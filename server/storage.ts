@@ -340,12 +340,12 @@ export class MemStorage implements IStorage {
       {
         name: "My Olympic Bro",
         description: "Exciting sports activities, live sporting events, competitive challenges, and vibrant bars.",
-        image: "https://images.unsplash.com/photo-1543423924-b9f161af87e4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+        image: "https://images.unsplash.com/photo-1526976668912-1a811878dd37?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
         name: "Chill and Feel",
         description: "Relaxed upscale experiences, chic restaurants, refined bars, and elegant city tours.",
-        image: "https://images.unsplash.com/photo-1592861956120-e524fc739696?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+        image: "https://images.unsplash.com/photo-1582192301635-c150dde7df9a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
         name: "The Last Adventure",
