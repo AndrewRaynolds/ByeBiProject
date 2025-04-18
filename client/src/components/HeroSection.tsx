@@ -6,8 +6,8 @@ interface HeroSectionProps {
 
 export default function HeroSection({ onGetStarted }: HeroSectionProps) {
   return (
-    <section className="relative py-12 md:py-24 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1566737236500-c8ac43014a67?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&h=600&q=80')" }}>
-      <div className="absolute inset-0 bg-dark bg-opacity-70"></div>
+    <section className="relative py-12 md:py-24 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1598495496118-f8763b94bde5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&h=600&q=80')" }}>
+      <div className="absolute inset-0 bg-dark bg-opacity-80"></div>
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-xl">
           <h1 className="text-white font-bold text-4xl md:text-5xl mb-4 font-poppins leading-tight">
