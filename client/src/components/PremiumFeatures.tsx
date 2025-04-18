@@ -126,7 +126,7 @@ export default function PremiumFeatures() {
                       <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Popular</div>
                     </div>
                     <div className="mb-4">
-                      <span className="text-3xl font-bold text-white">€4.99</span>
+                      <span className="text-3xl font-bold text-white">€2.99</span>
                       <span className="text-gray-400">/month</span>
                     </div>
                     <ul className="space-y-2 mb-6">
@@ -165,7 +165,7 @@ export default function PremiumFeatures() {
                       <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Save 33%</div>
                     </div>
                     <div className="mb-4">
-                      <span className="text-3xl font-bold text-white">€39.99</span>
+                      <span className="text-3xl font-bold text-white">€23.99</span>
                       <span className="text-gray-400">/year</span>
                     </div>
                     <ul className="space-y-2 mb-6">
