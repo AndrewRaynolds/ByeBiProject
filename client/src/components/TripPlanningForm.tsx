@@ -15,6 +15,7 @@ import { Destination, Experience } from "@shared/schema";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import ReactCountryFlag from "react-country-flag";
 
 const formSchema = z.object({
   name: z.string().min(2, "Trip name must be at least 2 characters"),
