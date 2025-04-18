@@ -333,23 +333,23 @@ export class MemStorage implements IStorage {
   private initializeExperiences() {
     const experiences: InsertExperience[] = [
       {
-        name: "Night to Remember",
-        description: "Epic club-hopping, VIP experiences, and the ultimate nightlife adventure.",
+        name: "The Ultimate BroNight",
+        description: "Epic club-hopping, exclusive nightclubs, casinos, and unforgettable alcohol-fueled adventures.",
         image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
-        name: "Adrenaline Rush",
-        description: "Extreme sports, outdoor adventures, and heart-pumping activities.",
+        name: "My Olympic Bro",
+        description: "Exciting sports activities, live sporting events, competitive challenges, and vibrant bars.",
         image: "https://images.unsplash.com/photo-1530294026-89b71564310b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
-        name: "Luxury Escape",
-        description: "Fine dining, premium accommodations, and exclusive experiences.",
+        name: "Chill and Feel",
+        description: "Relaxed upscale experiences, chic restaurants, refined bars, and elegant city tours.",
         image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
-        name: "Chill Vibes",
-        description: "Relaxing beach days, casual activities, and stress-free fun with friends.",
+        name: "The Last Adventure",
+        description: "One last wild adventure with your bros - outdoor activities, hiking, camping, and beers by the fire.",
         image: "https://images.unsplash.com/photo-1565538420870-da08ff96a207?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       }
     ];
