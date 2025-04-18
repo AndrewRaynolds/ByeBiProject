@@ -77,7 +77,7 @@ export default function SecretBlog() {
           <div className="mt-6 md:mt-0">
             {!isPremium && (
               <Link href="#premium-features">
-                <Button className="bg-gradient-to-r from-primary to-accent text-white font-bold py-3 px-6 rounded-lg transition hover:opacity-90">
+                <Button className="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 px-6 rounded-lg transition hover:opacity-90">
                   Unlock Premium Access
                 </Button>
               </Link>
@@ -121,7 +121,7 @@ export default function SecretBlog() {
                   <Lock className="text-white text-3xl mb-3" />
                   <span className="text-white font-bold">Premium Content</span>
                   <Link href="#premium-features">
-                    <Button className="mt-4 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-90 transition">
+                    <Button className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition">
                       Upgrade to Access
                     </Button>
                   </Link>
@@ -154,7 +154,7 @@ export default function SecretBlog() {
         
         <div className="text-center">
           <Link href="/secret-blog">
-            <Button variant="outline" className="border border-primary text-primary hover:bg-primary hover:text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+            <Button variant="outline" className="border border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold py-2 px-6 rounded-lg transition duration-300">
               View All Stories
             </Button>
           </Link>

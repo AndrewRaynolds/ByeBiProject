@@ -54,8 +54,8 @@ export default function Header() {
     <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center">
-          <Link href="/" className="text-primary font-poppins font-bold text-2xl">
-            <span className="text-dark">Bye</span>Bro
+          <Link href="/" className="font-poppins font-bold text-2xl">
+            <span className="text-black">Bye</span><span className="text-red-600">Bro</span>
           </Link>
         </div>
         
