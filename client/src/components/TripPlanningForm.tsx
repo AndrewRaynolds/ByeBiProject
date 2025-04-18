@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -371,13 +371,36 @@ export default function TripPlanningForm() {
                               const countriesArray = Array.from(countriesMap.entries())
                                 .sort((a, b) => a[0].localeCompare(b[0])); // Ordina alfabeticamente per paese
                               
+                              // Stato locale per il paese selezionato
+                              const [selectedCountry, setSelectedCountry] = React.useState<string | null>(null);
+                              
                               return (
                                 <div className="space-y-6">
-                                  {countriesArray.map(([country, countryDestinations]) => (
-                                    <div key={country} className="border border-gray-200 rounded-lg overflow-hidden">
-                                      <h3 className="bg-gray-100 px-4 py-2 font-medium text-gray-700">{country}</h3>
+                                  {/* Selettore del paese */}
+                                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <h3 className="bg-gray-100 px-4 py-2 font-medium text-gray-700">Seleziona un paese</h3>
+                                    <div className="p-4">
+                                      <select
+                                        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                                        value={selectedCountry || ""}
+                                        onChange={(e) => setSelectedCountry(e.target.value || null)}
+                                      >
+                                        <option value="">Seleziona un paese...</option>
+                                        {countriesArray.map(([country]) => (
+                                          <option key={country} value={country}>
+                                            {country}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Mostra le città solo se un paese è selezionato */}
+                                  {selectedCountry && (
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                      <h3 className="bg-gray-100 px-4 py-2 font-medium text-gray-700">Città in {selectedCountry}</h3>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4">
-                                        {countryDestinations.map((destination) => (
+                                        {(countriesMap.get(selectedCountry) || []).map((destination) => (
                                           <div key={destination.id} className="relative">
                                             <input 
                                               type="checkbox" 
@@ -408,7 +431,35 @@ export default function TripPlanningForm() {
                                         ))}
                                       </div>
                                     </div>
-                                  ))}
+                                  )}
+                                  
+                                  {/* Mostra un elenco di destinazioni selezionate */}
+                                  {field.value && field.value.length > 0 && (
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                      <h3 className="bg-gray-100 px-4 py-2 font-medium text-gray-700">Destinazioni selezionate</h3>
+                                      <div className="p-4">
+                                        <div className="flex flex-wrap gap-2">
+                                          {field.value.map(destName => (
+                                            <div key={destName} className="bg-red-600/10 text-red-600 px-3 py-1 rounded-full text-sm flex items-center">
+                                              <span>{destName}</span>
+                                              <button 
+                                                type="button"
+                                                className="ml-2 focus:outline-none"
+                                                onClick={() => {
+                                                  const newValues = field.value?.filter(v => v !== destName) || [];
+                                                  field.onChange(newValues);
+                                                }}
+                                              >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                              </button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}

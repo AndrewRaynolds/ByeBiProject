@@ -415,22 +415,13 @@ export class MemStorage implements IStorage {
         reviewCount: 136
       },
       {
-        name: "Kiev",
-        country: "Ukraine",
-        image: "https://images.unsplash.com/photo-1590573236787-2b3a3a989de7?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        description: "Emerging party scene with upscale clubs and affordable luxury experiences.",
-        tags: ["Nightlife", "Affordable", "Luxury"],
-        rating: "4.1",
-        reviewCount: 118
-      },
-      {
-        name: "Belgrade",
-        country: "Serbia",
-        image: "https://images.unsplash.com/photo-1608057430003-2b3f22b3e26b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        description: "Legendary nightlife with floating clubs on the river and parties until sunrise.",
-        tags: ["Nightlife", "Affordable"],
-        rating: "4.4",
-        reviewCount: 142
+        name: "Warsaw",
+        country: "Poland",
+        image: "https://images.unsplash.com/photo-1607427293702-036707c99c54?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Poland's energetic capital with vibrant nightlife, history and affordable luxury.",
+        tags: ["Nightlife", "Culture", "Affordable"],
+        rating: "4.5",
+        reviewCount: 162
       },
       {
         name: "Vilnius",
@@ -441,15 +432,7 @@ export class MemStorage implements IStorage {
         rating: "4.2",
         reviewCount: 119
       },
-      {
-        name: "Bratislava",
-        country: "Slovakia",
-        image: "https://images.unsplash.com/photo-1600007033163-9ade5ac2b7ba?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        description: "Central European gem with castle views and vibrant beer culture.",
-        tags: ["Nightlife", "Beer", "Affordable"],
-        rating: "4.0",
-        reviewCount: 107
-      },
+
       {
         name: "Hamburg",
         country: "Germany",
@@ -459,15 +442,7 @@ export class MemStorage implements IStorage {
         rating: "4.6",
         reviewCount: 163
       },
-      {
-        name: "Odessa",
-        country: "Ukraine",
-        image: "https://images.unsplash.com/photo-1594498653385-d5172c532c00?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        description: "Black Sea beaches and clubs with beautiful architecture as a backdrop.",
-        tags: ["Beaches", "Nightlife", "Affordable"],
-        rating: "4.1",
-        reviewCount: 112
-      },
+
       {
         name: "Sofia",
         country: "Bulgaria",
@@ -478,6 +453,15 @@ export class MemStorage implements IStorage {
         reviewCount: 103
       },
       {
+        name: "London",
+        country: "United Kingdom",
+        image: "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "World-class nightlife, iconic landmarks and endless entertainment options in the UK's vibrant capital.",
+        tags: ["Nightlife", "Culture", "Luxury"],
+        rating: "4.7",
+        reviewCount: 218
+      },
+      {
         name: "Liverpool",
         country: "United Kingdom",
         image: "https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
@@ -485,6 +469,24 @@ export class MemStorage implements IStorage {
         tags: ["Nightlife", "Music", "Culture"],
         rating: "4.5",
         reviewCount: 167
+      },
+      {
+        name: "Manchester",
+        country: "United Kingdom",
+        image: "https://images.unsplash.com/photo-1543785835-c7e2c3bab495?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Legendary music scene, football culture and buzzing nightlife in this northern powerhouse.",
+        tags: ["Nightlife", "Music", "Sport"],
+        rating: "4.6",
+        reviewCount: 174
+      },
+      {
+        name: "Edinburgh",
+        country: "United Kingdom",
+        image: "https://images.unsplash.com/photo-1574158671727-c3cfd9f29bd1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Scotland's capital with historic pubs, whisky tours and dramatic scenery as a backdrop.",
+        tags: ["Nightlife", "History", "Culture"],
+        rating: "4.7",
+        reviewCount: 181
       },
       {
         name: "Thessaloniki",
@@ -568,6 +570,15 @@ export class MemStorage implements IStorage {
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.6",
         reviewCount: 167
+      },
+      {
+        name: "Bilbao",
+        country: "Spain",
+        image: "https://images.unsplash.com/photo-1590362891991-f776e747a588?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Basque country gem with incredible gastronomy, modern art and vibrant culture.",
+        tags: ["Food", "Culture", "Nightlife"],
+        rating: "4.5",
+        reviewCount: 149
       },
       {
         name: "Seville",
