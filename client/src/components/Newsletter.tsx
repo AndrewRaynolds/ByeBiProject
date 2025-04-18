@@ -40,7 +40,7 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="py-16 bg-dark text-white">
+    <section className="py-16 bg-black text-white">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-4">Stay in the Loop</h2>
@@ -52,7 +52,7 @@ export default function Newsletter() {
               placeholder="Your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-700 text-white border-0"
+              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-900 text-white border border-gray-700"
             />
             <Button 
               type="submit" 
