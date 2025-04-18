@@ -105,8 +105,8 @@ export default function SecretBlog() {
                     </div>
                     <span className="text-gray-600 ml-2 text-sm">Anonymous</span>
                   </div>
-                  <Link href={`/secret-blog/${post.id}`}>
-                    <a className="text-primary hover:text-accent font-medium">Read More</a>
+                  <Link href={`/secret-blog/${post.id}`} className="text-primary hover:text-accent font-medium">
+                    Read More
                   </Link>
                 </div>
               </div>
@@ -143,8 +143,8 @@ export default function SecretBlog() {
                     </div>
                     <span className="text-gray-600 ml-2 text-sm">Anonymous</span>
                   </div>
-                  <Link href={`/secret-blog/${post.id}`}>
-                    <a className="text-primary hover:text-accent font-medium">Read More</a>
+                  <Link href={`/secret-blog/${post.id}`} className="text-primary hover:text-accent font-medium">
+                    Read More
                   </Link>
                 </div>
               </div>
