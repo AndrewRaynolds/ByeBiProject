@@ -272,7 +272,7 @@ export class MemStorage implements IStorage {
       {
         name: "Amsterdam",
         country: "Netherlands",
-        image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Famous for its vibrant nightlife, beautiful canals, and rich cultural experiences.",
         tags: ["Nightlife", "Sightseeing"],
         rating: "4.5",
@@ -281,7 +281,7 @@ export class MemStorage implements IStorage {
       {
         name: "Barcelona",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1588668214407-6ea9a6d8c272?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Beach parties, tapas bars, and clubbing until sunrise in this Mediterranean paradise.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.8",
@@ -290,7 +290,7 @@ export class MemStorage implements IStorage {
       {
         name: "Prague",
         country: "Czech Republic",
-        image: "https://images.unsplash.com/photo-1516550893885-985c994c4389?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Beer tours, historic pubs, and a vibrant nightlife scene in this beautiful historic city.",
         tags: ["Nightlife", "Breweries"],
         rating: "4.0",
@@ -340,12 +340,12 @@ export class MemStorage implements IStorage {
       {
         name: "My Olympic Bro",
         description: "Exciting sports activities, live sporting events, competitive challenges, and vibrant bars.",
-        image: "https://images.unsplash.com/photo-1526976668912-1a811878dd37?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+        image: "https://images.unsplash.com/photo-1495727034151-8ffc00a478ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
         name: "Chill and Feel",
         description: "Relaxed upscale experiences, chic restaurants, refined bars, and elegant city tours.",
-        image: "https://images.unsplash.com/photo-1582192301635-c150dde7df9a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+        image: "https://images.unsplash.com/photo-1534766555764-ce878a5e3a2b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
         name: "The Last Adventure",
