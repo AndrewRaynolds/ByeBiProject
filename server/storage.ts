@@ -5,7 +5,9 @@ import {
   blogPosts, BlogPost, InsertBlogPost,
   merchandise, Merchandise, InsertMerchandise,
   destinations, Destination, InsertDestination,
-  experiences, Experience, InsertExperience
+  experiences, Experience, InsertExperience,
+  expenseGroups, ExpenseGroup, InsertExpenseGroup,
+  expenses, Expense, InsertExpense
 } from "@shared/schema";
 
 export interface IStorage {
@@ -47,6 +49,18 @@ export interface IStorage {
   getExperience(id: number): Promise<Experience | undefined>;
   getAllExperiences(): Promise<Experience[]>;
   createExperience(experience: InsertExperience): Promise<Experience>;
+  
+  // Expense group operations (SplittaBro feature)
+  getExpenseGroup(id: number): Promise<ExpenseGroup | undefined>;
+  getExpenseGroupsByTripId(tripId: number): Promise<ExpenseGroup[]>;
+  createExpenseGroup(group: InsertExpenseGroup): Promise<ExpenseGroup>;
+  
+  // Expense operations (SplittaBro feature)
+  getExpense(id: number): Promise<Expense | undefined>;
+  getExpensesByGroupId(groupId: number): Promise<Expense[]>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -57,6 +71,8 @@ export class MemStorage implements IStorage {
   private merchandiseItems: Map<number, Merchandise>;
   private destinations: Map<number, Destination>;
   private experiences: Map<number, Experience>;
+  private expenseGroups: Map<number, ExpenseGroup>;
+  private expenseItems: Map<number, Expense>;
   
   private userId: number;
   private tripId: number;
@@ -65,6 +81,8 @@ export class MemStorage implements IStorage {
   private merchandiseId: number;
   private destinationId: number;
   private experienceId: number;
+  private expenseGroupId: number;
+  private expenseId: number;
 
   constructor() {
     this.users = new Map();
@@ -74,6 +92,8 @@ export class MemStorage implements IStorage {
     this.merchandiseItems = new Map();
     this.destinations = new Map();
     this.experiences = new Map();
+    this.expenseGroups = new Map();
+    this.expenseItems = new Map();
     
     this.userId = 1;
     this.tripId = 1;
@@ -82,6 +102,8 @@ export class MemStorage implements IStorage {
     this.merchandiseId = 1;
     this.destinationId = 1;
     this.experienceId = 1;
+    this.expenseGroupId = 1;
+    this.expenseId = 1;
 
     // Initialize with sample data
     this.initializeDestinations();
@@ -264,6 +286,70 @@ export class MemStorage implements IStorage {
     };
     this.experiences.set(id, experience);
     return experience;
+  }
+  
+  // Expense group operations (SplittaBro feature)
+  async getExpenseGroup(id: number): Promise<ExpenseGroup | undefined> {
+    return this.expenseGroups.get(id);
+  }
+
+  async getExpenseGroupsByTripId(tripId: number): Promise<ExpenseGroup[]> {
+    return Array.from(this.expenseGroups.values()).filter(
+      (group) => group.tripId === tripId,
+    );
+  }
+
+  async createExpenseGroup(insertGroup: InsertExpenseGroup): Promise<ExpenseGroup> {
+    const id = this.expenseGroupId++;
+    const group: ExpenseGroup = { 
+      ...insertGroup, 
+      id,
+      createdAt: new Date()
+    };
+    this.expenseGroups.set(id, group);
+    return group;
+  }
+  
+  // Expense operations (SplittaBro feature)
+  async getExpense(id: number): Promise<Expense | undefined> {
+    return this.expenseItems.get(id);
+  }
+
+  async getExpensesByGroupId(groupId: number): Promise<Expense[]> {
+    return Array.from(this.expenseItems.values()).filter(
+      (expense) => expense.groupId === groupId,
+    );
+  }
+
+  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const id = this.expenseId++;
+    const expense: Expense = { 
+      ...insertExpense, 
+      id,
+      createdAt: new Date()
+    };
+    this.expenseItems.set(id, expense);
+    return expense;
+  }
+  
+  async updateExpense(id: number, updateData: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const expense = await this.getExpense(id);
+    if (!expense) return undefined;
+    
+    const updatedExpense: Expense = {
+      ...expense,
+      ...updateData,
+    };
+    
+    this.expenseItems.set(id, updatedExpense);
+    return updatedExpense;
+  }
+  
+  async deleteExpense(id: number): Promise<boolean> {
+    const exists = await this.getExpense(id);
+    if (!exists) return false;
+    
+    return this.expenseItems.delete(id);
   }
 
   // Initialize with sample data

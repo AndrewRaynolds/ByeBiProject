@@ -154,6 +154,44 @@ export const insertExperienceSchema = createInsertSchema(experiences).pick({
   image: true,
 });
 
+// Expense Group model (for SplittaBro feature)
+export const expenseGroups = pgTable("expense_groups", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull(),
+  name: text("name").notNull(),
+  participants: json("participants").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const insertExpenseGroupSchema = createInsertSchema(expenseGroups).pick({
+  tripId: true,
+  name: true,
+  participants: true,
+});
+
+// Expense model (for SplittaBro feature)
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  description: text("description").notNull(),
+  amount: integer("amount").notNull(),
+  paidBy: text("paid_by").notNull(),
+  splitWith: json("split_with").notNull(),
+  date: timestamp("date").defaultNow(),
+  category: text("category").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).pick({
+  groupId: true,
+  description: true,
+  amount: true,
+  paidBy: true,
+  splitWith: true,
+  date: true,
+  category: true,
+});
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -175,3 +213,9 @@ export type InsertDestination = z.infer<typeof insertDestinationSchema>;
 
 export type Experience = typeof experiences.$inferSelect;
 export type InsertExperience = z.infer<typeof insertExperienceSchema>;
+
+export type ExpenseGroup = typeof expenseGroups.$inferSelect;
+export type InsertExpenseGroup = z.infer<typeof insertExpenseGroupSchema>;
+
+export type Expense = typeof expenses.$inferSelect;
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
