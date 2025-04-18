@@ -1,7 +1,12 @@
 import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertTripSchema } from "@shared/schema";
+import { 
+  insertUserSchema, 
+  insertTripSchema, 
+  insertExpenseGroupSchema, 
+  insertExpenseSchema 
+} from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 
@@ -90,8 +95,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const trip = await storage.createTrip(tripData);
       return res.status(201).json(trip);
     } catch (error) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });
       }
       return res.status(500).json({ message: "Server error" });
     }
@@ -212,6 +217,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       return res.status(200).json(merchandiseItems);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // SplittaBro - Expense Group routes
+  app.post("/api/expense-groups", async (req: Request, res: Response) => {
+    try {
+      const groupData = insertExpenseGroupSchema.parse(req.body);
+      const group = await storage.createExpenseGroup(groupData);
+      return res.status(201).json(group);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });
+      }
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/trips/:tripId/expense-groups", async (req: Request, res: Response) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const trip = await storage.getTrip(tripId);
+      
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      const expenseGroups = await storage.getExpenseGroupsByTripId(tripId);
+      return res.status(200).json(expenseGroups);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/expense-groups/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const group = await storage.getExpenseGroup(id);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Expense group not found" });
+      }
+      
+      return res.status(200).json(group);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // SplittaBro - Expense routes
+  app.post("/api/expenses", async (req: Request, res: Response) => {
+    try {
+      const expenseData = insertExpenseSchema.parse(req.body);
+      const expense = await storage.createExpense(expenseData);
+      return res.status(201).json(expense);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });
+      }
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/expense-groups/:groupId/expenses", async (req: Request, res: Response) => {
+    try {
+      const groupId = parseInt(req.params.groupId);
+      const group = await storage.getExpenseGroup(groupId);
+      
+      if (!group) {
+        return res.status(404).json({ message: "Expense group not found" });
+      }
+      
+      const expenses = await storage.getExpensesByGroupId(groupId);
+      return res.status(200).json(expenses);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/expenses/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expense = await storage.getExpense(id);
+      
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      return res.status(200).json(expense);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/expenses/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const updatedExpense = await storage.updateExpense(id, updateData);
+      
+      if (!updatedExpense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      return res.status(200).json(updatedExpense);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteExpense(id);
+      
+      if (!result) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      return res.status(200).json({ message: "Expense deleted successfully" });
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
     }

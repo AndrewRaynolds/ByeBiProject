@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
+import SplittaBroPage from "@/pages/SplittaBroPage";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary/:id" component={ItineraryPage} />
+      <Route path="/splittabro/:tripId?" component={SplittaBroPage} />
       <Route component={NotFound} />
     </Switch>
   );
