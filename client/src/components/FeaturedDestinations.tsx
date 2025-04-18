@@ -80,7 +80,7 @@ export default function FeaturedDestinations() {
             <h2 className="text-3xl md:text-4xl font-bold font-poppins">Popular Destinations</h2>
             <p className="text-gray-600 mt-2">Top picks for your unforgettable bachelor party</p>
           </div>
-          <Link href="/destinations" className="text-primary hover:text-accent font-medium hidden md:block">
+          <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
             View all destinations
           </Link>
         </div>
@@ -101,7 +101,7 @@ export default function FeaturedDestinations() {
               </div>
               <div className="p-4">
                 <div className="flex items-center mb-2">
-                  {destination.tags.map((tag, index) => (
+                  {destination.tags?.map((tag, index) => (
                     <span 
                       key={index} 
                       className={`${
@@ -122,7 +122,7 @@ export default function FeaturedDestinations() {
                     </div>
                     <span className="text-gray-600 ml-1 text-sm">{destination.rating} ({destination.reviewCount})</span>
                   </div>
-                  <Button variant="ghost" className="text-primary hover:text-accent font-medium">
+                  <Button variant="ghost" className="text-red-600 hover:text-red-700 font-medium">
                     Explore
                   </Button>
                 </div>
@@ -132,7 +132,7 @@ export default function FeaturedDestinations() {
         </div>
         
         <div className="mt-8 text-center md:hidden">
-          <Link href="/destinations" className="text-primary hover:text-accent font-medium">
+          <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium">
             View all destinations
           </Link>
         </div>
