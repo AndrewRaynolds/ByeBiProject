@@ -355,37 +355,64 @@ export default function TripPlanningForm() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="block text-sm font-medium text-gray-700 mb-2">Destination Preferences</FormLabel>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                              {destinations?.map((destination) => (
-                                <div key={destination.id} className="relative">
-                                  <input 
-                                    type="checkbox" 
-                                    id={`dest-${destination.id}`} 
-                                    className="peer absolute opacity-0 w-0 h-0"
-                                    value={destination.name}
-                                    checked={field.value?.includes(destination.name)}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      const newValues = e.target.checked
-                                        ? [...(field.value || []), value]
-                                        : (field.value || []).filter(v => v !== value);
-                                      field.onChange(newValues);
-                                    }}
-                                  />
-                                  <label 
-                                    htmlFor={`dest-${destination.id}`} 
-                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-red-600/5"
-                                  >
-                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                      </svg>
-                                    </span>
-                                    <span>{destination.name}</span>
-                                  </label>
+                            
+                            {(() => {
+                              // Raggruppa le destinazioni per paese
+                              const countriesMap = new Map<string, typeof destinations>();
+                              
+                              destinations?.forEach(destination => {
+                                if (!countriesMap.has(destination.country)) {
+                                  countriesMap.set(destination.country, []);
+                                }
+                                countriesMap.get(destination.country)?.push(destination);
+                              });
+                              
+                              // Converti la mappa in array per il rendering
+                              const countriesArray = Array.from(countriesMap.entries())
+                                .sort((a, b) => a[0].localeCompare(b[0])); // Ordina alfabeticamente per paese
+                              
+                              return (
+                                <div className="space-y-6">
+                                  {countriesArray.map(([country, countryDestinations]) => (
+                                    <div key={country} className="border border-gray-200 rounded-lg overflow-hidden">
+                                      <h3 className="bg-gray-100 px-4 py-2 font-medium text-gray-700">{country}</h3>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4">
+                                        {countryDestinations.map((destination) => (
+                                          <div key={destination.id} className="relative">
+                                            <input 
+                                              type="checkbox" 
+                                              id={`dest-${destination.id}`} 
+                                              className="peer absolute opacity-0 w-0 h-0"
+                                              value={destination.name}
+                                              checked={field.value?.includes(destination.name)}
+                                              onChange={(e) => {
+                                                const value = e.target.value;
+                                                const newValues = e.target.checked
+                                                  ? [...(field.value || []), value]
+                                                  : (field.value || []).filter(v => v !== value);
+                                                field.onChange(newValues);
+                                              }}
+                                            />
+                                            <label 
+                                              htmlFor={`dest-${destination.id}`} 
+                                              className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-600/5"
+                                            >
+                                              <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-red-600 transition-all mr-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
+                                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                              </span>
+                                              <span>{destination.name}</span>
+                                            </label>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
+                              );
+                            })()}
+                            
                             <FormMessage />
                           </FormItem>
                         )}

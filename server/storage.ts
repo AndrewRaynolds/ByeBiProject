@@ -512,6 +512,197 @@ export class MemStorage implements IStorage {
         tags: ["Beaches", "Nightlife", "History"],
         rating: "4.6",
         reviewCount: 147
+      },
+      // Aggiunta delle città italiane
+      {
+        name: "Rome",
+        country: "Italy",
+        image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Eternal city with incredible history, vibrant nightlife and amazing food scene.",
+        tags: ["Culture", "History", "Nightlife", "Food"],
+        rating: "4.7",
+        reviewCount: 212
+      },
+      {
+        name: "Milan",
+        country: "Italy",
+        image: "https://images.unsplash.com/photo-1574155376612-bfa4ed8aabfd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Fashion capital with stylish clubs, fancy aperitivo scene and vibrant nightlife.",
+        tags: ["Fashion", "Nightlife", "Food"],
+        rating: "4.5",
+        reviewCount: 156
+      },
+      {
+        name: "Florence",
+        country: "Italy",
+        image: "https://images.unsplash.com/photo-1541370976299-4d52ee1a47a8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Renaissance gem with amazing wine tours, cuisine and Tuscan landscapes.",
+        tags: ["Culture", "Wine", "Food"],
+        rating: "4.8",
+        reviewCount: 178
+      },
+      {
+        name: "Naples",
+        country: "Italy",
+        image: "https://images.unsplash.com/photo-1597057880641-c1f3fbde2c60?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Authentic Italian experience with the best pizza, nearby beaches and vibrant street life.",
+        tags: ["Food", "Culture", "Beaches"],
+        rating: "4.4",
+        reviewCount: 143
+      },
+      {
+        name: "Baja Sardinia",
+        country: "Italy",
+        image: "https://images.unsplash.com/photo-1594735514819-4fd512aae2ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Luxurious beach clubs, crystal waters and vibrant nightlife on Sardinia's Emerald Coast.",
+        tags: ["Beaches", "Luxury", "Nightlife"],
+        rating: "4.9",
+        reviewCount: 132
+      },
+      // Aggiunte altro destinazioni per paese
+      {
+        name: "Valencia",
+        country: "Spain",
+        image: "https://images.unsplash.com/photo-1596394642643-da47f5de8c2e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Beautiful city with incredible beaches, futuristic architecture and famous nightlife.",
+        tags: ["Beaches", "Culture", "Nightlife"],
+        rating: "4.6",
+        reviewCount: 167
+      },
+      {
+        name: "Seville",
+        country: "Spain",
+        image: "https://images.unsplash.com/photo-1558961166-68c7af5b9b97?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Passionate city with flamenco, tapas bars and romantic atmosphere.",
+        tags: ["Culture", "Food", "Nightlife"],
+        rating: "4.5",
+        reviewCount: 154
+      },
+      {
+        name: "Malaga",
+        country: "Spain",
+        image: "https://images.unsplash.com/photo-1590086783191-a0694c7d1e6e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Costa del Sol paradise with beaches, beachfront bars and clubs, and rich culture.",
+        tags: ["Beaches", "Nightlife", "Food"],
+        rating: "4.6",
+        reviewCount: 159
+      },
+      {
+        name: "Frankfurt",
+        country: "Germany",
+        image: "https://images.unsplash.com/photo-1564722079273-35d15ce7eedf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Financial heart of Germany with impressive skyscrapers and surprising nightlife.",
+        tags: ["Nightlife", "Breweries", "Culture"],
+        rating: "4.3",
+        reviewCount: 146
+      },
+      {
+        name: "Cologne",
+        country: "Germany",
+        image: "https://images.unsplash.com/photo-1578067141530-05b478de02ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Famous for its carnival, beer culture and vibrant LGBT scene.",
+        tags: ["Beer", "Nightlife", "Culture"],
+        rating: "4.4",
+        reviewCount: 152
+      },
+      {
+        name: "Porto",
+        country: "Portugal",
+        image: "https://images.unsplash.com/photo-1580323956656-26bbb1206e34?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Charming riverside city famous for its port wine cellars and vibrant food scene.",
+        tags: ["Wine", "Food", "Culture"],
+        rating: "4.7",
+        reviewCount: 169
+      },
+      {
+        name: "Faro",
+        country: "Portugal",
+        image: "https://images.unsplash.com/photo-1567156345550-52ddaeb97911?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Gateway to the Algarve with beautiful beaches and relaxed atmosphere.",
+        tags: ["Beaches", "Nightlife", "Affordable"],
+        rating: "4.3",
+        reviewCount: 138
+      },
+      {
+        name: "Galway",
+        country: "Ireland",
+        image: "https://images.unsplash.com/photo-1564017552458-14927ce61b7c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Ireland's cultural heart with amazing pubs, live music and friendly locals.",
+        tags: ["Pubs", "Music", "Culture"],
+        rating: "4.6",
+        reviewCount: 157
+      },
+      {
+        name: "Cork",
+        country: "Ireland",
+        image: "https://images.unsplash.com/photo-1582374458567-49011847696e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Charming city with excellent pubs, brewery tours and nearby scenic countryside.",
+        tags: ["Pubs", "Beer", "Culture"],
+        rating: "4.4",
+        reviewCount: 143
+      },
+      {
+        name: "Nice",
+        country: "France",
+        image: "https://images.unsplash.com/photo-1562883676-8c7feb83f09b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Glamorous coastal city on the French Riviera with beaches and upscale nightlife.",
+        tags: ["Beaches", "Luxury", "Nightlife"],
+        rating: "4.7",
+        reviewCount: 165
+      },
+      {
+        name: "Marseille",
+        country: "France",
+        image: "https://images.unsplash.com/photo-1572918284933-c21742e0a407?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Vibrant port city with Mediterranean flair, beaches and exciting nightlife.",
+        tags: ["Beaches", "Culture", "Nightlife"],
+        rating: "4.4",
+        reviewCount: 149
+      },
+      {
+        name: "Lyon",
+        country: "France",
+        image: "https://images.unsplash.com/photo-1486151412355-1b16fad0a6f2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Gastronomic capital of France with incredible food scene and charming old town.",
+        tags: ["Food", "Culture", "Nightlife"],
+        rating: "4.5",
+        reviewCount: 152
+      },
+      {
+        name: "Heraklion",
+        country: "Greece",
+        image: "https://images.unsplash.com/photo-1586156938613-769886aae531?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Crete's lively capital with nearby beaches, archaeological sites and party resorts.",
+        tags: ["Beaches", "Nightlife", "History"],
+        rating: "4.3",
+        reviewCount: 138
+      },
+      {
+        name: "Rhodes",
+        country: "Greece",
+        image: "https://images.unsplash.com/photo-1574958269340-fa927503f3dd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Historic island with medieval old town, beautiful beaches and vibrant party scene.",
+        tags: ["Beaches", "Nightlife", "History"],
+        rating: "4.6",
+        reviewCount: 148
+      },
+      {
+        name: "Zagreb",
+        country: "Croatia",
+        image: "https://images.unsplash.com/photo-1568125631245-a317a32e3148?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Croatia's capital with trendy bars, affordable prices and nearby nature attractions.",
+        tags: ["Nightlife", "Affordable", "Culture"],
+        rating: "4.3",
+        reviewCount: 126
+      },
+      {
+        name: "Dubrovnik",
+        country: "Croatia",
+        image: "https://images.unsplash.com/photo-1591085318719-7a83bde53c62?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Game of Thrones filming location with medieval walls and vibrant cliff bars.",
+        tags: ["Beaches", "Culture", "Nightlife"],
+        rating: "4.8",
+        reviewCount: 176
       }
     ];
     
