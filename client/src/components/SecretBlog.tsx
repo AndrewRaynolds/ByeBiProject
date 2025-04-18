@@ -105,7 +105,7 @@ export default function SecretBlog() {
                     </div>
                     <span className="text-gray-600 ml-2 text-sm">Anonymous</span>
                   </div>
-                  <Link href={`/secret-blog/${post.id}`} className="text-primary hover:text-accent font-medium">
+                  <Link href={`/secret-blog/${post.id}`} className="text-red-600 hover:text-red-700 font-medium">
                     Read More
                   </Link>
                 </div>
@@ -130,7 +130,7 @@ export default function SecretBlog() {
               <div className="relative">
                 <img src={post.image} alt={post.title} className="w-full h-48 object-cover" />
                 <div className="absolute top-3 left-3">
-                  <span className="bg-primary text-white text-xs px-2 py-1 rounded-full font-medium">Premium</span>
+                  <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full font-medium">Premium</span>
                 </div>
               </div>
               <div className="p-5">
@@ -143,7 +143,7 @@ export default function SecretBlog() {
                     </div>
                     <span className="text-gray-600 ml-2 text-sm">Anonymous</span>
                   </div>
-                  <Link href={`/secret-blog/${post.id}`} className="text-primary hover:text-accent font-medium">
+                  <Link href={`/secret-blog/${post.id}`} className="text-red-600 hover:text-red-700 font-medium">
                     Read More
                   </Link>
                 </div>

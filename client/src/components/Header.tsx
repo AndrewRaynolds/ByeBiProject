@@ -60,19 +60,19 @@ export default function Header() {
         </div>
         
         <div className="hidden md:flex items-center space-x-6">
-          <Link href="/" className={`text-dark hover:text-primary transition font-medium text-sm ${location === "/" ? "text-primary" : ""}`}>
+          <Link href="/" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/" ? "text-red-600" : ""}`}>
             How It Works
           </Link>
-          <Link href="/destinations" className={`text-dark hover:text-primary transition font-medium text-sm ${location === "/destinations" ? "text-primary" : ""}`}>
+          <Link href="/destinations" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/destinations" ? "text-red-600" : ""}`}>
             Destinations
           </Link>
-          <Link href="/experiences" className={`text-dark hover:text-primary transition font-medium text-sm ${location === "/experiences" ? "text-primary" : ""}`}>
+          <Link href="/experiences" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/experiences" ? "text-red-600" : ""}`}>
             Experiences
           </Link>
-          <Link href="/secret-blog" className={`text-dark hover:text-primary transition font-medium text-sm ${location === "/secret-blog" ? "text-primary" : ""}`}>
+          <Link href="/secret-blog" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/secret-blog" ? "text-red-600" : ""}`}>
             Secret Blog
           </Link>
-          <Link href="/merchandise" className={`text-dark hover:text-primary transition font-medium text-sm ${location === "/merchandise" ? "text-primary" : ""}`}>
+          <Link href="/merchandise" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/merchandise" ? "text-red-600" : ""}`}>
             Merch
           </Link>
         </div>
@@ -105,13 +105,13 @@ export default function Header() {
             <>
               <Button
                 variant="ghost"
-                className="hidden md:block text-primary font-medium hover:text-accent"
+                className="hidden md:block text-red-600 font-medium hover:text-red-700"
                 onClick={() => openAuthModal("login")}
               >
                 Log In
               </Button>
               <Button
-                className="hidden md:block bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-accent transition"
+                className="hidden md:block bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition"
                 onClick={() => openAuthModal("signup")}
               >
                 Sign Up
@@ -134,17 +134,17 @@ export default function Header() {
       {mobileMenuOpen && (
         <div ref={menuRef} className="md:hidden bg-white border-t border-gray-200 p-4">
           <div className="flex flex-col space-y-3">
-            <Link href="/" className="text-dark hover:text-primary transition font-medium">How It Works</Link>
-            <Link href="/destinations" className="text-dark hover:text-primary transition font-medium">Destinations</Link>
-            <Link href="/experiences" className="text-dark hover:text-primary transition font-medium">Experiences</Link>
-            <Link href="/secret-blog" className="text-dark hover:text-primary transition font-medium">Secret Blog</Link>
-            <Link href="/merchandise" className="text-dark hover:text-primary transition font-medium">Merch</Link>
+            <Link href="/" className="text-dark hover:text-red-600 transition font-medium">How It Works</Link>
+            <Link href="/destinations" className="text-dark hover:text-red-600 transition font-medium">Destinations</Link>
+            <Link href="/experiences" className="text-dark hover:text-red-600 transition font-medium">Experiences</Link>
+            <Link href="/secret-blog" className="text-dark hover:text-red-600 transition font-medium">Secret Blog</Link>
+            <Link href="/merchandise" className="text-dark hover:text-red-600 transition font-medium">Merch</Link>
             
             <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200 mt-2">
               {isAuthenticated ? (
                 <>
-                  <Link href="/dashboard" className="text-dark hover:text-primary transition font-medium">Dashboard</Link>
-                  <Link href="/account-settings" className="text-dark hover:text-primary transition font-medium">Account Settings</Link>
+                  <Link href="/dashboard" className="text-dark hover:text-red-600 transition font-medium">Dashboard</Link>
+                  <Link href="/account-settings" className="text-dark hover:text-red-600 transition font-medium">Account Settings</Link>
                   <Button variant="ghost" className="text-left" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4 inline" />
                     Logout
@@ -152,10 +152,10 @@ export default function Header() {
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" className="text-primary font-medium hover:text-accent transition text-left" onClick={() => openAuthModal("login")}>
+                  <Button variant="ghost" className="text-red-600 font-medium hover:text-red-700 transition text-left" onClick={() => openAuthModal("login")}>
                     Log In
                   </Button>
-                  <Button className="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-accent transition" onClick={() => openAuthModal("signup")}>
+                  <Button className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition" onClick={() => openAuthModal("signup")}>
                     Sign Up
                   </Button>
                 </>
