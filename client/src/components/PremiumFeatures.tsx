@@ -69,41 +69,41 @@ export default function PremiumFeatures() {
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium">Create Custom Groom Avatar</span>
-                    <p className="text-sm text-gray-600 mt-1">Design a fun avatar of the groom for your trip</p>
+                    <span className="font-medium text-white">Create Custom Groom Avatar</span>
+                    <p className="text-sm text-gray-300 mt-1">Design a fun avatar of the groom for your trip</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium">Priority Itinerary Generation</span>
-                    <p className="text-sm text-gray-600 mt-1">Get faster and more detailed trip recommendations</p>
+                    <span className="font-medium text-white">Priority Itinerary Generation</span>
+                    <p className="text-sm text-gray-300 mt-1">Get faster and more detailed trip recommendations</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium">Exclusive Discounts</span>
-                    <p className="text-sm text-gray-600 mt-1">Special pricing on accommodation and activities</p>
+                    <span className="font-medium text-white">Exclusive Discounts</span>
+                    <p className="text-sm text-gray-300 mt-1">Special pricing on accommodation and activities</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium">24/7 Travel Support</span>
-                    <p className="text-sm text-gray-600 mt-1">Get help with your trip anytime you need it</p>
+                    <span className="font-medium text-white">24/7 Travel Support</span>
+                    <p className="text-sm text-gray-300 mt-1">Get help with your trip anytime you need it</p>
                   </div>
                 </li>
               </ul>
             </div>
             
-            <div className="col-span-2 p-8">
-              <h3 className="text-2xl font-bold mb-6 font-poppins">Choose Your Plan</h3>
+            <div className="col-span-2 p-8 bg-black">
+              <h3 className="text-2xl font-bold mb-6 font-poppins text-white">Choose Your Plan</h3>
               
               {isPremium ? (
-                <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
-                  <h4 className="text-xl font-bold text-green-600 mb-2">You're a Premium Member!</h4>
-                  <p className="text-gray-600">
+                <div className="text-center p-6 bg-gray-900 rounded-lg border border-red-600">
+                  <h4 className="text-xl font-bold text-red-600 mb-2">You're a Premium Member!</h4>
+                  <p className="text-gray-300">
                     You already have access to all premium features including unlimited blog posts, custom groom avatars, priority itineraries, and exclusive discounts.
                   </p>
                   <Button className="mt-4 bg-red-600 hover:bg-red-700">
@@ -113,38 +113,38 @@ export default function PremiumFeatures() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div 
-                    className={`border rounded-lg p-6 hover:shadow-md transition duration-300 ${
-                      selectedPlan === "monthly" ? "border-red-600 shadow-md" : "border-gray-200"
+                    className={`border rounded-lg p-6 hover:shadow-md transition duration-300 bg-gray-900 ${
+                      selectedPlan === "monthly" ? "border-red-600 shadow-md" : "border-gray-700"
                     }`}
                     onClick={() => setSelectedPlan("monthly")}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h4 className="text-xl font-bold">Monthly</h4>
-                        <p className="text-gray-600 text-sm">Perfect for one-time planning</p>
+                        <h4 className="text-xl font-bold text-white">Monthly</h4>
+                        <p className="text-gray-300 text-sm">Perfect for one-time planning</p>
                       </div>
-                      <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">Popular</div>
+                      <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Popular</div>
                     </div>
                     <div className="mb-4">
-                      <span className="text-3xl font-bold">€4.99</span>
-                      <span className="text-gray-500">/month</span>
+                      <span className="text-3xl font-bold text-white">€4.99</span>
+                      <span className="text-gray-400">/month</span>
                     </div>
                     <ul className="space-y-2 mb-6">
                       <li className="flex items-center">
-                        <Check className="text-green-500 mr-2 h-4 w-4" />
-                        <span className="text-sm">All premium benefits</span>
+                        <Check className="text-red-600 mr-2 h-4 w-4" />
+                        <span className="text-sm text-gray-300">All premium benefits</span>
                       </li>
                       <li className="flex items-center">
-                        <Check className="text-green-500 mr-2 h-4 w-4" />
-                        <span className="text-sm">Cancel anytime</span>
+                        <Check className="text-red-600 mr-2 h-4 w-4" />
+                        <span className="text-sm text-gray-300">Cancel anytime</span>
                       </li>
                       <li className="flex items-center">
-                        <Check className="text-green-500 mr-2 h-4 w-4" />
-                        <span className="text-sm">10% off custom merchandise</span>
+                        <Check className="text-red-600 mr-2 h-4 w-4" />
+                        <span className="text-sm text-gray-300">10% off custom merchandise</span>
                       </li>
                     </ul>
                     <Button 
-                      className={`w-full ${selectedPlan === "monthly" ? "bg-red-600" : "bg-gray-400"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
+                      className={`w-full ${selectedPlan === "monthly" ? "bg-red-600" : "bg-gray-600"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
                       onClick={handleUpgrade}
                     >
                       Choose Monthly
@@ -152,38 +152,38 @@ export default function PremiumFeatures() {
                   </div>
                   
                   <div 
-                    className={`border rounded-lg p-6 hover:shadow-md transition duration-300 ${
-                      selectedPlan === "annual" ? "border-red-600 shadow-md" : "border-gray-200"
+                    className={`border rounded-lg p-6 hover:shadow-md transition duration-300 bg-gray-900 ${
+                      selectedPlan === "annual" ? "border-red-600 shadow-md" : "border-gray-700"
                     }`}
                     onClick={() => setSelectedPlan("annual")}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h4 className="text-xl font-bold">Annual</h4>
-                        <p className="text-gray-600 text-sm">Best value for bachelor party pros</p>
+                        <h4 className="text-xl font-bold text-white">Annual</h4>
+                        <p className="text-gray-300 text-sm">Best value for bachelor party pros</p>
                       </div>
-                      <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Save 33%</div>
+                      <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Save 33%</div>
                     </div>
                     <div className="mb-4">
-                      <span className="text-3xl font-bold">€39.99</span>
-                      <span className="text-gray-500">/year</span>
+                      <span className="text-3xl font-bold text-white">€39.99</span>
+                      <span className="text-gray-400">/year</span>
                     </div>
                     <ul className="space-y-2 mb-6">
                       <li className="flex items-center">
-                        <Check className="text-green-500 mr-2 h-4 w-4" />
-                        <span className="text-sm">All premium benefits</span>
+                        <Check className="text-red-600 mr-2 h-4 w-4" />
+                        <span className="text-sm text-gray-300">All premium benefits</span>
                       </li>
                       <li className="flex items-center">
-                        <Check className="text-green-500 mr-2 h-4 w-4" />
-                        <span className="text-sm">3 free t-shirts for your group</span>
+                        <Check className="text-red-600 mr-2 h-4 w-4" />
+                        <span className="text-sm text-gray-300">3 free t-shirts for your group</span>
                       </li>
                       <li className="flex items-center">
-                        <Check className="text-green-500 mr-2 h-4 w-4" />
-                        <span className="text-sm">20% off custom merchandise</span>
+                        <Check className="text-red-600 mr-2 h-4 w-4" />
+                        <span className="text-sm text-gray-300">20% off custom merchandise</span>
                       </li>
                     </ul>
                     <Button 
-                      className={`w-full ${selectedPlan === "annual" ? "bg-red-600" : "bg-gray-400"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
+                      className={`w-full ${selectedPlan === "annual" ? "bg-red-600" : "bg-gray-600"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
                       onClick={handleUpgrade}
                     >
                       Choose Annual
@@ -193,7 +193,7 @@ export default function PremiumFeatures() {
               )}
               
               {!isPremium && (
-                <div className="mt-6 text-center text-sm text-gray-600">
+                <div className="mt-6 text-center text-sm text-gray-300">
                   <p>Not sure yet? <a href="#" className="text-red-600 hover:text-red-700">Start with a 7-day free trial</a></p>
                 </div>
               )}
