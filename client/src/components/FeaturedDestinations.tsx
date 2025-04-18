@@ -73,12 +73,12 @@ export default function FeaturedDestinations() {
   }
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16 bg-gray-900">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins">Popular Destinations</h2>
-            <p className="text-gray-600 mt-2">Top picks for your unforgettable bachelor party</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">Popular Destinations</h2>
+            <p className="text-gray-300 mt-2">Top picks for your unforgettable bachelor party</p>
           </div>
           <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
             View all destinations
@@ -87,7 +87,7 @@ export default function FeaturedDestinations() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {destinations?.slice(0, 3).map((destination) => (
-            <div key={destination.id} className="rounded-xl overflow-hidden shadow-lg group">
+            <div key={destination.id} className="rounded-xl overflow-hidden shadow-lg group bg-black">
               <div className="relative h-64 overflow-hidden">
                 <img 
                   src={destination.image} 
@@ -105,22 +105,22 @@ export default function FeaturedDestinations() {
                     <span 
                       key={index} 
                       className={`${
-                        index === 0 ? 'bg-green-100 text-green-800' : 
-                        index === 1 ? 'bg-blue-100 text-blue-800' : 
-                        'bg-yellow-100 text-yellow-800'
+                        index === 0 ? 'bg-red-900 text-white' : 
+                        index === 1 ? 'bg-gray-800 text-white' : 
+                        'bg-red-900 text-white'
                       } text-xs px-2 py-1 rounded-full font-medium ${index > 0 ? 'ml-2' : ''}`}
                     >
                       {tag}
                     </span>
                   ))}
                 </div>
-                <p className="text-gray-600 text-sm mb-4">{destination.description}</p>
+                <p className="text-gray-300 text-sm mb-4">{destination.description}</p>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
                     <div className="text-yellow-400 flex">
                       {renderRatingStars(destination.rating)}
                     </div>
-                    <span className="text-gray-600 ml-1 text-sm">{destination.rating} ({destination.reviewCount})</span>
+                    <span className="text-gray-300 ml-1 text-sm">{destination.rating} ({destination.reviewCount})</span>
                   </div>
                   <Button variant="ghost" className="text-red-600 hover:text-red-700 font-medium">
                     Explore

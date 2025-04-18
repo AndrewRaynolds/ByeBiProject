@@ -54,16 +54,16 @@ export default function PremiumFeatures() {
           <p className="text-white opacity-90 max-w-3xl mx-auto">Get exclusive access to premium features and take your bachelor party planning to the next level.</p>
         </div>
         
-        <div className="max-w-4xl mx-auto bg-white rounded-xl overflow-hidden shadow-xl">
+        <div className="max-w-4xl mx-auto bg-black rounded-xl overflow-hidden shadow-xl border border-red-600">
           <div className="grid grid-cols-1 lg:grid-cols-3">
-            <div className="p-8 bg-light">
-              <h3 className="text-2xl font-bold mb-6 font-poppins">Premium Benefits</h3>
+            <div className="p-8 bg-gray-900">
+              <h3 className="text-2xl font-bold mb-6 font-poppins text-white">Premium Benefits</h3>
               <ul className="space-y-4">
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium">Unlimited Secret Blog Access</span>
-                    <p className="text-sm text-gray-600 mt-1">Read and share real bachelor party stories without limits</p>
+                    <span className="font-medium text-white">Unlimited Secret Blog Access</span>
+                    <p className="text-sm text-gray-300 mt-1">Read and share real bachelor party stories without limits</p>
                   </div>
                 </li>
                 <li className="flex items-start">
