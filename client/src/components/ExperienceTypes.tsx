@@ -73,7 +73,7 @@ export default function ExperienceTypes() {
               </div>
               <div className="p-4">
                 <p className="text-gray-600 text-sm mb-4">{experience.description}</p>
-                <Button variant="ghost" className="text-primary hover:text-accent font-medium text-sm flex items-center p-0">
+                <Button variant="ghost" className="text-red-600 hover:text-red-700 font-medium text-sm flex items-center p-0">
                   See Details <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
