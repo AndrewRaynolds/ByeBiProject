@@ -32,14 +32,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const departureCities = [
-  { value: "london", label: "London" },
-  { value: "paris", label: "Paris" },
-  { value: "berlin", label: "Berlin" },
-  { value: "rome", label: "Rome" },
-  { value: "madrid", label: "Madrid" },
-  { value: "amsterdam", label: "Amsterdam" },
-];
+// Rimosso array departureCities per permettere l'inserimento libero di qualsiasi città
 
 const activities = [
   { value: "nightclubs", label: "Nightclubs" },
@@ -310,23 +303,15 @@ export default function TripPlanningForm() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Where are you traveling from?</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select your departure city" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {departureCities.map((city) => (
-                                  <SelectItem key={city.value} value={city.value}>
-                                    {city.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter your departure city" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              You can start your trip from anywhere in Europe
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
