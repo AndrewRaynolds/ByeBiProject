@@ -144,10 +144,10 @@ export default function CustomMerchandise() {
                   <div className="p-4">
                     <h3 className="text-lg font-bold mb-1 font-poppins">{item.name}</h3>
                     <div className="flex justify-between items-center">
-                      <span className="text-primary font-bold">€{(item.price / 100).toFixed(2)}</span>
+                      <span className="text-red-600 font-bold">€{(item.price / 100).toFixed(2)}</span>
                       <Button 
                         variant="ghost" 
-                        className="text-primary hover:text-accent text-sm font-medium p-0"
+                        className="text-red-600 hover:text-red-700 text-sm font-medium p-0"
                         onClick={() => setSelectedType(item.type)}
                       >
                         View
@@ -202,7 +202,7 @@ export default function CustomMerchandise() {
                       <Button
                         key={color}
                         type="button"
-                        className={`w-8 h-8 rounded-full p-0 ${textColor === color ? 'ring-2 ring-offset-2 ring-primary' : ''}`}
+                        className={`w-8 h-8 rounded-full p-0 ${textColor === color ? 'ring-2 ring-offset-2 ring-red-600' : ''}`}
                         style={{ backgroundColor: color }}
                         onClick={() => setTextColor(color)}
                       />
@@ -212,7 +212,7 @@ export default function CustomMerchandise() {
                 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Upload Image or Logo</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-primary transition">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-red-600 transition">
                     <Upload className="mx-auto text-gray-400 mb-2" />
                     <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
                     <p className="text-xs text-gray-400 mt-1">PNG, JPG, SVG (max 5MB)</p>
@@ -249,7 +249,7 @@ export default function CustomMerchandise() {
                   </div>
                 </div>
                 
-                <Button type="submit" className="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-accent">
+                <Button type="submit" className="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700">
                   Add to Cart
                 </Button>
                 
