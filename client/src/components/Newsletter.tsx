@@ -52,11 +52,11 @@ export default function Newsletter() {
               placeholder="Your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-primary bg-gray-700 text-white border-0"
+              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-700 text-white border-0"
             />
             <Button 
               type="submit" 
-              className="bg-primary hover:bg-accent text-white font-bold py-3 px-6 rounded-lg transition duration-300"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300"
               disabled={isSubmitting}
             >
               {isSubmitting ? "Subscribing..." : "Subscribe"}
