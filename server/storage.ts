@@ -322,6 +322,196 @@ export class MemStorage implements IStorage {
         tags: ["Nightlife", "Beaches"],
         rating: "4.9",
         reviewCount: 234
+      },
+      // Nuove destinazioni aggiunte
+      {
+        name: "Palma de Mallorca",
+        country: "Spain",
+        image: "https://images.unsplash.com/photo-1593105544559-ecb03bf76f82?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Stunning beaches by day and lively clubs by night in this Mediterranean hotspot.",
+        tags: ["Nightlife", "Beaches"],
+        rating: "4.7",
+        reviewCount: 189
+      },
+      {
+        name: "Algarve",
+        country: "Portugal",
+        image: "https://images.unsplash.com/photo-1566419377145-1c4925d75500?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Beautiful beaches, excellent golf courses, and vibrant nightlife on Portugal's southern coast.",
+        tags: ["Beaches", "Golf", "Nightlife"],
+        rating: "4.6",
+        reviewCount: 156
+      },
+      {
+        name: "Bucharest",
+        country: "Romania",
+        image: "https://images.unsplash.com/photo-1584646098378-0874589d76b1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Affordable nightlife and luxury experiences in Eastern Europe's party capital.",
+        tags: ["Nightlife", "Affordable"],
+        rating: "4.3",
+        reviewCount: 132
+      },
+      {
+        name: "Madrid",
+        country: "Spain",
+        image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Tapas, rooftop bars, and clubs that don't get going until after midnight.",
+        tags: ["Nightlife", "Food", "Culture"],
+        rating: "4.8",
+        reviewCount: 205
+      },
+      {
+        name: "Mykonos",
+        country: "Greece",
+        image: "https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Beach clubs, crystal clear waters, and 24-hour partying on this Greek island paradise.",
+        tags: ["Beaches", "Nightlife", "Luxury"],
+        rating: "4.9",
+        reviewCount: 251
+      },
+      {
+        name: "Lisbon",
+        country: "Portugal",
+        image: "https://images.unsplash.com/photo-1518310952931-b1de897abd40?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Historic charm by day, vibrant nightlife by night in Portugal's coastal capital.",
+        tags: ["Nightlife", "Food", "Culture"],
+        rating: "4.6",
+        reviewCount: 178
+      },
+      {
+        name: "Dublin",
+        country: "Ireland",
+        image: "https://images.unsplash.com/photo-1564959130747-897fb406b9e5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Pub crawls, live music, and friendly locals make Dublin perfect for bachelor parties.",
+        tags: ["Nightlife", "Pubs", "Beer"],
+        rating: "4.5",
+        reviewCount: 183
+      },
+      {
+        name: "Krakow",
+        country: "Poland",
+        image: "https://images.unsplash.com/photo-1562864769-9a7b20095e41?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Affordable drinks, historic venues, and a welcoming party atmosphere.",
+        tags: ["Nightlife", "Affordable", "History"],
+        rating: "4.4",
+        reviewCount: 155
+      },
+      {
+        name: "Riga",
+        country: "Latvia",
+        image: "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Baltic's party capital with affordable prices and unique themed venues.",
+        tags: ["Nightlife", "Affordable"],
+        rating: "4.2",
+        reviewCount: 124
+      },
+      {
+        name: "Tallinn",
+        country: "Estonia",
+        image: "https://images.unsplash.com/photo-1562064361-256f027fe7fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Medieval charm with modern nightlife in this picturesque Baltic city.",
+        tags: ["Nightlife", "History", "Affordable"],
+        rating: "4.3",
+        reviewCount: 136
+      },
+      {
+        name: "Kiev",
+        country: "Ukraine",
+        image: "https://images.unsplash.com/photo-1590573236787-2b3a3a989de7?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Emerging party scene with upscale clubs and affordable luxury experiences.",
+        tags: ["Nightlife", "Affordable", "Luxury"],
+        rating: "4.1",
+        reviewCount: 118
+      },
+      {
+        name: "Belgrade",
+        country: "Serbia",
+        image: "https://images.unsplash.com/photo-1608057430003-2b3f22b3e26b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Legendary nightlife with floating clubs on the river and parties until sunrise.",
+        tags: ["Nightlife", "Affordable"],
+        rating: "4.4",
+        reviewCount: 142
+      },
+      {
+        name: "Vilnius",
+        country: "Lithuania",
+        image: "https://images.unsplash.com/photo-1610962599945-45e593913705?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Charming Old Town with hidden bars and clubs for an affordable weekend.",
+        tags: ["Nightlife", "Affordable", "History"],
+        rating: "4.2",
+        reviewCount: 119
+      },
+      {
+        name: "Bratislava",
+        country: "Slovakia",
+        image: "https://images.unsplash.com/photo-1600007033163-9ade5ac2b7ba?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Central European gem with castle views and vibrant beer culture.",
+        tags: ["Nightlife", "Beer", "Affordable"],
+        rating: "4.0",
+        reviewCount: 107
+      },
+      {
+        name: "Hamburg",
+        country: "Germany",
+        image: "https://images.unsplash.com/photo-1618259278412-2819cbdea4dc?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "The Reeperbahn district offers legendary nightlife and entertainment options.",
+        tags: ["Nightlife", "Red Light District"],
+        rating: "4.6",
+        reviewCount: 163
+      },
+      {
+        name: "Odessa",
+        country: "Ukraine",
+        image: "https://images.unsplash.com/photo-1594498653385-d5172c532c00?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Black Sea beaches and clubs with beautiful architecture as a backdrop.",
+        tags: ["Beaches", "Nightlife", "Affordable"],
+        rating: "4.1",
+        reviewCount: 112
+      },
+      {
+        name: "Sofia",
+        country: "Bulgaria",
+        image: "https://images.unsplash.com/photo-1596642779378-3db04b95f06a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Affordable beer, clubs, and casinos in the shadow of snow-capped mountains.",
+        tags: ["Nightlife", "Affordable", "Casinos"],
+        rating: "4.0",
+        reviewCount: 103
+      },
+      {
+        name: "Liverpool",
+        country: "United Kingdom",
+        image: "https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "The Beatles' hometown with an incredible music scene and friendly locals.",
+        tags: ["Nightlife", "Music", "Culture"],
+        rating: "4.5",
+        reviewCount: 167
+      },
+      {
+        name: "Thessaloniki",
+        country: "Greece",
+        image: "https://images.unsplash.com/photo-1612436395424-08c3c10d6711?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Seaside bars, tavernas, and clubs in Greece's second-largest city.",
+        tags: ["Nightlife", "Food", "Beaches"],
+        rating: "4.3",
+        reviewCount: 128
+      },
+      {
+        name: "Munich",
+        country: "Germany",
+        image: "https://images.unsplash.com/photo-1595867818082-083862f3d630?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Home of Oktoberfest with year-round beer gardens and traditional breweries.",
+        tags: ["Beer", "Nightlife", "Culture"],
+        rating: "4.7",
+        reviewCount: 184
+      },
+      {
+        name: "Split",
+        country: "Croatia",
+        image: "https://images.unsplash.com/photo-1555990538-17835ba38a8a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "Ancient Roman ruins by day, beachfront parties by night on the Adriatic coast.",
+        tags: ["Beaches", "Nightlife", "History"],
+        rating: "4.6",
+        reviewCount: 147
       }
     ];
     
