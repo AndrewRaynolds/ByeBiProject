@@ -204,25 +204,25 @@ export default function TripPlanningForm() {
             <div className="bg-gray-50 p-4 border-b">
               <div className="flex justify-between">
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full ${stepOneActive ? 'bg-primary' : 'bg-gray-300'} text-white flex items-center justify-center font-bold`}>1</div>
+                  <div className={`w-8 h-8 rounded-full ${stepOneActive ? 'bg-red-600' : 'bg-gray-300'} text-white flex items-center justify-center font-bold`}>1</div>
                   <span className="text-xs mt-1 font-medium">Basics</span>
                 </div>
                 <div className="w-full max-w-[80px] flex items-center">
                   <div className="h-1 w-full bg-gray-300 rounded">
-                    <div className="h-1 w-full bg-primary rounded transition-all duration-300" style={{ width: progressOneTwo }}></div>
+                    <div className="h-1 w-full bg-red-600 rounded transition-all duration-300" style={{ width: progressOneTwo }}></div>
                   </div>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full ${stepTwoActive ? 'bg-primary' : 'bg-gray-300'} text-white flex items-center justify-center font-bold`}>2</div>
+                  <div className={`w-8 h-8 rounded-full ${stepTwoActive ? 'bg-red-600' : 'bg-gray-300'} text-white flex items-center justify-center font-bold`}>2</div>
                   <span className={`text-xs mt-1 font-medium ${stepTwoActive ? 'text-dark' : 'text-gray-500'}`}>Details</span>
                 </div>
                 <div className="w-full max-w-[80px] flex items-center">
                   <div className="h-1 w-full bg-gray-300 rounded">
-                    <div className="h-1 bg-primary rounded transition-all duration-300" style={{ width: progressTwoThree }}></div>
+                    <div className="h-1 bg-red-600 rounded transition-all duration-300" style={{ width: progressTwoThree }}></div>
                   </div>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full ${stepThreeActive ? 'bg-primary' : 'bg-gray-300'} text-white flex items-center justify-center font-bold`}>3</div>
+                  <div className={`w-8 h-8 rounded-full ${stepThreeActive ? 'bg-red-600' : 'bg-gray-300'} text-white flex items-center justify-center font-bold`}>3</div>
                   <span className={`text-xs mt-1 font-medium ${stepThreeActive ? 'text-dark' : 'text-gray-500'}`}>Activities</span>
                 </div>
               </div>
@@ -336,7 +336,7 @@ export default function TripPlanningForm() {
                     <div className="flex justify-end">
                       <Button 
                         type="button" 
-                        className="bg-primary text-white font-bold py-2 px-6 rounded-lg hover:bg-accent"
+                        className="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent"
                         onClick={goToNextStep}
                       >
                         Next Step
@@ -374,9 +374,9 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`dest-${destination.id}`} 
-                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-primary/5"
+                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-red-600/5"
                                   >
-                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all mr-3">
+                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                       </svg>
@@ -413,9 +413,9 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`exp-${experience.id}`} 
-                                    className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-primary/5"
+                                    className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-red-600/5"
                                   >
-                                    <span className="w-5 h-5 border border-gray-300 rounded-full flex-shrink-0 flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all mr-3">
+                                    <span className="w-5 h-5 border border-gray-300 rounded-full flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
                                       <span className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100"></span>
                                     </span>
                                     <div>
@@ -474,7 +474,7 @@ export default function TripPlanningForm() {
                       </Button>
                       <Button 
                         type="button" 
-                        className="bg-primary text-white font-bold py-2 px-6 rounded-lg hover:bg-accent"
+                        className="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent"
                         onClick={goToNextStep}
                       >
                         Next Step
@@ -514,9 +514,9 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`act-${activity.value}`} 
-                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-primary/5"
+                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-red-600/5"
                                   >
-                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all mr-3">
+                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                       </svg>
@@ -590,7 +590,7 @@ export default function TripPlanningForm() {
                       </Button>
                       <Button 
                         type="submit" 
-                        className="bg-primary text-white font-bold py-2 px-6 rounded-lg hover:bg-accent"
+                        className="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700"
                       >
                         Generate Itinerary
                       </Button>

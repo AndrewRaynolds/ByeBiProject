@@ -106,7 +106,7 @@ export default function PremiumFeatures() {
                   <p className="text-gray-600">
                     You already have access to all premium features including unlimited blog posts, custom groom avatars, priority itineraries, and exclusive discounts.
                   </p>
-                  <Button className="mt-4 bg-primary hover:bg-accent">
+                  <Button className="mt-4 bg-red-600 hover:bg-red-700">
                     Go to Dashboard
                   </Button>
                 </div>
@@ -183,7 +183,7 @@ export default function PremiumFeatures() {
                       </li>
                     </ul>
                     <Button 
-                      className={`w-full ${selectedPlan === "annual" ? "bg-primary" : "bg-gray-400"} text-white font-bold py-2 px-4 rounded-lg hover:bg-accent transition duration-300`}
+                      className={`w-full ${selectedPlan === "annual" ? "bg-red-600" : "bg-gray-400"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
                       onClick={handleUpgrade}
                     >
                       Choose Annual
@@ -194,7 +194,7 @@ export default function PremiumFeatures() {
               
               {!isPremium && (
                 <div className="mt-6 text-center text-sm text-gray-600">
-                  <p>Not sure yet? <a href="#" className="text-primary hover:text-accent">Start with a 7-day free trial</a></p>
+                  <p>Not sure yet? <a href="#" className="text-red-600 hover:text-red-700">Start with a 7-day free trial</a></p>
                 </div>
               )}
             </div>
