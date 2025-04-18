@@ -47,7 +47,7 @@ export default function PremiumFeatures() {
   };
 
   return (
-    <section id="premium-features" className="py-16 bg-gradient-to-r from-primary to-accent">
+    <section id="premium-features" className="py-16 bg-gradient-to-r from-red-600 to-red-700">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Upgrade to Premium</h2>
@@ -60,35 +60,35 @@ export default function PremiumFeatures() {
               <h3 className="text-2xl font-bold mb-6 font-poppins">Premium Benefits</h3>
               <ul className="space-y-4">
                 <li className="flex items-start">
-                  <Check className="text-primary mt-1 mr-3 h-5 w-5" />
+                  <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
                     <span className="font-medium">Unlimited Secret Blog Access</span>
                     <p className="text-sm text-gray-600 mt-1">Read and share real bachelor party stories without limits</p>
                   </div>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-primary mt-1 mr-3 h-5 w-5" />
+                  <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
                     <span className="font-medium">Create Custom Groom Avatar</span>
                     <p className="text-sm text-gray-600 mt-1">Design a fun avatar of the groom for your trip</p>
                   </div>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-primary mt-1 mr-3 h-5 w-5" />
+                  <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
                     <span className="font-medium">Priority Itinerary Generation</span>
                     <p className="text-sm text-gray-600 mt-1">Get faster and more detailed trip recommendations</p>
                   </div>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-primary mt-1 mr-3 h-5 w-5" />
+                  <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
                     <span className="font-medium">Exclusive Discounts</span>
                     <p className="text-sm text-gray-600 mt-1">Special pricing on accommodation and activities</p>
                   </div>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-primary mt-1 mr-3 h-5 w-5" />
+                  <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
                     <span className="font-medium">24/7 Travel Support</span>
                     <p className="text-sm text-gray-600 mt-1">Get help with your trip anytime you need it</p>
@@ -114,7 +114,7 @@ export default function PremiumFeatures() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div 
                     className={`border rounded-lg p-6 hover:shadow-md transition duration-300 ${
-                      selectedPlan === "monthly" ? "border-primary shadow-md" : "border-gray-200"
+                      selectedPlan === "monthly" ? "border-red-600 shadow-md" : "border-gray-200"
                     }`}
                     onClick={() => setSelectedPlan("monthly")}
                   >
@@ -123,7 +123,7 @@ export default function PremiumFeatures() {
                         <h4 className="text-xl font-bold">Monthly</h4>
                         <p className="text-gray-600 text-sm">Perfect for one-time planning</p>
                       </div>
-                      <div className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full font-medium">Popular</div>
+                      <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">Popular</div>
                     </div>
                     <div className="mb-4">
                       <span className="text-3xl font-bold">€4.99</span>
@@ -144,7 +144,7 @@ export default function PremiumFeatures() {
                       </li>
                     </ul>
                     <Button 
-                      className={`w-full ${selectedPlan === "monthly" ? "bg-primary" : "bg-gray-400"} text-white font-bold py-2 px-4 rounded-lg hover:bg-accent transition duration-300`}
+                      className={`w-full ${selectedPlan === "monthly" ? "bg-red-600" : "bg-gray-400"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
                       onClick={handleUpgrade}
                     >
                       Choose Monthly
@@ -153,7 +153,7 @@ export default function PremiumFeatures() {
                   
                   <div 
                     className={`border rounded-lg p-6 hover:shadow-md transition duration-300 ${
-                      selectedPlan === "annual" ? "border-primary shadow-md" : "border-gray-200"
+                      selectedPlan === "annual" ? "border-red-600 shadow-md" : "border-gray-200"
                     }`}
                     onClick={() => setSelectedPlan("annual")}
                   >
