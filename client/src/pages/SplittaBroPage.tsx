@@ -58,12 +58,33 @@ export default function SplittaBroPage() {
   const [showNewExpenseDialog, setShowNewExpenseDialog] = useState(false);
   const [participants, setParticipants] = useState<{ name: string; email?: string }[]>([{ name: "" }]);
   
+  // Tipizzazione per i gruppi di spesa e le spese
+  interface ExpenseGroup {
+    id: number;
+    tripId: number;
+    name: string;
+    participants: { name: string; email?: string }[];
+    createdAt: string;
+  }
+  
+  interface Expense {
+    id: number;
+    groupId: number;
+    description: string;
+    amount: number;
+    paidBy: string;
+    splitWith: { name: string; share: number }[];
+    category: string;
+    date: string;
+    createdAt: string;
+  }
+
   // Query per ottenere i gruppi di spesa
   const { 
     data: expenseGroups,
     isLoading: isLoadingGroups, 
     error: groupsError 
-  } = useQuery({ 
+  } = useQuery<ExpenseGroup[]>({ 
     queryKey: ['/api/trips', tripId, 'expense-groups'],
     enabled: !!tripId,
     staleTime: 5000
@@ -74,7 +95,7 @@ export default function SplittaBroPage() {
     data: expenses,
     isLoading: isLoadingExpenses, 
     error: expensesError 
-  } = useQuery({ 
+  } = useQuery<Expense[]>({ 
     queryKey: ['/api/expense-groups', activeGroup, 'expenses'],
     enabled: !!activeGroup,
     staleTime: 2000
@@ -107,10 +128,7 @@ export default function SplittaBroPage() {
   // Mutation per creare un nuovo gruppo
   const createGroup = useMutation({
     mutationFn: (data: CreateGroupFormValues) => {
-      return apiRequest('/api/expense-groups', {
-        method: 'POST',
-        data
-      });
+      return apiRequest('POST', '/api/expense-groups', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/trips', tripId, 'expense-groups'] });
@@ -133,10 +151,7 @@ export default function SplittaBroPage() {
   // Mutation per creare una nuova spesa
   const createExpense = useMutation({
     mutationFn: (data: CreateExpenseFormValues) => {
-      return apiRequest('/api/expenses', {
-        method: 'POST',
-        data
-      });
+      return apiRequest('POST', '/api/expenses', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expense-groups', activeGroup, 'expenses'] });
@@ -159,9 +174,7 @@ export default function SplittaBroPage() {
   // Mutation per eliminare una spesa
   const deleteExpense = useMutation({
     mutationFn: (expenseId: number) => {
-      return apiRequest(`/api/expenses/${expenseId}`, {
-        method: 'DELETE'
-      });
+      return apiRequest('DELETE', `/api/expenses/${expenseId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/expense-groups', activeGroup, 'expenses'] });
