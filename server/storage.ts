@@ -340,7 +340,7 @@ export class MemStorage implements IStorage {
       {
         name: "My Olympic Bro",
         description: "Exciting sports activities, live sporting events, competitive challenges, and vibrant bars.",
-        image: "https://images.unsplash.com/photo-1495727034151-8ffc00a478ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
+        image: "/assets/images/staples_center.png"
       },
       {
         name: "Chill and Feel",

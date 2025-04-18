@@ -11,7 +11,7 @@ export default function ExperienceTypes() {
 
   if (isLoading) {
     return (
-      <section className="py-16 bg-light">
+      <section className="py-16 bg-black">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <Skeleton className="h-10 w-64 mx-auto" />
@@ -20,7 +20,7 @@ export default function ExperienceTypes() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-md">
+              <div key={i} className="bg-gray-900 rounded-xl overflow-hidden shadow-md">
                 <Skeleton className="h-48 w-full" />
                 <div className="p-4">
                   <Skeleton className="h-6 w-36 mb-4" />
@@ -37,10 +37,10 @@ export default function ExperienceTypes() {
 
   if (error) {
     return (
-      <section className="py-16 bg-light">
+      <section className="py-16 bg-black">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">Choose Your Experience</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Choose Your Experience</h2>
             <p className="text-red-500">Error loading experiences. Please try again later.</p>
           </div>
         </div>
@@ -49,16 +49,16 @@ export default function ExperienceTypes() {
   }
 
   return (
-    <section className="py-16 bg-light">
+    <section className="py-16 bg-black">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">Choose Your Experience</h2>
-          <p className="text-gray-600 max-w-3xl mx-auto">From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelor party.</p>
+          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Choose Your Experience</h2>
+          <p className="text-gray-300 max-w-3xl mx-auto">From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelor party.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {experiences?.map((experience) => (
-            <div key={experience.id} className="bg-white rounded-xl overflow-hidden shadow-md group hover:shadow-lg transition duration-300">
+            <div key={experience.id} className="bg-gray-900 rounded-xl overflow-hidden shadow-md group hover:shadow-lg transition duration-300">
               <div className="relative h-48 overflow-hidden">
                 <img 
                   src={experience.image} 
@@ -72,7 +72,7 @@ export default function ExperienceTypes() {
                 </div>
               </div>
               <div className="p-4">
-                <p className="text-gray-600 text-sm mb-4">{experience.description}</p>
+                <p className="text-gray-300 text-sm mb-4">{experience.description}</p>
                 <Button variant="ghost" className="text-red-600 hover:text-red-700 font-medium text-sm flex items-center p-0">
                   See Details <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
