@@ -401,10 +401,7 @@ export default function TripPlanningForm() {
                                         <option value="">Seleziona un paese...</option>
                                         {countriesArray.map(([country]) => (
                                           <option key={country} value={country}>
-                                            <div className="flex items-center">
-                                              <ReactCountryFlag countryCode={getCountryCode(country)} svg style={{marginRight: '8px'}} />
-                                              {country}
-                                            </div>
+                                            {country}
                                           </option>
                                         ))}
                                       </select>
@@ -436,8 +433,8 @@ export default function TripPlanningForm() {
                                               htmlFor={`dest-${destination.id}`} 
                                               className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
                                             >
-                                              <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-red-600 transition-all mr-3">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
+                                              <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-white peer-checked:border-red-900 transition-all mr-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-black opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
                                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                 </svg>
                                               </span>
@@ -512,8 +509,8 @@ export default function TripPlanningForm() {
                                     htmlFor={`exp-${experience.id}`} 
                                     className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
                                   >
-                                    <span className="w-5 h-5 border border-gray-300 rounded-full flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
-                                      <span className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100"></span>
+                                    <span className="w-5 h-5 border border-gray-300 rounded-full flex-shrink-0 flex items-center justify-center peer-checked:bg-white peer-checked:border-red-900 transition-all mr-3">
+                                      <span className="w-2 h-2 rounded-full bg-black opacity-0 peer-checked:opacity-100"></span>
                                     </span>
                                     <div>
                                       <span className="font-medium block">{experience.name}</span>
@@ -613,8 +610,8 @@ export default function TripPlanningForm() {
                                     htmlFor={`act-${activity.value}`} 
                                     className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
                                   >
-                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
+                                    <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-white peer-checked:border-red-900 transition-all mr-3">
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-black opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                       </svg>
                                     </span>
