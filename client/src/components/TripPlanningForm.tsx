@@ -47,6 +47,33 @@ const activities = [
   { value: "casinoNight", label: "Casino Night" },
 ];
 
+// Funzione per convertire il nome del paese in codice ISO
+const getCountryCode = (country: string): string => {
+  // Mappatura dei nomi dei paesi con i loro codici ISO
+  const countryMap: Record<string, string> = {
+    "Netherlands": "NL",
+    "Germany": "DE",
+    "Spain": "ES",
+    "Italy": "IT",
+    "France": "FR",
+    "United Kingdom": "GB",
+    "Czech Republic": "CZ",
+    "Croatia": "HR",
+    "Poland": "PL",
+    "Belgium": "BE",
+    "Portugal": "PT",
+    "Greece": "GR",
+    "Sweden": "SE",
+    "Denmark": "DK",
+    "Austria": "AT",
+    "Hungary": "HU",
+    "Ireland": "IE",
+    "Switzerland": "CH"
+  };
+  
+  return countryMap[country] || "EU"; // Usa l'UE come fallback
+};
+
 export default function TripPlanningForm() {
   const [step, setStep] = useState(1);
   const [budgetDisplay, setBudgetDisplay] = useState("800");
@@ -374,7 +401,10 @@ export default function TripPlanningForm() {
                                         <option value="">Seleziona un paese...</option>
                                         {countriesArray.map(([country]) => (
                                           <option key={country} value={country}>
-                                            {country}
+                                            <div className="flex items-center">
+                                              <ReactCountryFlag countryCode={getCountryCode(country)} svg style={{marginRight: '8px'}} />
+                                              {country}
+                                            </div>
                                           </option>
                                         ))}
                                       </select>
@@ -404,14 +434,17 @@ export default function TripPlanningForm() {
                                             />
                                             <label 
                                               htmlFor={`dest-${destination.id}`} 
-                                              className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-600/5"
+                                              className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
                                             >
                                               <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-red-600 transition-all mr-3">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
                                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                 </svg>
                                               </span>
-                                              <span>{destination.name}</span>
+                                              <div className="flex items-center">
+                                                <ReactCountryFlag countryCode={getCountryCode(selectedCountry)} svg style={{marginRight: '8px'}} />
+                                                <span>{destination.name}</span>
+                                              </div>
                                             </label>
                                           </div>
                                         ))}
@@ -477,7 +510,7 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`exp-${experience.id}`} 
-                                    className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-red-600/5"
+                                    className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
                                   >
                                     <span className="w-5 h-5 border border-gray-300 rounded-full flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
                                       <span className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100"></span>
@@ -578,7 +611,7 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`act-${activity.value}`} 
-                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-primary peer-checked:bg-red-600/5"
+                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
                                   >
                                     <span className="w-5 h-5 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center peer-checked:bg-red-600 peer-checked:border-primary transition-all mr-3">
                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100" viewBox="0 0 20 20" fill="currentColor">
