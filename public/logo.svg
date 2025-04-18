@@ -1,0 +1,7 @@
+<svg width="300" height="100" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap');
+  </style>
+  <text x="20" y="70" font-family="Poppins, sans-serif" font-size="60" font-weight="800" fill="#000000">Bye</text>
+  <text x="130" y="70" font-family="Poppins, sans-serif" font-size="60" font-weight="800" fill="#e11d48">Bro</text>
+</svg>

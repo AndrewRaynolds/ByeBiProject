@@ -10,9 +10,12 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
       <div className="absolute inset-0 bg-gradient-to-r from-black to-red-900 bg-opacity-75 mix-blend-multiply"></div>
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-xl">
-          <h1 className="text-white font-bold text-4xl md:text-5xl mb-4 font-poppins leading-tight">
-            One more Night, no more rights!
-          </h1>
+          <div className="flex flex-col items-start mb-4">
+            <img src="/logo.svg" alt="ByeBro Logo" className="h-20 mb-4" />
+            <h1 className="text-white font-bold text-4xl md:text-5xl font-poppins leading-tight">
+              One more Night, no more rights!
+            </h1>
+          </div>
           <p className="text-white text-lg mb-6 md:mb-8">
             Create unforgettable memories with personalized trips, activities, and gear for the groom's last adventure.
           </p>
