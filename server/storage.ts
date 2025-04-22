@@ -252,17 +252,38 @@ export class MemStorage implements IStorage {
 
   // Destination operations
   async getDestination(id: number): Promise<Destination | undefined> {
-    return this.destinations.get(id);
+    const destination = this.destinations.get(id);
+    if (destination) {
+      // Aggiorna l'URL dell'immagine con un nuovo timestamp
+      const imageUrl = destination.image.split('?')[0] + `?t=${Date.now()}`;
+      return { ...destination, image: imageUrl };
+    }
+    return destination;
   }
 
   async getAllDestinations(): Promise<Destination[]> {
-    return Array.from(this.destinations.values());
+    const destinations = Array.from(this.destinations.values());
+    // Aggiungi timestamp alle immagini
+    return destinations.map(destination => {
+      const imageUrlBase = destination.image.split('?')[0]; 
+      return {
+        ...destination,
+        image: `${imageUrlBase}?t=${Date.now()}`
+      };
+    });
   }
 
   async createDestination(insertDestination: InsertDestination): Promise<Destination> {
     const id = this.destinationId++;
+    
+    // Aggiungi timestamp alle URL delle immagini per forzare il refresh della cache
+    const imageWithTimestamp = insertDestination.image.includes('?') 
+      ? `${insertDestination.image}&t=${Date.now()}` 
+      : `${insertDestination.image}?t=${Date.now()}`;
+    
     const destination: Destination = { 
-      ...insertDestination, 
+      ...insertDestination,
+      image: imageWithTimestamp, 
       id
     };
     this.destinations.set(id, destination);
@@ -271,17 +292,38 @@ export class MemStorage implements IStorage {
 
   // Experience operations
   async getExperience(id: number): Promise<Experience | undefined> {
-    return this.experiences.get(id);
+    const experience = this.experiences.get(id);
+    if (experience) {
+      // Aggiorna l'URL dell'immagine con un nuovo timestamp
+      const imageUrl = experience.image.split('?')[0] + `?t=${Date.now()}`;
+      return { ...experience, image: imageUrl };
+    }
+    return experience;
   }
 
   async getAllExperiences(): Promise<Experience[]> {
-    return Array.from(this.experiences.values());
+    const experiences = Array.from(this.experiences.values());
+    // Aggiungi timestamp alle immagini
+    return experiences.map(experience => {
+      const imageUrlBase = experience.image.split('?')[0]; 
+      return {
+        ...experience,
+        image: `${imageUrlBase}?t=${Date.now()}`
+      };
+    });
   }
 
   async createExperience(insertExperience: InsertExperience): Promise<Experience> {
     const id = this.experienceId++;
+    
+    // Aggiungi timestamp alle URL delle immagini per forzare il refresh della cache
+    const imageWithTimestamp = insertExperience.image.includes('?') 
+      ? `${insertExperience.image}&t=${Date.now()}` 
+      : `${insertExperience.image}?t=${Date.now()}`;
+    
     const experience: Experience = { 
-      ...insertExperience, 
+      ...insertExperience,
+      image: imageWithTimestamp, 
       id 
     };
     this.experiences.set(id, experience);
@@ -403,7 +445,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1528591922185-a0eb2f8f50b6?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1596396051462-a5b98c629d15?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "The ultimate party island with world-famous clubs and beautiful beaches.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.9",
@@ -532,7 +574,7 @@ export class MemStorage implements IStorage {
       {
         name: "Sofia",
         country: "Bulgaria",
-        image: "https://images.unsplash.com/photo-1562650740-ce0f04d0d73e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1582633987110-78186872e5e5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Affordable beer, clubs, and casinos in the shadow of snow-capped mountains.",
         tags: ["Nightlife", "Affordable", "Casinos"],
         rating: "4.0",
