@@ -422,7 +422,7 @@ export class MemStorage implements IStorage {
       {
         name: "Algarve",
         country: "Portugal",
-        image: "https://images.unsplash.com/photo-1566419377145-1c4925d75500?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Beautiful beaches, excellent golf courses, and vibrant nightlife on Portugal's southern coast.",
         tags: ["Beaches", "Golf", "Nightlife"],
         rating: "4.6",
@@ -467,7 +467,7 @@ export class MemStorage implements IStorage {
       {
         name: "Dublin",
         country: "Ireland",
-        image: "https://images.unsplash.com/photo-1564959130747-897fb406b9e5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1549918864-48ac978761a4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Pub crawls, live music, and friendly locals make Dublin perfect for bachelor parties.",
         tags: ["Nightlife", "Pubs", "Beer"],
         rating: "4.5",
@@ -476,7 +476,7 @@ export class MemStorage implements IStorage {
       {
         name: "Krakow",
         country: "Poland",
-        image: "https://images.unsplash.com/photo-1562864769-9a7b20095e41?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1558642084-fd07fae5282e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Affordable drinks, historic venues, and a welcoming party atmosphere.",
         tags: ["Nightlife", "Affordable", "History"],
         rating: "4.4",
@@ -494,7 +494,7 @@ export class MemStorage implements IStorage {
       {
         name: "Tallinn",
         country: "Estonia",
-        image: "https://images.unsplash.com/photo-1562064361-256f027fe7fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1541343672885-9be56236302a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Medieval charm with modern nightlife in this picturesque Baltic city.",
         tags: ["Nightlife", "History", "Affordable"],
         rating: "4.3",
@@ -503,7 +503,7 @@ export class MemStorage implements IStorage {
       {
         name: "Warsaw",
         country: "Poland",
-        image: "https://images.unsplash.com/photo-1607427293702-036707c99c54?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1519197924294-4ba991a11128?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Poland's energetic capital with vibrant nightlife, history and affordable luxury.",
         tags: ["Nightlife", "Culture", "Affordable"],
         rating: "4.5",
@@ -512,7 +512,7 @@ export class MemStorage implements IStorage {
       {
         name: "Vilnius",
         country: "Lithuania",
-        image: "https://images.unsplash.com/photo-1610962599945-45e593913705?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1585211969224-3e992986159d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Charming Old Town with hidden bars and clubs for an affordable weekend.",
         tags: ["Nightlife", "Affordable", "History"],
         rating: "4.2",
@@ -532,7 +532,7 @@ export class MemStorage implements IStorage {
       {
         name: "Sofia",
         country: "Bulgaria",
-        image: "https://images.unsplash.com/photo-1596642779378-3db04b95f06a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1559777582-099d974c1d58?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Affordable beer, clubs, and casinos in the shadow of snow-capped mountains.",
         tags: ["Nightlife", "Affordable", "Casinos"],
         rating: "4.0",
