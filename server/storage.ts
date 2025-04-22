@@ -403,7 +403,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1599580326879-e378a0ed80df?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1528591922185-a0eb2f8f50b6?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "The ultimate party island with world-famous clubs and beautiful beaches.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.9",
@@ -577,7 +577,7 @@ export class MemStorage implements IStorage {
       {
         name: "Thessaloniki",
         country: "Greece",
-        image: "https://images.unsplash.com/photo-1612436395424-08c3c10d6711?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1609001650223-b8b5ba1a2842?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Seaside bars, tavernas, and clubs in Greece's second-largest city.",
         tags: ["Nightlife", "Food", "Beaches"],
         rating: "4.3",
@@ -595,7 +595,7 @@ export class MemStorage implements IStorage {
       {
         name: "Split",
         country: "Croatia",
-        image: "https://images.unsplash.com/photo-1555990538-17835ba38a8a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1555990538-4f79d1a28266?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Ancient Roman ruins by day, beachfront parties by night on the Adriatic coast.",
         tags: ["Beaches", "Nightlife", "History"],
         rating: "4.6",
@@ -623,7 +623,7 @@ export class MemStorage implements IStorage {
       {
         name: "Florence",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1541370976299-4d52ee1a47a8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1534322904425-1bce6e549c5a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Renaissance gem with amazing wine tours, cuisine and Tuscan landscapes.",
         tags: ["Culture", "Wine", "Food"],
         rating: "4.8",
@@ -632,7 +632,7 @@ export class MemStorage implements IStorage {
       {
         name: "Naples",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1597057880641-c1f3fbde2c60?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1534308748696-8c7a6085e6b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Authentic Italian experience with the best pizza, nearby beaches and vibrant street life.",
         tags: ["Food", "Culture", "Beaches"],
         rating: "4.4",
@@ -641,7 +641,7 @@ export class MemStorage implements IStorage {
       {
         name: "Baja Sardinia",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1594735514819-4fd512aae2ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1541074404370-947ed35fff39?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Luxurious beach clubs, crystal waters and vibrant nightlife on Sardinia's Emerald Coast.",
         tags: ["Beaches", "Luxury", "Nightlife"],
         rating: "4.9",
