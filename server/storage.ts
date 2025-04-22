@@ -358,7 +358,7 @@ export class MemStorage implements IStorage {
       {
         name: "Amsterdam",
         country: "Netherlands",
-        image: "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Famous for its vibrant nightlife, beautiful canals, and rich cultural experiences.",
         tags: ["Nightlife", "Sightseeing"],
         rating: "4.5",
@@ -367,7 +367,7 @@ export class MemStorage implements IStorage {
       {
         name: "Barcelona",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1511527661048-7fe73d85e9a4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Beach parties, tapas bars, and clubbing until sunrise in this Mediterranean paradise.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.8",
@@ -394,7 +394,7 @@ export class MemStorage implements IStorage {
       {
         name: "Berlin",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1566404791232-af9fe557fa49?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "World-class clubbing and a vibrant arts scene make Berlin a top destination for bachelor parties.",
         tags: ["Nightlife", "Culture"],
         rating: "4.7",
@@ -403,7 +403,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1626197031507-c17099753214?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1599580326879-e378a0ed80df?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "The ultimate party island with world-famous clubs and beautiful beaches.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.9",
@@ -669,7 +669,7 @@ export class MemStorage implements IStorage {
       {
         name: "Paris",
         country: "France",
-        image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1500313830540-7b6650a74fd0?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "The City of Lights offers luxury experiences, world-class cuisine, and unforgettable nightlife.",
         tags: ["Culture", "Food", "Luxury", "Nightlife"],
         rating: "4.9",

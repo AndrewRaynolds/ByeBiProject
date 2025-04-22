@@ -245,17 +245,11 @@ export default function DestinationsPage() {
                       
                       <p className="text-gray-700 mb-4">{destination.description}</p>
                       
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center">
-                          <div className="text-yellow-400 flex">
-                            {renderRatingStars(destination.rating)}
-                          </div>
-                          <span className="text-gray-600 ml-2 text-sm">{destination.rating} ({destination.reviewCount} reviews)</span>
+                      <div className="flex items-center">
+                        <div className="text-yellow-400 flex">
+                          {renderRatingStars(destination.rating)}
                         </div>
-                        
-                        <Button className="bg-red-600 hover:bg-red-700 text-white">
-                          Explore
-                        </Button>
+                        <span className="text-gray-600 ml-2 text-sm">{destination.rating} ({destination.reviewCount} reviews)</span>
                       </div>
                     </div>
                   </div>
