@@ -394,7 +394,7 @@ export class MemStorage implements IStorage {
       {
         name: "Berlin",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1566404791232-af9fe557fa49?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "World-class clubbing and a vibrant arts scene make Berlin a top destination for bachelor parties.",
         tags: ["Nightlife", "Culture"],
         rating: "4.7",
@@ -413,7 +413,7 @@ export class MemStorage implements IStorage {
       {
         name: "Palma de Mallorca",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1593105544559-ecb03bf76f82?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1563784462386-044c9c8f55f9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Stunning beaches by day and lively clubs by night in this Mediterranean hotspot.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.7",
@@ -458,7 +458,7 @@ export class MemStorage implements IStorage {
       {
         name: "Lisbon",
         country: "Portugal",
-        image: "https://images.unsplash.com/photo-1518310952931-b1de897abd40?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1536663815808-535e2280d2c2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Historic charm by day, vibrant nightlife by night in Portugal's coastal capital.",
         tags: ["Nightlife", "Food", "Culture"],
         rating: "4.6",
@@ -532,7 +532,7 @@ export class MemStorage implements IStorage {
       {
         name: "Sofia",
         country: "Bulgaria",
-        image: "https://images.unsplash.com/photo-1559777582-099d974c1d58?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1562650740-ce0f04d0d73e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Affordable beer, clubs, and casinos in the shadow of snow-capped mountains.",
         tags: ["Nightlife", "Affordable", "Casinos"],
         rating: "4.0",
@@ -559,7 +559,7 @@ export class MemStorage implements IStorage {
       {
         name: "Manchester",
         country: "United Kingdom",
-        image: "https://images.unsplash.com/photo-1543785835-c7e2c3bab495?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Legendary music scene, football culture and buzzing nightlife in this northern powerhouse.",
         tags: ["Nightlife", "Music", "Sport"],
         rating: "4.6",
@@ -568,7 +568,7 @@ export class MemStorage implements IStorage {
       {
         name: "Edinburgh",
         country: "United Kingdom",
-        image: "https://images.unsplash.com/photo-1574158671727-c3cfd9f29bd1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1607773246615-a773a3556f9f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Scotland's capital with historic pubs, whisky tours and dramatic scenery as a backdrop.",
         tags: ["Nightlife", "History", "Culture"],
         rating: "4.7",
