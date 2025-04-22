@@ -665,7 +665,7 @@ export class MemStorage implements IStorage {
       {
         name: "Florence",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1534322904425-1bce6e549c5a?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1543429728-c2a0b3dd5b07?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Renaissance gem with amazing wine tours, cuisine and Tuscan landscapes.",
         tags: ["Culture", "Wine", "Food"],
         rating: "4.8",
@@ -674,7 +674,7 @@ export class MemStorage implements IStorage {
       {
         name: "Naples",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1534308748696-8c7a6085e6b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1583460552833-8f1f8e5331e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Authentic Italian experience with the best pizza, nearby beaches and vibrant street life.",
         tags: ["Food", "Culture", "Beaches"],
         rating: "4.4",
@@ -683,7 +683,7 @@ export class MemStorage implements IStorage {
       {
         name: "Baja Sardinia",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1541074404370-947ed35fff39?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1597050608412-df88c8b0a619?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Luxurious beach clubs, crystal waters and vibrant nightlife on Sardinia's Emerald Coast.",
         tags: ["Beaches", "Luxury", "Nightlife"],
         rating: "4.9",
@@ -693,7 +693,7 @@ export class MemStorage implements IStorage {
       {
         name: "Valencia",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1596394642643-da47f5de8c2e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1599418798895-189392c73c08?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Beautiful city with incredible beaches, futuristic architecture and famous nightlife.",
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.6",
@@ -702,7 +702,7 @@ export class MemStorage implements IStorage {
       {
         name: "Bilbao",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1590362891991-f776e747a588?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1610968989154-5eb00b2e04c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Basque country gem with incredible gastronomy, modern art and vibrant culture.",
         tags: ["Food", "Culture", "Nightlife"],
         rating: "4.5",
@@ -720,7 +720,7 @@ export class MemStorage implements IStorage {
       {
         name: "Seville",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1558961166-68c7af5b9b97?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1587064712555-6e206484699d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Passionate city with flamenco, tapas bars and romantic atmosphere.",
         tags: ["Culture", "Food", "Nightlife"],
         rating: "4.5",
