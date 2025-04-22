@@ -122,9 +122,11 @@ export default function FeaturedDestinations() {
                     </div>
                     <span className="text-gray-300 ml-1 text-sm">{destination.rating} ({destination.reviewCount})</span>
                   </div>
-                  <Button variant="ghost" className="text-red-600 hover:text-red-700 font-medium">
-                    Explore
-                  </Button>
+                  <Link href="/destinations">
+                    <Button variant="ghost" className="text-red-600 hover:text-red-700 font-medium">
+                      Explore
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

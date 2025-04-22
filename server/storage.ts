@@ -667,6 +667,15 @@ export class MemStorage implements IStorage {
         reviewCount: 149
       },
       {
+        name: "Paris",
+        country: "France",
+        image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        description: "The City of Lights offers luxury experiences, world-class cuisine, and unforgettable nightlife.",
+        tags: ["Culture", "Food", "Luxury", "Nightlife"],
+        rating: "4.9",
+        reviewCount: 245
+      },
+      {
         name: "Seville",
         country: "Spain",
         image: "https://images.unsplash.com/photo-1558961166-68c7af5b9b97?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
