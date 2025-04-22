@@ -445,7 +445,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1596396051462-a5b98c629d15?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1512100356356-de1b84283e18?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "The ultimate party island with world-famous clubs and beautiful beaches.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.9",
