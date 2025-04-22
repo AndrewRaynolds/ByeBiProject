@@ -10,12 +10,14 @@ import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
 import SplittaBroPage from "@/pages/SplittaBroPage";
+import DestinationsPage from "@/pages/DestinationsPage";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/destinations" component={DestinationsPage} />
       <Route path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary/:id" component={ItineraryPage} />
