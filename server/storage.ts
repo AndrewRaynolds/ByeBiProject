@@ -738,7 +738,7 @@ export class MemStorage implements IStorage {
       {
         name: "Frankfurt",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1564722079273-35d15ce7eedf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1577185816322-21f6a92ffc1f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Financial heart of Germany with impressive skyscrapers and surprising nightlife.",
         tags: ["Nightlife", "Breweries", "Culture"],
         rating: "4.3",
@@ -747,7 +747,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cologne",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1578067141530-05b478de02ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1524905316052-a4990b955e83?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Famous for its carnival, beer culture and vibrant LGBT scene.",
         tags: ["Beer", "Nightlife", "Culture"],
         rating: "4.4",
@@ -765,7 +765,7 @@ export class MemStorage implements IStorage {
       {
         name: "Faro",
         country: "Portugal",
-        image: "https://images.unsplash.com/photo-1567156345550-52ddaeb97911?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1552042843-ed18bd009630?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Gateway to the Algarve with beautiful beaches and relaxed atmosphere.",
         tags: ["Beaches", "Nightlife", "Affordable"],
         rating: "4.3",
@@ -774,7 +774,7 @@ export class MemStorage implements IStorage {
       {
         name: "Galway",
         country: "Ireland",
-        image: "https://images.unsplash.com/photo-1564017552458-14927ce61b7c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1591416213802-1636b76acf0e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Ireland's cultural heart with amazing pubs, live music and friendly locals.",
         tags: ["Pubs", "Music", "Culture"],
         rating: "4.6",
@@ -783,7 +783,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cork",
         country: "Ireland",
-        image: "https://images.unsplash.com/photo-1582374458567-49011847696e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1567284783420-9c60fd0c3630?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Charming city with excellent pubs, brewery tours and nearby scenic countryside.",
         tags: ["Pubs", "Beer", "Culture"],
         rating: "4.4",
@@ -801,7 +801,7 @@ export class MemStorage implements IStorage {
       {
         name: "Marseille",
         country: "France",
-        image: "https://images.unsplash.com/photo-1572918284933-c21742e0a407?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1582880414862-2ed8f5162086?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Vibrant port city with Mediterranean flair, beaches and exciting nightlife.",
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.4",
@@ -810,7 +810,7 @@ export class MemStorage implements IStorage {
       {
         name: "Lyon",
         country: "France",
-        image: "https://images.unsplash.com/photo-1486151412355-1b16fad0a6f2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1603513492128-ba7bc9b3e143?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Gastronomic capital of France with incredible food scene and charming old town.",
         tags: ["Food", "Culture", "Nightlife"],
         rating: "4.5",
@@ -819,7 +819,7 @@ export class MemStorage implements IStorage {
       {
         name: "Heraklion",
         country: "Greece",
-        image: "https://images.unsplash.com/photo-1586156938613-769886aae531?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Crete's lively capital with nearby beaches, archaeological sites and party resorts.",
         tags: ["Beaches", "Nightlife", "History"],
         rating: "4.3",
@@ -837,7 +837,7 @@ export class MemStorage implements IStorage {
       {
         name: "Zagreb",
         country: "Croatia",
-        image: "https://images.unsplash.com/photo-1568125631245-a317a32e3148?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1582520122440-ca42c6c3a648?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Croatia's capital with trendy bars, affordable prices and nearby nature attractions.",
         tags: ["Nightlife", "Affordable", "Culture"],
         rating: "4.3",
@@ -846,7 +846,7 @@ export class MemStorage implements IStorage {
       {
         name: "Dubrovnik",
         country: "Croatia",
-        image: "https://images.unsplash.com/photo-1591085318719-7a83bde53c62?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1555990720-0065b7f51880?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         description: "Game of Thrones filming location with medieval walls and vibrant cliff bars.",
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.8",
