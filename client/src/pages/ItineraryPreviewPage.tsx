@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { FaClock, FaMapMarkerAlt, FaEuroSign, FaCheckCircle } from "react-icons/fa";
+import { FaClock, FaMapMarkerAlt, FaEuroSign, FaCheckCircle, FaCocktail, FaHotel, FaGlassCheers, FaBed } from "react-icons/fa";
 
 // Interfacce per il tipo di itinerario generato
 interface ScheduleItem {
@@ -241,7 +241,42 @@ export default function ItineraryPreviewPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Trip Highlights</CardTitle>
+                <CardTitle>Trip Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center">
+                    <FaHotel className="text-red-600 mr-3 text-xl" />
+                    <div>
+                      <h4 className="font-semibold">Destination</h4>
+                      <p className="text-gray-600">{generatedPlan.destination}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <FaClock className="text-red-600 mr-3 text-xl" />
+                    <div>
+                      <h4 className="font-semibold">Duration</h4>
+                      <p className="text-gray-600">{generatedPlan.days.length} Days</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <FaGlassCheers className="text-red-600 mr-3 text-xl" />
+                    <div>
+                      <h4 className="font-semibold">Activities</h4>
+                      <p className="text-gray-600">
+                        {generatedPlan.days.reduce((total, day) => total + day.schedule.length, 0)} planned experiences
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Barcelona Bachelor Tips</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
@@ -267,14 +302,36 @@ export default function ItineraryPreviewPage() {
                 
                 <Separator className="my-6" />
                 
-                <div className="text-center">
-                  <p className="mb-4 text-sm text-gray-600">Want to save this itinerary?</p>
-                  <Button
-                    onClick={() => setLocation('/auth')}
-                    className="bg-red-600 hover:bg-red-700 w-full"
-                  >
-                    Create Free Account
-                  </Button>
+                <div className="grid gap-4">
+                  <div className="text-center p-3 bg-slate-100 rounded-lg">
+                    <p className="font-semibold mb-1">What's included:</p>
+                    <ul className="text-sm text-gray-600 text-left pl-6 space-y-1">
+                      <li>• All activities and experiences</li>
+                      <li>• Club entrance fees</li>
+                      <li>• Restaurant reservations</li>
+                      <li>• Local transportation estimates</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="text-center p-3 bg-slate-100 rounded-lg">
+                    <p className="font-semibold mb-1">Not included:</p>
+                    <ul className="text-sm text-gray-600 text-left pl-6 space-y-1">
+                      <li>• Flights to Barcelona</li>
+                      <li>• Accommodation</li>
+                      <li>• Travel insurance</li>
+                      <li>• Personal expenses</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="text-center mt-2">
+                    <p className="mb-4 text-sm text-gray-600">Want to save this itinerary?</p>
+                    <Button
+                      onClick={() => setLocation('/auth')}
+                      className="bg-red-600 hover:bg-red-700 w-full"
+                    >
+                      Create Free Account
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
