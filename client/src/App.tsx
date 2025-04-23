@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
+import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
 import SplittaBroPage from "@/pages/SplittaBroPage";
 import DestinationsPage from "@/pages/DestinationsPage";
 import AuthPage from "@/pages/auth-page";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/destinations" component={DestinationsPage} />
       <ProtectedRoute path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
+      <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
       <ProtectedRoute path="/splittabro/:tripId?" component={SplittaBroPage} />
       <Route path="/auth" component={AuthPage} />

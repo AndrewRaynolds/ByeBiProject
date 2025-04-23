@@ -275,12 +275,18 @@ export default function TripPlanningForm() {
           // Redirect to the itinerary page if user is authenticated
           setLocation(`/itinerary/${tripId}`);
         } else {
-          // Se l'utente non è autenticato, mostra un messaggio di successo
+          // Se l'utente non è autenticato, mostra il risultato in un modal o in una nuova pagina
           toast({
             title: "Itinerary Generated Successfully!",
             description: "Create an account to save this itinerary for future reference!",
             variant: "default",
           });
+          
+          // Salviamo i dati dell'itinerario localmente
+          localStorage.setItem('lastGeneratedItinerary', JSON.stringify(result));
+          
+          // Redirigiamo alla pagina di visualizzazione itinerario non-autenticata
+          setLocation(`/itinerary/preview`);
         }
       } catch (err) {
         console.error("Error generating AI itinerary:", err);
