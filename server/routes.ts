@@ -1,4 +1,4 @@
-import express, { type Express, Request, Response } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -10,62 +10,21 @@ import {
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateItinerary } from "./services/openai";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // User routes
-  app.post("/api/register", async (req: Request, res: Response) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-      
-      const existingEmail = await storage.getUserByEmail(userData.email);
-      if (existingEmail) {
-        return res.status(400).json({ message: "Email already exists" });
-      }
-      
-      const user = await storage.createUser(userData);
-      
-      // Don't return password in response
-      const { password, ...userWithoutPassword } = user;
-      
-      return res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });
-      }
-      return res.status(500).json({ message: "Server error" });
-    }
-  });
+  // Setup authentication
+  setupAuth(app);
 
-  app.post("/api/login", async (req: Request, res: Response) => {
-    try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
-      }
-      
-      const user = await storage.getUserByUsername(username);
-      
-      if (!user || user.password !== password) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-      
-      // Don't return password in response
-      const { password: _, ...userWithoutPassword } = user;
-      
-      return res.status(200).json(userWithoutPassword);
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
+  // Authorization middleware
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+    if (req.isAuthenticated()) {
+      return next();
     }
-  });
+    res.status(401).json({ message: "Authentication required" });
+  };
 
-  app.post("/api/users/:id/premium", async (req: Request, res: Response) => {
+  app.post("/api/users/:id/premium", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const { isPremium } = req.body;
@@ -90,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trip routes
-  app.post("/api/trips", async (req: Request, res: Response) => {
+  app.post("/api/trips", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const tripData = insertTripSchema.parse(req.body);
       const trip = await storage.createTrip(tripData);
@@ -346,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OpenAI-powered itinerary generation
-  app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
+  app.post("/api/generate-itinerary", isAuthenticated, async (req: Request, res: Response) => {
     try {
       // Validate the incoming request
       const itinerarySchema = z.object({
