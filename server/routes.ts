@@ -320,17 +320,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const requestData = itinerarySchema.parse(req.body);
       
-      // Check if user is premium (optional validation)
-      // In development mode, allow all users to generate itineraries
-      if (process.env.NODE_ENV !== "development") {
-        const userId = req.body.userId;
-        if (userId) {
-          const user = await storage.getUser(userId);
-          if (!user || !user.isPremium) {
-            return res.status(403).json({ 
-              message: "This feature requires a premium subscription" 
-            });
-          }
+      // Permettiamo a tutti gli utenti di generare itinerari gratuitamente
+      // Il controllo premium è stato rimosso come richiesto
+      const userId = req.body.userId;
+      if (userId) {
+        // Verifichiamo solo che l'utente esista
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ 
+            message: "User not found" 
+          });
         }
       }
       
