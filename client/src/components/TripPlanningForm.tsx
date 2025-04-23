@@ -318,7 +318,7 @@ export default function TripPlanningForm() {
                           <FormItem>
                             <FormLabel>Trip Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Mike's Last Ride" {...field} />
+                              <Input placeholder="Mike's Last Ride" className="bg-white" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -337,6 +337,7 @@ export default function TripPlanningForm() {
                                 min="1" 
                                 max="30" 
                                 placeholder="6" 
+                                className="bg-white"
                                 {...field}
                                 onChange={e => field.onChange(Number(e.target.value))}
                               />
