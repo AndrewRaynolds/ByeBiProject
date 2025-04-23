@@ -13,6 +13,7 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
+  isAuthenticated: boolean;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
@@ -48,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: isInitialized,
+    // Ensure we always have null rather than undefined for proper typing
+    select: (data) => data || null,
   });
 
   // Initialize auth state
@@ -132,12 +135,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Determine if user is authenticated
+  const isAuthenticated = !!user;
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isLoading,
         error,
+        isAuthenticated,
         loginMutation,
         logoutMutation,
         registerMutation,

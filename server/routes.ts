@@ -321,13 +321,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestData = itinerarySchema.parse(req.body);
       
       // Check if user is premium (optional validation)
-      const userId = req.body.userId;
-      if (userId) {
-        const user = await storage.getUser(userId);
-        if (!user || !user.isPremium) {
-          return res.status(403).json({ 
-            message: "This feature requires a premium subscription" 
-          });
+      // In development mode, allow all users to generate itineraries
+      if (process.env.NODE_ENV !== "development") {
+        const userId = req.body.userId;
+        if (userId) {
+          const user = await storage.getUser(userId);
+          if (!user || !user.isPremium) {
+            return res.status(403).json({ 
+              message: "This feature requires a premium subscription" 
+            });
+          }
         }
       }
       
