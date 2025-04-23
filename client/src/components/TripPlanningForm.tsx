@@ -29,11 +29,58 @@ const formSchema = z.object({
   activities: z.array(z.string()).nonempty("Select at least one activity"),
   specialRequests: z.string().optional(),
   includeMerch: z.boolean().default(false),
+}).refine((data) => {
+  // Verifica che la data di fine sia successiva alla data di inizio
+  if (!data.startDate || !data.endDate) return true;
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  return end >= start;
+}, {
+  message: "End date must be after start date",
+  path: ["endDate"]
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Rimosso array departureCities per permettere l'inserimento libero di qualsiasi città
+// Lista di città europee per l'autocompletamento
+const europeanCities = [
+  // Italia
+  "Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna", "Firenze", "Bari", "Catania", "Venezia", "Verona",
+  // Germania  
+  "Berlin", "Hamburg", "Munich", "Cologne", "Frankfurt", "Stuttgart", "Düsseldorf", "Leipzig", "Dortmund", "Essen", "Bremen", "Dresden",
+  // Francia
+  "Paris", "Marseille", "Lyon", "Toulouse", "Nice", "Nantes", "Strasbourg", "Montpellier", "Bordeaux", "Lille", "Rennes", "Reims",
+  // Spagna
+  "Madrid", "Barcelona", "Valencia", "Seville", "Zaragoza", "Málaga", "Murcia", "Palma", "Las Palmas", "Bilbao", "Alicante", "Córdoba",
+  // Regno Unito
+  "London", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Bristol", "Sheffield", "Leeds", "Edinburgh", "Leicester", "Coventry", "Cardiff",
+  // Paesi Bassi
+  "Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven", "Tilburg", "Groningen", "Almere", "Breda", "Nijmegen", "Apeldoorn", "Haarlem",
+  // Belgio
+  "Brussels", "Antwerp", "Ghent", "Charleroi", "Liège", "Bruges", "Namur", "Leuven", "Mons", "Aalst", "Mechelen", "Hasselt",
+  // Portogallo
+  "Lisbon", "Porto", "Amadora", "Braga", "Coimbra", "Funchal", "Setúbal", "Aveiro", "Évora", "Faro", "Guimarães", "Viseu",
+  // Svizzera
+  "Zurich", "Geneva", "Basel", "Bern", "Lausanne", "Lucerne", "St. Gallen", "Lugano", "Biel", "Thun", "Köniz", "Winterthur",
+  // Austria
+  "Vienna", "Graz", "Linz", "Salzburg", "Innsbruck", "Klagenfurt", "Villach", "Wels", "Dornbirn", "Wiener Neustadt", "Feldkirch", "Bregenz",
+  // Repubblica Ceca
+  "Prague", "Brno", "Ostrava", "Plzeň", "Liberec", "Olomouc", "České Budějovice", "Hradec Králové", "Ústí nad Labem", "Pardubice",
+  // Polonia
+  "Warsaw", "Kraków", "Łódź", "Wrocław", "Poznań", "Gdańsk", "Szczecin", "Bydgoszcz", "Lublin", "Katowice", "Białystok", "Gdynia",
+  // Svezia
+  "Stockholm", "Gothenburg", "Malmö", "Uppsala", "Västerås", "Örebro", "Linköping", "Helsingborg", "Norrköping", "Jönköping", "Lund", "Umeå",
+  // Norvegia
+  "Oslo", "Bergen", "Trondheim", "Stavanger", "Drammen", "Fredrikstad", "Kristiansand", "Sandnes", "Tromsø", "Sarpsborg", "Skien", "Ålesund",
+  // Danimarca
+  "Copenhagen", "Aarhus", "Odense", "Aalborg", "Frederiksberg", "Esbjerg", "Randers", "Kolding", "Horsens", "Vejle", "Roskilde", "Herning",
+  // Finlandia
+  "Helsinki", "Espoo", "Tampere", "Vantaa", "Oulu", "Turku", "Jyväskylä", "Lahti", "Kuopio", "Kouvola", "Pori", "Joensuu",
+  // Irlanda
+  "Dublin", "Cork", "Limerick", "Galway", "Waterford", "Drogheda", "Dundalk", "Swords", "Bray", "Navan", "Ennis", "Kilkenny",
+  // Grecia
+  "Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Chania", "Chalcis", "Agrinio", "Katerini", "Trikala"
+];
 
 const activities = [
   { value: "nightclubs", label: "Nightclubs" },
@@ -77,7 +124,11 @@ const getCountryCode = (country: string): string => {
 export default function TripPlanningForm() {
   const [step, setStep] = useState(1);
   const [budgetDisplay, setBudgetDisplay] = useState("800");
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [filteredCities, setFilteredCities] = useState<string[]>([]);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
@@ -255,6 +306,59 @@ export default function TripPlanningForm() {
     setBudgetDisplay(budgetValue.toString());
   }, [form.watch("budget")]);
 
+  // Gestisci la ricerca delle città
+  const handleCitySearch = (value: string) => {
+    setCitySearchTerm(value);
+    
+    if (value.length < 2) {
+      setFilteredCities([]);
+      setShowCityDropdown(false);
+      return;
+    }
+    
+    const matches = europeanCities.filter(city => 
+      city.toLowerCase().includes(value.toLowerCase())
+    ).slice(0, 5); // Mostra solo i primi 5 risultati
+    
+    setFilteredCities(matches);
+    setShowCityDropdown(matches.length > 0);
+  };
+  
+  // Seleziona una città dalla lista
+  const selectCity = (city: string) => {
+    form.setValue("departureCity", city);
+    setCitySearchTerm(city);
+    setShowCityDropdown(false);
+  };
+  
+  // Chiudi il dropdown quando si clicca al di fuori
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setShowCityDropdown(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  
+  // Verifica validità della città selezionata
+  useEffect(() => {
+    // Controlla se la città inserita è nella lista
+    const cityValue = form.watch("departureCity");
+    if (cityValue && !europeanCities.includes(cityValue)) {
+      form.setError("departureCity", {
+        type: "manual",
+        message: "Please select a valid city from the list"
+      });
+    } else {
+      form.clearErrors("departureCity");
+    }
+  }, [form.watch("departureCity")]);
+  
   // Scroll to top of form when changing steps
   useEffect(() => {
     if (formRef.current) {
@@ -390,14 +494,42 @@ export default function TripPlanningForm() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Where are you traveling from?</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your departure city" 
-                                {...field} 
-                              />
-                            </FormControl>
+                            <div className="relative" ref={cityDropdownRef}>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Type to search cities (e.g. 'Rome', 'Berlin')" 
+                                  value={citySearchTerm}
+                                  onChange={(e) => {
+                                    handleCitySearch(e.target.value);
+                                    field.onChange(e.target.value);
+                                  }}
+                                  onFocus={() => {
+                                    if (citySearchTerm.length >= 2) {
+                                      setShowCityDropdown(true);
+                                    }
+                                  }}
+                                  className="bg-white"
+                                />
+                              </FormControl>
+                              
+                              {showCityDropdown && filteredCities.length > 0 && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                                  <ul className="py-1">
+                                    {filteredCities.map((city, index) => (
+                                      <li 
+                                        key={index}
+                                        className="px-3 py-2 hover:bg-red-50 cursor-pointer"
+                                        onClick={() => selectCity(city)}
+                                      >
+                                        {city}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
                             <FormDescription>
-                              You can start your trip from anywhere in Europe
+                              Please select from the available European cities
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
