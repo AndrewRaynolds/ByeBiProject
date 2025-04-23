@@ -12,7 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Destination, Experience } from "@shared/schema";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import ReactCountryFlag from "react-country-flag";

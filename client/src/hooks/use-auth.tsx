@@ -138,18 +138,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Determine if user is authenticated
   const isAuthenticated = !!user;
 
+  // Create a properly typed context value
+  const contextValue: AuthContextType = {
+    user,
+    isLoading,
+    error,
+    isAuthenticated,
+    loginMutation,
+    logoutMutation,
+    registerMutation,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        error,
-        isAuthenticated,
-        loginMutation,
-        logoutMutation,
-        registerMutation,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
