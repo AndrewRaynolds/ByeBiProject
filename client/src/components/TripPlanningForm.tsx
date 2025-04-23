@@ -150,31 +150,34 @@ export default function TripPlanningForm() {
 
   // Handle form submission
   const onSubmit = async (data: FormValues) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication required",
-        description: "Please login or register to save your trip.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
-      const tripData = {
-        ...data,
-        userId: user?.id
-      };
+      // Se l'utente è autenticato, salviamo il viaggio nel database
+      let tripId = 0;
       
-      const response = await apiRequest("POST", "/api/trips", tripData);
-      const trip = await response.json();
-      
-      toast({
-        title: "Trip saved!",
-        description: "Your trip has been created. Generating itineraries with AI...",
-      });
-      
-      // Invalidate queries to refetch data
-      queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user?.id}`] });
+      if (isAuthenticated && user) {
+        const tripData = {
+          ...data,
+          userId: user.id
+        };
+        
+        const response = await apiRequest("POST", "/api/trips", tripData);
+        const trip = await response.json();
+        tripId = trip.id;
+        
+        toast({
+          title: "Trip saved!",
+          description: "Your trip has been created. Generating itineraries with AI...",
+        });
+        
+        // Invalidate queries to refetch data
+        queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
+      } else {
+        // Utente non autenticato, possiamo comunque generare l'itinerario
+        toast({
+          title: "Generating itinerary",
+          description: "Creating your itinerary. Note: login to save this trip for future reference.",
+        });
+      }
       
       // Calcola il numero di giorni dalla data di inizio e fine
       const startDate = new Date(data.startDate);
@@ -192,8 +195,8 @@ export default function TripPlanningForm() {
       
       // Prepara i dati per la generazione dell'itinerario
       const itineraryRequest = {
-        tripId: trip.id,
-        userId: user?.id,
+        tripId, // Usa l'ID del viaggio salvato o 0 se non autenticato
+        userId: user?.id, // Potrebbe essere undefined se non autenticato
         destination: primaryDestination,
         country: country,
         days: tripDays,
@@ -211,33 +214,32 @@ export default function TripPlanningForm() {
         });
         
         // Chiamata all'API per generare l'itinerario con OpenAI
-        await apiRequest("POST", "/api/generate-itinerary", itineraryRequest);
+        const response = await apiRequest("POST", "/api/generate-itinerary", itineraryRequest);
+        const result = await response.json();
         
-        // Invalida la cache per i nuovi itinerari
-        queryClient.invalidateQueries({ queryKey: [`/api/trips/${trip.id}/itineraries`] });
-        
-        toast({
-          title: "Itinerary Ready!",
-          description: "Your personalized AI-generated itinerary is ready to view!",
-          variant: "default",
-        });
+        if (isAuthenticated && tripId > 0) {
+          // Invalida la cache per i nuovi itinerari solo se l'utente è autenticato
+          queryClient.invalidateQueries({ queryKey: [`/api/trips/${tripId}/itineraries`] });
+          
+          // Redirect to the itinerary page if user is authenticated
+          setLocation(`/itinerary/${tripId}`);
+        } else {
+          // Se l'utente non è autenticato, mostra un messaggio di successo
+          toast({
+            title: "Itinerary Generated Successfully!",
+            description: "Create an account to save this itinerary for future reference!",
+            variant: "default",
+          });
+        }
       } catch (err) {
         console.error("Error generating AI itinerary:", err);
         
-        // Se c'è un errore con l'IA, usiamo gli itinerari predefiniti
         toast({
-          title: "Using pre-built itineraries",
-          description: "AI generation failed. We've created standard itineraries for you instead.",
+          title: "Error Generating Itinerary",
+          description: "There was a problem creating your itinerary. Please try again.",
           variant: "destructive",
         });
-        
-        // Usa gli itinerari mock come fallback
-        await apiRequest("GET", `/api/trips/${trip.id}/itineraries`);
-        queryClient.invalidateQueries({ queryKey: [`/api/trips/${trip.id}/itineraries`] });
       }
-      
-      // Redirect to the itinerary page
-      setLocation(`/itinerary/${trip.id}`);
     } catch (error) {
       toast({
         title: "Error",

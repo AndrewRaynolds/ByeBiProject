@@ -305,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OpenAI-powered itinerary generation
-  app.post("/api/generate-itinerary", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
       // Validate the incoming request
       const itinerarySchema = z.object({
