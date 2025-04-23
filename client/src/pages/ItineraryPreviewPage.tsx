@@ -58,14 +58,63 @@ export default function ItineraryPreviewPage() {
   useEffect(() => {
     // Recupera i dati dell'itinerario da localStorage
     const storedData = localStorage.getItem('lastGeneratedItinerary');
+    
     if (storedData) {
       try {
-        const parsedData = JSON.parse(storedData);
-        setItineraryData(parsedData);
+        console.log("Stored itinerary data:", storedData);
         
-        // Se ci sono giorni nell'itinerario, imposta il primo giorno come attivo
-        if (parsedData.generatedPlan.days && parsedData.generatedPlan.days.length > 0) {
-          setActiveDay(parsedData.generatedPlan.days[0].day);
+        // Tenta di analizzare i dati dell'itinerario
+        const parsedData = JSON.parse(storedData);
+        
+        // Verifica il formato dei dati
+        if (parsedData.itinerary && parsedData.generatedPlan) {
+          // Formato originale
+          setItineraryData(parsedData);
+          
+          // Se ci sono giorni nell'itinerario, imposta il primo giorno come attivo
+          if (parsedData.generatedPlan.days && parsedData.generatedPlan.days.length > 0) {
+            setActiveDay(parsedData.generatedPlan.days[0].day);
+          }
+        } else if (parsedData.title && parsedData.destination) {
+          // Formato semplificato (fallback)
+          // Adatta i dati al formato previsto
+          const itineraryId = Math.floor(Math.random() * 1000); // ID random per il frontend
+          
+          const adaptedData = {
+            itinerary: {
+              tripId: 0,
+              name: parsedData.title,
+              description: parsedData.summary || "A customized bachelor party itinerary",
+              duration: parsedData.days?.length ? `${parsedData.days.length} Days` : "3 Days",
+              price: 0,
+              image: `https://source.unsplash.com/random/800x400/?${parsedData.destination.split(",")[0].toLowerCase()},travel`,
+              rating: "5.0",
+              highlights: parsedData.tips || [],
+              includes: ["Accommodation", "Activities", "Custom Experience"],
+              id: itineraryId,
+              createdAt: new Date().toISOString()
+            },
+            generatedPlan: parsedData
+          };
+          
+          // Se non ci sono giorni o sono vuoti, creiamo un giorno di esempio
+          if (!adaptedData.generatedPlan.days || adaptedData.generatedPlan.days.length === 0) {
+            adaptedData.generatedPlan.days = [{
+              day: 1,
+              title: "Free Day to Explore",
+              schedule: [{
+                time: "10:00",
+                activity: "Morning Activity",
+                description: "Start your day with a great activity in " + parsedData.destination
+              }]
+            }];
+          }
+          
+          setItineraryData(adaptedData);
+          setActiveDay(1);
+        } else {
+          // Formato non riconosciuto
+          throw new Error("Formato dati non riconosciuto");
         }
       } catch (error) {
         console.error('Error parsing stored itinerary', error);
@@ -74,6 +123,7 @@ export default function ItineraryPreviewPage() {
           description: "Could not load the itinerary data. Please try generating a new one.",
           variant: "destructive",
         });
+        setTimeout(() => setLocation('/'), 3000);
       }
     } else {
       // Se non ci sono dati, torna alla home
@@ -82,7 +132,7 @@ export default function ItineraryPreviewPage() {
         description: "Please complete the trip planning form to generate an itinerary.",
         variant: "destructive",
       });
-      setLocation('/');
+      setTimeout(() => setLocation('/'), 3000);
     }
   }, [toast, setLocation]);
 

@@ -209,7 +209,15 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
         return generateFallbackItinerary(request);
       }
     } catch (openaiError) {
-      console.error("OpenAI API error, using fallback itinerary:", openaiError);
+      console.error("OpenAI API error, using fallback itinerary:", JSON.stringify(openaiError));
+      
+      // Verifica se l'API key è configurata
+      if (!process.env.OPENAI_API_KEY) {
+        console.error("OPENAI_API_KEY non configurata nell'ambiente");
+      } else {
+        console.log("OPENAI_API_KEY è presente nell'ambiente");
+      }
+      
       return generateFallbackItinerary(request);
     }
   } catch (error) {
