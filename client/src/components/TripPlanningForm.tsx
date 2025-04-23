@@ -309,7 +309,7 @@ export default function TripPlanningForm() {
               <form onSubmit={form.handleSubmit(onSubmit)}>
                 {/* Step 1: Basics */}
                 {step === 1 && (
-                  <div className="p-6">
+                  <div className="p-6 [&_input]:bg-white">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <FormField
                         control={form.control}
