@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { generateItinerary } from "./services/openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // User routes
@@ -341,6 +342,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json({ message: "Expense deleted successfully" });
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // OpenAI-powered itinerary generation
+  app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
+    try {
+      // Validate the incoming request
+      const itinerarySchema = z.object({
+        destination: z.string(),
+        country: z.string(),
+        days: z.number().int().min(1).max(14),
+        groupSize: z.number().int().min(1).max(30),
+        budget: z.enum(["budget", "standard", "luxury"]),
+        interests: z.array(z.string()),
+        theme: z.string()
+      });
+      
+      const requestData = itinerarySchema.parse(req.body);
+      
+      // Check if user is premium (optional validation)
+      const userId = req.body.userId;
+      if (userId) {
+        const user = await storage.getUser(userId);
+        if (!user || !user.isPremium) {
+          return res.status(403).json({ 
+            message: "This feature requires a premium subscription" 
+          });
+        }
+      }
+      
+      // Generate the itinerary using OpenAI
+      const generatedItinerary = await generateItinerary(requestData);
+      
+      // Create a persistent itinerary in storage based on the generated one
+      const itineraryToSave = {
+        tripId: req.body.tripId || 0,
+        name: generatedItinerary.title,
+        description: generatedItinerary.summary,
+        duration: `${requestData.days} Days`,
+        price: parseFloat(generatedItinerary.estimatedTotalCost.replace(/[^0-9.]/g, '')),
+        image: `https://source.unsplash.com/random/800x400/?${requestData.destination.toLowerCase()},travel`,
+        rating: "5.0",
+        highlights: generatedItinerary.tips,
+        includes: ["Accommodation", "Activities", "Custom Experience"]
+      };
+      
+      const savedItinerary = await storage.createItinerary(itineraryToSave);
+      
+      // Return both the AI-generated detailed itinerary and the saved basic itinerary
+      return res.status(200).json({
+        itinerary: savedItinerary,
+        generatedPlan: generatedItinerary
+      });
+    } catch (error) {
+      console.error("Error generating itinerary:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid itinerary parameters", 
+          errors: fromZodError(error).message 
+        });
+      }
+      
+      return res.status(500).json({ 
+        message: "Failed to generate itinerary",
+        error: error.message
+      });
     }
   });
 
