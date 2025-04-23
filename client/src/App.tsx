@@ -11,17 +11,21 @@ import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
 import SplittaBroPage from "@/pages/SplittaBroPage";
 import DestinationsPage from "@/pages/DestinationsPage";
+import AuthPage from "@/pages/auth-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/destinations" component={DestinationsPage} />
-      <Route path="/secret-blog" component={SecretBlogPage} />
+      <ProtectedRoute path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
-      <Route path="/itinerary/:id" component={ItineraryPage} />
-      <Route path="/splittabro/:tripId?" component={SplittaBroPage} />
+      <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
+      <ProtectedRoute path="/splittabro/:tripId?" component={SplittaBroPage} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -30,10 +34,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
