@@ -142,19 +142,19 @@ export default function TripPlanningForm() {
     queryKey: ["/api/experiences"],
   });
 
-  // Form setup
+  // Form setup with default values to avoid validation issues
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
+      name: "Bachelor Party Trip",
       participants: 6,
-      startDate: "",
-      endDate: "",
-      departureCity: "",
-      destinations: [],
-      experienceType: "",
+      startDate: format(new Date(), "yyyy-MM-dd"),
+      endDate: format(new Date(new Date().setDate(new Date().getDate() + 3)), "yyyy-MM-dd"),
+      departureCity: "Berlin",
+      destinations: destinations && destinations.length > 0 ? [`${destinations[0].name}, ${destinations[0].country}`] : ["Rome, Italy"],
+      experienceType: experiences && experiences.length > 0 ? experiences[0].name : "The Ultimate BroNight",
       budget: 800,
-      activities: [],
+      activities: ["nightclubs", "barCrawl"],
       specialRequests: "",
       includeMerch: false,
     },
@@ -202,10 +202,19 @@ export default function TripPlanningForm() {
   // Handle form submission
   const onSubmit = async (data: FormValues) => {
     try {
+      // Visualizza un messaggio di debug per controllare i dati inviati
+      console.log("Form submitted with data:", data);
+      
+      toast({
+        title: "Form submitted",
+        description: "Processing your request...",
+      });
+      
       // Se l'utente è autenticato, salviamo il viaggio nel database
       let tripId = 0;
       
       if (isAuthenticated && user) {
+        console.log("User is authenticated, saving trip to database");
         const tripData = {
           ...data,
           userId: user.id
@@ -223,6 +232,7 @@ export default function TripPlanningForm() {
         // Invalidate queries to refetch data
         queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
       } else {
+        console.log("User is not authenticated, proceeding with itinerary generation only");
         // Utente non autenticato, possiamo comunque generare l'itinerario
         toast({
           title: "Generating itinerary",
@@ -418,7 +428,14 @@ export default function TripPlanningForm() {
             </div>
             
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
+              <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                console.error('Form validation failed with errors:', errors);
+                toast({
+                  title: "Form Validation Failed",
+                  description: "Please check the form for errors and try again.",
+                  variant: "destructive",
+                });
+              })}>
                 {/* Step 1: Basics */}
                 {step === 1 && (
                   <div className="p-6 [&_input]:bg-white">
