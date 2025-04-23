@@ -941,7 +941,7 @@ export class MemStorage implements IStorage {
         name: "Custom Mugs",
         description: "Personalized mugs to commemorate the bachelor party.",
         price: 1299,
-        image: "https://images.unsplash.com/photo-1609873539821-3b46e0efdf37?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=200&q=80",
+        image: "https://images.unsplash.com/photo-1574153388319-221a0089e842?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
         type: "mug"
       },
       {
@@ -955,7 +955,7 @@ export class MemStorage implements IStorage {
         name: "Custom Badges",
         description: "Pin badges with custom designs for your bachelor party.",
         price: 799,
-        image: "https://images.unsplash.com/photo-1524259062458-8038c526102b?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=200&q=80",
+        image: "https://images.unsplash.com/photo-1646934291540-8e0cfa53b66e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
         type: "badges"
       }
     ];
