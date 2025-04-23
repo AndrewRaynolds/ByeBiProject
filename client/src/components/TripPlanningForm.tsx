@@ -254,6 +254,8 @@ export default function TripPlanningForm() {
       if (data.budget < 500) budgetLevel = "budget";
       else if (data.budget > 1200) budgetLevel = "luxury";
       
+      console.log("Budget level determined:", budgetLevel);
+      
       // Prepara i dati per la generazione dell'itinerario
       const itineraryRequest = {
         tripId, // Usa l'ID del viaggio salvato o 0 se non autenticato
@@ -266,6 +268,8 @@ export default function TripPlanningForm() {
         interests: data.activities,
         theme: data.experienceType
       };
+      
+      console.log("Sending itinerary request:", JSON.stringify(itineraryRequest));
       
       try {
         // Mostra un toast per informare l'utente che l'IA sta generando l'itinerario
