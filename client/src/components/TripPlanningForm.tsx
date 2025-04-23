@@ -170,15 +170,71 @@ export default function TripPlanningForm() {
       
       toast({
         title: "Trip saved!",
-        description: "Your trip has been created. Generating itineraries...",
+        description: "Your trip has been created. Generating itineraries with AI...",
       });
       
       // Invalidate queries to refetch data
       queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user?.id}`] });
       
-      // Generate itineraries before redirecting
-      await apiRequest("GET", `/api/trips/${trip.id}/itineraries`);
-      queryClient.invalidateQueries({ queryKey: [`/api/trips/${trip.id}/itineraries`] });
+      // Calcola il numero di giorni dalla data di inizio e fine
+      const startDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+      const tripDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      
+      // Usa OpenAI per generare un itinerario personalizzato
+      const primaryDestination = data.destinations[0].split(', ')[0]; // Prende la prima destinazione
+      const country = data.destinations[0].split(', ')[1]; // Prende il paese della prima destinazione
+      
+      // Determina il budget in base al valore scelto
+      let budgetLevel: "budget" | "standard" | "luxury" = "standard";
+      if (data.budget < 500) budgetLevel = "budget";
+      else if (data.budget > 1200) budgetLevel = "luxury";
+      
+      // Prepara i dati per la generazione dell'itinerario
+      const itineraryRequest = {
+        tripId: trip.id,
+        userId: user?.id,
+        destination: primaryDestination,
+        country: country,
+        days: tripDays,
+        groupSize: data.participants,
+        budget: budgetLevel,
+        interests: data.activities,
+        theme: data.experienceType
+      };
+      
+      try {
+        // Mostra un toast per informare l'utente che l'IA sta generando l'itinerario
+        toast({
+          title: "AI Planning",
+          description: "Our AI is crafting the perfect bachelor party based on your preferences. This might take a moment...",
+        });
+        
+        // Chiamata all'API per generare l'itinerario con OpenAI
+        await apiRequest("POST", "/api/generate-itinerary", itineraryRequest);
+        
+        // Invalida la cache per i nuovi itinerari
+        queryClient.invalidateQueries({ queryKey: [`/api/trips/${trip.id}/itineraries`] });
+        
+        toast({
+          title: "Itinerary Ready!",
+          description: "Your personalized AI-generated itinerary is ready to view!",
+          variant: "default",
+        });
+      } catch (err) {
+        console.error("Error generating AI itinerary:", err);
+        
+        // Se c'è un errore con l'IA, usiamo gli itinerari predefiniti
+        toast({
+          title: "Using pre-built itineraries",
+          description: "AI generation failed. We've created standard itineraries for you instead.",
+          variant: "destructive",
+        });
+        
+        // Usa gli itinerari mock come fallback
+        await apiRequest("GET", `/api/trips/${trip.id}/itineraries`);
+        queryClient.invalidateQueries({ queryKey: [`/api/trips/${trip.id}/itineraries`] });
+      }
       
       // Redirect to the itinerary page
       setLocation(`/itinerary/${trip.id}`);

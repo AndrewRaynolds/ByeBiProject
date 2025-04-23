@@ -395,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         itinerary: savedItinerary,
         generatedPlan: generatedItinerary
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating itinerary:", error);
       
       if (error instanceof z.ZodError) {
@@ -407,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(500).json({ 
         message: "Failed to generate itinerary",
-        error: error.message
+        error: error.message || String(error)
       });
     }
   });
