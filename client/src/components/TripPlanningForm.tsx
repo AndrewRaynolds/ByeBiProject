@@ -487,7 +487,7 @@ export default function TripPlanningForm() {
                                             />
                                             <label 
                                               htmlFor={`dest-${destination.id}`} 
-                                              className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
+                                              className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-white text-black peer-checked:text-red-600"
                                             >
 
                                               <div className="flex items-center">
@@ -508,7 +508,7 @@ export default function TripPlanningForm() {
                                       <div className="p-4">
                                         <div className="flex flex-wrap gap-2">
                                           {field.value.map(destName => (
-                                            <div key={destName} className="bg-red-600/10 text-red-600 px-3 py-1 rounded-full text-sm flex items-center">
+                                            <div key={destName} className="bg-white text-red-600 border border-gray-300 px-3 py-1 rounded-full text-sm flex items-center">
                                               <span>{destName}</span>
                                               <button 
                                                 type="button"
@@ -559,7 +559,7 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`exp-${experience.id}`} 
-                                    className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
+                                    className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-white text-black peer-checked:text-red-600"
                                   >
 
                                     <div>
@@ -658,7 +658,7 @@ export default function TripPlanningForm() {
                                   />
                                   <label 
                                     htmlFor={`act-${activity.value}`} 
-                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-red-900 text-black peer-checked:text-white"
+                                    className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition-all hover:border-primary peer-checked:border-red-600 peer-checked:bg-white text-black peer-checked:text-red-600"
                                   >
 
                                     <div>
