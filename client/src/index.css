@@ -7,7 +7,53 @@
     @apply border-border;
   }
 
+  html {
+    /* Miglioramento dello scroll */
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    /* Previene l'overshooting dello scroll */
+    overscroll-behavior-y: none;
+    /* Rendering più fluido */
+    text-rendering: optimizeSpeed;
+  }
+
+  /* Ottimizzazioni per i link */
+  a, button {
+    @apply cursor-pointer touch-manipulation;
+  }
+
+  /* Movimento e animations ottimizzate */
+  .animate-optimized {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  /* Miglioramento transizioni */
+  .transition {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Scrollbar personalizzata */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
   }
 }

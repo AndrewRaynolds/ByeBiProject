@@ -15,6 +15,8 @@ import DestinationsPage from "@/pages/DestinationsPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { lazy, Suspense } from "react";
+import PerformanceOptimizer from "@/lib/performance-optimizer";
 
 function Router() {
   return (
@@ -39,7 +41,15 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-          <Router />
+          {/* Aggiungiamo l'ottimizzatore di performance globale */}
+          <PerformanceOptimizer />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-pulse text-xl font-semibold">Caricamento...</div>
+            </div>
+          }>
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
