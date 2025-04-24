@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,44 +9,55 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
+import { throttle } from "@/lib/performance";
 
-export default function Header() {
+// Utilizziamo React.memo per evitare re-render inutili
+const Header = memo(function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Utilizziamo il nostro hook ottimizzato per lo scroll
+  const { isScrolled } = useOptimizedScroll({
+    throttleMs: 50 // Reattivo ma ottimizzato
+  });
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
+  // Utilizziamo throttle per limitare la frequenza delle chiamate
+  const toggleMobileMenu = throttle(() => {
+    setMobileMenuOpen(prev => !prev);
+  }, 200);
 
-  const navigateToAuth = (defaultTab: string = "login") => {
+  const navigateToAuth = throttle((defaultTab: string = "login") => {
     navigate(`/auth?tab=${defaultTab}`);
-  };
+  }, 300);
 
-  const handleLogout = () => {
+  const handleLogout = throttle(() => {
     logoutMutation.mutate();
-  };
+  }, 300);
 
-  // Close mobile menu when clicking outside
+  // Chiude il menu mobile quando si clicca all'esterno
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+    // Ottimizzazione: utilizziamo un unico event listener con throttle
+    const handleClickOutside = throttle((event: MouseEvent) => {
+      if (mobileMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMobileMenuOpen(false);
       }
-    }
+    }, 100);
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // Utilizziamo passive: true per migliorare le performance
+    document.addEventListener("mousedown", handleClickOutside, { passive: true });
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [mobileMenuOpen]); // Dipendenza da mobileMenuOpen per evitare calcoli inutili
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+    <header className={`bg-white sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md py-1' : 'py-2'}`}>
+      <div className="container mx-auto px-4 py-2 flex justify-between items-center">
         <div className="flex items-center">
-          <Link href="/" className="font-poppins font-bold text-2xl">
+          <Link href="/" className="font-poppins font-bold text-2xl transform transition-transform hover:scale-105">
             <span className="text-black">Bye</span><span className="text-red-600">Bro</span>
           </Link>
         </div>
@@ -188,4 +199,6 @@ export default function Header() {
       )}
     </header>
   );
-}
+});
+
+export default Header;
