@@ -18,6 +18,8 @@ export default function CustomMerchandise() {
 
   const { data: merchandise, isLoading, error } = useQuery<Merchandise[]>({
     queryKey: ["/api/merchandise"],
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const handleAddToCart = () => {
@@ -87,6 +89,11 @@ export default function CustomMerchandise() {
   const tShirts = merchandise?.filter(item => item.type === "tshirt") || [];
   const caps = merchandise?.filter(item => item.type === "cap") || [];
   const smallItems = merchandise?.filter(item => !["tshirt", "cap"].includes(item.type)) || [];
+
+  // Funzione helper per aggiungere il cache buster alle URL delle immagini
+  const getCacheBustedImageUrl = (url: string) => {
+    return `${url}?t=${Date.now()}`;
+  };
 
   return (
     <section className="py-16 bg-white">

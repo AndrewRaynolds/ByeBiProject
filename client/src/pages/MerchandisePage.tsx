@@ -17,6 +17,12 @@ export default function MerchandisePage() {
   const [cart, setCart] = useState<Array<{ id: number; quantity: number }>>([]);
   const { toast } = useToast();
 
+  // Aggiungiamo un useEffect per invalidare la cache all'avvio del componente
+  useEffect(() => {
+    // Invalida la cache della query
+    queryClient.invalidateQueries({ queryKey: ["/api/merchandise"] });
+  }, []);
+
   const { data: merchandise, isLoading, error } = useQuery<Merchandise[]>({
     queryKey: ["/api/merchandise"],
     staleTime: 0, // Non usare la cache
@@ -116,7 +122,7 @@ export default function MerchandisePage() {
                       <Card key={item.id} className="overflow-hidden group">
                         <div className="relative h-64 overflow-hidden">
                           <img 
-                            src={item.image} 
+                            src={`${item.image}?t=${Date.now()}`} 
                             alt={item.name} 
                             className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
                           />
