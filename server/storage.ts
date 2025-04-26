@@ -938,24 +938,24 @@ export class MemStorage implements IStorage {
         type: "cap"
       },
       {
-        name: "Custom Mugs",
-        description: "Personalized mugs to commemorate the bachelor party.",
+        name: "ByeBro Mugs",
+        description: "Milk mugs featuring the ByeBro logo - perfect for morning afters!",
         price: 1299,
-        image: "https://images.unsplash.com/photo-1574153388319-221a0089e842?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
+        image: "https://images.unsplash.com/photo-1508366717390-1b54517b6c96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
         type: "mug"
       },
       {
-        name: "Custom Socks",
-        description: "Fun, personalized socks for the whole group.",
+        name: "The Bro Socks",
+        description: "Red and black socks with \"The Bro Socks\" embroidery for stylish bros.",
         price: 999,
-        image: "https://images.unsplash.com/photo-1617038220319-276d3cfab638?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&h=200&q=80",
+        image: "https://images.unsplash.com/photo-1586350977771-b3714d332da4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
         type: "socks"
       },
       {
-        name: "Custom Badges",
-        description: "Pin badges with custom designs for your bachelor party.",
+        name: "Last Night Badges",
+        description: "Commemorative badges with \"One More Night, No More Rights!\" slogan.",
         price: 799,
-        image: "https://images.unsplash.com/photo-1646934291540-8e0cfa53b66e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
+        image: "https://images.unsplash.com/photo-1563290329-75d360304388?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=350&q=80",
         type: "badges"
       }
     ];
