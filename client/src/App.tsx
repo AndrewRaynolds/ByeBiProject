@@ -12,6 +12,7 @@ import ItineraryPage from "@/pages/ItineraryPage";
 import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
 import SplittaBroPage from "@/pages/SplittaBroPage";
 import DestinationsPage from "@/pages/DestinationsPage";
+import ExperiencesPage from "@/pages/ExperiencesPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/" component={Home} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/destinations" component={DestinationsPage} />
+      <Route path="/experiences" component={ExperiencesPage} />
       <ProtectedRoute path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
