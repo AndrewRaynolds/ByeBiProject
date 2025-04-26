@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Merchandise } from "@shared/schema";
 import Header from "@/components/Header";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShoppingBag, Heart, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 export default function MerchandisePage() {
   const [cart, setCart] = useState<Array<{ id: number; quantity: number }>>([]);
@@ -18,6 +19,8 @@ export default function MerchandisePage() {
 
   const { data: merchandise, isLoading, error } = useQuery<Merchandise[]>({
     queryKey: ["/api/merchandise"],
+    staleTime: 0, // Non usare la cache
+    refetchOnMount: true, // Forza il refresh quando il componente viene montato
   });
 
   const handleAddToCart = (id: number) => {
