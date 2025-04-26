@@ -111,7 +111,7 @@ export default function CustomMerchandise() {
                 <div key={item.id} className="bg-light rounded-xl overflow-hidden shadow-md group hover:shadow-lg transition duration-300">
                   <div className="relative h-64 overflow-hidden">
                     <img 
-                      src={item.image} 
+                      src={getCacheBustedImageUrl(item.image)} 
                       alt={item.name} 
                       className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
                     />
@@ -143,7 +143,7 @@ export default function CustomMerchandise() {
                 <div key={item.id} className="bg-light rounded-xl overflow-hidden shadow-md group hover:shadow-lg transition duration-300">
                   <div className="relative h-48 overflow-hidden">
                     <img 
-                      src={item.image} 
+                      src={getCacheBustedImageUrl(item.image)} 
                       alt={item.name} 
                       className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
                     />
