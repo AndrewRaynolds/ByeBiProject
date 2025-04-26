@@ -75,11 +75,11 @@ export default function DestinationsPage() {
         "barcelona", "bilbao", "munich", "london", "milan", "rome", "paris",
         "spain", "germany", "united kingdom", "italy", "france"
       ],
-      "Chill & Feel": [
+      "Chill & Feel the Bro": [
         "rome", "florence", "paris", "barcelona", "lisbon", "copenhagen", "vienna",
         "italy", "france", "spain", "portugal", "denmark", "austria"
       ],
-      "The Last Adventure": [
+      "The Wild Broventure": [
         "interlaken", "barcelona", "split", "ibiza", "mykonos", "berlin", "prague",
         "switzerland", "spain", "croatia", "greece", "germany", "czech republic"
       ]
@@ -111,8 +111,8 @@ export default function DestinationsPage() {
     }
     else if (destinationName === "paris") {
       // Paris for culinary excellence
-      if (!matchingExperiences.includes("Chill & Feel")) {
-        matchingExperiences.unshift("Chill & Feel");
+      if (!matchingExperiences.includes("Chill & Feel the Bro")) {
+        matchingExperiences.unshift("Chill & Feel the Bro");
       }
     }
     
@@ -124,8 +124,8 @@ export default function DestinationsPage() {
     const colorMap: Record<string, string> = {
       "The Ultimate BroNight": "bg-red-600",
       "My Olympic Bro": "bg-blue-600",
-      "Chill & Feel": "bg-green-600",
-      "The Last Adventure": "bg-amber-600"
+      "Chill & Feel the Bro": "bg-green-600",
+      "The Wild Broventure": "bg-amber-600"
     };
     
     return colorMap[expName] || "bg-gray-600";
