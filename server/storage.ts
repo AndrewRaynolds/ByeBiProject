@@ -872,12 +872,12 @@ export class MemStorage implements IStorage {
         image: "https://images.unsplash.com/photo-1518063319789-7217e6706b04?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
-        name: "Chill and Feel",
+        name: "Chill and Feel the Bro",
         description: "Relaxed upscale experiences, chic restaurants, refined bars, and elegant city tours.",
         image: "https://images.unsplash.com/photo-1534766555764-ce878a5e3a2b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       },
       {
-        name: "The Last Adventure",
+        name: "The Wild Broventure",
         description: "One last wild adventure with your bros - outdoor activities, hiking, camping, and beers by the fire.",
         image: "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80"
       }
