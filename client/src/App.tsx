@@ -30,7 +30,7 @@ function Router() {
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
-      <ProtectedRoute path="/splittabro/:tripId?" component={SplittaBroPage} />
+      <Route path="/splittabro/:tripId?" component={SplittaBroPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

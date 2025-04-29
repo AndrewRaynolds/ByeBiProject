@@ -149,7 +149,7 @@ export default function AuthPage() {
             {/* Register Form */}
             <TabsContent value="register" className="mt-6">
               <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4 auth-page-form">
                   <FormField
                     control={registerForm.control}
                     name="username"

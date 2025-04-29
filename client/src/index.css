@@ -56,4 +56,19 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400;
   }
+  
+  /* Custom styles per l'auth page */
+  .auth-page-form input {
+    background-color: #1a1a1a !important;
+    border-color: #333 !important;
+    color: white !important;
+  }
+  
+  .auth-page-form label {
+    color: #ccc !important;
+  }
+  
+  .auth-page-form .form-message {
+    color: #ff4c4c !important;
+  }
 }
