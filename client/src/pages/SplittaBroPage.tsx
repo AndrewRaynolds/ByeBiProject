@@ -429,20 +429,84 @@ export default function SplittaBroPage() {
     "Alloggio", "Cibo", "Trasporto", "Attività", "Bevande", "Regali", "Altro"
   ];
 
+  // Permette l'uso di SplittaBro anche senza un viaggio selezionato
+  const createDefaultExpenseGroup = useMutation({
+    mutationFn: async () => {
+      const defaultGroup = {
+        name: "Gruppo di default",
+        tripId: 0, // 0 indica che non è associato a un viaggio
+        participants: [
+          { name: "Tu" },
+          { name: "Amico 1" },
+          { name: "Amico 2" },
+          { name: "Amico 3" }
+        ]
+      };
+      const response = await apiRequest('POST', '/api/expense-groups', defaultGroup);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trips', 0, 'expense-groups'] });
+      toast({
+        title: "Gruppo creato",
+        description: "È stato creato un gruppo di esempio"
+      });
+      setActiveGroup(data.id);
+      setLocation(`/splittabro/0`);
+    }
+  });
+  
   if (!tripId) {
+    // Se non c'è un tripId, lo impostiamo a 0 e cerchiamo gruppi default
+    useEffect(() => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trips', 0, 'expense-groups'] });
+    }, []);
+    
     return (
       <div className="container mx-auto py-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-1">SplittaBro</h1>
+            <p className="text-gray-600">Gestisci e dividi le spese con gli amici durante il tuo addio al celibato</p>
+          </div>
+        </div>
+        
         <Card>
           <CardHeader>
-            <CardTitle>Errore</CardTitle>
-            <CardDescription>Nessun viaggio selezionato</CardDescription>
+            <CardTitle>Benvenuto in SplittaBro</CardTitle>
+            <CardDescription>
+              L'app per gestire facilmente le spese condivise durante il tuo addio al celibato
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p>Seleziona un viaggio per gestire le spese di gruppo.</p>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 border border-gray-200 rounded-lg bg-black bg-opacity-5">
+                <h3 className="text-lg font-bold mb-2">Come funziona?</h3>
+                <p className="mb-4">SplittaBro ti permette di:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>Registrare ogni spesa del gruppo</li>
+                  <li>Monitorare chi ha pagato cosa</li>
+                  <li>Calcolare automaticamente chi deve dare quanto a chi</li>
+                  <li>Organizzare le spese per categorie</li>
+                </ul>
+              </div>
+              <div className="p-6 border border-gray-200 rounded-lg bg-red-50">
+                <h3 className="text-lg font-bold mb-2">Inizia subito</h3>
+                <p className="mb-4">Crea un gruppo di esempio per vedere come funziona:</p>
+                <Button 
+                  className="bg-red-600 hover:bg-red-700 w-full"
+                  onClick={() => createDefaultExpenseGroup.mutate()}
+                  disabled={createDefaultExpenseGroup.isPending}
+                >
+                  {createDefaultExpenseGroup.isPending ? (
+                    <>Creazione gruppo...</>
+                  ) : (
+                    <>Crea gruppo di esempio</>
+                  )}
+                </Button>
+              </div>
+            </div>
           </CardContent>
-          <CardFooter>
-            <Button onClick={() => setLocation('/dashboard')}>Torna alla dashboard</Button>
-          </CardFooter>
         </Card>
       </div>
     );

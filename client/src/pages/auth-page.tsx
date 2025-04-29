@@ -78,27 +78,28 @@ export default function AuthPage() {
   return (
     <div className="flex min-h-screen">
       {/* Authentication Form */}
-      <div className="w-full lg:w-1/2 p-8 flex items-center justify-center">
+      <div className="w-full lg:w-1/2 p-8 flex items-center justify-center bg-black text-white">
         <div className="max-w-md w-full space-y-8">
+
           <div className="text-center">
-            <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-              Welcome to ByeBro
+            <h2 className="mt-6 text-3xl font-bold text-white">
+              Welcome to <span className="text-red-600">Bye</span>Bro
             </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-sm text-gray-400">
               One more Night, no more rights!
             </p>
           </div>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="mt-8">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-gray-900">
+              <TabsTrigger value="login" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Login</TabsTrigger>
+              <TabsTrigger value="register" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Sign Up</TabsTrigger>
             </TabsList>
 
             {/* Login Form */}
             <TabsContent value="login" className="mt-6">
               <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 auth-page-form">
                   <FormField
                     control={loginForm.control}
                     name="username"
