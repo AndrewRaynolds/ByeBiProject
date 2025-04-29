@@ -314,6 +314,50 @@ export default function SplittaBroPage() {
     }));
   };
   
+  // Calcola i rimborsi ottimali tra i partecipanti
+  const calculateSettlements = () => {
+    const balances = calculateBalances();
+    
+    // Crea due liste separate di debiti e crediti
+    const positiveBalances = balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance);
+    const negativeBalances = balances.filter(b => b.balance < 0).sort((a, b) => a.balance - b.balance);
+    
+    const settlements: { from: string; to: string; amount: number }[] = [];
+    
+    // Implementa l'algoritmo di liquidazione dei debiti
+    while (negativeBalances.length > 0 && positiveBalances.length > 0) {
+      const debtor = negativeBalances[0];
+      const creditor = positiveBalances[0];
+      
+      // Trova l'importo minimo tra debito e credito
+      const amount = Math.min(Math.abs(debtor.balance), creditor.balance);
+      
+      if (amount > 0) {
+        // Crea un nuovo rimborso
+        settlements.push({
+          from: debtor.name,
+          to: creditor.name,
+          amount
+        });
+        
+        // Aggiorna i saldi
+        debtor.balance += amount;
+        creditor.balance -= amount;
+      }
+      
+      // Rimuovi dalla lista le persone che hanno liquidato completamente
+      if (Math.abs(debtor.balance) < 0.01) {
+        negativeBalances.shift();
+      }
+      
+      if (Math.abs(creditor.balance) < 0.01) {
+        positiveBalances.shift();
+      }
+    }
+    
+    return settlements;
+  };
+  
   // Formattazione di un importo in EUR
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -322,26 +366,60 @@ export default function SplittaBroPage() {
   // Rendering del bilancio complessivo
   const renderBalances = () => {
     const balances = calculateBalances();
+    const settlements = calculateSettlements();
     
     return (
-      <div className="space-y-4 mt-6">
-        <h3 className="font-bold text-lg">Bilancio del gruppo</h3>
-        <div className="grid grid-cols-1 gap-2">
-          {balances.map((balance, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-black bg-opacity-5 rounded-lg">
-              <span className="font-medium">{balance.name}</span>
-              <span className={
+      <div className="space-y-6 mt-6">
+        <div>
+          <h3 className="font-bold text-lg mb-3">Bilancio del gruppo</h3>
+          <div className="grid grid-cols-1 gap-2">
+            {balances.map((balance, index) => (
+              <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
                 balance.balance > 0 
-                  ? "font-bold text-green-500" 
+                  ? "bg-green-50 border border-green-100" 
                   : balance.balance < 0 
-                    ? "font-bold text-red-500" 
-                    : ""
-              }>
-                {formatAmount(balance.balance)}
-              </span>
-            </div>
-          ))}
+                    ? "bg-red-50 border border-red-100" 
+                    : "bg-gray-50 border border-gray-100"
+              }`}>
+                <div className="flex flex-col">
+                  <span className="font-semibold">{balance.name}</span>
+                  <span className="text-xs text-gray-500">
+                    Pagato: {formatAmount(balance.paid)} • Dovuto: {formatAmount(balance.owed)}
+                  </span>
+                </div>
+                <span className={
+                  balance.balance > 0 
+                    ? "font-bold text-green-600" 
+                    : balance.balance < 0 
+                      ? "font-bold text-red-600" 
+                      : "text-gray-600"
+                }>
+                  {formatAmount(balance.balance)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
+        
+        {settlements.length > 0 && (
+          <div>
+            <h3 className="font-bold text-lg mb-3">Suggerimenti per il regolamento</h3>
+            <div className="grid grid-cols-1 gap-2 bg-yellow-50 border border-yellow-100 rounded-lg p-4">
+              {settlements.map((settlement, index) => (
+                <div key={index} className="flex items-center justify-between p-2">
+                  <div className="flex items-center">
+                    <Badge variant="outline" className="bg-white mr-2">
+                      {index + 1}
+                    </Badge>
+                    <span>
+                      <span className="font-medium text-red-600">{settlement.from}</span> deve dare <span className="font-medium text-green-600">{formatAmount(settlement.amount)}</span> a <span className="font-medium text-green-600">{settlement.to}</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -525,42 +603,85 @@ export default function SplittaBroPage() {
                           </Button>
                         </div>
                       ) : (
-                        <div className="space-y-4">
-                          {expenses.map((expense: any) => (
-                            <div key={expense.id} className="border border-gray-200 rounded-lg p-4">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h3 className="font-bold">{expense.description}</h3>
-                                  <p className="text-sm text-gray-500">
-                                    Pagato da {expense.paidBy} • {new Date(expense.date).toLocaleDateString()}
-                                  </p>
+                        <div className="space-y-5">
+                          {expenses.map((expense: any) => {
+                            // Determina icona in base alla categoria
+                            let categoryIcon;
+                            switch(expense.category) {
+                              case 'Alloggio':
+                                categoryIcon = '🏨';
+                                break;
+                              case 'Cibo':
+                                categoryIcon = '🍔';
+                                break;
+                              case 'Trasporto':
+                                categoryIcon = '🚕';
+                                break;
+                              case 'Attività':
+                                categoryIcon = '🎮';
+                                break;
+                              case 'Bevande':
+                                categoryIcon = '🍻';
+                                break;
+                              case 'Regali':
+                                categoryIcon = '🎁';
+                                break;
+                              default:
+                                categoryIcon = '💸';
+                            }
+                            
+                            return (
+                              <div key={expense.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex p-4">
+                                  <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mr-4 text-2xl">
+                                    {categoryIcon}
+                                  </div>
+                                  <div className="flex-grow">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <h3 className="font-bold text-lg">{expense.description}</h3>
+                                        <p className="text-sm text-gray-500">
+                                          {new Date(expense.date).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                      <div className="flex flex-col items-end">
+                                        <span className="font-bold text-lg">{formatAmount(expense.amount)}</span>
+                                        <Badge className="mt-1 bg-red-100 text-red-600 hover:bg-red-200 border-red-200">
+                                          {expense.category}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mt-3 text-sm">
+                                      <span className="font-medium text-green-600">{expense.paidBy}</span> ha pagato e ha diviso con:
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                                      {expense.splitWith.map((split: any, idx: number) => (
+                                        <div key={idx} className="text-sm bg-gray-50 rounded p-2 border border-gray-100">
+                                          <div className="font-medium">{split.name}</div>
+                                          <div className={`${split.name === expense.paidBy ? "text-green-600 font-medium" : "text-red-600 font-medium"}`}>
+                                            {formatAmount(split.share)}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="bg-red-100 hover:bg-red-200 border-red-200">
-                                    {expense.category}
-                                  </Badge>
-                                  <span className="font-bold">{formatAmount(expense.amount)}</span>
+                                
+                                <div className="border-t border-gray-100 bg-gray-50 p-2 flex justify-end rounded-b-lg">
                                   <Button 
                                     variant="ghost" 
-                                    size="icon"
+                                    size="sm"
                                     onClick={() => deleteExpense.mutate(expense.id)}
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                   >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                    <Trash2 className="h-4 w-4 mr-1" /> Elimina
                                   </Button>
                                 </div>
                               </div>
-                              
-                              <Separator className="my-3" />
-                              
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {expense.splitWith.map((split: any, idx: number) => (
-                                  <div key={idx} className="text-sm">
-                                    <span className="font-medium">{split.name}</span>: {formatAmount(split.share)}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </TabsContent>
@@ -697,15 +818,24 @@ export default function SplittaBroPage() {
                   <FormItem>
                     <FormLabel>Importo (€)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00" 
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span className="text-gray-500">€</span>
+                        </div>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          min="0"
+                          className="pl-8 font-medium" 
+                          placeholder="0.00" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
                     </FormControl>
+                    <FormDescription className="text-xs">
+                      Inserisci l'importo totale della spesa
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -759,44 +889,129 @@ export default function SplittaBroPage() {
                 />
               </div>
               
-              <div>
-                <Label>Divisione della spesa</Label>
-                <FormDescription>
-                  Lascia tutto a zero per dividere equamente
-                </FormDescription>
+              <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-semibold">Divisione della spesa</Label>
+                    <FormDescription className="text-xs">
+                      Lascia tutto a zero per dividere equamente
+                    </FormDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs bg-white border border-gray-200"
+                    onClick={() => {
+                      // Calcola divisione equa
+                      const amount = expenseForm.getValues('amount');
+                      const splitWith = expenseForm.getValues('splitWith');
+                      const share = amount / splitWith.length;
+                      const roundedShare = Math.round(share * 100) / 100;
+                      
+                      // Aggiorna i valori
+                      splitWith.forEach((_, index) => {
+                        expenseForm.setValue(`splitWith.${index}.share`, roundedShare);
+                      });
+                    }}
+                  >
+                    Dividi equamente
+                  </Button>
+                </div>
+                
                 <div className="space-y-2 mt-1.5">
-                  {expenseForm.getValues('splitWith').map((_, index) => (
-                    <div key={index} className="flex gap-2 items-center">
-                      <FormField
-                        control={expenseForm.control}
-                        name={`splitWith.${index}.name`}
-                        render={({ field }) => (
-                          <div className="flex-1">
-                            {field.value}
-                          </div>
-                        )}
-                      />
-                      <FormField
-                        control={expenseForm.control}
-                        name={`splitWith.${index}.share`}
-                        render={({ field }) => (
-                          <FormItem className="space-y-0">
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00" 
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  ))}
+                  {expenseForm.getValues('splitWith').map((split, index) => {
+                    // Verifica se questa è la persona che ha pagato
+                    const isPayer = split.name === expenseForm.getValues('paidBy');
+                    
+                    return (
+                      <div key={index} className={`flex gap-2 items-center p-2 rounded ${isPayer ? 'bg-green-50 border border-green-100' : 'bg-white border border-gray-200'}`}>
+                        <FormField
+                          control={expenseForm.control}
+                          name={`splitWith.${index}.name`}
+                          render={({ field }) => (
+                            <div className="flex-1 flex items-center">
+                              {isPayer && (
+                                <Badge className="mr-2 bg-green-100 text-green-700 hover:bg-green-200">
+                                  Pagatore
+                                </Badge>
+                              )}
+                              <span className={isPayer ? 'font-medium' : ''}>{field.value}</span>
+                            </div>
+                          )}
+                        />
+                        <FormField
+                          control={expenseForm.control}
+                          name={`splitWith.${index}.share`}
+                          render={({ field }) => (
+                            <FormItem className="space-y-0">
+                              <FormControl>
+                                <div className="relative">
+                                  <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                                    <span className="text-gray-500 text-xs">€</span>
+                                  </div>
+                                  <Input 
+                                    type="number" 
+                                    step="0.01"
+                                    min="0"
+                                    className="w-24 pl-6 text-right" 
+                                    placeholder="0.00" 
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="text-sm font-medium">Totale:</span>
+                  <div className="flex items-center">
+                    {(() => {
+                      const totalSplit = expenseForm.getValues('splitWith').reduce(
+                        (sum, item) => sum + (item.share || 0), 0
+                      );
+                      const amount = expenseForm.getValues('amount');
+                      const diff = Math.abs(totalSplit - amount);
+                      
+                      return diff > 0.01 ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-500 text-xs">
+                            Non corrisponde all'importo totale!
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-[10px] bg-white border border-red-200 text-red-500 hover:text-red-600"
+                            onClick={() => {
+                              // Calcola divisione corretta
+                              const amount = expenseForm.getValues('amount');
+                              const splitWith = expenseForm.getValues('splitWith');
+                              const share = amount / splitWith.length;
+                              const roundedShare = Math.round(share * 100) / 100;
+                              
+                              // Aggiorna i valori
+                              splitWith.forEach((_, index) => {
+                                expenseForm.setValue(`splitWith.${index}.share`, roundedShare);
+                              });
+                            }}
+                          >
+                            Correggi
+                          </Button>
+                        </div>
+                      ) : null;
+                    })()}
+                    <span className="font-bold ml-2">
+                      {formatAmount(expenseForm.getValues('splitWith').reduce((sum, item) => sum + (item.share || 0), 0))}
+                    </span>
+                  </div>
                 </div>
               </div>
               
