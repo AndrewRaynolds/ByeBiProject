@@ -226,15 +226,15 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Hero image section */}
+      {/* Hero image section - with bright red background */}
       <div
-        className="hidden lg:block lg:w-1/2 bg-cover bg-center"
+        className="hidden lg:block lg:w-1/2 bg-cover bg-center bg-red-600"
         style={{
           backgroundImage:
-            "url('https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')",
+            "linear-gradient(rgba(220, 0, 0, 0.85), rgba(180, 0, 0, 0.95)), url('https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')",
         }}
       >
-        <div className="h-full w-full bg-black bg-opacity-50 p-12 flex flex-col justify-end">
+        <div className="h-full w-full p-12 flex flex-col justify-end">
           <div className="text-white">
             <h2 className="text-4xl font-bold mb-4">Join ByeBro Today</h2>
             <p className="mb-6 text-lg">
@@ -243,16 +243,16 @@ export default function AuthPage() {
             </p>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
-                <span className="mr-2 text-red-500">✓</span> AI-Generated Itineraries
+                <span className="mr-2 text-white font-bold">✓</span> AI-Generated Itineraries
               </div>
               <div className="flex items-center">
-                <span className="mr-2 text-red-500">✓</span> Expense Sharing
+                <span className="mr-2 text-white font-bold">✓</span> Expense Sharing
               </div>
               <div className="flex items-center">
-                <span className="mr-2 text-red-500">✓</span> Exclusive Destinations
+                <span className="mr-2 text-white font-bold">✓</span> Exclusive Destinations
               </div>
               <div className="flex items-center">
-                <span className="mr-2 text-red-500">✓</span> Custom Merchandise
+                <span className="mr-2 text-white font-bold">✓</span> Custom Merchandise
               </div>
             </div>
           </div>
