@@ -59,16 +59,16 @@
   
   /* Custom styles per l'auth page */
   .auth-page-form input {
-    background-color: #1a1a1a !important;
+    background-color: #f2f2f2 !important;
     border-color: #333 !important;
     color: white !important;
   }
   
   .auth-page-form label {
-    color: #ccc !important;
+    color: #ffffff !important;
   }
   
   .auth-page-form .form-message {
-    color: #ff4c4c !important;
+    color: #f2f2f2 !important;
   }
 }

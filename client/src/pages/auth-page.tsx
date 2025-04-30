@@ -92,8 +92,8 @@ export default function AuthPage() {
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="mt-8">
             <TabsList className="grid w-full grid-cols-2 bg-gray-900">
-              <TabsTrigger value="login" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Login</TabsTrigger>
-              <TabsTrigger value="register" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Sign Up</TabsTrigger>
+              <TabsTrigger value="login" className="text-white data-[state=active]:bg-red-600">Login</TabsTrigger>
+              <TabsTrigger value="register" className="text-white data-[state=active]:bg-red-600">Sign Up</TabsTrigger>
             </TabsList>
 
             {/* Login Form */}
@@ -227,15 +227,15 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Hero image section - with bright red background */}
+      {/* Hero image section - senza filtro colorato */}
       <div
-        className="hidden lg:block lg:w-1/2 bg-cover bg-center bg-red-600"
+        className="hidden lg:block lg:w-1/2 bg-cover bg-center"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(220, 0, 0, 0.85), rgba(180, 0, 0, 0.95)), url('https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')",
+            "url('https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')",
         }}
       >
-        <div className="h-full w-full p-12 flex flex-col justify-end">
+        <div className="h-full w-full p-12 flex flex-col justify-end bg-black bg-opacity-40">
           <div className="text-white">
             <h2 className="text-4xl font-bold mb-4">Join ByeBro Today</h2>
             <p className="mb-6 text-lg">
