@@ -47,7 +47,7 @@ type CreateExpenseFormValues = z.infer<typeof createExpenseSchema>;
 
 // Componente per l'interfaccia SplittaBro
 export default function SplittaBroPage() {
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const params = useParams();
   const tripId = params?.tripId ? parseInt(params.tripId) : null;
   const queryClient = useQueryClient();
@@ -446,13 +446,37 @@ export default function SplittaBroPage() {
       return await response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/trips', 0, 'expense-groups'] });
+      // Notifica del successo
       toast({
         title: "Gruppo creato",
         description: "È stato creato un gruppo di esempio"
       });
+      
+      // Impostiamo il gruppo attivo
       setActiveGroup(data.id);
-      setLocation(`/splittabro/0`);
+      
+      // Invalidiamo sia la query principale che quella specifica per il gruppo appena creato
+      queryClient.invalidateQueries({ queryKey: ['/api/trips', 0, 'expense-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/expense-groups'] });
+      
+      // Controlliamo che l'URL sia corretto
+      if (location.pathname !== '/splittabro/0') {
+        setLocation(`/splittabro/0`);
+      } else {
+        // Se siamo già sull'URL corretto, aggiorniamo manualmente i dati
+        setTimeout(() => {
+          // Rimandiamo il caricamento dei gruppi dopo un breve delay
+          queryClient.invalidateQueries({ queryKey: ['/api/trips', 0, 'expense-groups'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/expense-groups'] });
+        }, 500);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Errore",
+        description: "Non è stato possibile creare il gruppo",
+        variant: "destructive"
+      });
     }
   });
   

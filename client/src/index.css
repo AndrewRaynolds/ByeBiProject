@@ -61,7 +61,7 @@
   .auth-page-form input {
     background-color: #f2f2f2 !important;
     border-color: #333 !important;
-    color: white !important;
+    color: #000000 !important;
   }
   
   .auth-page-form label {
@@ -69,6 +69,6 @@
   }
   
   .auth-page-form .form-message {
-    color: #f2f2f2 !important;
+    color: #ff4c4c !important;
   }
 }

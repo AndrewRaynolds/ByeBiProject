@@ -212,6 +212,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all expense groups (for SplittaBro standalone use)
+  app.get("/api/expense-groups", async (req: Request, res: Response) => {
+    try {
+      // Otteniamo tutti i gruppi con tripId = 0 (non associati a un viaggio)
+      const defaultGroups = await storage.getExpenseGroupsByTripId(0);
+      return res.status(200).json(defaultGroups);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/expense-groups/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
