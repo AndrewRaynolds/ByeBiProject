@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -16,12 +17,23 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
           <p className="text-white text-lg mb-6 md:mb-8">
             Create unforgettable memories with personalized trips, activities, and gear for the groom's last adventure.
           </p>
-          <Button 
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg transform hover:-translate-y-1"
-            onClick={onGetStarted}
-          >
-            Plan Your Trip
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button 
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg transform hover:-translate-y-1"
+              onClick={onGetStarted}
+            >
+              Plan Your Trip
+            </Button>
+            
+            <Link href="/one-click-package">
+              <Button 
+                className="bg-black hover:bg-gray-800 text-white border border-red-600 font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg transform hover:-translate-y-1"
+                variant="outline"
+              >
+                One Click Assistant
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

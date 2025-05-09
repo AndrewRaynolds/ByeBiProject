@@ -13,6 +13,7 @@ import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
 import SplittaBroPage from "@/pages/SplittaBroPage";
 import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
+import OneClickPackagePage from "@/pages/OneClickPackagePage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
       <Route path="/splittabro/:tripId?" component={SplittaBroPage} />
+      <Route path="/one-click-package" component={OneClickPackagePage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
