@@ -11,6 +11,7 @@ import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
+import { registerZapierRoutes } from "./zapier-integration";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -383,6 +384,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Register Zapier integration routes
+  registerZapierRoutes(app);
 
   const httpServer = createServer(app);
 

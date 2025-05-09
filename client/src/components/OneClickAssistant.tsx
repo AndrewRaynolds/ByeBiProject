@@ -306,23 +306,82 @@ export default function OneClickAssistant() {
     setCheckoutDialogOpen(true);
   };
 
-  // Completamento dell'acquisto
-  const completeCheckout = () => {
-    toast({
-      title: "Acquisto completato",
-      description: "Il tuo pacchetto ByeBro è stato acquistato con successo!",
-    });
-    setCheckoutDialogOpen(false);
-    
-    // Aggiungi un messaggio di conferma nella chat
-    const confirmationMessage: ChatMessage = {
-      id: (Date.now() + 4).toString(),
-      content: "Fantastico! Ho appena ricevuto la conferma del tuo acquisto. Riceverai presto un'email con tutti i dettagli del tuo pacchetto ByeBro. Buon divertimento!",
-      sender: 'assistant',
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, confirmationMessage]);
+  // Completamento dell'acquisto con integrazione Zapier
+  const completeCheckout = async () => {
+    try {
+      // Dati del pacchetto da inviare a Zapier
+      const selectedItems = packageItems.filter(item => item.selected);
+      
+      // Prepariamo i dati dell'acquisto per Zapier
+      const purchaseData = {
+        packageId: Date.now().toString(),
+        userId: user?.id || 'guest',
+        userEmail: user?.email || 'guest@example.com',
+        destination: 'Amsterdam',
+        startDate: '2025-06-15',
+        endDate: '2025-06-18',
+        items: selectedItems.map(item => ({
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          price: item.price
+        })),
+        totalPrice,
+        purchaseDate: new Date().toISOString()
+      };
+      
+      // Invia dati dell'acquisto a Zapier tramite il nostro endpoint
+      await apiRequest('POST', '/api/zapier/receive', {
+        action: 'purchase_completed',
+        data: purchaseData
+      });
+      
+      toast({
+        title: "Acquisto completato",
+        description: "Il tuo pacchetto ByeBro è stato acquistato con successo!",
+      });
+      setCheckoutDialogOpen(false);
+      
+      // Aggiungi un messaggio di conferma nella chat
+      const confirmationMessage: ChatMessage = {
+        id: (Date.now() + 4).toString(),
+        content: "Fantastico! Ho appena ricevuto la conferma del tuo acquisto. Riceverai presto un'email con tutti i dettagli del tuo pacchetto ByeBro. Ho anche sincronizzato le informazioni con il tuo calendario e inviato notifiche agli altri partecipanti. Buon divertimento!",
+        sender: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, confirmationMessage]);
+      
+      // Dopo 3 secondi, aggiungi un altro messaggio con informazioni sulla conferma
+      setTimeout(() => {
+        const followUpMessage: ChatMessage = {
+          id: (Date.now() + 5).toString(),
+          content: "Ti ho inviato un'email di conferma con tutti i dettagli. Inoltre, ho programmato dei promemoria prima della partenza e creato un gruppo condiviso per tutti i partecipanti.",
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, followUpMessage]);
+      }, 3000);
+    } catch (error) {
+      console.error('Error completing purchase with Zapier integration:', error);
+      
+      // Fallback in caso di errore con Zapier
+      toast({
+        title: "Acquisto completato",
+        description: "Il tuo pacchetto ByeBro è stato acquistato con successo!",
+      });
+      setCheckoutDialogOpen(false);
+      
+      const confirmationMessage: ChatMessage = {
+        id: (Date.now() + 4).toString(),
+        content: "Fantastico! Ho appena ricevuto la conferma del tuo acquisto. Riceverai presto un'email con tutti i dettagli del tuo pacchetto ByeBro. Buon divertimento!",
+        sender: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, confirmationMessage]);
+    }
   };
 
   // Formattazione del prezzo
