@@ -1100,41 +1100,45 @@ export default function OneClickAssistant() {
       
       {/* Dialog per il checkout */}
       <Dialog open={checkoutDialogOpen} onOpenChange={setCheckoutDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-black text-white border border-red-600">
           <DialogHeader>
-            <DialogTitle>Completa il tuo acquisto</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Completa il tuo acquisto</DialogTitle>
+            <DialogDescription className="text-gray-300">
               Rivedi il tuo pacchetto ByeBro e conferma l'acquisto con un clic.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-3 my-4">
-            <h3 className="font-semibold">Riepilogo del pacchetto:</h3>
+            <h3 className="font-semibold text-white">Riepilogo del pacchetto:</h3>
             
             {packageItems
               .filter(item => item.selected)
               .map((item) => (
-                <div key={item.id} className="flex justify-between items-center py-2 border-b">
-                  <div className="flex items-center space-x-2">
-                    {renderItemIcon(item.type)}
+                <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-700">
+                  <div className="flex items-center space-x-2 text-gray-200">
+                    <span className="text-red-500">{renderItemIcon(item.type)}</span>
                     <span>{item.title}</span>
                   </div>
-                  <span>{formatPrice(item.price)}</span>
+                  <span className="text-gray-200">{formatPrice(item.price)}</span>
                 </div>
               ))}
               
             <div className="flex justify-between items-center pt-2 font-bold">
-              <span>Totale:</span>
-              <span>{formatPrice(totalPrice)}</span>
+              <span className="text-white">Totale:</span>
+              <span className="text-red-500">{formatPrice(totalPrice)}</span>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCheckoutDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setCheckoutDialogOpen(false)}
+              className="border-red-600 text-white hover:bg-gray-900"
+            >
               Torna al pacchetto
             </Button>
             <Button 
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white"
               onClick={completeCheckout}
             >
               Conferma acquisto
