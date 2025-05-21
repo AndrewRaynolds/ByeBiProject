@@ -403,10 +403,12 @@ export default function OneClickAssistant() {
 
   return (
     <div className="flex flex-col h-full">
-      <Card className="flex flex-col h-full border-none shadow-none">
+      <Card className="flex flex-col h-full border-none shadow-none bg-black text-white">
         <CardHeader className="pb-4">
-          <CardTitle className="text-2xl font-bold">Assistente ByeBro</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-white">
+            <span className="text-white">Assistente</span> <span className="text-red-600">Bye</span><span className="text-white">Bro</span>
+          </CardTitle>
+          <CardDescription className="text-gray-300">
             Crea il tuo pacchetto completo per l'addio al celibato con un solo clic
           </CardDescription>
         </CardHeader>
@@ -431,13 +433,13 @@ export default function OneClickAssistant() {
                     
                     <div className={`p-3 rounded-lg ${
                       message.sender === 'assistant' 
-                        ? 'bg-secondary text-secondary-foreground' 
+                        ? 'bg-gray-900 text-white border border-red-600' 
                         : 'bg-red-600 text-white'
                     }`}>
                       <p>{message.content}</p>
                       <div className={`text-xs mt-1 ${
                         message.sender === 'assistant' 
-                          ? 'text-gray-500' 
+                          ? 'text-gray-400' 
                           : 'text-gray-300'
                       }`}>
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -455,11 +457,11 @@ export default function OneClickAssistant() {
                       <AvatarFallback>BA</AvatarFallback>
                     </Avatar>
                     
-                    <div className="p-3 rounded-lg bg-secondary text-secondary-foreground">
+                    <div className="p-3 rounded-lg bg-gray-900 text-white border border-red-600">
                       <div className="flex items-center space-x-2">
-                        <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                        <div className="h-2 w-2 bg-red-500 rounded-full animate-bounce"></div>
+                        <div className="h-2 w-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="h-2 w-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                       </div>
                     </div>
                   </div>
@@ -474,9 +476,9 @@ export default function OneClickAssistant() {
                       <AvatarFallback>BA</AvatarFallback>
                     </Avatar>
                     
-                    <div className="p-3 rounded-lg bg-secondary text-secondary-foreground">
+                    <div className="p-3 rounded-lg bg-gray-900 text-white border border-red-600">
                       <div className="flex items-center space-x-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <Loader2 className="h-4 w-4 animate-spin text-red-500" />
                         <span>Sto preparando il tuo pacchetto personalizzato...</span>
                       </div>
                     </div>
@@ -496,6 +498,7 @@ export default function OneClickAssistant() {
                 placeholder="Scrivi un messaggio..."
                 {...form.register('message')}
                 disabled={isLoading || isGeneratingPackage}
+                className="bg-gray-900 border-red-600 text-white placeholder:text-gray-400 focus:ring-red-500"
               />
               <Button 
                 type="submit" 
