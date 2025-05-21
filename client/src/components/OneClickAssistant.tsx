@@ -153,6 +153,12 @@ export default function OneClickAssistant() {
     } else if (normalizedMessage.includes('budapest') || normalizedMessage.includes('ungheria')) {
       setSelectedDestination('budapest');
       return "Budapest è una meta popolare per gli addii al celibato! Offre bagni termali, ruin bar e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('barcellona') || normalizedMessage.includes('spagna')) {
+      setSelectedDestination('barcellona');
+      return "Barcellona è perfetta per un addio al celibato! Offre belle spiagge, vita notturna eccezionale e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('berlino') || normalizedMessage.includes('germania')) {
+      setSelectedDestination('berlino');
+      return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (
       normalizedMessage.includes('date') || 
       normalizedMessage.includes('quando') || 
@@ -460,6 +466,186 @@ export default function OneClickAssistant() {
             selected: true
           }
         ];
+      } else if (selectedDestination === 'barcellona') {
+        dummyPackage = [
+          {
+            id: '1',
+            type: 'flight',
+            title: 'Volo diretto per Barcellona',
+            description: 'Volo Vueling da Milano Malpensa a Barcellona El Prat, andata e ritorno',
+            price: 159.99,
+            imageUrl: 'https://images.unsplash.com/photo-1587019563857-b387d14e8d7a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            date: '15 Giugno 2025',
+            duration: '1h 50min',
+            selected: true
+          },
+          {
+            id: '2',
+            type: 'hotel',
+            title: 'Generator Barcelona',
+            description: 'Ostello moderno a pochi passi da Passeig de Gràcia',
+            price: 39.99,
+            imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Gracia, Barcellona',
+            rating: '4.3',
+            selected: true
+          },
+          {
+            id: '3',
+            type: 'hotel',
+            title: 'W Barcelona',
+            description: 'Hotel di lusso sulla spiaggia di Barceloneta con vista mozzafiato',
+            price: 229.99,
+            imageUrl: 'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1174&q=80',
+            location: 'Barceloneta, Barcellona',
+            rating: '4.7',
+            selected: false
+          },
+          {
+            id: '4',
+            type: 'restaurant',
+            title: 'El Nacional',
+            description: 'Complesso gastronomico con 4 ristoranti e 4 bar specializzati',
+            price: 45.99,
+            imageUrl: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1185&q=80',
+            location: 'Eixample, Barcellona',
+            rating: '4.6',
+            selected: true
+          },
+          {
+            id: '5',
+            type: 'activity',
+            title: 'Tour in barca con DJ',
+            description: 'Festa in barca con musica dal vivo, drink inclusi e bagno nel Mediterraneo',
+            price: 65.99,
+            imageUrl: 'https://images.unsplash.com/photo-1603568367331-62a0e08821a3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Porto Olimpico, Barcellona',
+            duration: '3 ore',
+            selected: true
+          },
+          {
+            id: '6',
+            type: 'activity',
+            title: 'Tour dei bar di tapas',
+            description: 'Visita di 4 bar tradizionali con degustazione di tapas e vino',
+            price: 49.99,
+            imageUrl: 'https://images.unsplash.com/photo-1607098665874-fd193397547b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'El Born, Barcellona',
+            duration: '4 ore',
+            selected: true
+          },
+          {
+            id: '7',
+            type: 'activity',
+            title: 'Ingresso a Opium Barcelona',
+            description: 'VIP pass per uno dei migliori club sulla spiaggia',
+            price: 30.99,
+            imageUrl: 'https://images.unsplash.com/photo-1571156425562-365cb9b8ca86?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Barceloneta, Barcellona',
+            duration: 'Ingresso notturno',
+            selected: true
+          },
+          {
+            id: '8',
+            type: 'transport',
+            title: 'Barcelona Card',
+            description: 'Trasporto pubblico illimitato e sconti sulle attrazioni',
+            price: 35.99,
+            imageUrl: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            duration: '3 giorni',
+            selected: true
+          }
+        ];
+      } else if (selectedDestination === 'berlino') {
+        dummyPackage = [
+          {
+            id: '1',
+            type: 'flight',
+            title: 'Volo diretto per Berlino',
+            description: 'Volo Eurowings da Milano Malpensa a Berlino Brandenburg, andata e ritorno',
+            price: 179.99,
+            imageUrl: 'https://images.unsplash.com/photo-1499063078284-f78f7d89616a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            date: '15 Giugno 2025',
+            duration: '1h 55min',
+            selected: true
+          },
+          {
+            id: '2',
+            type: 'hotel',
+            title: 'Generator Berlin Mitte',
+            description: 'Ostello moderno nel centro di Berlino con bar e lounge',
+            price: 32.99,
+            imageUrl: 'https://images.unsplash.com/photo-1568084680786-a84f91d1153c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Mitte, Berlino',
+            rating: '4.2',
+            selected: true
+          },
+          {
+            id: '3',
+            type: 'hotel',
+            title: 'Michelberger Hotel',
+            description: 'Hotel boutique trendy con ristorante e cocktail bar',
+            price: 115.99,
+            imageUrl: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Friedrichshain, Berlino',
+            rating: '4.5',
+            selected: false
+          },
+          {
+            id: '4',
+            type: 'restaurant',
+            title: 'BRLO Brwhouse',
+            description: 'Birreria artigianale con ottimo cibo in container riciclati',
+            price: 35.99,
+            imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Kreuzberg, Berlino',
+            rating: '4.4',
+            selected: true
+          },
+          {
+            id: '5',
+            type: 'activity',
+            title: 'Tour dei club underground',
+            description: 'Visita guidata ai migliori club tecno della città con ingresso saltafila',
+            price: 59.99,
+            imageUrl: 'https://images.unsplash.com/photo-1571156425562-365cb9b8ca86?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Vari quartieri, Berlino',
+            duration: '6 ore',
+            selected: true
+          },
+          {
+            id: '6',
+            type: 'activity',
+            title: 'Tour delle birrerie di Berlino',
+            description: 'Visita di 4 birrerie tradizionali e artigianali con degustazioni',
+            price: 42.99,
+            imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Prenzlauer Berg, Berlino',
+            duration: '4 ore',
+            selected: true
+          },
+          {
+            id: '7',
+            type: 'activity',
+            title: 'Ingresso prioritario a Berghain',
+            description: 'Ingresso VIP (non garantito) al club più esclusivo di Berlino',
+            price: 25.99,
+            imageUrl: 'https://images.unsplash.com/photo-1642201725271-087fa8377e83?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Friedrichshain, Berlino',
+            duration: 'Ingresso notturno',
+            selected: true
+          },
+          {
+            id: '8',
+            type: 'transport',
+            title: 'Berlin WelcomeCard',
+            description: 'Trasporto pubblico illimitato e sconti sulle attrazioni',
+            price: 34.99,
+            imageUrl: 'https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            duration: '3 giorni',
+            selected: true
+          }
+        ];
       }
       
       setPackageItems(dummyPackage);
@@ -506,7 +692,7 @@ export default function OneClickAssistant() {
         packageId: Date.now().toString(),
         userId: user?.id || 'guest',
         userEmail: user?.email || 'guest@example.com',
-        destination: 'Amsterdam',
+        destination: selectedDestination || 'amsterdam',
         startDate: '2025-06-15',
         endDate: '2025-06-18',
         items: selectedItems.map(item => ({
@@ -525,9 +711,12 @@ export default function OneClickAssistant() {
         data: purchaseData
       });
       
+      // Reindirizza alla pagina di checkout reale
+      window.location.href = "/checkout?package=" + purchaseData.packageId;
+      
       toast({
-        title: "Acquisto completato",
-        description: "Il tuo pacchetto ByeBro è stato acquistato con successo!",
+        title: "Acquisto in elaborazione",
+        description: "Verrai reindirizzato alla pagina di pagamento...",
       });
       setCheckoutDialogOpen(false);
       
