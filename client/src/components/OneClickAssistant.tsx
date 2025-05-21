@@ -518,22 +518,24 @@ export default function OneClickAssistant() {
       
       {/* Dialog per la visualizzazione del pacchetto */}
       <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl bg-black text-white border-red-600">
           <DialogHeader>
-            <DialogTitle>Il tuo pacchetto ByeBro personalizzato</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">
+              Il tuo pacchetto <span className="text-red-600">ByeBro</span> personalizzato
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
               Seleziona le opzioni che preferisci e completa il tuo pacchetto con un solo clic.
             </DialogDescription>
           </DialogHeader>
           
           <Tabs defaultValue="all" className="mt-4">
-            <TabsList className="grid grid-cols-6 mb-4">
-              <TabsTrigger value="all">Tutti</TabsTrigger>
-              <TabsTrigger value="flight">Voli</TabsTrigger>
-              <TabsTrigger value="hotel">Hotel</TabsTrigger>
-              <TabsTrigger value="restaurant">Ristoranti</TabsTrigger>
-              <TabsTrigger value="activity">Attività</TabsTrigger>
-              <TabsTrigger value="transport">Trasporti</TabsTrigger>
+            <TabsList className="grid grid-cols-6 mb-4 bg-gray-900">
+              <TabsTrigger value="all" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Tutti</TabsTrigger>
+              <TabsTrigger value="flight" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Voli</TabsTrigger>
+              <TabsTrigger value="hotel" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Hotel</TabsTrigger>
+              <TabsTrigger value="restaurant" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Ristoranti</TabsTrigger>
+              <TabsTrigger value="activity" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Attività</TabsTrigger>
+              <TabsTrigger value="transport" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Trasporti</TabsTrigger>
             </TabsList>
             
             <TabsContent value="all">
