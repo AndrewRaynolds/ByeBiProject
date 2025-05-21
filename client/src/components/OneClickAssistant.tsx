@@ -61,6 +61,7 @@ export default function OneClickAssistant() {
   const [showPackageDialog, setShowPackageDialog] = useState(false);
   const [totalPrice, setTotalPrice] = useState(0);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<string>("");
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -144,10 +145,13 @@ export default function OneClickAssistant() {
     const normalizedMessage = userMessage.toLowerCase();
     
     if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
+      setSelectedDestination('amsterdam');
       return "Amsterdam è una scelta eccellente per un addio al celibato! Offre locali notturni, ottima birra e molto altro. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('praga') || normalizedMessage.includes('repubblica ceca')) {
+      setSelectedDestination('praga');
       return "Praga è una destinazione fantastica per un addio al celibato! È famosa per la sua birra, vita notturna e prezzi accessibili. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('budapest') || normalizedMessage.includes('ungheria')) {
+      setSelectedDestination('budapest');
       return "Budapest è una meta popolare per gli addii al celibato! Offre bagni termali, ruin bar e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (
       normalizedMessage.includes('date') || 
@@ -183,95 +187,280 @@ export default function OneClickAssistant() {
     
     // Simuliamo una chiamata API
     setTimeout(() => {
-      const dummyPackage: PackageItem[] = [
-        {
-          id: '1',
-          type: 'flight',
-          title: 'Volo diretto per Amsterdam',
-          description: 'Volo Alitalia da Milano Malpensa a Amsterdam Schiphol, andata e ritorno',
-          price: 189.99,
-          imageUrl: 'https://images.unsplash.com/photo-1507812984078-917a274065be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-          date: '15 Giugno 2025',
-          duration: '1h 45min',
-          selected: true
-        },
-        {
-          id: '2',
-          type: 'hotel',
-          title: 'The Flying Pig Downtown Hostel',
-          description: 'Ostello economico nel centro di Amsterdam, ideale per gruppi',
-          price: 45.99,
-          imageUrl: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-          location: 'Centro di Amsterdam',
-          rating: '4.2',
-          selected: true
-        },
-        {
-          id: '3',
-          type: 'hotel',
-          title: 'Hilton Amsterdam',
-          description: 'Hotel di lusso con tutti i comfort per un\'esperienza premium',
-          price: 189.99,
-          imageUrl: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80',
-          location: 'Amsterdam Zuid',
-          rating: '4.8',
-          selected: false
-        },
-        {
-          id: '4',
-          type: 'restaurant',
-          title: 'REM Eiland',
-          description: 'Ristorante unico su una ex piattaforma di trasmissione in mare',
-          price: 45.99,
-          imageUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-          location: 'Amsterdam Ovest',
-          rating: '4.5',
-          selected: true
-        },
-        {
-          id: '5',
-          type: 'activity',
-          title: 'Tour Heineken Experience',
-          description: 'Visita alla famosa fabbrica di birra con degustazione inclusa',
-          price: 21.99,
-          imageUrl: 'https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-          location: 'Centro di Amsterdam',
-          duration: '1.5 ore',
-          selected: true
-        },
-        {
-          id: '6',
-          type: 'activity',
-          title: 'Giro in barca sui canali',
-          description: 'Tour privato in barca sui canali con birra inclusa',
-          price: 35.99,
-          imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-          location: 'Canali di Amsterdam',
-          duration: '2 ore',
-          selected: true
-        },
-        {
-          id: '7',
-          type: 'activity',
-          title: 'Ingresso al casino Holland',
-          description: 'Una serata di divertimento al casino più famoso di Amsterdam',
-          price: 15.99,
-          imageUrl: 'https://images.unsplash.com/photo-1529973625058-a665431328fb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1887&q=80',
-          location: 'Centro di Amsterdam',
-          duration: 'Accesso giornaliero',
-          selected: false
-        },
-        {
-          id: '8',
-          type: 'transport',
-          title: 'Amsterdam Travel Card',
-          description: 'Trasporto pubblico illimitato per 3 giorni',
-          price: 28.99,
-          imageUrl: 'https://images.unsplash.com/photo-1527150122257-eda8fb9c0999?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=387&q=80',
-          duration: '3 giorni',
-          selected: true
-        }
-      ];
+      let dummyPackage: PackageItem[] = [];
+      
+      // Se nessuna destinazione è selezionata, impostiamo Amsterdam di default
+      if (!selectedDestination || selectedDestination === 'amsterdam') {
+        dummyPackage = [
+          {
+            id: '1',
+            type: 'flight',
+            title: 'Volo diretto per Amsterdam',
+            description: 'Volo Alitalia da Milano Malpensa a Amsterdam Schiphol, andata e ritorno',
+            price: 189.99,
+            imageUrl: 'https://images.unsplash.com/photo-1507812984078-917a274065be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            date: '15 Giugno 2025',
+            duration: '1h 45min',
+            selected: true
+          },
+          {
+            id: '2',
+            type: 'hotel',
+            title: 'The Flying Pig Downtown Hostel',
+            description: 'Ostello economico nel centro di Amsterdam, ideale per gruppi',
+            price: 45.99,
+            imageUrl: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Centro di Amsterdam',
+            rating: '4.2',
+            selected: true
+          },
+          {
+            id: '3',
+            type: 'hotel',
+            title: 'Hilton Amsterdam',
+            description: 'Hotel di lusso con tutti i comfort per un\'esperienza premium',
+            price: 189.99,
+            imageUrl: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80',
+            location: 'Amsterdam Zuid',
+            rating: '4.8',
+            selected: false
+          },
+          {
+            id: '4',
+            type: 'restaurant',
+            title: 'REM Eiland',
+            description: 'Ristorante unico su una ex piattaforma di trasmissione in mare',
+            price: 45.99,
+            imageUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Amsterdam Ovest',
+            rating: '4.5',
+            selected: true
+          },
+          {
+            id: '5',
+            type: 'activity',
+            title: 'Tour Heineken Experience',
+            description: 'Visita alla famosa fabbrica di birra con degustazione inclusa',
+            price: 21.99,
+            imageUrl: 'https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Centro di Amsterdam',
+            duration: '1.5 ore',
+            selected: true
+          },
+          {
+            id: '6',
+            type: 'activity',
+            title: 'Giro in barca sui canali',
+            description: 'Tour privato in barca sui canali con birra inclusa',
+            price: 35.99,
+            imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Canali di Amsterdam',
+            duration: '2 ore',
+            selected: true
+          },
+          {
+            id: '7',
+            type: 'activity',
+            title: 'Ingresso al casino Holland',
+            description: 'Una serata di divertimento al casino più famoso di Amsterdam',
+            price: 15.99,
+            imageUrl: 'https://images.unsplash.com/photo-1529973625058-a665431328fb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1887&q=80',
+            location: 'Centro di Amsterdam',
+            duration: 'Accesso giornaliero',
+            selected: false
+          },
+          {
+            id: '8',
+            type: 'transport',
+            title: 'Amsterdam Travel Card',
+            description: 'Trasporto pubblico illimitato per 3 giorni',
+            price: 28.99,
+            imageUrl: 'https://images.unsplash.com/photo-1527150122257-eda8fb9c0999?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=387&q=80',
+            duration: '3 giorni',
+            selected: true
+          }
+        ];
+      } else if (selectedDestination === 'praga') {
+        dummyPackage = [
+          {
+            id: '1',
+            type: 'flight',
+            title: 'Volo diretto per Praga',
+            description: 'Volo Czech Airlines da Milano Malpensa a Praga Václav Havel, andata e ritorno',
+            price: 169.99,
+            imageUrl: 'https://images.unsplash.com/photo-1586449480584-34302e933441?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            date: '15 Giugno 2025',
+            duration: '1h 30min',
+            selected: true
+          },
+          {
+            id: '2',
+            type: 'hotel',
+            title: 'Czech Inn',
+            description: 'Ostello moderno nel centro di Praga, ideale per gruppi',
+            price: 35.99,
+            imageUrl: 'https://images.unsplash.com/photo-1598495496118-f8763b94bde1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Centro storico di Praga',
+            rating: '4.3',
+            selected: true
+          },
+          {
+            id: '3',
+            type: 'hotel',
+            title: 'Hilton Prague Old Town',
+            description: 'Hotel di lusso nel quartiere storico di Praga',
+            price: 169.99,
+            imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Città Vecchia di Praga',
+            rating: '4.7',
+            selected: false
+          },
+          {
+            id: '4',
+            type: 'restaurant',
+            title: 'Lokál Dlouhááá',
+            description: 'Ristorante tradizionale ceco con ottima birra locale',
+            price: 25.99,
+            imageUrl: 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Centro di Praga',
+            rating: '4.6',
+            selected: true
+          },
+          {
+            id: '5',
+            type: 'activity',
+            title: 'Tour delle birrerie di Praga',
+            description: 'Visita a 3 birrerie storiche con degustazione inclusa',
+            price: 29.99,
+            imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Centro di Praga',
+            duration: '3 ore',
+            selected: true
+          },
+          {
+            id: '6',
+            type: 'activity',
+            title: 'Crociera sul fiume Moldava',
+            description: 'Tour serale con cena e bevande incluse',
+            price: 45.99,
+            imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Fiume Moldava, Praga',
+            duration: '2 ore',
+            selected: true
+          },
+          {
+            id: '7',
+            type: 'activity',
+            title: 'Ingresso al Casino Atrium',
+            description: 'Una serata di divertimento nel più grande casino di Praga',
+            price: 20.99,
+            imageUrl: 'https://images.unsplash.com/photo-1634553795936-440e6996b496?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Praga 5',
+            duration: 'Accesso giornaliero',
+            selected: false
+          },
+          {
+            id: '8',
+            type: 'transport',
+            title: 'Praga City Card',
+            description: 'Trasporto pubblico illimitato e accesso ad attrazioni',
+            price: 32.99,
+            imageUrl: 'https://images.unsplash.com/photo-1562249004-c63b56249baa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            duration: '3 giorni',
+            selected: true
+          }
+        ];
+      } else if (selectedDestination === 'budapest') {
+        dummyPackage = [
+          {
+            id: '1',
+            type: 'flight',
+            title: 'Volo diretto per Budapest',
+            description: 'Volo Wizz Air da Milano Malpensa a Budapest Ferenc Liszt, andata e ritorno',
+            price: 149.99,
+            imageUrl: 'https://images.unsplash.com/photo-1549964124-87487f50bc8a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            date: '15 Giugno 2025',
+            duration: '1h 40min',
+            selected: true
+          },
+          {
+            id: '2',
+            type: 'hotel',
+            title: 'Wombats City Hostel Budapest',
+            description: 'Ostello economico nel centro di Budapest, perfetto per gruppi',
+            price: 29.99,
+            imageUrl: 'https://images.unsplash.com/photo-1605145230448-3a148875c312?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Centro di Budapest',
+            rating: '4.5',
+            selected: true
+          },
+          {
+            id: '3',
+            type: 'hotel',
+            title: 'Hotel Gellért Budapest',
+            description: 'Hotel storico con accesso alle terme Gellért',
+            price: 159.99,
+            imageUrl: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Buda, Budapest',
+            rating: '4.6',
+            selected: false
+          },
+          {
+            id: '4',
+            type: 'restaurant',
+            title: 'Mazel Tov',
+            description: 'Ristorante alla moda nel quartiere ebraico',
+            price: 35.99,
+            imageUrl: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1185&q=80',
+            location: 'Quartiere ebraico, Budapest',
+            rating: '4.7',
+            selected: true
+          },
+          {
+            id: '5',
+            type: 'activity',
+            title: 'Tour dei Ruin Bar',
+            description: 'Visita guidata dei famosi bar ricavati da edifici abbandonati',
+            price: 25.99,
+            imageUrl: 'https://images.unsplash.com/photo-1583165224510-7a3729d0dfa4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Quartiere ebraico, Budapest',
+            duration: '4 ore',
+            selected: true
+          },
+          {
+            id: '6',
+            type: 'activity',
+            title: 'Terme Széchenyi',
+            description: 'Accesso giornaliero alle più grandi terme d\'Europa',
+            price: 22.99,
+            imageUrl: 'https://images.unsplash.com/photo-1549475762-f55ae96177c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: 'Parco Városliget, Budapest',
+            duration: 'Accesso giornaliero',
+            selected: true
+          },
+          {
+            id: '7',
+            type: 'activity',
+            title: 'Crociera sul Danubio',
+            description: 'Tour serale con cena e bevande incluse',
+            price: 49.99,
+            imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: 'Fiume Danubio, Budapest',
+            duration: '2.5 ore',
+            selected: false
+          },
+          {
+            id: '8',
+            type: 'transport',
+            title: 'Budapest Card',
+            description: 'Trasporto pubblico illimitato e accesso ad attrazioni',
+            price: 30.99,
+            imageUrl: 'https://images.unsplash.com/photo-1597579964094-f8a5143abf9b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            duration: '3 giorni',
+            selected: true
+          }
+        ];
+      }
       
       setPackageItems(dummyPackage);
       setIsGeneratingPackage(false);
