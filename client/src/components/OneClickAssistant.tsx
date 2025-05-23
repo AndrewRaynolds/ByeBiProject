@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Send, Calendar, MapPin, Utensils, Music, Plane, Hotel, Car, Gift, PlusCircle, ShoppingCart } from 'lucide-react';
+import { Loader2, Send, Calendar, MapPin, Utensils, Music, Plane, Building, Car, Gift, PlusCircle, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { travelService, Flight, Hotel, Activity, Restaurant, Event, PackageRequest, TravelPackage } from '@/services/travel-service';
 
 // Schema per il form di input
 const messageSchema = z.object({
@@ -34,7 +35,7 @@ interface ChatMessage {
 // Tipo per gli elementi del pacchetto
 interface PackageItem {
   id: string;
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport';
+  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'event';
   title: string;
   description: string;
   price: number;
@@ -62,6 +63,8 @@ export default function OneClickAssistant() {
   const [totalPrice, setTotalPrice] = useState(0);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
+  const [selectedDates, setSelectedDates] = useState<{start?: string, end?: string}>({});
+  const [selectedPeople, setSelectedPeople] = useState<number>(0);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -101,8 +104,6 @@ export default function OneClickAssistant() {
     setIsLoading(true);
 
     try {
-      // In una implementazione reale, qui chiameremmo l'API OpenAI
-      // Per ora simuliamo una risposta dopo un breve ritardo
       setTimeout(() => {
         const assistantResponse = generateResponse(data.message);
         
@@ -117,7 +118,7 @@ export default function OneClickAssistant() {
         setIsLoading(false);
         
         // Se l'utente ha fornito abbastanza informazioni, suggeriamo di generare un pacchetto
-        if (messages.length > 4) {
+        if (messages.length > 4 && selectedDestination) {
           setTimeout(() => {
             const finalMessage: ChatMessage = {
               id: (Date.now() + 2).toString(),
@@ -140,43 +141,83 @@ export default function OneClickAssistant() {
     }
   };
 
-  // Simulazione delle risposte dell'assistente (in un'implementazione reale utilizzerebbe OpenAI)
+  // Elaborazione delle risposte dell'assistente in base al messaggio dell'utente
   const generateResponse = (userMessage: string): string => {
     const normalizedMessage = userMessage.toLowerCase();
     
+    // Rilevamento della destinazione
     if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
       setSelectedDestination('amsterdam');
       return "Amsterdam è una scelta eccellente per un addio al celibato! Offre locali notturni, ottima birra e molto altro. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('praga') || normalizedMessage.includes('repubblica ceca')) {
-      setSelectedDestination('praga');
+      setSelectedDestination('prague');
       return "Praga è una destinazione fantastica per un addio al celibato! È famosa per la sua birra, vita notturna e prezzi accessibili. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('budapest') || normalizedMessage.includes('ungheria')) {
       setSelectedDestination('budapest');
       return "Budapest è una meta popolare per gli addii al celibato! Offre bagni termali, ruin bar e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('barcellona') || normalizedMessage.includes('spagna')) {
-      setSelectedDestination('barcellona');
+      setSelectedDestination('barcelona');
       return "Barcellona è perfetta per un addio al celibato! Offre belle spiagge, vita notturna eccezionale e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('berlino') || normalizedMessage.includes('germania')) {
-      setSelectedDestination('berlino');
+      setSelectedDestination('berlin');
       return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
-    } else if (
+    } 
+    
+    // Rilevamento delle date
+    else if (
       normalizedMessage.includes('date') || 
       normalizedMessage.includes('quando') || 
-      normalizedMessage.includes('giorno')
+      normalizedMessage.includes('giorno') ||
+      normalizedMessage.includes('giugno') ||
+      normalizedMessage.includes('luglio') ||
+      normalizedMessage.includes('agosto') ||
+      normalizedMessage.includes('settembre')
     ) {
+      // Estrazione delle date dal messaggio (versione semplificata)
+      if (normalizedMessage.includes('giugno')) {
+        setSelectedDates({start: '2025-06-15', end: '2025-06-20'});
+      } else if (normalizedMessage.includes('luglio')) {
+        setSelectedDates({start: '2025-07-15', end: '2025-07-20'});
+      } else if (normalizedMessage.includes('agosto')) {
+        setSelectedDates({start: '2025-08-15', end: '2025-08-20'});
+      } else if (normalizedMessage.includes('settembre')) {
+        setSelectedDates({start: '2025-09-15', end: '2025-09-20'});
+      } else {
+        setSelectedDates({start: '2025-06-15', end: '2025-06-20'});
+      }
+      
       return "Perfetto! E quante persone parteciperanno al viaggio? Così posso consigliarti le migliori opzioni per alloggi e attività.";
-    } else if (
+    } 
+    
+    // Rilevamento del numero di persone
+    else if (
       normalizedMessage.includes('person') || 
       normalizedMessage.includes('amici') || 
       normalizedMessage.includes('partecipanti') || 
-      normalizedMessage.includes('gruppo')
+      normalizedMessage.includes('gruppo') ||
+      /\d+/.test(normalizedMessage) // Regex per rilevare numeri
     ) {
+      // Estrazione del numero di persone (versione semplificata)
+      const match = normalizedMessage.match(/\d+/);
+      if (match) {
+        setSelectedPeople(parseInt(match[0], 10));
+      } else {
+        setSelectedPeople(6); // Valore di default
+      }
+      
       return "Ottimo! Ti interessano più attività rilassanti o preferisci un'esperienza più movimentata? Hai interessi particolari come sport, degustazioni, esperienze culturali?";
-    } else if (
+    } 
+    
+    // Generazione del pacchetto
+    else if (
       normalizedMessage.includes('genera') || 
       normalizedMessage.includes('crea') || 
       normalizedMessage.includes('pacchetto') ||
-      normalizedMessage.includes('proposta')
+      normalizedMessage.includes('proposta') ||
+      normalizedMessage.includes('mostra') ||
+      normalizedMessage.includes('sì') ||
+      normalizedMessage.includes('si') ||
+      normalizedMessage.includes('ok')
     ) {
       setTimeout(() => {
         generatePackage();
@@ -184,914 +225,906 @@ export default function OneClickAssistant() {
       return "Sto generando un pacchetto personalizzato in base alle tue preferenze. Dammi solo un momento...";
     }
     
+    // Risposta di default
     return "Grazie per queste informazioni! Hai altre preferenze o richieste particolari per il tuo addio al celibato?";
   };
 
-  // Genera un pacchetto con opzioni per volo, hotel, ristoranti e attività
-  const generatePackage = () => {
-    setIsGeneratingPackage(true);
+  // Fallback ai dati di esempio se c'è un errore con le API
+  const generateFallbackPackage = () => {
+    let dummyPackage: PackageItem[] = [];
     
-    // Simuliamo una chiamata API
-    setTimeout(() => {
-      let dummyPackage: PackageItem[] = [];
+    // Se nessuna destinazione è selezionata, impostiamo Amsterdam di default
+    if (!selectedDestination || selectedDestination === 'amsterdam') {
+      dummyPackage = [
+        {
+          id: '1',
+          type: 'flight',
+          title: 'Volo diretto per Amsterdam',
+          description: 'Volo Alitalia da Milano Malpensa a Amsterdam Schiphol, andata e ritorno',
+          price: 189.99,
+          imageUrl: 'https://images.unsplash.com/photo-1507812984078-917a274065be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          date: '15 Giugno 2025',
+          duration: '1h 45min',
+          selected: true
+        },
+        {
+          id: '2',
+          type: 'hotel',
+          title: 'The Flying Pig Downtown Hostel',
+          description: 'Ostello economico nel centro di Amsterdam, ideale per gruppi',
+          price: 45.99,
+          imageUrl: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Centro di Amsterdam',
+          rating: '4.2',
+          selected: true
+        },
+        {
+          id: '3',
+          type: 'hotel',
+          title: 'Hilton Amsterdam',
+          description: 'Hotel di lusso con tutti i comfort per un\'esperienza premium',
+          price: 189.99,
+          imageUrl: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80',
+          location: 'Amsterdam Zuid',
+          rating: '4.8',
+          selected: false
+        },
+        {
+          id: '4',
+          type: 'restaurant',
+          title: 'REM Eiland',
+          description: 'Ristorante unico su una ex piattaforma di trasmissione in mare',
+          price: 45.99,
+          imageUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Amsterdam Ovest',
+          rating: '4.5',
+          selected: true
+        },
+        {
+          id: '5',
+          type: 'activity',
+          title: 'Tour Heineken Experience',
+          description: 'Visita alla famosa fabbrica di birra con degustazione inclusa',
+          price: 21.99,
+          imageUrl: 'https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Centro di Amsterdam',
+          duration: '1.5 ore',
+          selected: true
+        },
+        {
+          id: '6',
+          type: 'activity',
+          title: 'Giro in barca sui canali',
+          description: 'Tour privato in barca sui canali con birra inclusa',
+          price: 35.99,
+          imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Canali di Amsterdam',
+          duration: '2 ore',
+          selected: true
+        },
+        {
+          id: '7',
+          type: 'activity',
+          title: 'Ingresso al casino Holland',
+          description: 'Una serata di divertimento al casino più famoso di Amsterdam',
+          price: 15.99,
+          imageUrl: 'https://images.unsplash.com/photo-1529973625058-a665431328fb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1887&q=80',
+          location: 'Centro di Amsterdam',
+          duration: 'Accesso giornaliero',
+          selected: false
+        },
+        {
+          id: '8',
+          type: 'transport',
+          title: 'Amsterdam Travel Card',
+          description: 'Trasporto pubblico illimitato per 3 giorni',
+          price: 28.99,
+          imageUrl: 'https://images.unsplash.com/photo-1527150122257-eda8fb9c0999?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=387&q=80',
+          duration: '3 giorni',
+          selected: true
+        }
+      ];
+    } else if (selectedDestination === 'prague') {
+      dummyPackage = [
+        {
+          id: '1',
+          type: 'flight',
+          title: 'Volo diretto per Praga',
+          description: 'Volo Czech Airlines da Milano Malpensa a Praga Václav Havel, andata e ritorno',
+          price: 169.99,
+          imageUrl: 'https://images.unsplash.com/photo-1586449480584-34302e933441?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          date: '15 Giugno 2025',
+          duration: '1h 30min',
+          selected: true
+        },
+        {
+          id: '2',
+          type: 'hotel',
+          title: 'Czech Inn',
+          description: 'Ostello moderno nel centro di Praga, ideale per gruppi',
+          price: 35.99,
+          imageUrl: 'https://images.unsplash.com/photo-1598495496118-f8763b94bde1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Centro storico di Praga',
+          rating: '4.3',
+          selected: true
+        },
+        {
+          id: '3',
+          type: 'hotel',
+          title: 'Hilton Prague Old Town',
+          description: 'Hotel di lusso nel quartiere storico di Praga',
+          price: 169.99,
+          imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Città Vecchia di Praga',
+          rating: '4.7',
+          selected: false
+        },
+        {
+          id: '4',
+          type: 'restaurant',
+          title: 'Lokál Dlouhááá',
+          description: 'Ristorante tradizionale ceco con ottima birra locale',
+          price: 25.99,
+          imageUrl: 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Centro di Praga',
+          rating: '4.6',
+          selected: true
+        },
+        {
+          id: '5',
+          type: 'activity',
+          title: 'Tour delle birrerie di Praga',
+          description: 'Visita a 3 birrerie storiche con degustazione inclusa',
+          price: 29.99,
+          imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Centro di Praga',
+          duration: '3 ore',
+          selected: true
+        },
+        {
+          id: '6',
+          type: 'activity',
+          title: 'Crociera sul fiume Moldava',
+          description: 'Tour serale con cena e bevande incluse',
+          price: 45.99,
+          imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Fiume Moldava, Praga',
+          duration: '2 ore',
+          selected: true
+        },
+        {
+          id: '7',
+          type: 'transport',
+          title: 'Prague Travel Card',
+          description: 'Trasporto pubblico illimitato per 3 giorni',
+          price: 22.99,
+          imageUrl: 'https://images.unsplash.com/photo-1501623774294-6b93428aef20?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80',
+          duration: '3 giorni',
+          selected: true
+        }
+      ];
+    } 
+    // Budapest
+    else if (selectedDestination === 'budapest') {
+      dummyPackage = [
+        {
+          id: '1',
+          type: 'flight',
+          title: 'Volo diretto per Budapest',
+          description: 'Volo Wizz Air da Milano Malpensa a Budapest Ferenc Liszt, andata e ritorno',
+          price: 149.99,
+          imageUrl: 'https://images.unsplash.com/photo-1572356722933-2dca3b3e5d0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          date: '15 Giugno 2025',
+          duration: '1h 40min',
+          selected: true
+        },
+        {
+          id: '2',
+          type: 'hotel',
+          title: 'Wombats City Hostel',
+          description: 'Ostello moderno nel centro di Budapest, ideale per gruppi',
+          price: 30.99,
+          imageUrl: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Centro di Budapest',
+          rating: '4.4',
+          selected: true
+        },
+        {
+          id: '4',
+          type: 'restaurant',
+          title: 'Mazel Tov',
+          description: 'Ristorante trendy nel quartiere ebraico con cucina mediorientale',
+          price: 35.99,
+          imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Quartiere ebraico, Budapest',
+          rating: '4.7',
+          selected: true
+        },
+        {
+          id: '5',
+          type: 'activity',
+          title: 'Terme Széchenyi',
+          description: 'Giornata di relax nei bagni termali più famosi della città',
+          price: 22.99,
+          imageUrl: 'https://images.unsplash.com/photo-1549321495-305eb13f8aa9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Parco della Città, Budapest',
+          duration: 'Giornaliero',
+          selected: true
+        },
+        {
+          id: '6',
+          type: 'activity',
+          title: 'Boat Party sul Danubio',
+          description: 'Festa in barca con musica, bevande e vista notturna sulla città',
+          price: 39.99,
+          imageUrl: 'https://images.unsplash.com/photo-1571694330263-a325ca5d3cdf?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Fiume Danubio, Budapest',
+          duration: '3 ore',
+          selected: true
+        },
+        {
+          id: '7',
+          type: 'transport',
+          title: 'Budapest Travel Card',
+          description: 'Trasporto pubblico illimitato per 3 giorni',
+          price: 22.99,
+          imageUrl: 'https://images.unsplash.com/photo-1505245208761-ba872912fac0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          duration: '3 giorni',
+          selected: true
+        }
+      ];
+    }
+    // Barcellona
+    else if (selectedDestination === 'barcelona') {
+      dummyPackage = [
+        {
+          id: '1',
+          type: 'flight',
+          title: 'Volo diretto per Barcellona',
+          description: 'Volo Vueling da Milano Malpensa a Barcellona El Prat, andata e ritorno',
+          price: 179.99,
+          imageUrl: 'https://images.unsplash.com/photo-1525154661349-45aa10ee53e0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          date: '15 Giugno 2025',
+          duration: '1h 55min',
+          selected: true
+        },
+        {
+          id: '2',
+          type: 'hotel',
+          title: 'Generator Barcelona',
+          description: 'Ostello moderno vicino alla Sagrada Familia',
+          price: 42.99,
+          imageUrl: 'https://images.unsplash.com/photo-1596436889106-be35e843f974?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Gracia, Barcellona',
+          rating: '4.3',
+          selected: true
+        },
+        {
+          id: '4',
+          type: 'restaurant',
+          title: 'La Paradeta',
+          description: 'Ristorante di pesce fresco in stile mercato',
+          price: 40.99,
+          imageUrl: 'https://images.unsplash.com/photo-1539136788836-5699e78bfc75?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Born, Barcellona',
+          rating: '4.6',
+          selected: true
+        },
+        {
+          id: '5',
+          type: 'activity',
+          title: 'Tour del Barrio Gotico',
+          description: 'Visita guidata del quartiere gotico con degustazione di tapas e sangria',
+          price: 29.99,
+          imageUrl: 'https://images.unsplash.com/photo-1558599235-c6945be50305?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Barrio Gotico, Barcellona',
+          duration: '3 ore',
+          selected: true
+        },
+        {
+          id: '6',
+          type: 'activity',
+          title: 'Barceloneta Beach Day',
+          description: 'Giornata in spiaggia con noleggio lettini e drink inclusi',
+          price: 25.99,
+          imageUrl: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Barceloneta, Barcellona',
+          duration: 'Giornaliero',
+          selected: true
+        },
+        {
+          id: '7',
+          type: 'transport',
+          title: 'Barcelona Travel Card',
+          description: 'Trasporto pubblico illimitato per 3 giorni',
+          price: 24.99,
+          imageUrl: 'https://images.unsplash.com/photo-1646044528173-13ade7ccf079?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          duration: '3 giorni',
+          selected: true
+        }
+      ];
+    }
+    // Berlino
+    else if (selectedDestination === 'berlin') {
+      dummyPackage = [
+        {
+          id: '1',
+          type: 'flight',
+          title: 'Volo diretto per Berlino',
+          description: 'Volo Lufthansa da Milano Malpensa a Berlino Brandeburgo, andata e ritorno',
+          price: 199.99,
+          imageUrl: 'https://images.unsplash.com/photo-1504276048855-f3d60e69632f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          date: '15 Giugno 2025',
+          duration: '1h 50min',
+          selected: true
+        },
+        {
+          id: '2',
+          type: 'hotel',
+          title: 'Generator Berlin Mitte',
+          description: 'Ostello moderno nel centro di Berlino',
+          price: 38.99,
+          imageUrl: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Mitte, Berlino',
+          rating: '4.2',
+          selected: true
+        },
+        {
+          id: '4',
+          type: 'restaurant',
+          title: 'Burgermeister',
+          description: 'Famoso fast food di hamburger in un ex bagno pubblico sotto la metropolitana',
+          price: 20.99,
+          imageUrl: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=722&q=80',
+          location: 'Kreuzberg, Berlino',
+          rating: '4.5',
+          selected: true
+        },
+        {
+          id: '5',
+          type: 'activity',
+          title: 'Pub Crawl a Kreuzberg',
+          description: 'Tour dei migliori locali del quartiere più vivace di Berlino',
+          price: 34.99,
+          imageUrl: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Kreuzberg, Berlino',
+          duration: '4 ore',
+          selected: true
+        },
+        {
+          id: '6',
+          type: 'activity',
+          title: 'Berghain Club',
+          description: 'Biglietti per il club techno più famoso al mondo (ingresso non garantito!)',
+          price: 25.99,
+          imageUrl: 'https://images.unsplash.com/photo-1642982660372-be380c9a92c7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Friedrichshain, Berlino',
+          duration: 'Notte intera',
+          selected: true
+        },
+        {
+          id: '7',
+          type: 'transport',
+          title: 'Berlin Travel Card',
+          description: 'Trasporto pubblico illimitato per 3 giorni',
+          price: 26.99,
+          imageUrl: 'https://images.unsplash.com/photo-1531501410720-c8d437636201?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          duration: '3 giorni',
+          selected: true
+        }
+      ];
+    }
+    
+    setPackageItems(dummyPackage);
+    setShowPackageDialog(true);
+    
+    // Crea un messagio con il pacchetto generato
+    const packageReadyMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: `Ho generato un pacchetto personalizzato per il tuo addio al celibato! Include volo, alloggio, attività e altro. Clicca sul pulsante "Vedi Pacchetto" per visualizzare i dettagli.`,
+      sender: 'assistant',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, packageReadyMessage]);
+  };
+
+  // Genera un pacchetto con opzioni per volo, hotel, ristoranti e attività
+  const generatePackage = async () => {
+    setIsGeneratingPackage(true);
+    let packageItems: PackageItem[] = [];
+    
+    try {
+      // Usa selectedDestination, selectedDates, e selectedPeople per generare un pacchetto
+      const destination = selectedDestination || 'amsterdam';
       
-      // Se nessuna destinazione è selezionata, impostiamo Amsterdam di default
-      if (!selectedDestination || selectedDestination === 'amsterdam') {
-        dummyPackage = [
-          {
-            id: '1',
+      // Crea la richiesta di pacchetto
+      const packageRequest: PackageRequest = {
+        destination: destination,
+        startDate: selectedDates.start || '2025-06-15',
+        endDate: selectedDates.end || '2025-06-20',
+        adults: selectedPeople || 6,
+        budget: 'standard'
+      };
+      
+      // Per ogni tipo di elemento, gestisci separatamente gli errori
+      try {
+        // Ottieni voli
+        const flights = await travelService.getFlights(
+          'MXP', // origin (Milano Malpensa)
+          packageRequest.destination, 
+          packageRequest.startDate, 
+          packageRequest.endDate,
+          packageRequest.adults
+        );
+        
+        if (flights && flights.length > 0) {
+          packageItems.push({
+            id: flights[0].id,
             type: 'flight',
-            title: 'Volo diretto per Amsterdam',
-            description: 'Volo Alitalia da Milano Malpensa a Amsterdam Schiphol, andata e ritorno',
-            price: 189.99,
+            title: `Volo per ${flights[0].destination}`,
+            description: `Volo ${flights[0].airline} da ${flights[0].origin} a ${flights[0].destination}, andata e ritorno`,
+            price: flights[0].price,
             imageUrl: 'https://images.unsplash.com/photo-1507812984078-917a274065be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            date: '15 Giugno 2025',
-            duration: '1h 45min',
+            date: flights[0].departureDate,
+            duration: flights[0].duration,
             selected: true
-          },
-          {
-            id: '2',
-            type: 'hotel',
-            title: 'The Flying Pig Downtown Hostel',
-            description: 'Ostello economico nel centro di Amsterdam, ideale per gruppi',
-            price: 45.99,
-            imageUrl: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Centro di Amsterdam',
-            rating: '4.2',
-            selected: true
-          },
-          {
-            id: '3',
-            type: 'hotel',
-            title: 'Hilton Amsterdam',
-            description: 'Hotel di lusso con tutti i comfort per un\'esperienza premium',
-            price: 189.99,
-            imageUrl: 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80',
-            location: 'Amsterdam Zuid',
-            rating: '4.8',
-            selected: false
-          },
-          {
-            id: '4',
-            type: 'restaurant',
-            title: 'REM Eiland',
-            description: 'Ristorante unico su una ex piattaforma di trasmissione in mare',
-            price: 45.99,
-            imageUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Amsterdam Ovest',
-            rating: '4.5',
-            selected: true
-          },
-          {
-            id: '5',
-            type: 'activity',
-            title: 'Tour Heineken Experience',
-            description: 'Visita alla famosa fabbrica di birra con degustazione inclusa',
-            price: 21.99,
-            imageUrl: 'https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Centro di Amsterdam',
-            duration: '1.5 ore',
-            selected: true
-          },
-          {
-            id: '6',
-            type: 'activity',
-            title: 'Giro in barca sui canali',
-            description: 'Tour privato in barca sui canali con birra inclusa',
-            price: 35.99,
-            imageUrl: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Canali di Amsterdam',
-            duration: '2 ore',
-            selected: true
-          },
-          {
-            id: '7',
-            type: 'activity',
-            title: 'Ingresso al casino Holland',
-            description: 'Una serata di divertimento al casino più famoso di Amsterdam',
-            price: 15.99,
-            imageUrl: 'https://images.unsplash.com/photo-1529973625058-a665431328fb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1887&q=80',
-            location: 'Centro di Amsterdam',
-            duration: 'Accesso giornaliero',
-            selected: false
-          },
-          {
-            id: '8',
-            type: 'transport',
-            title: 'Amsterdam Travel Card',
-            description: 'Trasporto pubblico illimitato per 3 giorni',
-            price: 28.99,
-            imageUrl: 'https://images.unsplash.com/photo-1527150122257-eda8fb9c0999?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=387&q=80',
-            duration: '3 giorni',
-            selected: true
-          }
-        ];
-      } else if (selectedDestination === 'praga') {
-        dummyPackage = [
-          {
-            id: '1',
-            type: 'flight',
-            title: 'Volo diretto per Praga',
-            description: 'Volo Czech Airlines da Milano Malpensa a Praga Václav Havel, andata e ritorno',
-            price: 169.99,
-            imageUrl: 'https://images.unsplash.com/photo-1586449480584-34302e933441?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            date: '15 Giugno 2025',
-            duration: '1h 30min',
-            selected: true
-          },
-          {
-            id: '2',
-            type: 'hotel',
-            title: 'Czech Inn',
-            description: 'Ostello moderno nel centro di Praga, ideale per gruppi',
-            price: 35.99,
-            imageUrl: 'https://images.unsplash.com/photo-1598495496118-f8763b94bde1?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Centro storico di Praga',
-            rating: '4.3',
-            selected: true
-          },
-          {
-            id: '3',
-            type: 'hotel',
-            title: 'Hilton Prague Old Town',
-            description: 'Hotel di lusso nel quartiere storico di Praga',
-            price: 169.99,
-            imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Città Vecchia di Praga',
-            rating: '4.7',
-            selected: false
-          },
-          {
-            id: '4',
-            type: 'restaurant',
-            title: 'Lokál Dlouhááá',
-            description: 'Ristorante tradizionale ceco con ottima birra locale',
-            price: 25.99,
-            imageUrl: 'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Centro di Praga',
-            rating: '4.6',
-            selected: true
-          },
-          {
-            id: '5',
-            type: 'activity',
-            title: 'Tour delle birrerie di Praga',
-            description: 'Visita a 3 birrerie storiche con degustazione inclusa',
-            price: 29.99,
-            imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Centro di Praga',
-            duration: '3 ore',
-            selected: true
-          },
-          {
-            id: '6',
-            type: 'activity',
-            title: 'Crociera sul fiume Moldava',
-            description: 'Tour serale con cena e bevande incluse',
-            price: 45.99,
-            imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Fiume Moldava, Praga',
-            duration: '2 ore',
-            selected: true
-          },
-          {
-            id: '7',
-            type: 'activity',
-            title: 'Ingresso al Casino Atrium',
-            description: 'Una serata di divertimento nel più grande casino di Praga',
-            price: 20.99,
-            imageUrl: 'https://images.unsplash.com/photo-1634553795936-440e6996b496?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Praga 5',
-            duration: 'Accesso giornaliero',
-            selected: false
-          },
-          {
-            id: '8',
-            type: 'transport',
-            title: 'Praga City Card',
-            description: 'Trasporto pubblico illimitato e accesso ad attrazioni',
-            price: 32.99,
-            imageUrl: 'https://images.unsplash.com/photo-1562249004-c63b56249baa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            duration: '3 giorni',
-            selected: true
-          }
-        ];
-      } else if (selectedDestination === 'budapest') {
-        dummyPackage = [
-          {
-            id: '1',
-            type: 'flight',
-            title: 'Volo diretto per Budapest',
-            description: 'Volo Wizz Air da Milano Malpensa a Budapest Ferenc Liszt, andata e ritorno',
-            price: 149.99,
-            imageUrl: 'https://images.unsplash.com/photo-1549964124-87487f50bc8a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            date: '15 Giugno 2025',
-            duration: '1h 40min',
-            selected: true
-          },
-          {
-            id: '2',
-            type: 'hotel',
-            title: 'Wombats City Hostel Budapest',
-            description: 'Ostello economico nel centro di Budapest, perfetto per gruppi',
-            price: 29.99,
-            imageUrl: 'https://images.unsplash.com/photo-1605145230448-3a148875c312?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Centro di Budapest',
-            rating: '4.5',
-            selected: true
-          },
-          {
-            id: '3',
-            type: 'hotel',
-            title: 'Hotel Gellért Budapest',
-            description: 'Hotel storico con accesso alle terme Gellért',
-            price: 159.99,
-            imageUrl: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Buda, Budapest',
-            rating: '4.6',
-            selected: false
-          },
-          {
-            id: '4',
-            type: 'restaurant',
-            title: 'Mazel Tov',
-            description: 'Ristorante alla moda nel quartiere ebraico',
-            price: 35.99,
-            imageUrl: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1185&q=80',
-            location: 'Quartiere ebraico, Budapest',
-            rating: '4.7',
-            selected: true
-          },
-          {
-            id: '5',
-            type: 'activity',
-            title: 'Tour dei Ruin Bar',
-            description: 'Visita guidata dei famosi bar ricavati da edifici abbandonati',
-            price: 25.99,
-            imageUrl: 'https://images.unsplash.com/photo-1583165224510-7a3729d0dfa4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Quartiere ebraico, Budapest',
-            duration: '4 ore',
-            selected: true
-          },
-          {
-            id: '6',
-            type: 'activity',
-            title: 'Terme Széchenyi',
-            description: 'Accesso giornaliero alle più grandi terme d\'Europa',
-            price: 22.99,
-            imageUrl: 'https://images.unsplash.com/photo-1549475762-f55ae96177c0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Parco Városliget, Budapest',
-            duration: 'Accesso giornaliero',
-            selected: true
-          },
-          {
-            id: '7',
-            type: 'activity',
-            title: 'Crociera sul Danubio',
-            description: 'Tour serale con cena e bevande incluse',
-            price: 49.99,
-            imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Fiume Danubio, Budapest',
-            duration: '2.5 ore',
-            selected: false
-          },
-          {
-            id: '8',
-            type: 'transport',
-            title: 'Budapest Card',
-            description: 'Trasporto pubblico illimitato e accesso ad attrazioni',
-            price: 30.99,
-            imageUrl: 'https://images.unsplash.com/photo-1597579964094-f8a5143abf9b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            duration: '3 giorni',
-            selected: true
-          }
-        ];
-      } else if (selectedDestination === 'barcellona') {
-        dummyPackage = [
-          {
-            id: '1',
-            type: 'flight',
-            title: 'Volo diretto per Barcellona',
-            description: 'Volo Vueling da Milano Malpensa a Barcellona El Prat, andata e ritorno',
-            price: 159.99,
-            imageUrl: 'https://images.unsplash.com/photo-1587019563857-b387d14e8d7a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            date: '15 Giugno 2025',
-            duration: '1h 50min',
-            selected: true
-          },
-          {
-            id: '2',
-            type: 'hotel',
-            title: 'Generator Barcelona',
-            description: 'Ostello moderno a pochi passi da Passeig de Gràcia',
-            price: 39.99,
-            imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Gracia, Barcellona',
-            rating: '4.3',
-            selected: true
-          },
-          {
-            id: '3',
-            type: 'hotel',
-            title: 'W Barcelona',
-            description: 'Hotel di lusso sulla spiaggia di Barceloneta con vista mozzafiato',
-            price: 229.99,
-            imageUrl: 'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1174&q=80',
-            location: 'Barceloneta, Barcellona',
-            rating: '4.7',
-            selected: false
-          },
-          {
-            id: '4',
-            type: 'restaurant',
-            title: 'El Nacional',
-            description: 'Complesso gastronomico con 4 ristoranti e 4 bar specializzati',
-            price: 45.99,
-            imageUrl: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1185&q=80',
-            location: 'Eixample, Barcellona',
-            rating: '4.6',
-            selected: true
-          },
-          {
-            id: '5',
-            type: 'activity',
-            title: 'Tour in barca con DJ',
-            description: 'Festa in barca con musica dal vivo, drink inclusi e bagno nel Mediterraneo',
-            price: 65.99,
-            imageUrl: 'https://images.unsplash.com/photo-1603568367331-62a0e08821a3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Porto Olimpico, Barcellona',
-            duration: '3 ore',
-            selected: true
-          },
-          {
-            id: '6',
-            type: 'activity',
-            title: 'Tour dei bar di tapas',
-            description: 'Visita di 4 bar tradizionali con degustazione di tapas e vino',
-            price: 49.99,
-            imageUrl: 'https://images.unsplash.com/photo-1607098665874-fd193397547b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'El Born, Barcellona',
-            duration: '4 ore',
-            selected: true
-          },
-          {
-            id: '7',
-            type: 'activity',
-            title: 'Ingresso a Opium Barcelona',
-            description: 'VIP pass per uno dei migliori club sulla spiaggia',
-            price: 30.99,
-            imageUrl: 'https://images.unsplash.com/photo-1571156425562-365cb9b8ca86?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Barceloneta, Barcellona',
-            duration: 'Ingresso notturno',
-            selected: true
-          },
-          {
-            id: '8',
-            type: 'transport',
-            title: 'Barcelona Card',
-            description: 'Trasporto pubblico illimitato e sconti sulle attrazioni',
-            price: 35.99,
-            imageUrl: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            duration: '3 giorni',
-            selected: true
-          }
-        ];
-      } else if (selectedDestination === 'berlino') {
-        dummyPackage = [
-          {
-            id: '1',
-            type: 'flight',
-            title: 'Volo diretto per Berlino',
-            description: 'Volo Eurowings da Milano Malpensa a Berlino Brandenburg, andata e ritorno',
-            price: 179.99,
-            imageUrl: 'https://images.unsplash.com/photo-1499063078284-f78f7d89616a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            date: '15 Giugno 2025',
-            duration: '1h 55min',
-            selected: true
-          },
-          {
-            id: '2',
-            type: 'hotel',
-            title: 'Generator Berlin Mitte',
-            description: 'Ostello moderno nel centro di Berlino con bar e lounge',
-            price: 32.99,
-            imageUrl: 'https://images.unsplash.com/photo-1568084680786-a84f91d1153c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Mitte, Berlino',
-            rating: '4.2',
-            selected: true
-          },
-          {
-            id: '3',
-            type: 'hotel',
-            title: 'Michelberger Hotel',
-            description: 'Hotel boutique trendy con ristorante e cocktail bar',
-            price: 115.99,
-            imageUrl: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Friedrichshain, Berlino',
-            rating: '4.5',
-            selected: false
-          },
-          {
-            id: '4',
-            type: 'restaurant',
-            title: 'BRLO Brwhouse',
-            description: 'Birreria artigianale con ottimo cibo in container riciclati',
-            price: 35.99,
-            imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Kreuzberg, Berlino',
-            rating: '4.4',
-            selected: true
-          },
-          {
-            id: '5',
-            type: 'activity',
-            title: 'Tour dei club underground',
-            description: 'Visita guidata ai migliori club tecno della città con ingresso saltafila',
-            price: 59.99,
-            imageUrl: 'https://images.unsplash.com/photo-1571156425562-365cb9b8ca86?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Vari quartieri, Berlino',
-            duration: '6 ore',
-            selected: true
-          },
-          {
-            id: '6',
-            type: 'activity',
-            title: 'Tour delle birrerie di Berlino',
-            description: 'Visita di 4 birrerie tradizionali e artigianali con degustazioni',
-            price: 42.99,
-            imageUrl: 'https://images.unsplash.com/photo-1600095760934-9e913f921dc6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            location: 'Prenzlauer Berg, Berlino',
-            duration: '4 ore',
-            selected: true
-          },
-          {
-            id: '7',
-            type: 'activity',
-            title: 'Ingresso prioritario a Berghain',
-            description: 'Ingresso VIP (non garantito) al club più esclusivo di Berlino',
-            price: 25.99,
-            imageUrl: 'https://images.unsplash.com/photo-1642201725271-087fa8377e83?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            location: 'Friedrichshain, Berlino',
-            duration: 'Ingresso notturno',
-            selected: true
-          },
-          {
-            id: '8',
-            type: 'transport',
-            title: 'Berlin WelcomeCard',
-            description: 'Trasporto pubblico illimitato e sconti sulle attrazioni',
-            price: 34.99,
-            imageUrl: 'https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-            duration: '3 giorni',
-            selected: true
-          }
-        ];
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching flights:", error);
       }
       
-      setPackageItems(dummyPackage);
-      setIsGeneratingPackage(false);
+      try {
+        // Ottieni hotel
+        const hotels = await travelService.getHotels(
+          packageRequest.destination,
+          packageRequest.startDate,
+          packageRequest.endDate,
+          packageRequest.adults
+        );
+        
+        if (hotels && hotels.length > 0) {
+          // Aggiungi hotel economico
+          const budgetHotel = hotels.find(h => h.price < 100) || hotels[0];
+          packageItems.push({
+            id: budgetHotel.id,
+            type: 'hotel',
+            title: budgetHotel.name,
+            description: budgetHotel.description,
+            price: budgetHotel.price,
+            imageUrl: budgetHotel.images[0] || 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+            location: budgetHotel.city,
+            rating: budgetHotel.rating.toString(),
+            selected: true
+          });
+          
+          // Aggiungi hotel di lusso
+          const luxuryHotel = hotels.find(h => h.price > 150) || hotels[hotels.length - 1];
+          packageItems.push({
+            id: luxuryHotel.id,
+            type: 'hotel',
+            title: luxuryHotel.name,
+            description: luxuryHotel.description,
+            price: luxuryHotel.price,
+            imageUrl: luxuryHotel.images[0] || 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80',
+            location: luxuryHotel.city,
+            rating: luxuryHotel.rating.toString(),
+            selected: false
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching hotels:", error);
+      }
+      
+      try {
+        // Ottieni ristoranti
+        const restaurants = await travelService.getRestaurants(packageRequest.destination);
+        
+        if (restaurants && restaurants.length > 0) {
+          const restaurant = restaurants[0];
+          packageItems.push({
+            id: restaurant.id,
+            type: 'restaurant',
+            title: restaurant.name,
+            description: restaurant.description,
+            price: restaurant.price,
+            imageUrl: restaurant.images[0] || 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+            location: restaurant.city,
+            rating: restaurant.rating.toString(),
+            selected: true
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching restaurants:", error);
+      }
+      
+      try {
+        // Ottieni attività
+        const activities = await travelService.getActivities(packageRequest.destination);
+        
+        if (activities && activities.length > 0) {
+          activities.slice(0, 3).forEach((activity, index) => {
+            packageItems.push({
+              id: activity.id,
+              type: 'activity',
+              title: activity.name,
+              description: activity.description,
+              price: activity.price,
+              imageUrl: activity.images[0] || 'https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+              location: activity.city,
+              duration: activity.duration,
+              rating: activity.rating.toString(),
+              selected: index === 0 // Seleziona solo la prima attività di default
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+      }
+      
+      // Aggiungi trasporto locale
+      packageItems.push({
+        id: 'transport1',
+        type: 'transport',
+        title: `${packageRequest.destination.charAt(0).toUpperCase() + packageRequest.destination.slice(1)} Travel Card`,
+        description: 'Trasporto pubblico illimitato per 3 giorni',
+        price: 28.99,
+        imageUrl: 'https://images.unsplash.com/photo-1527150122257-eda8fb9c0999?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=387&q=80',
+        duration: '3 giorni',
+        selected: true
+      });
+      
+      // Se non abbiamo ottenuto nessun elemento dal servizio, usiamo il fallback
+      if (packageItems.length <= 1) {
+        generateFallbackPackage();
+        return;
+      }
+      
+      setPackageItems(packageItems);
       setShowPackageDialog(true);
       
-      // Aggiungi un messaggio che informa l'utente che il pacchetto è pronto
+      // Crea un messagio con il pacchetto generato
       const packageReadyMessage: ChatMessage = {
-        id: (Date.now() + 3).toString(),
-        content: "Ho creato un pacchetto personalizzato per il tuo addio al celibato! Puoi visualizzare le opzioni e procedere con l'acquisto con un solo clic.",
+        id: Date.now().toString(),
+        content: `Ho generato un pacchetto personalizzato per il tuo addio al celibato a ${packageRequest.destination.charAt(0).toUpperCase() + packageRequest.destination.slice(1)}! Include volo, alloggio, attività e altro. Clicca sul pulsante "Vedi Pacchetto" per visualizzare i dettagli.`,
         sender: 'assistant',
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, packageReadyMessage]);
-    }, 3000);
+      
+    } catch (error) {
+      console.error('Errore nella generazione del pacchetto:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore nella generazione del pacchetto",
+        variant: "destructive",
+      });
+      
+      // Fallback ai dati di esempio se c'è un errore
+      generateFallbackPackage();
+    } finally {
+      setIsGeneratingPackage(false);
+    }
   };
 
-  // Funzione per gestire la selezione/deselezione degli elementi del pacchetto
-  const toggleItemSelection = (itemId: string) => {
+  // Toggle della selezione di un elemento del pacchetto
+  const toggleItemSelection = (id: string) => {
     setPackageItems(prev => 
       prev.map(item => 
-        item.id === itemId 
-          ? { ...item, selected: !item.selected } 
-          : item
+        item.id === id ? { ...item, selected: !item.selected } : item
       )
     );
   };
 
-  // Funzione per procedere al checkout
+  // Procedi al checkout del pacchetto
   const proceedToCheckout = () => {
+    // Chiudi il dialog del pacchetto
     setShowPackageDialog(false);
-    setCheckoutDialogOpen(true);
+    
+    // Mostra un messaggio di conferma
+    const confirmationMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: `Fantastico! Hai selezionato un pacchetto per un valore totale di €${totalPrice.toFixed(2)}. Procediamo con il pagamento?`,
+      sender: 'assistant',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
+    
+    // Abilita il dialog di checkout dopo un breve ritardo
+    setTimeout(() => {
+      setCheckoutDialogOpen(true);
+    }, 1000);
   };
 
-  // Completamento dell'acquisto con integrazione Zapier
-  const completeCheckout = async () => {
-    try {
-      // Dati del pacchetto da inviare a Zapier
-      const selectedItems = packageItems.filter(item => item.selected);
-      
-      // Prepariamo i dati dell'acquisto per Zapier
-      const purchaseData = {
-        packageId: Date.now().toString(),
-        userId: user?.id || 'guest',
-        userEmail: user?.email || 'guest@example.com',
-        destination: selectedDestination || 'amsterdam',
-        startDate: '2025-06-15',
-        endDate: '2025-06-18',
-        items: selectedItems.map(item => ({
-          id: item.id,
-          type: item.type,
-          title: item.title,
-          price: item.price
-        })),
-        totalPrice,
-        purchaseDate: new Date().toISOString()
-      };
-      
-      // Invia dati dell'acquisto a Zapier tramite il nostro endpoint
-      await apiRequest('POST', '/api/zapier/receive', {
-        action: 'purchase_completed',
-        data: purchaseData
-      });
-      
-      // Reindirizza alla pagina di checkout reale
-      window.location.href = "/checkout?package=" + purchaseData.packageId;
-      
-      toast({
-        title: "Acquisto in elaborazione",
-        description: "Verrai reindirizzato alla pagina di pagamento...",
-      });
-      setCheckoutDialogOpen(false);
-      
-      // Aggiungi un messaggio di conferma nella chat
-      const confirmationMessage: ChatMessage = {
-        id: (Date.now() + 4).toString(),
-        content: "Fantastico! Ho appena ricevuto la conferma del tuo acquisto. Riceverai presto un'email con tutti i dettagli del tuo pacchetto ByeBro. Ho anche sincronizzato le informazioni con il tuo calendario e inviato notifiche agli altri partecipanti. Buon divertimento!",
+  // Conferma del checkout
+  const confirmCheckout = () => {
+    setCheckoutDialogOpen(false);
+    
+    // In una implementazione reale, qui chiameremmo il servizio di pagamento (Stripe)
+    // Per ora simuliamo una conferma
+    
+    // Aggiungi messaggio di conferma
+    const confirmationMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: `Pagamento completato con successo! Riceverai a breve una email con tutti i dettagli della prenotazione. Buon viaggio!`,
+      sender: 'assistant',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
+    
+    // Aggiungi messaggio di follow-up
+    setTimeout(() => {
+      const followUpMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `C'è qualcos'altro che posso fare per te? Ad esempio, posso suggerirti altre attività nella tua destinazione o aiutarti a organizzare il trasporto dall'aeroporto.`,
         sender: 'assistant',
         timestamp: new Date(),
       };
       
-      setMessages(prev => [...prev, confirmationMessage]);
-      
-      // Dopo 3 secondi, aggiungi un altro messaggio con informazioni sulla conferma
-      setTimeout(() => {
-        const followUpMessage: ChatMessage = {
-          id: (Date.now() + 5).toString(),
-          content: "Ti ho inviato un'email di conferma con tutti i dettagli. Inoltre, ho programmato dei promemoria prima della partenza e creato un gruppo condiviso per tutti i partecipanti.",
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, followUpMessage]);
-      }, 3000);
-    } catch (error) {
-      console.error('Error completing purchase with Zapier integration:', error);
-      
-      // Fallback in caso di errore con Zapier
-      toast({
-        title: "Acquisto completato",
-        description: "Il tuo pacchetto ByeBro è stato acquistato con successo!",
-      });
-      setCheckoutDialogOpen(false);
-      
-      const confirmationMessage: ChatMessage = {
-        id: (Date.now() + 4).toString(),
-        content: "Fantastico! Ho appena ricevuto la conferma del tuo acquisto. Riceverai presto un'email con tutti i dettagli del tuo pacchetto ByeBro. Buon divertimento!",
-        sender: 'assistant',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, confirmationMessage]);
-    }
+      setMessages(prev => [...prev, followUpMessage]);
+    }, 2000);
   };
 
-  // Formattazione del prezzo
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(price);
-  };
-
-  // Rendering dell'icona in base al tipo di elemento
-  const renderItemIcon = (type: string) => {
-    switch (type) {
-      case 'flight': return <Plane className="h-5 w-5" />;
-      case 'hotel': return <Hotel className="h-5 w-5" />;
-      case 'restaurant': return <Utensils className="h-5 w-5" />;
-      case 'activity': return <Music className="h-5 w-5" />;
-      case 'transport': return <Car className="h-5 w-5" />;
-      default: return <Gift className="h-5 w-5" />;
-    }
+  // Annulla il checkout
+  const cancelCheckout = () => {
+    setCheckoutDialogOpen(false);
+    
+    // Aggiungi messaggio di conferma dell'annullamento
+    const confirmationMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: `Nessun problema! Il tuo pacchetto è stato salvato. Puoi completare l'acquisto in qualsiasi momento o modificare le tue selezioni. Hai altre domande?`,
+      sender: 'assistant',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <Card className="flex flex-col h-full border-none shadow-none bg-black text-white">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-2xl font-bold text-white">
-            <span className="text-white">Assistente</span> <span className="text-red-600">Bye</span><span className="text-white">Bro</span>
+    <div className="bg-black text-white min-h-screen p-4">
+      <Card className="mx-auto max-w-4xl bg-black border-red-600">
+        <CardHeader className="border-b border-red-600">
+          <CardTitle className="text-red-600 text-xl md:text-2xl flex items-center gap-2">
+            <PlusCircle className="h-6 w-6 text-red-600" />
+            ByeBro One Click Assistant
           </CardTitle>
-          <CardDescription className="text-gray-300">
-            Crea il tuo pacchetto completo per l'addio al celibato con un solo clic
+          <CardDescription className="text-gray-400">
+            Il tuo assistente personale per la pianificazione dell'addio al celibato perfetto
           </CardDescription>
         </CardHeader>
-        
-        <CardContent className="flex-grow p-0 overflow-hidden">
-          <ScrollArea className="h-[60vh] px-4">
-            <div className="space-y-4 pb-4">
+        <CardContent className="p-4 md:p-6">
+          <div className="space-y-4">
+            <ScrollArea className="h-[400px] md:h-[500px] pr-4">
               {messages.map((message) => (
-                <div 
+                <div
                   key={message.id}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${
+                    message.sender === 'user' ? 'justify-end' : 'justify-start'
+                  } mb-4`}
                 >
-                  <div className={`flex items-start max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <Avatar className={`h-8 w-8 ${message.sender === 'user' ? 'ml-2' : 'mr-2'}`}>
-                      {message.sender === 'assistant' ? (
-                        <AvatarImage src="/api/avatar-assistant.png" alt="Assistente" />
-                      ) : (
-                        <AvatarImage src="/api/avatar-user.png" alt="Tu" />
-                      )}
-                      <AvatarFallback>{message.sender === 'assistant' ? 'BA' : 'Tu'}</AvatarFallback>
+                  {message.sender === 'assistant' && (
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarImage src="/assets/assistant-avatar.png" />
+                      <AvatarFallback className="bg-red-600 text-white">BB</AvatarFallback>
                     </Avatar>
-                    
-                    <div className={`p-3 rounded-lg ${
-                      message.sender === 'assistant' 
-                        ? 'bg-gray-900 text-white border border-red-600' 
-                        : 'bg-red-600 text-white'
-                    }`}>
-                      <p>{message.content}</p>
-                      <div className={`text-xs mt-1 ${
-                        message.sender === 'assistant' 
-                          ? 'text-gray-400' 
-                          : 'text-gray-300'
-                      }`}>
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
+                  )}
+                  <div
+                    className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                      message.sender === 'user'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-800 text-gray-200'
+                    }`}
+                  >
+                    <p className="text-sm md:text-base">{message.content}</p>
+                    <p className="text-xs mt-1 opacity-60">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   </div>
+                  {message.sender === 'user' && (
+                    <Avatar className="h-8 w-8 ml-2">
+                      <AvatarImage src="/assets/user-avatar.png" />
+                      <AvatarFallback className="bg-gray-600">YOU</AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
               ))}
-              
               {isLoading && (
-                <div className="flex justify-start">
-                  <div className="flex items-start max-w-[80%]">
-                    <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage src="/api/avatar-assistant.png" alt="Assistente" />
-                      <AvatarFallback>BA</AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="p-3 rounded-lg bg-gray-900 text-white border border-red-600">
-                      <div className="flex items-center space-x-2">
-                        <div className="h-2 w-2 bg-red-500 rounded-full animate-bounce"></div>
-                        <div className="h-2 w-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="h-2 w-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
-                    </div>
+                <div className="flex justify-start mb-4">
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarImage src="/assets/assistant-avatar.png" />
+                    <AvatarFallback className="bg-red-600 text-white">BB</AvatarFallback>
+                  </Avatar>
+                  <div className="bg-gray-800 rounded-lg px-4 py-3 max-w-[80%]">
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
                   </div>
                 </div>
               )}
-              
-              {isGeneratingPackage && (
-                <div className="flex justify-start">
-                  <div className="flex items-start max-w-[80%]">
-                    <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage src="/api/avatar-assistant.png" alt="Assistente" />
-                      <AvatarFallback>BA</AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="p-3 rounded-lg bg-gray-900 text-white border border-red-600">
-                      <div className="flex items-center space-x-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-red-500" />
-                        <span>Sto preparando il tuo pacchetto personalizzato...</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
               <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-        </CardContent>
-        
-        <CardFooter className="pt-0">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-2">
-            <div className="flex items-center space-x-2">
-              <Input
-                placeholder="Scrivi un messaggio..."
-                {...form.register('message')}
-                disabled={isLoading || isGeneratingPackage}
-                className="bg-gray-900 border-red-600 text-white placeholder:text-gray-400 focus:ring-red-500"
-              />
-              <Button 
-                type="submit" 
-                size="icon"
-                disabled={isLoading || isGeneratingPackage}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            {form.formState.errors.message && (
-              <p className="text-sm text-red-500">{form.formState.errors.message.message}</p>
+            </ScrollArea>
+            
+            {isGeneratingPackage && (
+              <div className="w-full py-3 flex items-center justify-center gap-2 bg-gray-800 rounded-lg">
+                <Loader2 className="h-5 w-5 animate-spin text-red-600" />
+                <p className="text-sm text-gray-300">Sto generando il tuo pacchetto personalizzato...</p>
+              </div>
             )}
-          </form>
+            
+            {messages.length > 4 && !isGeneratingPackage && !showPackageDialog && (
+              <div className="flex justify-center">
+                <Button 
+                  onClick={() => generatePackage()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Genera Pacchetto Personalizzato
+                </Button>
+              </div>
+            )}
+            
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Scrivi un messaggio..."
+                  className="bg-gray-800 border-gray-700 focus:border-red-600 text-white"
+                  {...form.register('message')}
+                  disabled={isLoading || isGeneratingPackage}
+                />
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || isGeneratingPackage}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t border-red-600 p-4 flex flex-wrap justify-between items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-gray-300">
+            <Badge variant="outline" className="border-red-600 text-red-600">
+              Assistente AI
+            </Badge>
+            {selectedDestination && (
+              <Badge variant="outline" className="border-gray-600">
+                <MapPin className="h-3 w-3 mr-1" />
+                {selectedDestination.charAt(0).toUpperCase() + selectedDestination.slice(1)}
+              </Badge>
+            )}
+            {selectedDates.start && (
+              <Badge variant="outline" className="border-gray-600">
+                <Calendar className="h-3 w-3 mr-1" />
+                {new Date(selectedDates.start).toLocaleDateString('it-IT', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </Badge>
+            )}
+            {selectedPeople > 0 && (
+              <Badge variant="outline" className="border-gray-600">
+                {selectedPeople} persone
+              </Badge>
+            )}
+          </div>
+          
+          {packageItems.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="border-red-600 text-red-600 hover:bg-red-900"
+              onClick={() => setShowPackageDialog(true)}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" /> Vedi Pacchetto
+            </Button>
+          )}
         </CardFooter>
       </Card>
       
-      {/* Dialog per la visualizzazione del pacchetto */}
+      {/* Dialog per mostrare il pacchetto generato */}
       <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
-        <DialogContent className="max-w-4xl bg-black text-white border-red-600">
+        <DialogContent className="bg-black text-white border border-red-600 max-w-4xl h-[80vh]">
           <DialogHeader>
-            <DialogTitle className="text-white">
-              Il tuo pacchetto <span className="text-red-600">ByeBro</span> personalizzato
-            </DialogTitle>
+            <DialogTitle className="text-red-600 text-xl">Il Tuo Pacchetto Personalizzato</DialogTitle>
             <DialogDescription className="text-gray-300">
-              Seleziona le opzioni che preferisci e completa il tuo pacchetto con un solo clic.
+              Seleziona gli elementi che preferisci per personalizzare il tuo pacchetto
             </DialogDescription>
           </DialogHeader>
           
-          <Tabs defaultValue="all" className="mt-4">
-            <TabsList className="grid grid-cols-6 mb-4 bg-gray-900">
-              <TabsTrigger value="all" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Tutti</TabsTrigger>
-              <TabsTrigger value="flight" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Voli</TabsTrigger>
-              <TabsTrigger value="hotel" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Hotel</TabsTrigger>
-              <TabsTrigger value="restaurant" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Ristoranti</TabsTrigger>
-              <TabsTrigger value="activity" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Attività</TabsTrigger>
-              <TabsTrigger value="transport" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Trasporti</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all">
-              <ScrollArea className="h-[50vh]">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ScrollArea className="h-[calc(80vh-180px)]">
+            <div className="space-y-6 p-1">
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="bg-gray-900 border-b border-gray-800 mb-4">
+                  <TabsTrigger value="all" className="data-[state=active]:text-red-600">Tutto</TabsTrigger>
+                  <TabsTrigger value="flights" className="data-[state=active]:text-red-600">Voli</TabsTrigger>
+                  <TabsTrigger value="hotels" className="data-[state=active]:text-red-600">Hotel</TabsTrigger>
+                  <TabsTrigger value="activities" className="data-[state=active]:text-red-600">Attività</TabsTrigger>
+                  <TabsTrigger value="food" className="data-[state=active]:text-red-600">Ristoranti</TabsTrigger>
+                  <TabsTrigger value="transport" className="data-[state=active]:text-red-600">Trasporti</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all" className="space-y-4">
                   {packageItems.map((item) => (
-                    <Card 
+                    <PackageItemCard 
                       key={item.id} 
-                      className={`overflow-hidden cursor-pointer transition-colors ${
-                        item.selected 
-                          ? 'ring-2 ring-red-600 border-transparent' 
-                          : 'hover:border-red-200'
-                      }`}
-                      onClick={() => toggleItemSelection(item.id)}
-                    >
-                      <div className="relative h-40">
-                        <img 
-                          src={item.imageUrl} 
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-2 right-2">
-                          <Badge 
-                            className={`${
-                              item.selected 
-                                ? 'bg-red-600 hover:bg-red-700' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            {item.selected ? 'Selezionato' : 'Aggiungi'}
-                          </Badge>
-                        </div>
-                        <div className="absolute top-2 left-2">
-                          <Badge variant="outline" className="bg-black bg-opacity-50 text-white border-none">
-                            <div className="flex items-center space-x-1">
-                              {renderItemIcon(item.type)}
-                              <span className="capitalize">
-                                {item.type === 'flight' ? 'Volo' :
-                                  item.type === 'hotel' ? 'Hotel' :
-                                  item.type === 'restaurant' ? 'Ristorante' :
-                                  item.type === 'activity' ? 'Attività' : 'Trasporto'}
-                              </span>
-                            </div>
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      <CardContent className="p-3">
-                        <h3 className="font-bold truncate">{item.title}</h3>
-                        <p className="text-sm text-gray-500 line-clamp-2 h-10">{item.description}</p>
-                        
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {item.date && (
-                            <Badge variant="outline" className="flex items-center space-x-1 text-xs">
-                              <Calendar className="h-3 w-3" />
-                              <span>{item.date}</span>
-                            </Badge>
-                          )}
-                          
-                          {item.location && (
-                            <Badge variant="outline" className="flex items-center space-x-1 text-xs">
-                              <MapPin className="h-3 w-3" />
-                              <span>{item.location}</span>
-                            </Badge>
-                          )}
-                          
-                          {item.duration && (
-                            <Badge variant="outline" className="flex items-center space-x-1 text-xs">
-                              <Clock className="h-3 w-3" />
-                              <span>{item.duration}</span>
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="mt-3 font-bold text-lg">
-                          {formatPrice(item.price)}
-                        </div>
-                      </CardContent>
-                    </Card>
+                      item={item} 
+                      onToggle={toggleItemSelection} 
+                    />
                   ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-            
-            {['flight', 'hotel', 'restaurant', 'activity', 'transport'].map((type) => (
-              <TabsContent key={type} value={type}>
-                <ScrollArea className="h-[50vh]">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {packageItems
-                      .filter(item => item.type === type)
-                      .map((item) => (
-                        <Card 
-                          key={item.id} 
-                          className={`overflow-hidden cursor-pointer transition-colors ${
-                            item.selected 
-                              ? 'ring-2 ring-red-600 border-transparent' 
-                              : 'hover:border-red-200'
-                          }`}
-                          onClick={() => toggleItemSelection(item.id)}
-                        >
-                          <div className="relative h-40">
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.title}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute top-2 right-2">
-                              <Badge 
-                                className={`${
-                                  item.selected 
-                                    ? 'bg-red-600 hover:bg-red-700' 
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
-                              >
-                                {item.selected ? 'Selezionato' : 'Aggiungi'}
-                              </Badge>
-                            </div>
-                          </div>
-                          
-                          <CardContent className="p-3">
-                            <h3 className="font-bold truncate">{item.title}</h3>
-                            <p className="text-sm text-gray-500 line-clamp-2 h-10">{item.description}</p>
-                            
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {item.date && (
-                                <Badge variant="outline" className="flex items-center space-x-1 text-xs">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{item.date}</span>
-                                </Badge>
-                              )}
-                              
-                              {item.location && (
-                                <Badge variant="outline" className="flex items-center space-x-1 text-xs">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{item.location}</span>
-                                </Badge>
-                              )}
-                              
-                              {item.duration && (
-                                <Badge variant="outline" className="flex items-center space-x-1 text-xs">
-                                  <Clock className="h-3 w-3" />
-                                  <span>{item.duration}</span>
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            <div className="mt-3 font-bold text-lg">
-                              {formatPrice(item.price)}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-            ))}
-          </Tabs>
-          
-          <Separator className="my-4" />
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-lg">Totale: {formatPrice(totalPrice)}</h3>
-              <p className="text-sm text-gray-500">
-                {packageItems.filter(item => item.selected).length} elementi selezionati
-              </p>
+                </TabsContent>
+                
+                <TabsContent value="flights" className="space-y-4">
+                  {packageItems.filter(i => i.type === 'flight').map((item) => (
+                    <PackageItemCard 
+                      key={item.id} 
+                      item={item} 
+                      onToggle={toggleItemSelection} 
+                    />
+                  ))}
+                </TabsContent>
+                
+                <TabsContent value="hotels" className="space-y-4">
+                  {packageItems.filter(i => i.type === 'hotel').map((item) => (
+                    <PackageItemCard 
+                      key={item.id} 
+                      item={item} 
+                      onToggle={toggleItemSelection} 
+                    />
+                  ))}
+                </TabsContent>
+                
+                <TabsContent value="activities" className="space-y-4">
+                  {packageItems.filter(i => i.type === 'activity').map((item) => (
+                    <PackageItemCard 
+                      key={item.id} 
+                      item={item} 
+                      onToggle={toggleItemSelection} 
+                    />
+                  ))}
+                </TabsContent>
+                
+                <TabsContent value="food" className="space-y-4">
+                  {packageItems.filter(i => i.type === 'restaurant').map((item) => (
+                    <PackageItemCard 
+                      key={item.id} 
+                      item={item} 
+                      onToggle={toggleItemSelection} 
+                    />
+                  ))}
+                </TabsContent>
+                
+                <TabsContent value="transport" className="space-y-4">
+                  {packageItems.filter(i => i.type === 'transport').map((item) => (
+                    <PackageItemCard 
+                      key={item.id} 
+                      item={item} 
+                      onToggle={toggleItemSelection} 
+                    />
+                  ))}
+                </TabsContent>
+              </Tabs>
             </div>
-            
-            <div className="flex space-x-2">
+          </ScrollArea>
+          
+          <div className="border-t border-gray-800 pt-4 flex flex-wrap justify-between items-center gap-2">
+            <div className="text-lg font-bold">
+              Totale: <span className="text-red-600">€{totalPrice.toFixed(2)}</span>
+            </div>
+            <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowPackageDialog(false)}>
                 Annulla
               </Button>
-              <Button 
-                className="bg-red-600 hover:bg-red-700"
-                onClick={proceedToCheckout}
-              >
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Acquista con un clic
+              <Button className="bg-red-600 hover:bg-red-700" onClick={proceedToCheckout}>
+                Procedi al Checkout
               </Button>
             </div>
           </div>
@@ -1102,46 +1135,41 @@ export default function OneClickAssistant() {
       <Dialog open={checkoutDialogOpen} onOpenChange={setCheckoutDialogOpen}>
         <DialogContent className="bg-black text-white border border-red-600">
           <DialogHeader>
-            <DialogTitle className="text-white">Completa il tuo acquisto</DialogTitle>
+            <DialogTitle className="text-xl text-red-600">Conferma il tuo acquisto</DialogTitle>
             <DialogDescription className="text-gray-300">
-              Rivedi il tuo pacchetto ByeBro e conferma l'acquisto con un clic.
+              Sei pronto per acquistare il pacchetto selezionato?
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-3 my-4">
-            <h3 className="font-semibold text-white">Riepilogo del pacchetto:</h3>
-            
-            {packageItems
-              .filter(item => item.selected)
-              .map((item) => (
-                <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-700">
-                  <div className="flex items-center space-x-2 text-gray-200">
-                    <span className="text-red-500">{renderItemIcon(item.type)}</span>
-                    <span>{item.title}</span>
+          <div className="space-y-4 py-4">
+            <div className="bg-gray-900 p-4 rounded-md">
+              <h4 className="font-bold mb-2">Riepilogo dell'ordine</h4>
+              <div className="space-y-2">
+                {packageItems.filter(item => item.selected).map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span className="text-gray-300">{item.title}</span>
+                    <span className="text-red-600">€{item.price.toFixed(2)}</span>
                   </div>
-                  <span className="text-gray-200">{formatPrice(item.price)}</span>
+                ))}
+                <Separator className="my-2 bg-gray-700" />
+                <div className="flex justify-between font-bold">
+                  <span>Totale</span>
+                  <span className="text-red-600">€{totalPrice.toFixed(2)}</span>
                 </div>
-              ))}
-              
-            <div className="flex justify-between items-center pt-2 font-bold">
-              <span className="text-white">Totale:</span>
-              <span className="text-red-500">{formatPrice(totalPrice)}</span>
+              </div>
             </div>
+            
+            <p className="text-sm text-gray-400">
+              Cliccando su "Conferma Acquisto", verrai reindirizzato alla pagina di pagamento dove potrai inserire i dettagli della tua carta di credito.
+            </p>
           </div>
           
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setCheckoutDialogOpen(false)}
-              className="border-red-600 text-white hover:bg-gray-900"
-            >
-              Torna al pacchetto
+          <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+            <Button variant="outline" onClick={cancelCheckout}>
+              Annulla
             </Button>
-            <Button 
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={completeCheckout}
-            >
-              Conferma acquisto
+            <Button className="bg-red-600 hover:bg-red-700" onClick={confirmCheckout}>
+              Conferma Acquisto
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1150,7 +1178,100 @@ export default function OneClickAssistant() {
   );
 }
 
-// Componente Clock per l'icona della durata
+interface PackageItemCardProps {
+  item: PackageItem;
+  onToggle: (id: string) => void;
+}
+
+function PackageItemCard({ item, onToggle }: PackageItemCardProps) {
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'flight':
+        return <Plane className="h-5 w-5 text-red-600" />;
+      case 'hotel':
+        return <Building className="h-5 w-5 text-blue-500" />;
+      case 'restaurant':
+        return <Utensils className="h-5 w-5 text-yellow-500" />;
+      case 'activity':
+        return <Music className="h-5 w-5 text-green-500" />;
+      case 'transport':
+        return <Car className="h-5 w-5 text-purple-500" />;
+      case 'event':
+        return <Calendar className="h-5 w-5 text-pink-500" />;
+      default:
+        return <Gift className="h-5 w-5 text-gray-500" />;
+    }
+  };
+  
+  return (
+    <Card className={`bg-gray-900 border ${
+      item.selected ? 'border-red-600' : 'border-gray-700'
+    } transition-all hover:border-red-500`}>
+      <CardContent className="p-0 flex flex-col md:flex-row overflow-hidden">
+        <div className="md:w-1/4 h-48 md:h-auto relative">
+          <img
+            src={item.imageUrl}
+            alt={item.title}
+            className="object-cover w-full h-full"
+          />
+          <div className="absolute top-2 left-2 bg-black bg-opacity-50 rounded-full p-1">
+            {getIcon(item.type)}
+          </div>
+        </div>
+        <div className="p-4 flex-1 flex flex-col">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <h3 className="font-bold text-lg">{item.title}</h3>
+              {item.rating && (
+                <div className="flex items-center text-yellow-500 text-sm">
+                  {'★'.repeat(Math.round(parseFloat(item.rating)))}
+                  <span className="text-gray-300 ml-1">({item.rating})</span>
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="text-red-600 font-bold">€{item.price.toFixed(2)}</div>
+              {item.type === 'hotel' && <div className="text-sm text-gray-400">per notte</div>}
+            </div>
+          </div>
+          
+          <p className="text-gray-300 text-sm flex-1">{item.description}</p>
+          
+          <div className="flex flex-wrap gap-2 mt-3">
+            {item.location && (
+              <Badge variant="outline" className="text-xs bg-gray-800 border-gray-700">
+                <MapPin className="h-3 w-3 mr-1" /> {item.location}
+              </Badge>
+            )}
+            {item.duration && (
+              <Badge variant="outline" className="text-xs bg-gray-800 border-gray-700">
+                <Clock className="h-3 w-3 mr-1" /> {item.duration}
+              </Badge>
+            )}
+            {item.date && (
+              <Badge variant="outline" className="text-xs bg-gray-800 border-gray-700">
+                <Calendar className="h-3 w-3 mr-1" /> {item.date}
+              </Badge>
+            )}
+          </div>
+          
+          <Button
+            variant={item.selected ? "default" : "outline"}
+            className={`mt-3 ${
+              item.selected 
+                ? "bg-red-600 hover:bg-red-700 text-white" 
+                : "border-red-600 text-red-600 hover:bg-red-900"
+            }`}
+            onClick={() => onToggle(item.id)}
+          >
+            {item.selected ? "Selezionato" : "Aggiungi al pacchetto"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Clock(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
