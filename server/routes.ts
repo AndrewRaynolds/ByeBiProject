@@ -12,6 +12,7 @@ import { fromZodError } from "zod-validation-error";
 import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
+import { travelAPI } from "./services/travel-api";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -380,6 +381,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(500).json({ 
         message: "Failed to generate itinerary",
+        error: error.message || String(error)
+      });
+    }
+  });
+
+  // Travel API routes
+  app.get("/api/travel/flights", async (req: Request, res: Response) => {
+    try {
+      const { origin, destination, departureDate, returnDate, adults } = req.query;
+      
+      if (!destination || !departureDate || !returnDate) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      const flights = await travelAPI.getFlights(
+        origin as string || 'MXP',
+        destination as string,
+        departureDate as string,
+        returnDate as string,
+        adults ? parseInt(adults as string) : 1
+      );
+      
+      return res.status(200).json(flights);
+    } catch (error: any) {
+      console.error("Error fetching flights:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch flights",
+        error: error.message || String(error)
+      });
+    }
+  });
+
+  app.get("/api/travel/hotels", async (req: Request, res: Response) => {
+    try {
+      const { city, checkInDate, checkOutDate, adults } = req.query;
+      
+      if (!city || !checkInDate || !checkOutDate) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      const hotels = await travelAPI.getHotels(
+        city as string,
+        checkInDate as string,
+        checkOutDate as string,
+        adults ? parseInt(adults as string) : 1
+      );
+      
+      return res.status(200).json(hotels);
+    } catch (error: any) {
+      console.error("Error fetching hotels:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch hotels",
+        error: error.message || String(error)
+      });
+    }
+  });
+
+  app.get("/api/travel/activities", async (req: Request, res: Response) => {
+    try {
+      const { city } = req.query;
+      
+      if (!city) {
+        return res.status(400).json({ message: "Missing city parameter" });
+      }
+      
+      const activities = await travelAPI.getActivities(city as string);
+      
+      return res.status(200).json(activities);
+    } catch (error: any) {
+      console.error("Error fetching activities:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch activities",
+        error: error.message || String(error)
+      });
+    }
+  });
+
+  app.get("/api/travel/restaurants", async (req: Request, res: Response) => {
+    try {
+      const { city, cuisine } = req.query;
+      
+      if (!city) {
+        return res.status(400).json({ message: "Missing city parameter" });
+      }
+      
+      const restaurants = await travelAPI.getRestaurants(
+        city as string,
+        cuisine as string || ''
+      );
+      
+      return res.status(200).json(restaurants);
+    } catch (error: any) {
+      console.error("Error fetching restaurants:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch restaurants",
+        error: error.message || String(error)
+      });
+    }
+  });
+
+  app.get("/api/travel/events", async (req: Request, res: Response) => {
+    try {
+      const { city, startDate, endDate, category } = req.query;
+      
+      if (!city || !startDate || !endDate) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      const events = await travelAPI.getEvents(
+        city as string,
+        startDate as string,
+        endDate as string,
+        category as string || 'nightlife'
+      );
+      
+      return res.status(200).json(events);
+    } catch (error: any) {
+      console.error("Error fetching events:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch events",
+        error: error.message || String(error)
+      });
+    }
+  });
+
+  // OneClick API per generare pacchetti completi
+  app.post("/api/travel/packages", async (req: Request, res: Response) => {
+    try {
+      const { destination, startDate, endDate, adults, budget } = req.body;
+      
+      if (!destination || !startDate || !endDate) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+
+      // Conversione delle date in formato stringa (YYYY-MM-DD)
+      const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
+      const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
+      const numAdults = adults || 1;
+      
+      // Otteniamo tutti i dati in parallelo
+      const [flights, hotels, activities, restaurants, events] = await Promise.all([
+        travelAPI.getFlights("MXP", destination, formattedStartDate, formattedEndDate, numAdults),
+        travelAPI.getHotels(destination, formattedStartDate, formattedEndDate, numAdults),
+        travelAPI.getActivities(destination),
+        travelAPI.getRestaurants(destination),
+        travelAPI.getEvents(destination, formattedStartDate, formattedEndDate)
+      ]);
+      
+      // Creiamo il pacchetto completo
+      const travelPackage = {
+        destination,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        adults: numAdults,
+        budget: budget || "standard",
+        flights,
+        hotels,
+        activities,
+        restaurants,
+        events
+      };
+      
+      return res.status(200).json(travelPackage);
+    } catch (error: any) {
+      console.error("Error generating travel package:", error);
+      return res.status(500).json({ 
+        message: "Failed to generate travel package",
         error: error.message || String(error)
       });
     }
