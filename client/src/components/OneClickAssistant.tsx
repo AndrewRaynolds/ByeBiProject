@@ -1034,8 +1034,8 @@ export default function OneClickAssistant() {
       <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
         <DialogContent className="bg-black text-white border border-red-600 max-w-4xl h-[80vh]">
           <DialogHeader>
-            <DialogTitle className="text-red-600 text-xl">Il Tuo Pacchetto Personalizzato</DialogTitle>
-            <DialogDescription className="text-gray-300">
+            <DialogTitle className="text-white text-xl">Il Tuo Pacchetto Personalizzato</DialogTitle>
+            <DialogDescription className="text-white">
               Seleziona gli elementi che preferisci per personalizzare il tuo pacchetto
             </DialogDescription>
           </DialogHeader>
@@ -1044,12 +1044,12 @@ export default function OneClickAssistant() {
             <div className="space-y-6 p-1">
               <Tabs defaultValue="all" className="w-full">
                 <TabsList className="bg-gray-900 border-b border-gray-800 mb-4">
-                  <TabsTrigger value="all" className="data-[state=active]:text-red-600">Tutto</TabsTrigger>
-                  <TabsTrigger value="flights" className="data-[state=active]:text-red-600">Voli</TabsTrigger>
-                  <TabsTrigger value="hotels" className="data-[state=active]:text-red-600">Hotel</TabsTrigger>
-                  <TabsTrigger value="activities" className="data-[state=active]:text-red-600">Attività</TabsTrigger>
-                  <TabsTrigger value="food" className="data-[state=active]:text-red-600">Ristoranti</TabsTrigger>
-                  <TabsTrigger value="transport" className="data-[state=active]:text-red-600">Trasporti</TabsTrigger>
+                  <TabsTrigger value="all" className="text-white data-[state=active]:text-red-600">Tutto</TabsTrigger>
+                  <TabsTrigger value="flights" className="text-white data-[state=active]:text-red-600">Voli</TabsTrigger>
+                  <TabsTrigger value="hotels" className="text-white data-[state=active]:text-red-600">Hotel</TabsTrigger>
+                  <TabsTrigger value="activities" className="text-white data-[state=active]:text-red-600">Attività</TabsTrigger>
+                  <TabsTrigger value="food" className="text-white data-[state=active]:text-red-600">Ristoranti</TabsTrigger>
+                  <TabsTrigger value="transport" className="text-white data-[state=active]:text-red-600">Trasporti</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="all" className="space-y-4">
@@ -1135,31 +1135,31 @@ export default function OneClickAssistant() {
       <Dialog open={checkoutDialogOpen} onOpenChange={setCheckoutDialogOpen}>
         <DialogContent className="bg-black text-white border border-red-600">
           <DialogHeader>
-            <DialogTitle className="text-xl text-red-600">Conferma il tuo acquisto</DialogTitle>
-            <DialogDescription className="text-gray-300">
+            <DialogTitle className="text-xl text-white">Conferma il tuo acquisto</DialogTitle>
+            <DialogDescription className="text-white">
               Sei pronto per acquistare il pacchetto selezionato?
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="bg-gray-900 p-4 rounded-md">
-              <h4 className="font-bold mb-2">Riepilogo dell'ordine</h4>
+              <h4 className="font-bold mb-2 text-white">Riepilogo dell'ordine</h4>
               <div className="space-y-2">
                 {packageItems.filter(item => item.selected).map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-300">{item.title}</span>
+                    <span className="text-white">{item.title}</span>
                     <span className="text-red-600">€{item.price.toFixed(2)}</span>
                   </div>
                 ))}
                 <Separator className="my-2 bg-gray-700" />
                 <div className="flex justify-between font-bold">
-                  <span>Totale</span>
+                  <span className="text-white">Totale</span>
                   <span className="text-red-600">€{totalPrice.toFixed(2)}</span>
                 </div>
               </div>
             </div>
             
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-white">
               Cliccando su "Conferma Acquisto", verrai reindirizzato alla pagina di pagamento dove potrai inserire i dettagli della tua carta di credito.
             </p>
           </div>
