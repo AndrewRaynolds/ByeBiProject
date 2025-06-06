@@ -146,83 +146,83 @@ export default function SplittaBroPage() {
       const demoExpenses = [
         {
           description: "Hotel The Student Hotel Amsterdam",
-          amount: 480.00,
+          amount: 48000, // 480.00 EUR in cents
           paidBy: "Luca",
           splitWith: [
-            { name: "Marco (Sposo)", share: 80.00 },
-            { name: "Luca", share: 80.00 },
-            { name: "Andrea", share: 80.00 },
-            { name: "Paolo", share: 80.00 },
-            { name: "Giuseppe", share: 80.00 },
-            { name: "Matteo", share: 80.00 }
+            { name: "Marco (Sposo)", share: 8000 },
+            { name: "Luca", share: 8000 },
+            { name: "Andrea", share: 8000 },
+            { name: "Paolo", share: 8000 },
+            { name: "Giuseppe", share: 8000 },
+            { name: "Matteo", share: 8000 }
           ],
           category: "Alloggio",
           groupId: newGroup.id,
-          date: "2025-06-15"
+          date: new Date("2025-06-15").toISOString()
         },
         {
           description: "Voli Alitalia Milano-Amsterdam",
-          amount: 1140.00,
+          amount: 114000, // 1140.00 EUR in cents
           paidBy: "Andrea",
           splitWith: [
-            { name: "Marco (Sposo)", share: 190.00 },
-            { name: "Luca", share: 190.00 },
-            { name: "Andrea", share: 190.00 },
-            { name: "Paolo", share: 190.00 },
-            { name: "Giuseppe", share: 190.00 },
-            { name: "Matteo", share: 190.00 }
+            { name: "Marco (Sposo)", share: 19000 },
+            { name: "Luca", share: 19000 },
+            { name: "Andrea", share: 19000 },
+            { name: "Paolo", share: 19000 },
+            { name: "Giuseppe", share: 19000 },
+            { name: "Matteo", share: 19000 }
           ],
           category: "Trasporto",
           groupId: newGroup.id,
-          date: "2025-06-15"
+          date: new Date("2025-06-15").toISOString()
         },
         {
           description: "Cena REM Eiland",
-          amount: 315.50,
+          amount: 31550, // 315.50 EUR in cents
           paidBy: "Paolo",
           splitWith: [
-            { name: "Marco (Sposo)", share: 52.58 },
-            { name: "Luca", share: 52.58 },
-            { name: "Andrea", share: 52.58 },
-            { name: "Paolo", share: 52.58 },
-            { name: "Giuseppe", share: 52.58 },
-            { name: "Matteo", share: 52.60 }
+            { name: "Marco (Sposo)", share: 5258 },
+            { name: "Luca", share: 5258 },
+            { name: "Andrea", share: 5258 },
+            { name: "Paolo", share: 5258 },
+            { name: "Giuseppe", share: 5258 },
+            { name: "Matteo", share: 5260 }
           ],
           category: "Cibo",
           groupId: newGroup.id,
-          date: "2025-06-15"
+          date: new Date("2025-06-15").toISOString()
         },
         {
           description: "Heineken Experience + Giro in barca",
-          amount: 348.00,
+          amount: 34800, // 348.00 EUR in cents
           paidBy: "Giuseppe",
           splitWith: [
-            { name: "Marco (Sposo)", share: 58.00 },
-            { name: "Luca", share: 58.00 },
-            { name: "Andrea", share: 58.00 },
-            { name: "Paolo", share: 58.00 },
-            { name: "Giuseppe", share: 58.00 },
-            { name: "Matteo", share: 58.00 }
+            { name: "Marco (Sposo)", share: 5800 },
+            { name: "Luca", share: 5800 },
+            { name: "Andrea", share: 5800 },
+            { name: "Paolo", share: 5800 },
+            { name: "Giuseppe", share: 5800 },
+            { name: "Matteo", share: 5800 }
           ],
           category: "Attività",
           groupId: newGroup.id,
-          date: "2025-06-16"
+          date: new Date("2025-06-16").toISOString()
         },
         {
           description: "Serata al Red Light District",
-          amount: 420.00,
+          amount: 42000, // 420.00 EUR in cents
           paidBy: "Matteo",
           splitWith: [
-            { name: "Marco (Sposo)", share: 0.00 },
-            { name: "Luca", share: 84.00 },
-            { name: "Andrea", share: 84.00 },
-            { name: "Paolo", share: 84.00 },
-            { name: "Giuseppe", share: 84.00 },
-            { name: "Matteo", share: 84.00 }
+            { name: "Marco (Sposo)", share: 0 },
+            { name: "Luca", share: 8400 },
+            { name: "Andrea", share: 8400 },
+            { name: "Paolo", share: 8400 },
+            { name: "Giuseppe", share: 8400 },
+            { name: "Matteo", share: 8400 }
           ],
           category: "Bevande",
           groupId: newGroup.id,
-          date: "2025-06-16"
+          date: new Date("2025-06-16").toISOString()
         }
       ];
 
@@ -319,34 +319,44 @@ export default function SplittaBroPage() {
     if (!expenses || !activeGroup || !expenseGroups) return [];
     
     const group = expenseGroups.find(g => g.id === activeGroup);
-    if (!group) return [];
+    if (!group || !group.participants || !Array.isArray(group.participants)) return [];
     
     const balances: Record<string, { paid: number; owed: number; balance: number }> = {};
     
     // Inizializza tutti i partecipanti
     group.participants.forEach(p => {
-      balances[p.name] = { paid: 0, owed: 0, balance: 0 };
+      if (p && p.name) {
+        balances[p.name] = { paid: 0, owed: 0, balance: 0 };
+      }
     });
     
     // Calcola pagamenti e debiti
-    expenses.forEach(expense => {
-      const paidBy = expense.paidBy;
-      const amount = expense.amount;
-      
-      if (balances[paidBy]) {
-        balances[paidBy].paid += amount;
-      }
-      
-      expense.splitWith.forEach(split => {
-        if (balances[split.name]) {
-          balances[split.name].owed += split.share;
+    if (Array.isArray(expenses)) {
+      expenses.forEach(expense => {
+        if (!expense) return;
+        
+        const paidBy = expense.paidBy;
+        const amount = expense.amount || 0;
+        
+        if (balances[paidBy]) {
+          balances[paidBy].paid += amount;
+        }
+        
+        if (expense.splitWith && Array.isArray(expense.splitWith)) {
+          expense.splitWith.forEach(split => {
+            if (split && split.name && balances[split.name]) {
+              balances[split.name].owed += (split.share || 0);
+            }
+          });
         }
       });
-    });
+    }
     
     // Calcola bilancio finale
     Object.keys(balances).forEach(person => {
-      balances[person].balance = balances[person].paid - balances[person].owed;
+      if (balances[person]) {
+        balances[person].balance = balances[person].paid - balances[person].owed;
+      }
     });
     
     return Object.entries(balances).map(([name, data]) => ({

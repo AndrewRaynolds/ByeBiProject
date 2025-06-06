@@ -32,6 +32,7 @@ function Router() {
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
+      <Route path="/splitta-bro" component={SplittaBroPage} />
       <Route path="/splittabro/:tripId?" component={SplittaBroPage} />
       <Route path="/one-click-package" component={OneClickPackagePage} />
       <Route path="/zapier-webhooks" component={ZapierWebhooksPage} />
