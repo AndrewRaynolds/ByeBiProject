@@ -158,7 +158,7 @@ export default function SplittaBroPage() {
           ],
           category: "Alloggio",
           groupId: newGroup.id,
-          date: new Date("2025-06-15").toISOString()
+          date: new Date("2025-06-15")
         },
         {
           description: "Voli Alitalia Milano-Amsterdam",
@@ -174,7 +174,7 @@ export default function SplittaBroPage() {
           ],
           category: "Trasporto",
           groupId: newGroup.id,
-          date: new Date("2025-06-15").toISOString()
+          date: new Date("2025-06-15")
         },
         {
           description: "Cena REM Eiland",
@@ -190,7 +190,7 @@ export default function SplittaBroPage() {
           ],
           category: "Cibo",
           groupId: newGroup.id,
-          date: new Date("2025-06-15").toISOString()
+          date: new Date("2025-06-15")
         },
         {
           description: "Heineken Experience + Giro in barca",
@@ -206,7 +206,7 @@ export default function SplittaBroPage() {
           ],
           category: "Attività",
           groupId: newGroup.id,
-          date: new Date("2025-06-16").toISOString()
+          date: new Date("2025-06-16")
         },
         {
           description: "Serata al Red Light District",
@@ -222,7 +222,7 @@ export default function SplittaBroPage() {
           ],
           category: "Bevande",
           groupId: newGroup.id,
-          date: new Date("2025-06-16").toISOString()
+          date: new Date("2025-06-16")
         }
       ];
 
