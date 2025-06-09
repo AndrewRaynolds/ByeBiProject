@@ -704,12 +704,14 @@ export default function SplittaBroPage() {
                         </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600 bg-gray-50 rounded p-2">
-                          {expense.splitWith.map((split, index) => (
+                          {expense.splitWith && Array.isArray(expense.splitWith) ? expense.splitWith.map((split, index) => (
                             <div key={index} className="flex justify-between">
                               <span>{split.name}:</span>
                               <span className="font-medium">{formatAmount(split.share)}</span>
                             </div>
-                          ))}
+                          )) : (
+                            <div className="text-gray-500">Nessuna divisione disponibile</div>
+                          )}
                         </div>
                       </div>
                     ))}
