@@ -188,7 +188,6 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
   amount: true,
   paidBy: true,
   splitWith: true,
-  date: true,
   category: true,
 });
 
