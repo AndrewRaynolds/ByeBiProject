@@ -10,8 +10,7 @@ import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
 import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
-import SplittaBroPage from "@/pages/SplittaBroPage";
-import SplittaBroTestPage from "@/pages/SplittaBroTestPage";
+import SplittaBroMainPage from "@/pages/SplittaBroMainPage";
 import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
 import OneClickPackagePage from "@/pages/OneClickPackagePage";
@@ -33,8 +32,7 @@ function Router() {
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
-      <Route path="/splitta-bro" component={SplittaBroTestPage} />
-      <Route path="/splittabro/:tripId?" component={SplittaBroPage} />
+      <Route path="/splitta-bro" component={SplittaBroMainPage} />
       <Route path="/one-click-package" component={OneClickPackagePage} />
       <Route path="/zapier-webhooks" component={ZapierWebhooksPage} />
       <Route path="/auth" component={AuthPage} />
