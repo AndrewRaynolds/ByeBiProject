@@ -53,6 +53,7 @@ export interface IStorage {
   // Expense group operations (SplittaBro feature)
   getExpenseGroup(id: number): Promise<ExpenseGroup | undefined>;
   getExpenseGroupsByTripId(tripId: number): Promise<ExpenseGroup[]>;
+  getAllExpenseGroups(): Promise<ExpenseGroup[]>;
   createExpenseGroup(group: InsertExpenseGroup): Promise<ExpenseGroup>;
   
   // Expense operations (SplittaBro feature)
