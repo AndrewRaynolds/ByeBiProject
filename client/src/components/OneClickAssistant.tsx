@@ -146,21 +146,33 @@ export default function OneClickAssistant() {
     const normalizedMessage = userMessage.toLowerCase();
     
     // Rilevamento della destinazione
-    if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
+    if (normalizedMessage.includes('londra') || normalizedMessage.includes('london') || normalizedMessage.includes('inghilterra') || normalizedMessage.includes('regno unito')) {
+      setSelectedDestination('london');
+      return "Londra è una scelta eccellente per un addio al celibato! Offre pub storici, vita notturna incredibile e molte esperienze uniche. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
       setSelectedDestination('amsterdam');
-      return "Amsterdam è una scelta eccellente per un addio al celibato! Offre locali notturni, ottima birra e molto altro. In quali date vorresti andarci? E quante persone parteciperanno?";
-    } else if (normalizedMessage.includes('praga') || normalizedMessage.includes('repubblica ceca')) {
+      return "Amsterdam è una scelta eccellente per un addio al celibato! Offre locali notturni, ottima birra e molto altro. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('praga') || normalizedMessage.includes('prague') || normalizedMessage.includes('repubblica ceca')) {
       setSelectedDestination('prague');
-      return "Praga è una destinazione fantastica per un addio al celibato! È famosa per la sua birra, vita notturna e prezzi accessibili. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return "Praga è una destinazione fantastica per un addio al celibato! È famosa per la sua birra, vita notturna e prezzi accessibili. In quali date vorreste andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('budapest') || normalizedMessage.includes('ungheria')) {
       setSelectedDestination('budapest');
-      return "Budapest è una meta popolare per gli addii al celibato! Offre bagni termali, ruin bar e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
-    } else if (normalizedMessage.includes('barcellona') || normalizedMessage.includes('spagna')) {
+      return "Budapest è una meta popolare per gli addii al celibato! Offre bagni termali, ruin bar e ottimo cibo. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('barcellona') || normalizedMessage.includes('barcelona') || normalizedMessage.includes('spagna')) {
       setSelectedDestination('barcelona');
-      return "Barcellona è perfetta per un addio al celibato! Offre belle spiagge, vita notturna eccezionale e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
-    } else if (normalizedMessage.includes('berlino') || normalizedMessage.includes('germania')) {
+      return "Barcellona è perfetta per un addio al celibato! Offre belle spiagge, vita notturna eccezionale e ottimo cibo. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('berlino') || normalizedMessage.includes('berlin') || normalizedMessage.includes('germania')) {
       setSelectedDestination('berlin');
-      return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('parigi') || normalizedMessage.includes('paris') || normalizedMessage.includes('francia')) {
+      setSelectedDestination('paris');
+      return "Parigi è una destinazione romantica ma anche perfetta per un addio al celibato! Offre ottimi ristoranti, bar raffinati e vita notturna elegante. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('madrid') || normalizedMessage.includes('spagna')) {
+      setSelectedDestination('madrid');
+      return "Madrid è una meta fantastica per un addio al celibato! Offre tapas incredibili, flamenco e vita notturna che non finisce mai. In quali date vorreste andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('vienna') || normalizedMessage.includes('vienna') || normalizedMessage.includes('austria')) {
+      setSelectedDestination('vienna');
+      return "Vienna è una scelta elegante per un addio al celibato! Offre cultura, ottimi caffè e una vita notturna sofisticata. In quali date vorreste andarci? E quante persone parteciperanno?";
     } 
     
     // Rilevamento delle date
@@ -233,8 +245,78 @@ export default function OneClickAssistant() {
   const generateFallbackPackage = () => {
     let dummyPackage: PackageItem[] = [];
     
-    // Se nessuna destinazione è selezionata, impostiamo Amsterdam di default
-    if (!selectedDestination || selectedDestination === 'amsterdam') {
+    // London
+    if (selectedDestination === 'london') {
+      dummyPackage = [
+        {
+          id: '1',
+          type: 'flight',
+          title: 'Volo diretto per Londra',
+          description: 'Volo British Airways da Milano Malpensa a London Heathrow, andata e ritorno',
+          price: 249.99,
+          imageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          date: '15 Giugno 2025',
+          duration: '2h 30min',
+          selected: true
+        },
+        {
+          id: '2',
+          type: 'hotel',
+          title: 'Generator London',
+          description: 'Ostello moderno a Russell Square, perfetto per gruppi',
+          price: 65.99,
+          imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Russell Square, Londra',
+          rating: '4.3',
+          selected: true
+        },
+        {
+          id: '3',
+          type: 'restaurant',
+          title: 'Dishoom',
+          description: 'Ristorante indiano iconico di Londra con atmosfera vintage',
+          price: 45.99,
+          imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+          location: 'Covent Garden, Londra',
+          rating: '4.7',
+          selected: true
+        },
+        {
+          id: '4',
+          type: 'activity',
+          title: 'Pub Crawl Camden',
+          description: 'Tour guidato dei migliori pub di Camden con bevande incluse',
+          price: 35.99,
+          imageUrl: 'https://images.unsplash.com/photo-1436076863939-06870fe779c2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Camden, Londra',
+          duration: '4 ore',
+          selected: true
+        },
+        {
+          id: '5',
+          type: 'activity',
+          title: 'Fabric Nightclub',
+          description: 'Ingresso al leggendario club di musica elettronica',
+          price: 28.99,
+          imageUrl: 'https://images.unsplash.com/photo-1571266028243-d220c2dcfb01?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          location: 'Farringdon, Londra',
+          duration: 'Notte intera',
+          selected: true
+        },
+        {
+          id: '6',
+          type: 'transport',
+          title: 'Oyster Card 3 giorni',
+          description: 'Trasporto pubblico illimitato per metropolitana e autobus',
+          price: 32.99,
+          imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1169&q=80',
+          duration: '3 giorni',
+          selected: true
+        }
+      ];
+    }
+    // Amsterdam
+    else if (!selectedDestination || selectedDestination === 'amsterdam') {
       dummyPackage = [
         {
           id: '1',
@@ -636,7 +718,19 @@ export default function OneClickAssistant() {
     
     try {
       // Usa selectedDestination, selectedDates, e selectedPeople per generare un pacchetto
-      const destination = selectedDestination || 'amsterdam';
+      const destinationMapping: { [key: string]: string } = {
+        'london': 'London',
+        'amsterdam': 'Amsterdam',
+        'prague': 'Prague',
+        'budapest': 'Budapest',
+        'barcelona': 'Barcelona', 
+        'berlin': 'Berlin',
+        'paris': 'Paris',
+        'madrid': 'Madrid',
+        'vienna': 'Vienna'
+      };
+      
+      const destination = destinationMapping[selectedDestination] || 'London';
       
       // Crea la richiesta di pacchetto
       const packageRequest: PackageRequest = {
