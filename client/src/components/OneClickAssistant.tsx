@@ -649,30 +649,88 @@ export default function OneClickAssistant() {
       
       // Per ogni tipo di elemento, gestisci separatamente gli errori
       try {
-        // Ottieni voli
-        const flights = await travelService.getFlights(
-          'MXP', // origin (Milano Malpensa)
-          packageRequest.destination, 
-          packageRequest.startDate, 
-          packageRequest.endDate,
-          packageRequest.adults
-        );
-        
-        if (flights && flights.length > 0) {
+        // Genera itinerario completo usando Kiwi.com API
+        const kiwiRequest = {
+          destination: packageRequest.destination,
+          departureCity: 'Milan',
+          startDate: packageRequest.startDate,
+          endDate: packageRequest.endDate,
+          groupSize: packageRequest.adults,
+          budget: 'standard' as const,
+          interests: ['nightlife', 'food', 'entertainment']
+        };
+
+        const response = await fetch('/api/generate-itinerary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(kiwiRequest),
+        });
+
+        if (response.ok) {
+          const itineraryResult = await response.json();
+          const generatedPlan = itineraryResult.generatedPlan;
+          
+          // Aggiungi voli dall'itinerario Kiwi.com
+          if (generatedPlan.flights && generatedPlan.flights.length > 0) {
+            const flight = generatedPlan.flights[0];
+            packageItems.push({
+              id: `kiwi_flight_${Date.now()}`,
+              type: 'flight',
+              title: `Volo ${flight.airline}`,
+              description: `${flight.departure} → ${flight.arrival} • ${flight.duration}`,
+              price: flight.price,
+              imageUrl: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
+              date: packageRequest.startDate,
+              duration: flight.duration,
+              selected: true
+            });
+          }
+
+          // Aggiungi attività dall'itinerario Kiwi.com
+          if (generatedPlan.activities && generatedPlan.activities.length > 0) {
+            generatedPlan.activities.slice(0, 2).forEach((dayActivity: any, index: number) => {
+              if (dayActivity.activities && dayActivity.activities.length > 0) {
+                const activity = dayActivity.activities[0];
+                packageItems.push({
+                  id: `kiwi_activity_${index}`,
+                  type: 'activity',
+                  title: activity,
+                  description: `Day ${dayActivity.day} - ${activity}`,
+                  price: Math.round(30 + (Math.random() * 40)),
+                  imageUrl: `https://source.unsplash.com/400x300/?${packageRequest.destination.toLowerCase()},activity`,
+                  location: packageRequest.destination,
+                  duration: '2-3 ore',
+                  selected: true
+                });
+              }
+            });
+          }
+          
+          // Aggiungi alloggio basato sulla destinazione Kiwi.com
+          const hotelPrice = generatedPlan.estimatedTotalCost ? 
+            Math.round(generatedPlan.estimatedTotalCost * 0.3) : 120;
+          
           packageItems.push({
-            id: flights[0].id,
-            type: 'flight',
-            title: `Volo per ${flights[0].destination}`,
-            description: `Volo ${flights[0].airline} da ${flights[0].origin} a ${flights[0].destination}, andata e ritorno`,
-            price: flights[0].price,
-            imageUrl: 'https://images.unsplash.com/photo-1507812984078-917a274065be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80',
-            date: flights[0].departureDate,
-            duration: flights[0].duration,
+            id: `kiwi_hotel_${Date.now()}`,
+            type: 'hotel',
+            title: `Hotel ${packageRequest.destination}`,
+            description: `Alloggio centrale perfetto per gruppi nella migliore zona`,
+            price: hotelPrice,
+            imageUrl: `https://source.unsplash.com/400x300/?hotel,${packageRequest.destination.toLowerCase()}`,
+            location: packageRequest.destination,
+            rating: '4.5',
             selected: true
           });
+        } else {
+          throw new Error('Kiwi.com API temporaneamente non disponibile');
         }
       } catch (error) {
-        console.error("Error fetching flights:", error);
+        console.error("Error generating Kiwi.com itinerary:", error);
+        // Fallback solo se necessario
+        generateFallbackPackage();
+        return;
       }
       
       try {
@@ -1221,25 +1279,25 @@ function PackageItemCard({ item, onToggle }: PackageItemCardProps) {
         <div className="p-4 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-2">
             <div>
-              <h3 className="font-bold text-lg">{item.title}</h3>
+              <h3 className="font-bold text-lg text-white">{item.title}</h3>
               {item.rating && (
                 <div className="flex items-center text-yellow-500 text-sm">
                   {'★'.repeat(Math.round(parseFloat(item.rating)))}
-                  <span className="text-gray-300 ml-1">({item.rating})</span>
+                  <span className="text-white ml-1">({item.rating})</span>
                 </div>
               )}
             </div>
             <div className="text-right">
               <div className="text-red-600 font-bold">€{item.price.toFixed(2)}</div>
-              {item.type === 'hotel' && <div className="text-sm text-gray-400">per notte</div>}
+              {item.type === 'hotel' && <div className="text-sm text-white">per notte</div>}
             </div>
           </div>
           
-          <p className="text-gray-300 text-sm flex-1">{item.description}</p>
+          <p className="text-white text-sm flex-1">{item.description}</p>
           
           <div className="flex flex-wrap gap-2 mt-3">
             {item.location && (
-              <Badge variant="outline" className="text-xs bg-gray-800 border-gray-700">
+              <Badge variant="outline" className="text-xs bg-gray-800 border-gray-700 text-white">
                 <MapPin className="h-3 w-3 mr-1" /> {item.location}
               </Badge>
             )}
