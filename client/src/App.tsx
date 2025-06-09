@@ -15,6 +15,7 @@ import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
 import OneClickPackagePage from "@/pages/OneClickPackagePage";
 import ZapierWebhooksPage from "@/pages/ZapierWebhooksPage";
+import KiwiTestPage from "@/pages/KiwiTestPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -34,6 +35,7 @@ function Router() {
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
       <Route path="/splitta-bro" component={SplittaBroFixed} />
       <Route path="/one-click-package" component={OneClickPackagePage} />
+      <Route path="/kiwi-test" component={KiwiTestPage} />
       <Route path="/zapier-webhooks" component={ZapierWebhooksPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
