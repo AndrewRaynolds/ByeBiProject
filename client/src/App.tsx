@@ -11,6 +11,7 @@ import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
 import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
 import SplittaBroPage from "@/pages/SplittaBroPage";
+import SplittaBroTestPage from "@/pages/SplittaBroTestPage";
 import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
 import OneClickPackagePage from "@/pages/OneClickPackagePage";

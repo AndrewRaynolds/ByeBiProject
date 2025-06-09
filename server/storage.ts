@@ -342,6 +342,10 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getAllExpenseGroups(): Promise<ExpenseGroup[]> {
+    return Array.from(this.expenseGroups.values());
+  }
+
   async createExpenseGroup(insertGroup: InsertExpenseGroup): Promise<ExpenseGroup> {
     const id = this.expenseGroupId++;
     const group: ExpenseGroup = { 
@@ -369,6 +373,7 @@ export class MemStorage implements IStorage {
     const expense: Expense = { 
       ...insertExpense, 
       id,
+      date: insertExpense.date || new Date(),
       createdAt: new Date()
     };
     this.expenseItems.set(id, expense);
