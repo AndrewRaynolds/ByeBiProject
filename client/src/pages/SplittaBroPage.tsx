@@ -738,24 +738,26 @@ export default function SplittaBroPage() {
               <CardContent>
                 <div className="space-y-3">
                   {calculateBalances().map((balance, index) => (
-                    <div key={index} className={`flex items-center justify-between p-3 rounded-lg ${
+                    <div key={index} className={`flex items-center justify-between p-4 rounded-lg transition-all hover:shadow-md ${
                       balance.balance > 0.01
                         ? "bg-green-50 border border-green-200" 
                         : balance.balance < -0.01
                           ? "bg-red-50 border border-red-200" 
                           : "bg-gray-50 border border-gray-200"
                     }`}>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm">{balance.name}</span>
-                        <span className="text-xs text-gray-500">
-                          Pagato: {formatAmount(balance.paid)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Dovuto: {formatAmount(balance.owed)}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                          {balance.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-lg">{balance.name}</span>
+                          <div className="text-sm text-gray-500">
+                            Ha pagato {formatAmount(balance.paid)} • Deve {formatAmount(balance.owed)}
+                          </div>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <span className={`font-bold ${
+                        <div className={`text-2xl font-bold ${
                           balance.balance > 0.01
                             ? "text-green-600" 
                             : balance.balance < -0.01
@@ -763,10 +765,16 @@ export default function SplittaBroPage() {
                               : "text-gray-600"
                         }`}>
                           {balance.balance > 0.01 ? "+" : ""}{formatAmount(balance.balance)}
-                        </span>
-                        <div className="text-xs text-gray-500">
-                          {balance.balance > 0.01 ? "Da ricevere" : 
-                           balance.balance < -0.01 ? "Da pagare" : "In pari"}
+                        </div>
+                        <div className={`text-sm font-medium ${
+                          balance.balance > 0.01
+                            ? "text-green-600" 
+                            : balance.balance < -0.01
+                              ? "text-red-600" 
+                              : "text-gray-600"
+                        }`}>
+                          {balance.balance > 0.01 ? "In credito" : 
+                           balance.balance < -0.01 ? "Deve pagare" : "In pari"}
                         </div>
                       </div>
                     </div>

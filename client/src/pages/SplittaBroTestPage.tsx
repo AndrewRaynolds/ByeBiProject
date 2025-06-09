@@ -317,72 +317,135 @@ export default function SplittaBroTestPage() {
                         <DialogDescription>Aggiungi una nuova spesa al gruppo</DialogDescription>
                       </DialogHeader>
                       
-                      <form onSubmit={form.handleSubmit((data) => createExpense.mutate(data))} className="space-y-4">
-                        <div>
-                          <Label>Descrizione</Label>
-                          <Input {...form.register("description")} placeholder="Es. Cena al ristorante" />
-                          {form.formState.errors.description && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.description.message}</p>
-                          )}
+                      <form onSubmit={form.handleSubmit((data) => createExpense.mutate(data))} className="space-y-6">
+                        {/* Descrizione e Importo */}
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-base font-medium">Descrizione della spesa</Label>
+                            <Input 
+                              {...form.register("description")} 
+                              placeholder="Inserisci descrizione (es. Cena al ristorante)" 
+                              className="text-lg"
+                            />
+                            {form.formState.errors.description && (
+                              <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <Label className="text-base font-medium">Importo totale</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">€</span>
+                              <Input 
+                                type="number" 
+                                step="0.01" 
+                                {...form.register("amount", { valueAsNumber: true })} 
+                                placeholder="0.00"
+                                className="text-lg pl-8"
+                              />
+                            </div>
+                            {form.formState.errors.amount && (
+                              <p className="text-red-500 text-sm mt-1">{form.formState.errors.amount.message}</p>
+                            )}
+                          </div>
                         </div>
 
+                        {/* Chi ha pagato */}
                         <div>
-                          <Label>Importo (€)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            {...form.register("amount", { valueAsNumber: true })} 
-                            placeholder="0.00" 
-                          />
-                          {form.formState.errors.amount && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.amount.message}</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label>Pagato da</Label>
+                          <Label className="text-base font-medium">Pagato da</Label>
                           <Select onValueChange={(value) => form.setValue("paidBy", value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chi ha pagato?" />
+                            <SelectTrigger className="text-lg">
+                              <SelectValue placeholder="Seleziona chi ha pagato" />
                             </SelectTrigger>
                             <SelectContent>
                               {groups.find(g => g.id === selectedGroup)?.participants.map(p => (
-                                <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                                <SelectItem key={p.name} value={p.name}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                      {p.name.charAt(0)}
+                                    </div>
+                                    {p.name}
+                                  </div>
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           {form.formState.errors.paidBy && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.paidBy.message}</p>
+                            <p className="text-red-500 text-sm mt-1">{form.formState.errors.paidBy.message}</p>
                           )}
                         </div>
 
+                        {/* Divisione spesa */}
                         <div>
-                          <Label>Categoria</Label>
-                          <Select onValueChange={(value) => form.setValue("category", value)} defaultValue="Cibo">
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Cibo">Cibo</SelectItem>
-                              <SelectItem value="Trasporto">Trasporto</SelectItem>
-                              <SelectItem value="Alloggio">Alloggio</SelectItem>
-                              <SelectItem value="Divertimento">Divertimento</SelectItem>
-                              <SelectItem value="Altro">Altro</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-base font-medium">Come dividere la spesa?</Label>
+                          <div className="mt-2 p-4 border rounded-lg bg-gray-50">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-medium text-gray-700">Dividi equamente tra tutti</span>
+                              <span className="text-sm text-gray-500">
+                                {form.watch("amount") > 0 && groups.find(g => g.id === selectedGroup) ? 
+                                  `€${(form.watch("amount") / groups.find(g => g.id === selectedGroup)!.participants.length).toFixed(2)} a testa` : 
+                                  '€0.00 a testa'
+                                }
+                              </span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {groups.find(g => g.id === selectedGroup)?.participants.map(p => (
+                                <div key={p.name} className="flex items-center justify-between py-2 px-3 bg-white rounded border">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                      {p.name.charAt(0)}
+                                    </div>
+                                    <span className="text-sm font-medium">{p.name}</span>
+                                  </div>
+                                  <span className="text-sm font-medium text-green-600">
+                                    {form.watch("amount") > 0 ? 
+                                      `€${(form.watch("amount") / groups.find(g => g.id === selectedGroup)!.participants.length).toFixed(2)}` : 
+                                      '€0.00'
+                                    }
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
 
-                        <div>
-                          <Label>Data</Label>
-                          <Input type="date" {...form.register("date")} />
+                        {/* Categoria e Data */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-base font-medium">Categoria</Label>
+                            <Select onValueChange={(value) => form.setValue("category", value)} defaultValue="Cibo">
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Cibo">🍽️ Cibo & Ristoranti</SelectItem>
+                                <SelectItem value="Trasporto">🚗 Trasporto</SelectItem>
+                                <SelectItem value="Alloggio">🏨 Alloggio</SelectItem>
+                                <SelectItem value="Attività">🎯 Attività & Divertimento</SelectItem>
+                                <SelectItem value="Bevande">🍺 Bevande & Locali</SelectItem>
+                                <SelectItem value="Shopping">🛍️ Shopping</SelectItem>
+                                <SelectItem value="Altro">📝 Altro</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-base font-medium">Data</Label>
+                            <Input type="date" {...form.register("date")} />
+                          </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="mt-6">
                           <Button type="button" variant="outline" onClick={() => setShowExpenseDialog(false)}>
                             Annulla
                           </Button>
-                          <Button type="submit" disabled={createExpense.isPending}>
-                            {createExpense.isPending ? "Aggiungendo..." : "Aggiungi"}
+                          <Button 
+                            type="submit" 
+                            disabled={createExpense.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {createExpense.isPending ? "Salvando..." : "Salva spesa"}
                           </Button>
                         </DialogFooter>
                       </form>
