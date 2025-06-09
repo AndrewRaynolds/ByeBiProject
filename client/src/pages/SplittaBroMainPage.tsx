@@ -83,7 +83,7 @@ export default function SplittaBroMainPage() {
   });
 
   // Carica gruppi
-  const { data: groups = [] } = useQuery({
+  const { data: groups = [] } = useQuery<ExpenseGroup[]>({
     queryKey: ['/api/expense-groups'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/expense-groups");
@@ -92,7 +92,7 @@ export default function SplittaBroMainPage() {
   });
 
   // Carica spese del gruppo selezionato
-  const { data: expenses = [] } = useQuery({
+  const { data: expenses = [] } = useQuery<Expense[]>({
     queryKey: ['/api/expense-groups', selectedGroup, 'expenses'],
     queryFn: async () => {
       if (!selectedGroup) return [];
@@ -141,13 +141,13 @@ export default function SplittaBroMainPage() {
     mutationFn: async (data: ExpenseForm) => {
       if (!selectedGroup) throw new Error("Nessun gruppo selezionato");
       
-      const group = groups.find(g => g.id === selectedGroup);
+      const group = groups.find((g: ExpenseGroup) => g.id === selectedGroup);
       if (!group) throw new Error("Gruppo non trovato");
 
       const sharePerPerson = Math.round((data.amount * 100) / group.participants.length);
       const remainder = (data.amount * 100) - (sharePerPerson * group.participants.length);
       
-      const splitWith = group.participants.map((participant, index) => ({
+      const splitWith = group.participants.map((participant: Participant, index: number) => ({
         name: participant.name,
         share: index === group.participants.length - 1 ? sharePerPerson + remainder : sharePerPerson
       }));
@@ -210,13 +210,13 @@ export default function SplittaBroMainPage() {
   const calculateBalances = () => {
     if (!selectedGroup) return [];
     
-    const group = groups.find(g => g.id === selectedGroup);
+    const group = groups.find((g: ExpenseGroup) => g.id === selectedGroup);
     if (!group) return [];
 
     const balances: Record<string, { paid: number; owed: number; balance: number }> = {};
     
     // Inizializza bilanci
-    group.participants.forEach(participant => {
+    group.participants.forEach((participant: Participant) => {
       balances[participant.name] = { paid: 0, owed: 0, balance: 0 };
     });
 
@@ -230,7 +230,7 @@ export default function SplittaBroMainPage() {
       }
       
       if (expense.splitWith && Array.isArray(expense.splitWith)) {
-        expense.splitWith.forEach(split => {
+        expense.splitWith.forEach((split: { name: string; share: number }) => {
           if (split && split.name && balances[split.name]) {
             balances[split.name].owed += (split.share || 0);
           }
@@ -252,15 +252,15 @@ export default function SplittaBroMainPage() {
   const shareGroup = () => {
     if (!selectedGroup) return;
     
-    const group = groups.find(g => g.id === selectedGroup);
+    const group = groups.find((g: ExpenseGroup) => g.id === selectedGroup);
     if (!group) return;
 
     const balances = calculateBalances();
-    const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const totalAmount = expenses.reduce((sum: number, expense: Expense) => sum + expense.amount, 0);
     
     let message = `🧾 *SplittaBro - ${group.name}*\n\n`;
     message += `💰 *Totale spese:* €${(totalAmount / 100).toFixed(2)}\n`;
-    message += `👥 *Partecipanti:* ${group.participants.map(p => p.name).join(', ')}\n\n`;
+    message += `👥 *Partecipanti:* ${group.participants.map((p: Participant) => p.name).join(', ')}\n\n`;
     
     message += `*📊 Bilanci:*\n`;
     balances.forEach(balance => {
@@ -456,7 +456,7 @@ export default function SplittaBroMainPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {groups.map((group) => (
+                    {groups.map((group: ExpenseGroup) => (
                       <div
                         key={group.id}
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
@@ -549,7 +549,7 @@ export default function SplittaBroMainPage() {
                                   <SelectValue placeholder="Seleziona chi ha pagato" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {selectedGroupData.participants.map(p => (
+                                  {selectedGroupData.participants.map((p: Participant) => (
                                     <SelectItem key={p.name} value={p.name}>
                                       <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
@@ -580,7 +580,7 @@ export default function SplittaBroMainPage() {
                                 </div>
                                 
                                 <div className="space-y-2">
-                                  {selectedGroupData.participants.map(p => (
+                                  {selectedGroupData.participants.map((p: Participant) => (
                                     <div key={p.name} className="flex items-center justify-between py-2 px-3 bg-white rounded border">
                                       <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
