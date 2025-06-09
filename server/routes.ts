@@ -13,6 +13,7 @@ import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
 import { travelAPI } from "./services/travel-api";
+import { kiwiAPI } from "./services/kiwi-api";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
