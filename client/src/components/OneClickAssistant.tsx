@@ -788,7 +788,7 @@ export default function OneClickAssistant() {
               if (dayActivity.activities && dayActivity.activities.length > 0) {
                 const activity = dayActivity.activities[0];
                 packageItems.push({
-                  id: `kiwi_activity_${index}`,
+                  id: `kiwi_activity_${Date.now()}_${index}`,
                   type: 'activity',
                   title: activity,
                   description: `Day ${dayActivity.day} - ${activity}`,
