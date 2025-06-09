@@ -319,49 +319,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OpenAI-powered itinerary generation
+  // Kiwi.com-powered itinerary generation
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
       // Validate the incoming request
       const itinerarySchema = z.object({
         destination: z.string(),
-        country: z.string(),
-        days: z.number().int().min(1).max(14),
+        departureCity: z.string(),
+        startDate: z.string(),
+        endDate: z.string(),
         groupSize: z.number().int().min(1).max(30),
         budget: z.enum(["budget", "standard", "luxury"]),
-        interests: z.array(z.string()),
-        theme: z.string()
+        interests: z.array(z.string())
       });
       
       const requestData = itinerarySchema.parse(req.body);
       
-      // Permettiamo a tutti gli utenti di generare itinerari gratuitamente
-      // Il controllo premium è stato rimosso come richiesto
-      const userId = req.body.userId;
-      if (userId) {
-        // Verifichiamo solo che l'utente esista
-        const user = await storage.getUser(userId);
-        if (!user) {
-          return res.status(404).json({ 
-            message: "User not found" 
-          });
-        }
+      // Test Kiwi.com API connection
+      const isConnected = await kiwiAPI.testConnection();
+      if (!isConnected) {
+        return res.status(503).json({ 
+          message: "Unable to connect to travel services. Please try again later." 
+        });
       }
       
-      // Generate the itinerary using OpenAI
-      const generatedItinerary = await generateItinerary(requestData);
+      // Calculate trip duration in days
+      const startDate = new Date(requestData.startDate);
+      const endDate = new Date(requestData.endDate);
+      const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Generate the itinerary using Kiwi.com API
+      const generatedItinerary = await kiwiAPI.generateItinerary(requestData);
       
       // Create a persistent itinerary in storage based on the generated one
       const itineraryToSave = {
         tripId: req.body.tripId || 0,
         name: generatedItinerary.title,
         description: generatedItinerary.summary,
-        duration: `${requestData.days} Days`,
-        price: parseFloat(generatedItinerary.estimatedTotalCost.replace(/[^0-9.]/g, '')),
+        duration: `${durationDays} Days`,
+        price: generatedItinerary.estimatedTotalCost,
         image: `https://source.unsplash.com/random/800x400/?${requestData.destination.toLowerCase()},travel`,
         rating: "5.0",
-        highlights: generatedItinerary.tips,
-        includes: ["Accommodation", "Activities", "Custom Experience"]
+        highlights: generatedItinerary.activities?.map(a => `Day ${a.day}: ${a.activities.join(', ')}`) || ["Itinerario personalizzato"],
+        includes: ["Voli inclusi", "Attività selezionate", "Esperienza personalizzata"]
       };
       
       const savedItinerary = await storage.createItinerary(itineraryToSave);
@@ -509,6 +509,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OneClick API per generare pacchetti completi
+  // Test Kiwi.com API connection
+  app.get("/api/kiwi/test", async (req: Request, res: Response) => {
+    try {
+      const isConnected = await kiwiAPI.testConnection();
+      return res.status(200).json({ 
+        connected: isConnected,
+        message: isConnected ? "Kiwi.com API connected successfully" : "Unable to connect to Kiwi.com API"
+      });
+    } catch (error: any) {
+      return res.status(500).json({ 
+        connected: false,
+        message: "Error testing Kiwi.com connection: " + error.message 
+      });
+    }
+  });
+
+  // Search locations using Kiwi.com
+  app.get("/api/kiwi/locations", async (req: Request, res: Response) => {
+    try {
+      const { term } = req.query;
+      if (!term || typeof term !== 'string') {
+        return res.status(400).json({ message: "Search term is required" });
+      }
+      
+      const locations = await kiwiAPI.searchLocations(term);
+      return res.status(200).json(locations);
+    } catch (error: any) {
+      return res.status(500).json({ 
+        message: "Error searching locations: " + error.message 
+      });
+    }
+  });
+
   app.post("/api/travel/packages", async (req: Request, res: Response) => {
     try {
       const { destination, startDate, endDate, adults, budget } = req.body;
