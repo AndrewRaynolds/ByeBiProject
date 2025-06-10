@@ -157,16 +157,19 @@ export const insertExperienceSchema = createInsertSchema(experiences).pick({
 // Expense Group model (for SplittaBro feature)
 export const expenseGroups = pgTable("expense_groups", {
   id: serial("id").primaryKey(),
-  tripId: integer("trip_id").notNull(),
   name: text("name").notNull(),
-  participants: json("participants").notNull(),
+  description: text("description"),
+  members: json("members").notNull(),
+  totalAmount: integer("total_amount").default(0),
+  currency: text("currency").default("EUR"),
   createdAt: timestamp("created_at").defaultNow()
 });
 
 export const insertExpenseGroupSchema = createInsertSchema(expenseGroups).pick({
-  tripId: true,
   name: true,
-  participants: true,
+  description: true,
+  members: true,
+  currency: true,
 });
 
 // Expense model (for SplittaBro feature)
