@@ -519,6 +519,9 @@ export function SplittaBro() {
                 <DialogContent className="bg-gray-900 border-gray-800 text-white">
                   <DialogHeader>
                     <DialogTitle className="text-white">Aggiungi Nuova Spesa</DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                      Registra una nuova spesa per il gruppo e seleziona chi deve partecipare alla divisione
+                    </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={expenseForm.handleSubmit(onCreateExpense)} className="space-y-4">
                     <div>
