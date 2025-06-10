@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +71,7 @@ export function SplittaBro() {
   const [showCreateExpense, setShowCreateExpense] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
 
   const groupForm = useForm<CreateGroupFormValues>({
     resolver: zodResolver(createGroupSchema),
@@ -325,9 +327,18 @@ export function SplittaBro() {
     <div className="min-h-screen bg-black text-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-red-600 mb-2">SplittaBro</h1>
-          <p className="text-gray-300">Dividi le spese del tuo addio al celibato</p>
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => navigate('/')}
+            className="font-poppins font-bold text-2xl transform transition-transform hover:scale-105 cursor-pointer"
+          >
+            <span className="text-white">Bye</span><span className="text-red-600">Bro</span>
+          </button>
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold text-red-600 mb-2">SplittaBro</h1>
+            <p className="text-gray-300">Dividi le spese del tuo addio al celibato</p>
+          </div>
+          <div className="w-16"></div> {/* Spacer for balance */}
         </div>
 
         {!selectedGroup ? (
