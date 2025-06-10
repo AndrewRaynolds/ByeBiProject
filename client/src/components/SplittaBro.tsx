@@ -204,7 +204,7 @@ export function SplittaBro() {
         body: JSON.stringify({
           groupId: selectedGroup.id,
           description: data.description,
-          amount: data.amount,
+          amount: Math.round(data.amount * 100), // Convert to cents
           paidBy: data.paidBy,
           splitBetween: splitBetween,
           category: data.category,
@@ -226,8 +226,8 @@ export function SplittaBro() {
           splitEqually: false,
         });
         
-        // Aggiorna il totale del gruppo
-        const groupTotal = [...expenses, newExpense].reduce((sum, exp) => sum + exp.amount, 0);
+        // Aggiorna il totale del gruppo (convert from cents to euros)
+        const groupTotal = [...expenses, newExpense].reduce((sum, exp) => sum + exp.amount, 0) / 100;
         setGroups(prev => prev.map(g => 
           g.id === selectedGroup.id ? { ...g, totalAmount: groupTotal } : g
         ));
@@ -261,7 +261,7 @@ export function SplittaBro() {
       balances[member] = 0;
     });
 
-    // Calcola i saldi per ogni spesa
+    // Calcola i saldi per ogni spesa (amounts are in cents)
     expenses.forEach(expense => {
       const amountPerPerson = expense.amount / expense.splitBetween.length;
       
@@ -678,7 +678,7 @@ export function SplittaBro() {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-bold text-red-600">€{expense.amount.toFixed(2)}</p>
+                                  <p className="font-bold text-red-600">€{(expense.amount / 100).toFixed(2)}</p>
                                   <p className="text-xs text-gray-400">
                                     {new Date(expense.date).toLocaleDateString()}
                                   </p>
@@ -733,7 +733,7 @@ export function SplittaBro() {
                                   <span className="text-white font-medium">{settlement.to}</span>
                                 </div>
                                 <span className="font-bold text-red-600">
-                                  €{settlement.amount.toFixed(2)}
+                                  €{(settlement.amount / 100).toFixed(2)}
                                 </span>
                               </div>
                             </div>
