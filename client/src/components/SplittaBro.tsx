@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,7 +46,7 @@ interface Settlement {
 const createGroupSchema = z.object({
   name: z.string().min(1, 'Nome gruppo richiesto'),
   description: z.string().optional(),
-  members: z.string().min(1, 'Almeno un membro richiesto'),
+  members: z.array(z.string()).min(1, 'Almeno un membro richiesto'),
 });
 
 const createExpenseSchema = z.object({
@@ -76,9 +76,11 @@ export function SplittaBro() {
     defaultValues: {
       name: '',
       description: '',
-      members: '',
+      members: [],
     },
   });
+
+  const [newMemberName, setNewMemberName] = useState('');
 
   const expenseForm = useForm<CreateExpenseFormValues>({
     resolver: zodResolver(createExpenseSchema),
@@ -133,8 +135,6 @@ export function SplittaBro() {
 
   const onCreateGroup = async (data: CreateGroupFormValues) => {
     try {
-      const members = data.members.split(',').map(m => m.trim()).filter(m => m.length > 0);
-      
       const response = await fetch('/api/expense-groups', {
         method: 'POST',
         headers: {
@@ -143,7 +143,7 @@ export function SplittaBro() {
         body: JSON.stringify({
           name: data.name,
           description: data.description,
-          members: members,
+          members: data.members,
           currency: 'EUR',
         }),
       });
@@ -152,7 +152,12 @@ export function SplittaBro() {
         const newGroup = await response.json();
         setGroups(prev => [...prev, newGroup]);
         setShowCreateGroup(false);
-        groupForm.reset();
+        groupForm.reset({
+          name: '',
+          description: '',
+          members: [],
+        });
+        setNewMemberName('');
         toast({
           title: "Gruppo creato!",
           description: "Il nuovo gruppo di spese è stato creato con successo.",
@@ -167,6 +172,21 @@ export function SplittaBro() {
         variant: "destructive",
       });
     }
+  };
+
+  const addMember = () => {
+    if (newMemberName.trim()) {
+      const currentMembers = groupForm.getValues('members') || [];
+      if (!currentMembers.includes(newMemberName.trim())) {
+        groupForm.setValue('members', [...currentMembers, newMemberName.trim()]);
+        setNewMemberName('');
+      }
+    }
+  };
+
+  const removeMember = (memberToRemove: string) => {
+    const currentMembers = groupForm.getValues('members') || [];
+    groupForm.setValue('members', currentMembers.filter(m => m !== memberToRemove));
   };
 
   const onCreateExpense = async (data: CreateExpenseFormValues) => {
@@ -325,6 +345,9 @@ export function SplittaBro() {
                 <DialogContent className="bg-gray-900 border-gray-800 text-white">
                   <DialogHeader>
                     <DialogTitle className="text-white">Crea Nuovo Gruppo</DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                      Crea un nuovo gruppo per dividere le spese del tuo addio al celibato
+                    </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={groupForm.handleSubmit(onCreateGroup)} className="space-y-4">
                     <div>
@@ -353,18 +376,51 @@ export function SplittaBro() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="members" className="text-white">Membri</Label>
-                      <Input
-                        id="members"
-                        {...groupForm.register('members')}
-                        placeholder="Marco, Luca, Giuseppe, Andrea (separati da virgola)"
-                        className="bg-gray-800 border-gray-700 text-white"
-                      />
-                      {groupForm.formState.errors.members && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {groupForm.formState.errors.members.message}
-                        </p>
-                      )}
+                      <Label className="text-white">Membri</Label>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex gap-2">
+                          <Input
+                            value={newMemberName}
+                            onChange={(e) => setNewMemberName(e.target.value)}
+                            placeholder="Nome del membro"
+                            className="bg-gray-800 border-gray-700 text-white flex-1"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addMember();
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            onClick={addMember}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {groupForm.watch('members')?.map((member, index) => (
+                            <div key={index} className="flex items-center justify-between bg-gray-800 px-3 py-2 rounded border border-gray-700">
+                              <span className="text-white text-sm">{member}</span>
+                              <Button
+                                type="button"
+                                onClick={() => removeMember(member)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-400 hover:text-red-600 hover:bg-red-900/20"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        {groupForm.formState.errors.members && (
+                          <p className="text-red-500 text-sm">
+                            {groupForm.formState.errors.members.message}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     
                     <DialogFooter>
@@ -491,11 +547,11 @@ export function SplittaBro() {
                       <Label htmlFor="paidBy" className="text-white">Chi ha pagato</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('paidBy', value)}>
                         <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Seleziona chi ha pagato" />
+                          <SelectValue placeholder="Seleziona chi ha pagato" className="text-white" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
                           {selectedGroup.members.map((member) => (
-                            <SelectItem key={member} value={member} className="text-white">
+                            <SelectItem key={member} value={member} className="text-white focus:text-white">
                               {member}
                             </SelectItem>
                           ))}
@@ -549,17 +605,27 @@ export function SplittaBro() {
                       <Label htmlFor="category" className="text-white">Categoria</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('category', value)}>
                         <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Seleziona categoria" />
+                          <SelectValue placeholder="Seleziona categoria" className="text-white" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
-                          <SelectItem value="food" className="text-white">🍽️ Cibo</SelectItem>
-                          <SelectItem value="transport" className="text-white">🚗 Trasporti</SelectItem>
-                          <SelectItem value="accommodation" className="text-white">🏨 Alloggio</SelectItem>
-                          <SelectItem value="entertainment" className="text-white">🎉 Divertimento</SelectItem>
-                          <SelectItem value="shopping" className="text-white">🛍️ Shopping</SelectItem>
-                          <SelectItem value="other" className="text-white">📋 Altro</SelectItem>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                          <SelectItem value="food" className="text-white focus:text-white">🍽️ Cibo</SelectItem>
+                          <SelectItem value="transport" className="text-white focus:text-white">🚗 Trasporti</SelectItem>
+                          <SelectItem value="accommodation" className="text-white focus:text-white">🏨 Alloggio</SelectItem>
+                          <SelectItem value="entertainment" className="text-white focus:text-white">🎉 Divertimento</SelectItem>
+                          <SelectItem value="shopping" className="text-white focus:text-white">🛍️ Shopping</SelectItem>
+                          <SelectItem value="other" className="text-white focus:text-white">📋 Altro</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="date" className="text-white">Data</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        {...expenseForm.register('date')}
+                        className="bg-gray-800 border-gray-700 text-white"
+                      />
                     </div>
                     
                     <DialogFooter>
