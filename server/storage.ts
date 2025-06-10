@@ -349,9 +349,10 @@ export class MemStorage implements IStorage {
   async createExpenseGroup(insertGroup: InsertExpenseGroup): Promise<ExpenseGroup> {
     const id = this.expenseGroupId++;
     const group: ExpenseGroup = { 
-      ...insertGroup, 
+      ...insertGroup,
       id,
-      createdAt: new Date()
+      totalAmount: 0,
+      createdAt: new Date().toISOString()
     };
     this.expenseGroups.set(id, group);
     return group;

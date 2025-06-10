@@ -179,9 +179,9 @@ export const expenses = pgTable("expenses", {
   description: text("description").notNull(),
   amount: integer("amount").notNull(),
   paidBy: text("paid_by").notNull(),
-  splitWith: json("split_with").notNull(),
-  date: timestamp("date").defaultNow(),
+  splitBetween: json("split_between").notNull(),
   category: text("category").notNull(),
+  date: text("date").notNull(),
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -190,8 +190,9 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
   description: true,
   amount: true,
   paidBy: true,
-  splitWith: true,
+  splitBetween: true,
   category: true,
+  date: true,
 });
 
 // Export types
