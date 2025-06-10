@@ -78,7 +78,7 @@ const Header = memo(function Header() {
           <Link href="/merchandise" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/merchandise" ? "text-red-600" : ""}`}>
             Merch
           </Link>
-          <Link href="/splittabro" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location.startsWith("/splittabro") ? "text-red-600" : ""}`}>
+          <Link href="/splitta-bro" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location.startsWith("/splitta-bro") ? "text-red-600" : ""}`}>
             SplittaBro
           </Link>
         </div>
@@ -151,7 +151,7 @@ const Header = memo(function Header() {
             <Link href="/experiences" className="text-dark hover:text-red-600 transition font-medium">Experiences</Link>
             <Link href="/secret-blog" className="text-dark hover:text-red-600 transition font-medium">Secret Blog</Link>
             <Link href="/merchandise" className="text-dark hover:text-red-600 transition font-medium">Merch</Link>
-            <Link href="/splittabro" className="text-dark hover:text-red-600 transition font-medium">SplittaBro</Link>
+            <Link href="/splitta-bro" className="text-dark hover:text-red-600 transition font-medium">SplittaBro</Link>
             
             <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200 mt-2">
               {user ? (
