@@ -55,6 +55,8 @@ const createExpenseSchema = z.object({
   paidBy: z.string().min(1, 'Chi ha pagato è richiesto'),
   splitBetween: z.array(z.string()).min(1, 'Seleziona almeno una persona'),
   category: z.string().min(1, 'Categoria richiesta'),
+  date: z.string().min(1, 'Data richiesta'),
+  splitEqually: z.boolean().optional(),
 });
 
 type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
@@ -86,6 +88,8 @@ export function SplittaBro() {
       paidBy: '',
       splitBetween: [],
       category: 'food',
+      date: new Date().toISOString().split('T')[0],
+      splitEqually: false,
     },
   });
 
@@ -169,6 +173,9 @@ export function SplittaBro() {
     if (!selectedGroup) return;
 
     try {
+      // Se è selezionato "dividi equamente", includi tutti i membri del gruppo
+      const splitBetween = data.splitEqually ? selectedGroup.members : data.splitBetween;
+      
       const response = await fetch('/api/expenses', {
         method: 'POST',
         headers: {
@@ -179,9 +186,9 @@ export function SplittaBro() {
           description: data.description,
           amount: data.amount,
           paidBy: data.paidBy,
-          splitBetween: data.splitBetween,
+          splitBetween: splitBetween,
           category: data.category,
-          date: new Date().toISOString(),
+          date: data.date,
         }),
       });
 
@@ -189,7 +196,15 @@ export function SplittaBro() {
         const newExpense = await response.json();
         setExpenses(prev => [...prev, newExpense]);
         setShowCreateExpense(false);
-        expenseForm.reset();
+        expenseForm.reset({
+          description: '',
+          amount: 0,
+          paidBy: '',
+          splitBetween: [],
+          category: 'food',
+          date: new Date().toISOString().split('T')[0],
+          splitEqually: false,
+        });
         
         // Aggiorna il totale del gruppo
         const groupTotal = [...expenses, newExpense].reduce((sum, exp) => sum + exp.amount, 0);
@@ -202,9 +217,12 @@ export function SplittaBro() {
           description: "La spesa è stata registrata con successo.",
         });
       } else {
+        const errorData = await response.json();
+        console.error('Errore validazione:', errorData);
         throw new Error('Errore nella creazione della spesa');
       }
     } catch (error) {
+      console.error('Errore creazione spesa:', error);
       toast({
         title: "Errore",
         description: "Impossibile aggiungere la spesa. Riprova.",
@@ -487,24 +505,43 @@ export function SplittaBro() {
                     
                     <div>
                       <Label className="text-white">Dividi tra</Label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {selectedGroup.members.map((member) => (
-                          <label key={member} className="flex items-center space-x-2 text-white">
-                            <input
-                              type="checkbox"
-                              onChange={(e) => {
-                                const currentSplit = expenseForm.getValues('splitBetween') || [];
-                                if (e.target.checked) {
-                                  expenseForm.setValue('splitBetween', [...currentSplit, member]);
-                                } else {
-                                  expenseForm.setValue('splitBetween', currentSplit.filter(m => m !== member));
-                                }
-                              }}
-                              className="rounded border-gray-600"
-                            />
-                            <span className="text-sm">{member}</span>
-                          </label>
-                        ))}
+                      <div className="space-y-2 mt-2">
+                        <label className="flex items-center space-x-2 text-white">
+                          <input
+                            type="checkbox"
+                            {...expenseForm.register('splitEqually')}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                expenseForm.setValue('splitBetween', selectedGroup.members);
+                              } else {
+                                expenseForm.setValue('splitBetween', []);
+                              }
+                            }}
+                            className="rounded border-gray-600"
+                          />
+                          <span className="text-sm font-medium">Dividi equamente tra tutti</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {selectedGroup.members.map((member) => (
+                            <label key={member} className="flex items-center space-x-2 text-white">
+                              <input
+                                type="checkbox"
+                                checked={expenseForm.watch('splitBetween')?.includes(member) || false}
+                                onChange={(e) => {
+                                  const currentSplit = expenseForm.getValues('splitBetween') || [];
+                                  if (e.target.checked) {
+                                    expenseForm.setValue('splitBetween', [...currentSplit, member]);
+                                  } else {
+                                    expenseForm.setValue('splitBetween', currentSplit.filter(m => m !== member));
+                                    expenseForm.setValue('splitEqually', false);
+                                  }
+                                }}
+                                className="rounded border-gray-600"
+                              />
+                              <span className="text-sm">{member}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     
