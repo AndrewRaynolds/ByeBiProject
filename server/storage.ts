@@ -817,7 +817,7 @@ export class MemStorage implements IStorage {
       {
         name: "Lyon",
         country: "France",
-        image: "https://images.unsplash.com/photo-1603513492128-ba7bc9b3e143?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2019/04/29/15/21/lyon-4166710_960_720.jpg",
         description: "Gastronomic capital of France with incredible food scene and charming old town.",
         tags: ["Food", "Culture", "Nightlife"],
         rating: "4.5",
@@ -835,7 +835,7 @@ export class MemStorage implements IStorage {
       {
         name: "Rhodes",
         country: "Greece",
-        image: "https://images.unsplash.com/photo-1574958269340-fa927503f3dd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2019/08/14/14/15/rhodes-4405877_960_720.jpg",
         description: "Historic island with medieval old town, beautiful beaches and vibrant party scene.",
         tags: ["Beaches", "Nightlife", "History"],
         rating: "4.6",
@@ -844,7 +844,7 @@ export class MemStorage implements IStorage {
       {
         name: "Zagreb",
         country: "Croatia",
-        image: "https://images.unsplash.com/photo-1582520122440-ca42c6c3a648?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2019/06/26/19/33/zagreb-4299893_960_720.jpg",
         description: "Croatia's capital with trendy bars, affordable prices and nearby nature attractions.",
         tags: ["Nightlife", "Affordable", "Culture"],
         rating: "4.3",
@@ -853,7 +853,7 @@ export class MemStorage implements IStorage {
       {
         name: "Dubrovnik",
         country: "Croatia",
-        image: "https://images.unsplash.com/photo-1555990720-0065b7f51880?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/09/12/13/56/dubrovnik-2743336_960_720.jpg",
         description: "Game of Thrones filming location with medieval walls and vibrant cliff bars.",
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.8",
