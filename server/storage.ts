@@ -736,7 +736,7 @@ export class MemStorage implements IStorage {
       {
         name: "Malaga",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1590086783191-a0694c7d1e6e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2020/02/18/19/59/malaga-4860045_960_720.jpg",
         description: "Costa del Sol paradise with beaches, beachfront bars and clubs, and rich culture.",
         tags: ["Beaches", "Nightlife", "Food"],
         rating: "4.6",
@@ -745,7 +745,7 @@ export class MemStorage implements IStorage {
       {
         name: "Frankfurt",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1577185816322-21f6a92ffc1f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/07/30/12/43/architecture-2556700_960_720.jpg",
         description: "Financial heart of Germany with impressive skyscrapers and surprising nightlife.",
         tags: ["Nightlife", "Breweries", "Culture"],
         rating: "4.3",
@@ -754,7 +754,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cologne",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1524905316052-a4990b955e83?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/05/30/15/38/cologne-2356808_960_720.jpg",
         description: "Famous for its carnival, beer culture and vibrant LGBT scene.",
         tags: ["Beer", "Nightlife", "Culture"],
         rating: "4.4",
@@ -772,7 +772,7 @@ export class MemStorage implements IStorage {
       {
         name: "Faro",
         country: "Portugal",
-        image: "https://images.unsplash.com/photo-1552042843-ed18bd009630?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2018/11/04/20/21/portugal-3795617_960_720.jpg",
         description: "Gateway to the Algarve with beautiful beaches and relaxed atmosphere.",
         tags: ["Beaches", "Nightlife", "Affordable"],
         rating: "4.3",
@@ -781,7 +781,7 @@ export class MemStorage implements IStorage {
       {
         name: "Galway",
         country: "Ireland",
-        image: "https://images.unsplash.com/photo-1591416213802-1636b76acf0e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2020/06/07/17/28/galway-5271688_960_720.jpg",
         description: "Ireland's cultural heart with amazing pubs, live music and friendly locals.",
         tags: ["Pubs", "Music", "Culture"],
         rating: "4.6",
@@ -790,7 +790,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cork",
         country: "Ireland",
-        image: "https://images.unsplash.com/photo-1567284783420-9c60fd0c3630?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/08/21/21/34/cork-2665919_960_720.jpg",
         description: "Charming city with excellent pubs, brewery tours and nearby scenic countryside.",
         tags: ["Pubs", "Beer", "Culture"],
         rating: "4.4",
@@ -799,7 +799,7 @@ export class MemStorage implements IStorage {
       {
         name: "Nice",
         country: "France",
-        image: "https://images.unsplash.com/photo-1562883676-8c7feb83f09b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2018/08/21/09/30/nice-3620530_960_720.jpg",
         description: "Glamorous coastal city on the French Riviera with beaches and upscale nightlife.",
         tags: ["Beaches", "Luxury", "Nightlife"],
         rating: "4.7",
@@ -808,7 +808,7 @@ export class MemStorage implements IStorage {
       {
         name: "Marseille",
         country: "France",
-        image: "https://images.unsplash.com/photo-1582880414862-2ed8f5162086?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/09/01/21/52/marseille-2705425_960_720.jpg",
         description: "Vibrant port city with Mediterranean flair, beaches and exciting nightlife.",
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.4",
