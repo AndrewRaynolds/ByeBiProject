@@ -663,7 +663,7 @@ export class MemStorage implements IStorage {
       {
         name: "Milan",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1574155376612-bfa4ed8aabfd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2018/07/26/07/45/milan-3562342_960_720.jpg",
         description: "Fashion capital with stylish clubs, fancy aperitivo scene and vibrant nightlife.",
         tags: ["Fashion", "Nightlife", "Food"],
         rating: "4.5",
@@ -672,7 +672,7 @@ export class MemStorage implements IStorage {
       {
         name: "Florence",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1543429728-c2a0b3dd5b07?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2016/11/29/12/25/florence-1869826_960_720.jpg",
         description: "Renaissance gem with amazing wine tours, cuisine and Tuscan landscapes.",
         tags: ["Culture", "Wine", "Food"],
         rating: "4.8",
@@ -681,7 +681,7 @@ export class MemStorage implements IStorage {
       {
         name: "Naples",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1583460552833-8f1f8e5331e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2019/04/24/21/55/naples-4153392_960_720.jpg",
         description: "Authentic Italian experience with the best pizza, nearby beaches and vibrant street life.",
         tags: ["Food", "Culture", "Beaches"],
         rating: "4.4",
@@ -690,7 +690,7 @@ export class MemStorage implements IStorage {
       {
         name: "Baja Sardinia",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1597050608412-df88c8b0a619?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2019/06/17/20/03/sardinia-4281187_960_720.jpg",
         description: "Luxurious beach clubs, crystal waters and vibrant nightlife on Sardinia's Emerald Coast.",
         tags: ["Beaches", "Luxury", "Nightlife"],
         rating: "4.9",
@@ -700,7 +700,7 @@ export class MemStorage implements IStorage {
       {
         name: "Valencia",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1599418798895-189392c73c08?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2020/04/12/14/21/valencia-5035061_960_720.jpg",
         description: "Beautiful city with incredible beaches, futuristic architecture and famous nightlife.",
         tags: ["Beaches", "Culture", "Nightlife"],
         rating: "4.6",
@@ -709,7 +709,7 @@ export class MemStorage implements IStorage {
       {
         name: "Bilbao",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1610968989154-5eb00b2e04c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/09/12/19/49/bilbao-2743876_960_720.jpg",
         description: "Basque country gem with incredible gastronomy, modern art and vibrant culture.",
         tags: ["Food", "Culture", "Nightlife"],
         rating: "4.5",
@@ -727,7 +727,7 @@ export class MemStorage implements IStorage {
       {
         name: "Seville",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1587064712555-6e206484699d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2018/08/22/15/46/seville-3623804_960_720.jpg",
         description: "Passionate city with flamenco, tapas bars and romantic atmosphere.",
         tags: ["Culture", "Food", "Nightlife"],
         rating: "4.5",
