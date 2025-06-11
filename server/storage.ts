@@ -462,7 +462,7 @@ export class MemStorage implements IStorage {
       {
         name: "Palma de Mallorca",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1563784462386-044c9c8f55f9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2018/05/30/15/39/palma-de-mallorca-3441396_960_720.jpg",
         description: "Stunning beaches by day and lively clubs by night in this Mediterranean hotspot.",
         tags: ["Nightlife", "Beaches"],
         rating: "4.7",
@@ -581,7 +581,7 @@ export class MemStorage implements IStorage {
       {
         name: "Sofia",
         country: "Bulgaria",
-        image: "https://images.unsplash.com/photo-1582633987110-78186872e5e5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2019/06/04/14/20/sofia-4252836_960_720.jpg",
         description: "Affordable beer, clubs, and casinos in the shadow of snow-capped mountains.",
         tags: ["Nightlife", "Affordable", "Casinos"],
         rating: "4.0",
@@ -608,7 +608,7 @@ export class MemStorage implements IStorage {
       {
         name: "Manchester",
         country: "United Kingdom",
-        image: "https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2020/02/26/15/34/manchester-4881842_960_720.jpg",
         description: "Legendary music scene, football culture and buzzing nightlife in this northern powerhouse.",
         tags: ["Nightlife", "Music", "Sport"],
         rating: "4.6",
@@ -617,7 +617,7 @@ export class MemStorage implements IStorage {
       {
         name: "Edinburgh",
         country: "United Kingdom",
-        image: "https://images.unsplash.com/photo-1607773246615-a773a3556f9f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/01/29/13/21/edinburgh-2017267_960_720.jpg",
         description: "Scotland's capital with historic pubs, whisky tours and dramatic scenery as a backdrop.",
         tags: ["Nightlife", "History", "Culture"],
         rating: "4.7",
@@ -626,7 +626,7 @@ export class MemStorage implements IStorage {
       {
         name: "Thessaloniki",
         country: "Greece",
-        image: "https://images.unsplash.com/photo-1609001650223-b8b5ba1a2842?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2020/06/08/16/19/thessaloniki-5275684_960_720.jpg",
         description: "Seaside bars, tavernas, and clubs in Greece's second-largest city.",
         tags: ["Nightlife", "Food", "Beaches"],
         rating: "4.3",
@@ -644,7 +644,7 @@ export class MemStorage implements IStorage {
       {
         name: "Split",
         country: "Croatia",
-        image: "https://images.unsplash.com/photo-1555990538-4f79d1a28266?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://cdn.pixabay.com/photo/2017/06/15/11/40/split-2405071_960_720.jpg",
         description: "Ancient Roman ruins by day, beachfront parties by night on the Adriatic coast.",
         tags: ["Beaches", "Nightlife", "History"],
         rating: "4.6",
