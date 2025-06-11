@@ -544,47 +544,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/travel/packages", async (req: Request, res: Response) => {
     try {
-      const { destination, startDate, endDate, adults, budget } = req.body;
+      const { destination, departureCity, startDate, endDate, adults, budget, interests } = req.body;
       
       if (!destination || !startDate || !endDate) {
-        return res.status(400).json({ message: "Missing required parameters" });
+        return res.status(400).json({ message: "Missing required parameters: destination, startDate, endDate" });
       }
 
       // Conversione delle date in formato stringa (YYYY-MM-DD)
       const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
       const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
-      const numAdults = adults || 1;
+      const numAdults = adults || 2;
+      const departureLocation = departureCity || "Milan";
       
-      // Otteniamo tutti i dati in parallelo
-      const [flights, hotels, activities, restaurants, events] = await Promise.all([
-        travelAPI.getFlights("MXP", destination, formattedStartDate, formattedEndDate, numAdults),
-        travelAPI.getHotels(destination, formattedStartDate, formattedEndDate, numAdults),
-        travelAPI.getActivities(destination),
-        travelAPI.getRestaurants(destination),
-        travelAPI.getEvents(destination, formattedStartDate, formattedEndDate)
-      ]);
+      // Usa le API reali di Kiwi.com e Booking.com
+      const { travelAPI: realTravelAPI } = await import("./services/travel-api");
       
-      // Creiamo il pacchetto completo
-      const travelPackage = {
+      const realPackage = await realTravelAPI.generateTravelPackage({
+        destination,
+        departureCity: departureLocation,
+        checkIn: formattedStartDate,
+        checkOut: formattedEndDate,
+        adults: numAdults,
+        budget: budget as "budget" | "standard" | "luxury" || "standard",
+        interests: interests || ["nightlife", "food"]
+      });
+      
+      // Mantieni la compatibilità con il frontend esistente
+      const compatiblePackage = {
         destination,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         adults: numAdults,
         budget: budget || "standard",
-        flights,
-        hotels,
-        activities,
-        restaurants,
-        events
+        flights: [realPackage.flights.outbound],
+        hotels: realPackage.hotels,
+        activities: realPackage.activities.map((activity, index) => ({
+          id: `activity_${index}`,
+          name: activity,
+          city: destination,
+          category: interests?.[0] || "nightlife",
+          price: realPackage.estimatedDailyCost * 0.3,
+          currency: realPackage.currency,
+          rating: 4.5,
+          duration: "2-3 hours",
+          description: activity,
+          images: []
+        })),
+        restaurants: [],
+        events: [],
+        totalCost: realPackage.totalCost,
+        currency: realPackage.currency,
+        realApiData: true
       };
       
-      return res.status(200).json(travelPackage);
+      return res.status(200).json(compatiblePackage);
     } catch (error: any) {
-      console.error("Error generating travel package:", error);
-      return res.status(500).json({ 
-        message: "Failed to generate travel package",
-        error: error.message || String(error)
+      console.error("Error generating real travel package:", error);
+      
+      // Fallback al sistema esistente solo se le API reali falliscono
+      try {
+        const formattedStartDate = new Date(req.body.startDate).toISOString().split('T')[0];
+        const formattedEndDate = new Date(req.body.endDate).toISOString().split('T')[0];
+        const numAdults = req.body.adults || 1;
+        
+        const [flights, hotels, activities, restaurants, events] = await Promise.all([
+          travelAPI.getFlights("MXP", req.body.destination, formattedStartDate, formattedEndDate, numAdults),
+          travelAPI.getHotels(req.body.destination, formattedStartDate, formattedEndDate, numAdults),
+          travelAPI.getActivities(req.body.destination),
+          travelAPI.getRestaurants(req.body.destination),
+          travelAPI.getEvents(req.body.destination, formattedStartDate, formattedEndDate)
+        ]);
+        
+        const fallbackPackage = {
+          destination: req.body.destination,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate,
+          adults: numAdults,
+          budget: req.body.budget || "standard",
+          flights,
+          hotels,
+          activities,
+          restaurants,
+          events,
+          realApiData: false,
+          fallbackReason: error.message
+        };
+        
+        return res.status(200).json(fallbackPackage);
+      } catch (fallbackError: any) {
+        return res.status(500).json({ 
+          message: "Failed to generate travel package with both real and fallback APIs",
+          realApiError: error.message,
+          fallbackError: fallbackError.message
+        });
+      }
+    }
+  });
+
+  // Test API connections for Kiwi.com and Booking.com
+  app.get("/api/travel/test-apis", async (req: Request, res: Response) => {
+    try {
+      const { travelAPI: realTravelAPI } = await import("./services/travel-api");
+      const status = await realTravelAPI.testAPIs();
+      
+      res.json({
+        status: "ok",
+        apis: status,
+        message: `Kiwi API: ${status.kiwi ? 'Connected' : 'Failed'}, Booking API: ${status.booking ? 'Connected' : 'Failed'}`
       });
+    } catch (error: any) {
+      console.error("Error testing APIs:", error);
+      res.status(500).json({ message: "Error testing APIs: " + error.message });
+    }
+  });
+
+  // Search flights using real Kiwi API
+  app.get("/api/travel/flights/search", async (req: Request, res: Response) => {
+    try {
+      const { from, to, dateFrom, dateTo, adults = 2 } = req.query;
+      
+      if (!from || !to || !dateFrom || !dateTo) {
+        return res.status(400).json({ message: "Missing required parameters: from, to, dateFrom, dateTo" });
+      }
+
+      const { kiwiAPI } = await import("./services/kiwi-api");
+      
+      const flights = await kiwiAPI.searchFlights({
+        fly_from: from as string,
+        fly_to: to as string,
+        date_from: dateFrom as string,
+        date_to: dateTo as string,
+        adults: parseInt(adults as string),
+        curr: 'EUR',
+        limit: 10
+      });
+
+      res.json(flights);
+    } catch (error: any) {
+      console.error("Error searching flights:", error);
+      res.status(500).json({ message: "Error searching flights: " + error.message });
+    }
+  });
+
+  // Search hotels using real Booking API
+  app.get("/api/travel/hotels/search", async (req: Request, res: Response) => {
+    try {
+      const { destination, checkIn, checkOut, adults = 2 } = req.query;
+      
+      if (!destination || !checkIn || !checkOut) {
+        return res.status(400).json({ message: "Missing required parameters: destination, checkIn, checkOut" });
+      }
+
+      const { bookingAPI } = await import("./services/booking-api");
+      
+      // Prima trova la destinazione
+      const destinations = await bookingAPI.searchDestinations(destination as string);
+      if (destinations.length === 0) {
+        return res.status(404).json({ message: `No destinations found for: ${destination}` });
+      }
+
+      // Poi cerca gli hotel
+      const hotels = await bookingAPI.searchHotels({
+        dest_id: destinations[0].dest_id,
+        checkin_date: checkIn as string,
+        checkout_date: checkOut as string,
+        adults_number: parseInt(adults as string),
+        room_number: 1,
+        units: 'metric',
+        locale: 'en-gb',
+        currency: 'EUR'
+      });
+
+      res.json({
+        destination: destinations[0],
+        hotels: hotels
+      });
+    } catch (error: any) {
+      console.error("Error searching hotels:", error);
+      res.status(500).json({ message: "Error searching hotels: " + error.message });
     }
   });
 
