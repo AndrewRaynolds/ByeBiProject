@@ -92,7 +92,6 @@ DestinationCard.displayName = "DestinationCard";
 
 // Componente principale ottimizzato
 const FeaturedDestinations = memo(function FeaturedDestinations() {
-  const { t } = useLanguage();
   const { data: destinations, isLoading, error } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
@@ -138,8 +137,8 @@ const FeaturedDestinations = memo(function FeaturedDestinations() {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">{t('destinations.title')}</h2>
-            <p className="text-red-500">{t('msg.error')}</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">Popular Destinations</h2>
+            <p className="text-red-500">Error loading destinations. Please try again later.</p>
           </div>
         </div>
       </section>
@@ -151,11 +150,11 @@ const FeaturedDestinations = memo(function FeaturedDestinations() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">{t('destinations.title')}</h2>
-            <p className="text-gray-300 mt-2">{t('destinations.subtitle')}</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">Popular Destinations</h2>
+            <p className="text-gray-300 mt-2">Top picks for your unforgettable bachelor party</p>
           </div>
           <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
-            {t('destinations.viewall')}
+            View all destinations
           </Link>
         </div>
         
