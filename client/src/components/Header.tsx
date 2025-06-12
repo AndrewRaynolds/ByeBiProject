@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Menu, X, User, LogOut, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
@@ -11,12 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
 import { throttle } from "@/lib/performance";
+import LanguageSelector from "./LanguageSelector";
 
 // Utilizziamo React.memo per evitare re-render inutili
 const Header = memo(function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const { t } = useLanguage();
   const menuRef = useRef<HTMLDivElement>(null);
   
   // Utilizziamo il nostro hook ottimizzato per lo scroll
@@ -64,26 +67,27 @@ const Header = memo(function Header() {
         
         <div className="hidden md:flex items-center space-x-6">
           <Link href="/" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/" ? "text-red-600" : ""}`}>
-            How It Works
+            {t('howitworks.title')}
           </Link>
           <Link href="/destinations" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/destinations" ? "text-red-600" : ""}`}>
-            Destinations
+            {t('nav.destinations')}
           </Link>
           <Link href="/experiences" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/experiences" ? "text-red-600" : ""}`}>
-            Experiences
+            {t('nav.experiences')}
           </Link>
           <Link href="/secret-blog" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/secret-blog" ? "text-red-600" : ""}`}>
-            Secret Blog
+            {t('nav.blog')}
           </Link>
           <Link href="/merchandise" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location === "/merchandise" ? "text-red-600" : ""}`}>
-            Merch
+            {t('nav.merchandise')}
           </Link>
           <Link href="/splitta-bro" className={`text-dark hover:text-red-600 transition font-medium text-sm ${location.startsWith("/splitta-bro") ? "text-red-600" : ""}`}>
-            SplittaBro
+            {t('nav.splitta')}
           </Link>
         </div>
         
         <div className="flex items-center space-x-4">
+          <LanguageSelector />
           {user ? (
             <div className="hidden md:block">
               <DropdownMenu>
@@ -95,18 +99,18 @@ const Header = memo(function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Dashboard</Link>
+                    <Link href="/dashboard">{t('header.dashboard')}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
                     {logoutMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Logging out...
+                        {t('header.logout')}...
                       </>
                     ) : (
                       <>
                         <LogOut className="mr-2 h-4 w-4" />
-                        Logout
+                        {t('header.logout')}
                       </>
                     )}
                   </DropdownMenuItem>
@@ -120,13 +124,13 @@ const Header = memo(function Header() {
                 className="hidden md:block text-red-600 font-medium hover:text-red-700"
                 onClick={() => navigateToAuth("login")}
               >
-                Log In
+                {t('header.login')}
               </Button>
               <Button
                 className="hidden md:block bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition"
                 onClick={() => navigateToAuth("register")}
               >
-                Sign Up
+                {t('header.login')}
               </Button>
             </>
           )}
