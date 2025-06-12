@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Destination } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Star, StarHalf } from "lucide-react";
 import { Link } from "wouter";
 import { memo, useCallback } from "react";
@@ -92,6 +93,7 @@ DestinationCard.displayName = "DestinationCard";
 
 // Componente principale ottimizzato
 const FeaturedDestinations = memo(function FeaturedDestinations() {
+  const { t } = useLanguage();
   const { data: destinations, isLoading, error } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
@@ -137,8 +139,8 @@ const FeaturedDestinations = memo(function FeaturedDestinations() {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">Popular Destinations</h2>
-            <p className="text-red-500">Error loading destinations. Please try again later.</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">{t('destinations.title')}</h2>
+            <p className="text-red-500">{t('msg.error')}</p>
           </div>
         </div>
       </section>
