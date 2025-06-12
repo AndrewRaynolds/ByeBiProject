@@ -152,11 +152,11 @@ const FeaturedDestinations = memo(function FeaturedDestinations() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">Popular Destinations</h2>
-            <p className="text-gray-300 mt-2">Top picks for your unforgettable bachelor party</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">{t('destinations.title')}</h2>
+            <p className="text-gray-300 mt-2">{t('destinations.subtitle')}</p>
           </div>
           <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
-            View all destinations
+            {t('destinations.viewall')}
           </Link>
         </div>
         
