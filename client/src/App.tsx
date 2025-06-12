@@ -19,7 +19,6 @@ import KiwiTestPage from "@/pages/KiwiTestPage";
 import ApiTestPage from "@/pages/ApiTestPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
-import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { lazy, Suspense } from "react";
 import PerformanceOptimizer from "@/lib/performance-optimizer";
@@ -49,9 +48,8 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
           <Toaster />
           {/* Aggiungiamo l'ottimizzatore di performance globale */}
           <PerformanceOptimizer />
@@ -64,7 +62,6 @@ function App() {
           </Suspense>
         </TooltipProvider>
       </AuthProvider>
-    </LanguageProvider>
     </QueryClientProvider>
   );
 }

@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Destination } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { Star, StarHalf } from "lucide-react";
 import { Link } from "wouter";
 import { memo, useCallback } from "react";
