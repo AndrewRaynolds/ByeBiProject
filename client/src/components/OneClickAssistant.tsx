@@ -62,6 +62,14 @@ export default function OneClickAssistant() {
   const [totalPrice, setTotalPrice] = useState(0);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
+  const [showItineraryDialog, setShowItineraryDialog] = useState(false);
+  const [itineraryData, setItineraryData] = useState<any>(null);
+  const [tripDetails, setTripDetails] = useState({
+    people: 0,
+    days: 0,
+    startDate: '',
+    adventureType: ''
+  });
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -140,9 +148,128 @@ export default function OneClickAssistant() {
     }
   };
 
+  // Function to extract trip details from user messages
+  const extractTripDetails = (message: string) => {
+    const normalizedMessage = message.toLowerCase();
+    
+    // Extract number of people
+    const peopleMatch = normalizedMessage.match(/(\d+)\s*(person|amici|partecipanti|gente|ragazzi|siamo)/);
+    if (peopleMatch) {
+      setTripDetails(prev => ({ ...prev, people: parseInt(peopleMatch[1]) }));
+    }
+    
+    // Extract number of days
+    const daysMatch = normalizedMessage.match(/(\d+)\s*(giorni|day|giorno)/);
+    if (daysMatch) {
+      setTripDetails(prev => ({ ...prev, days: parseInt(daysMatch[1]) }));
+    }
+    
+    // Extract adventure type
+    if (normalizedMessage.includes('relax') || normalizedMessage.includes('moderato')) {
+      setTripDetails(prev => ({ ...prev, adventureType: 'relax' }));
+    } else if (normalizedMessage.includes('party') || normalizedMessage.includes('intenso') || normalizedMessage.includes('vita notturna')) {
+      setTripDetails(prev => ({ ...prev, adventureType: 'party' }));
+    } else if (normalizedMessage.includes('mix') || normalizedMessage.includes('cultura') || normalizedMessage.includes('cibo')) {
+      setTripDetails(prev => ({ ...prev, adventureType: 'mix' }));
+    } else if (normalizedMessage.includes('lusso') || normalizedMessage.includes('senza limiti')) {
+      setTripDetails(prev => ({ ...prev, adventureType: 'luxury' }));
+    }
+    
+    // Extract dates
+    const monthNames = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 
+                       'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+    monthNames.forEach((month, index) => {
+      if (normalizedMessage.includes(month)) {
+        setTripDetails(prev => ({ ...prev, startDate: `2025-${String(index + 1).padStart(2, '0')}-15` }));
+      }
+    });
+  };
+
+  // Generate personalized itinerary for Ibiza
+  const generateIbizaItinerary = (details: any) => {
+    const { people, days, adventureType } = details;
+    
+    const itinerary = {
+      title: `Itinerario Ibiza - ${days} giorni per ${people} persone`,
+      subtitle: `Addio al celibato ${adventureType === 'party' ? 'Party Intenso' : 
+                adventureType === 'luxury' ? 'Lusso Totale' : 
+                adventureType === 'mix' ? 'Mix Perfetto' : 'Relax & Fun'}`,
+      days: [] as any[]
+    };
+
+    for (let day = 1; day <= Math.min(days, 5); day++) {
+      let dayPlan: any = {
+        day: day,
+        title: `Giorno ${day}`,
+        activities: []
+      };
+
+      if (day === 1) {
+        dayPlan.title = "Arrivo e Prima Serata";
+        dayPlan.activities = [
+          { time: "15:00", type: "arrival", title: "Arrivo a Ibiza", description: "Check-in hotel e sistemazione" },
+          { time: "19:00", type: "restaurant", title: adventureType === 'luxury' ? "La Gaia" : "Amante Beach", 
+            description: adventureType === 'luxury' ? "Cena stellata con vista mare (€185/persona)" : "Aperitivo e cena vista mare (€65/persona)" },
+          { time: "23:30", type: "nightlife", title: "Pacha Ibiza", 
+            description: `Prima notte al club più iconico! Ingresso €65 + drink €15-20 caduno` }
+        ];
+      } else if (day === 2) {
+        dayPlan.title = "Beach Day & Club Night";
+        dayPlan.activities = [
+          { time: "11:00", type: "activity", title: "Boat Party", description: "Festa in barca con DJ e open bar (€90/persona)" },
+          { time: "18:00", type: "restaurant", title: adventureType === 'party' ? "Tapas locali" : "Es Mercat", 
+            description: adventureType === 'party' ? "Pre-drink e tapas (€25/persona)" : "Cena tradizionale ibicenca (€45/persona)" },
+          { time: "01:00", type: "nightlife", title: adventureType === 'luxury' ? "Hï Ibiza VIP" : "Amnesia", 
+            description: adventureType === 'luxury' ? "Tavolo VIP esperienza totale (€450/persona)" : "Notte al club leggendario (€65/persona)" }
+        ];
+      } else if (day === 3 && days >= 3) {
+        dayPlan.title = "Esplorazione & Sunset";
+        dayPlan.activities = [
+          { time: "14:00", type: "activity", title: "Tour dell'isola", description: "Visita Dalt Vila e spiagge nascoste" },
+          { time: "19:00", type: "restaurant", title: adventureType === 'luxury' ? "Es Tragón Michelin" : "Ca N'Alfredo", 
+            description: adventureType === 'luxury' ? "Esperienza stellata Michelin (€220/persona)" : "Autentica cucina locale (€55/persona)" },
+          { time: "22:00", type: "activity", title: "Sunset Strip", description: "Aperitivi vista tramonto a San Antonio" },
+          { time: "01:30", type: "nightlife", title: "DC10 Circoloco", description: "Underground techno experience (€75/persona)" }
+        ];
+      }
+
+      if (day <= days) {
+        (itinerary.days as any[]).push(dayPlan);
+      }
+    }
+
+    return itinerary;
+  };
+
+  // Check if we have enough details to generate itinerary
+  const checkAndGenerateItinerary = () => {
+    if (selectedDestination === 'ibiza' && tripDetails.people > 0 && tripDetails.days > 0 && tripDetails.adventureType) {
+      setTimeout(() => {
+        const itinerary = generateIbizaItinerary(tripDetails);
+        setItineraryData(itinerary);
+        setShowItineraryDialog(true);
+        
+        const confirmMessage: ChatMessage = {
+          id: (Date.now() + 3).toString(),
+          content: "Perfetto! Ho creato il vostro itinerario personalizzato per Ibiza. Controllate tutti i dettagli giorno per giorno!",
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, confirmMessage]);
+      }, 1500);
+      
+      return "Sto creando il vostro itinerario personalizzato per Ibiza... Un momento! 🔥";
+    }
+    return null;
+  };
+
   // Simulazione delle risposte dell'assistente (in un'implementazione reale utilizzerebbe OpenAI)
   const generateResponse = (userMessage: string): string => {
     const normalizedMessage = userMessage.toLowerCase();
+    
+    // Extract trip details from user message
+    extractTripDetails(userMessage);
     
     if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
       setSelectedDestination('amsterdam');
@@ -161,7 +288,7 @@ export default function OneClickAssistant() {
       return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('ibiza')) {
       setSelectedDestination('ibiza');
-      return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nHai a disposizione:\n\n🍽️ RISTORANTI:\n• Fascia alta: Es Tragón ⭐️ Michelin (€200+), La Gaia (€185), Etxeko (€175)\n• Fascia media: Amante (€50-80), La Paloma (€40-60)\n• Budget: Street food/paella locali (€15-25)\n\n🎧 VITA NOTTURNA:\n• Club famosi: Pacha (€50-80), Hï Ibiza (€80-120), DC10/Circoloco (€56-94), Amnesia (€55-75)\n• Tavoli VIP da €300+ a persona\n• Drink: €15-30 cocktail, €10-15 birra\n\n💡 CONSIGLI:\n• Prenota ristoranti top in anticipo\n• Pre-drink prima dei club per risparmiare\n• Biglietti online = risparmio €10-20\n\nIn che periodo pensate di andarci? E che budget avete in mente?";
+      return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nPer crearvi un itinerario personalizzato perfetto, ho bisogno di alcune info:\n\n1️⃣ Quante persone siete?\n2️⃣ Quando partite e per quanti giorni?\n3️⃣ Che tipo di avventura cercate?\n   • Relax e divertimento moderato\n   • Party intenso e vita notturna\n   • Mix di cultura, cibo e festa\n   • Lusso totale senza limiti\n\nDitemi questi dettagli e vi creo un itinerario giorno per giorno con ristoranti, locali e attività specifiche!";
     } else if (
       normalizedMessage.includes('date') || 
       normalizedMessage.includes('quando') || 
@@ -190,12 +317,38 @@ export default function OneClickAssistant() {
       normalizedMessage.includes('genera') || 
       normalizedMessage.includes('crea') || 
       normalizedMessage.includes('pacchetto') ||
-      normalizedMessage.includes('proposta')
+      normalizedMessage.includes('proposta') ||
+      normalizedMessage.includes('itinerario')
     ) {
+      // Check if we can generate itinerary for Ibiza
+      const itineraryResponse = checkAndGenerateItinerary();
+      if (itineraryResponse) {
+        return itineraryResponse;
+      }
+      
+      // Otherwise generate package
       setTimeout(() => {
         generatePackage();
       }, 1000);
       return "Sto generando un pacchetto personalizzato in base alle tue preferenze. Dammi solo un momento...";
+    }
+    
+    // Check if we can auto-generate itinerary based on collected details
+    const autoItineraryResponse = checkAndGenerateItinerary();
+    if (autoItineraryResponse) {
+      return autoItineraryResponse;
+    }
+    
+    // Provide contextual responses based on destination and missing info
+    if (selectedDestination === 'ibiza') {
+      const missing = [];
+      if (tripDetails.people === 0) missing.push("numero di persone");
+      if (tripDetails.days === 0) missing.push("durata del viaggio");
+      if (!tripDetails.adventureType) missing.push("tipo di avventura");
+      
+      if (missing.length > 0) {
+        return `Perfetto! Mi manca ancora: ${missing.join(', ')}. Ditemi questi dettagli e creo subito il vostro itinerario personalizzato!`;
+      }
     }
     
     return "Grazie per queste informazioni! Hai altre preferenze o richieste particolari per il tuo addio al celibato?";
@@ -681,6 +834,108 @@ export default function OneClickAssistant() {
             <Button onClick={handlePayment}>
               <Gift className="w-4 h-4 mr-2" />
               Paga Ora
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Itinerary Dialog */}
+      <Dialog open={showItineraryDialog} onOpenChange={setShowItineraryDialog}>
+        <DialogContent className="max-w-6xl h-[90vh]">
+          <DialogHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-t-lg -m-6 mb-4">
+            <DialogTitle className="text-2xl font-bold">
+              {itineraryData?.title || "Il Vostro Itinerario"}
+            </DialogTitle>
+            <DialogDescription className="text-red-100 text-lg">
+              {itineraryData?.subtitle || "Addio al celibato personalizzato"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {itineraryData?.days?.map((day: any, index: number) => (
+                <div key={index} className="border border-red-200 rounded-xl overflow-hidden">
+                  <div className="bg-red-50 px-6 py-4 border-b border-red-200">
+                    <h3 className="text-xl font-bold text-red-800">
+                      {day.title}
+                    </h3>
+                  </div>
+                  
+                  <div className="p-6 space-y-4">
+                    {day.activities?.map((activity: any, actIndex: number) => (
+                      <div key={actIndex} className="flex gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white font-bold">
+                            {activity.time}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {activity.type === 'restaurant' && <Utensils className="w-5 h-5 text-red-600" />}
+                            {activity.type === 'nightlife' && <Music className="w-5 h-5 text-red-600" />}
+                            {activity.type === 'activity' && <MapPin className="w-5 h-5 text-red-600" />}
+                            {activity.type === 'arrival' && <Plane className="w-5 h-5 text-red-600" />}
+                            
+                            <h4 className="font-bold text-lg text-gray-900">
+                              {activity.title}
+                            </h4>
+                            
+                            <Badge 
+                              variant={
+                                activity.type === 'restaurant' ? 'default' :
+                                activity.type === 'nightlife' ? 'destructive' :
+                                activity.type === 'activity' ? 'secondary' : 'outline'
+                              }
+                              className="ml-auto"
+                            >
+                              {activity.type === 'restaurant' ? 'Ristorante' :
+                               activity.type === 'nightlife' ? 'Vita Notturna' :
+                               activity.type === 'activity' ? 'Attività' : 'Arrivo'}
+                            </Badge>
+                          </div>
+                          
+                          <p className="text-gray-700 leading-relaxed">
+                            {activity.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-xl">
+                <h3 className="text-xl font-bold mb-3">Consigli Extra per Ibiza</h3>
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <h4 className="font-semibold mb-2">Prima di partire:</h4>
+                    <ul className="space-y-1 text-red-100">
+                      <li>• Prenota ristoranti top in anticipo</li>
+                      <li>• Compra biglietti club online (-€10-20)</li>
+                      <li>• Scarica app taxi locali</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Durante il viaggio:</h4>
+                    <ul className="space-y-1 text-red-100">
+                      <li>• Pre-drink prima dei club</li>
+                      <li>• Usa guest list quando disponibile</li>
+                      <li>• Goditi i tramonti di San Antonio</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          
+          <DialogFooter className="bg-gray-50 -m-6 mt-4 p-6">
+            <Button variant="outline" onClick={() => setShowItineraryDialog(false)}>
+              Chiudi
+            </Button>
+            <Button className="bg-red-600 hover:bg-red-700">
+              <Calendar className="w-4 h-4 mr-2" />
+              Scarica PDF
             </Button>
           </DialogFooter>
         </DialogContent>
