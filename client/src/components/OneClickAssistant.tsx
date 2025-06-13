@@ -159,6 +159,9 @@ export default function OneClickAssistant() {
     } else if (normalizedMessage.includes('berlino') || normalizedMessage.includes('germania')) {
       setSelectedDestination('berlino');
       return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
+    } else if (normalizedMessage.includes('ibiza')) {
+      setSelectedDestination('ibiza');
+      return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nHai a disposizione:\n\n🍽️ RISTORANTI:\n• Fascia alta: Es Tragón ⭐️ Michelin (€200+), La Gaia (€185), Etxeko (€175)\n• Fascia media: Amante (€50-80), La Paloma (€40-60)\n• Budget: Street food/paella locali (€15-25)\n\n🎧 VITA NOTTURNA:\n• Club famosi: Pacha (€50-80), Hï Ibiza (€80-120), DC10/Circoloco (€56-94), Amnesia (€55-75)\n• Tavoli VIP da €300+ a persona\n• Drink: €15-30 cocktail, €10-15 birra\n\n💡 CONSIGLI:\n• Prenota ristoranti top in anticipo\n• Pre-drink prima dei club per risparmiare\n• Biglietti online = risparmio €10-20\n\nIn che periodo pensate di andarci? E che budget avete in mente?";
     } else if (
       normalizedMessage.includes('date') || 
       normalizedMessage.includes('quando') || 
@@ -172,6 +175,17 @@ export default function OneClickAssistant() {
       normalizedMessage.includes('gruppo')
     ) {
       return "Ottimo! Ti interessano più attività rilassanti o preferisci un'esperienza più movimentata? Hai interessi particolari come sport, degustazioni, esperienze culturali?";
+    } else if (
+      normalizedMessage.includes('budget') && 
+      selectedDestination === 'ibiza'
+    ) {
+      return "Per Ibiza i budget tipici sono:\n\n💰 BUDGET ECONOMICO (€150-250/giorno):\n• Hotel base o ostello\n• Cene in tapas bar (€15-45)\n• Club standard (€50-80 ingresso)\n• Pre-drink per risparmiare\n\n💸 BUDGET MEDIO (€300-500/giorno):\n• Hotel 4 stelle\n• Ristoranti medi (€50-80)\n• Mix club + qualche VIP experience\n• Boat party incluso\n\n🏆 BUDGET ALTO (€600+/giorno):\n• Hotel luxury (Ushuaïa)\n• Ristoranti stellati\n• Tavoli VIP nei club top\n• Esperienze esclusive\n\nQuale si avvicina di più alle vostre possibilità?";
+    } else if (
+      normalizedMessage.includes('stagione') || 
+      normalizedMessage.includes('periodo') || 
+      (normalizedMessage.includes('quando') && selectedDestination === 'ibiza')
+    ) {
+      return "📅 STAGIONI A IBIZA:\n\n🔥 ALTA STAGIONE (Giugno-Settembre):\n• Prezzi massimi ma massima energia\n• Tutti i club aperti\n• Temperature perfette (25-30°C)\n• Mare caldo\n\n🌞 MEDIA STAGIONE (Maggio + Ottobre):\n• Prezzi più accessibili (-30%)\n• Molti eventi ancora attivi\n• Meno affollato\n• Clima ottimo\n\n❄️ BASSA STAGIONE (Nov-Aprile):\n• Prezzi minimi ma molti club chiusi\n• Principalmente per relax\n\nPer un addio al celibato consiglio Maggio-Settembre per avere tutto aperto!";
     } else if (
       normalizedMessage.includes('genera') || 
       normalizedMessage.includes('crea') || 
@@ -195,8 +209,120 @@ export default function OneClickAssistant() {
     setTimeout(() => {
       let dummyPackage: PackageItem[] = [];
       
-      // Se nessuna destinazione è selezionata, impostiamo Amsterdam di default
-      if (!selectedDestination || selectedDestination === 'amsterdam') {
+      // Pacchetti specifici per destinazione
+      if (selectedDestination === 'ibiza') {
+        dummyPackage = [
+          {
+            id: '1',
+            type: 'flight',
+            title: 'Volo per Ibiza',
+            description: 'Volo diretto da Milano a Ibiza, andata e ritorno',
+            price: 299.99,
+            imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80',
+            date: '15 Luglio 2025',
+            duration: '2h 15min',
+            selected: true
+          },
+          {
+            id: '2',
+            type: 'hotel',
+            title: 'Hotel Pacha',
+            description: 'Hotel iconico nel cuore di Ibiza, perfetto per la vita notturna',
+            price: 180.99,
+            imageUrl: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'Ibiza Town',
+            rating: '4.6',
+            selected: true
+          },
+          {
+            id: '3',
+            type: 'hotel',
+            title: 'Ushuaïa Ibiza Beach Hotel',
+            description: 'Hotel luxury con pool party e eventi esclusivi',
+            price: 350.99,
+            imageUrl: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'Platja d\'en Bossa',
+            rating: '4.8',
+            selected: false
+          },
+          {
+            id: '4',
+            type: 'restaurant',
+            title: 'Amante Beach Restaurant',
+            description: 'Ristorante con vista mozzafiato e cucina mediterranea (€50-80)',
+            price: 65.99,
+            imageUrl: 'https://images.unsplash.com/photo-1559329007-40df8a9345d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80',
+            location: 'Sol d\'en Serra',
+            rating: '4.7',
+            selected: true
+          },
+          {
+            id: '5',
+            type: 'restaurant',
+            title: 'Es Tragón - Michelin Star',
+            description: 'Esperienza gastronomica stellata, il top di Ibiza (€200+)',
+            price: 220.99,
+            imageUrl: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'Sant Llorenç de Balàfia',
+            rating: '4.9',
+            selected: false
+          },
+          {
+            id: '6',
+            type: 'event',
+            title: 'Ingresso Pacha Club',
+            description: 'Notte al club più famoso di Ibiza (include 1 drink)',
+            price: 65.99,
+            imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'Ibiza Town',
+            duration: 'Tutta la notte',
+            selected: true
+          },
+          {
+            id: '7',
+            type: 'event',
+            title: 'Hï Ibiza VIP Experience',
+            description: 'Tavolo VIP al club più tecnologico di Ibiza (€80-120 + consumazioni)',
+            price: 450.99,
+            imageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'Platja d\'en Bossa',
+            duration: 'Esperienza VIP',
+            selected: false
+          },
+          {
+            id: '8',
+            type: 'activity',
+            title: 'Boat Party Premium',
+            description: 'Festa in barca con DJ, open bar e snorkeling',
+            price: 89.99,
+            imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'Marina di Ibiza',
+            duration: '6 ore',
+            selected: true
+          },
+          {
+            id: '9',
+            type: 'activity',
+            title: 'Jet Ski Adventure',
+            description: 'Tour in jet ski lungo la costa di Ibiza',
+            price: 120.99,
+            imageUrl: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            location: 'San Antonio Bay',
+            duration: '2 ore',
+            selected: false
+          },
+          {
+            id: '10',
+            type: 'transport',
+            title: 'Transfer + Taxi Pass',
+            description: 'Transfer aeroporto + taxi illimitati per 3 giorni',
+            price: 45.99,
+            imageUrl: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            duration: '3 giorni',
+            selected: true
+          }
+        ];
+      } else if (!selectedDestination || selectedDestination === 'amsterdam') {
         dummyPackage = [
           {
             id: '1',
