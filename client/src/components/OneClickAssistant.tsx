@@ -4,18 +4,12 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Send, Calendar, MapPin, Utensils, Music, Plane, Building, Car, Gift, PlusCircle, ShoppingCart } from 'lucide-react';
+import { Loader2, Send, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { travelService, Flight, Hotel, Activity, Restaurant, Event, PackageRequest, TravelPackage } from '@/services/travel-service';
 
 // City information database for bachelor parties
 const CITY_DATA = {
@@ -35,7 +29,7 @@ const CITY_DATA = {
     ],
     activities: [
       "Colosseum VIP Underground Tour",
-      "Roman Food Tour in Trastevere",
+      "Roman Food Tour in Trastevere", 
       "Vespa Tour of Rome",
       "Gladiator School Experience",
       "Vatican Skip-the-Line Tour"
@@ -63,7 +57,7 @@ const CITY_DATA = {
     activities: [
       "Duomo Rooftop Experience",
       "La Scala Theatre Tour",
-      "Navigli Canal Boat Tour",
+      "Navigli Canal Boat Tour", 
       "San Siro Stadium Tour",
       "Fashion District Shopping Tour"
     ],
@@ -333,21 +327,6 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-// Tipo per gli elementi del pacchetto
-interface PackageItem {
-  id: string;
-  type: 'flight' | 'hotel' | 'restaurant' | 'activity' | 'transport' | 'event';
-  title: string;
-  description: string;
-  price: number;
-  imageUrl: string;
-  date?: string;
-  location?: string;
-  duration?: string;
-  rating?: string;
-  selected: boolean;
-}
-
 export default function OneClickAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -358,13 +337,7 @@ export default function OneClickAssistant() {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingPackage, setIsGeneratingPackage] = useState(false);
-  const [packageItems, setPackageItems] = useState<PackageItem[]>([]);
-  const [showPackageDialog, setShowPackageDialog] = useState(false);
-  const [totalPrice, setTotalPrice] = useState(0);
-  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
-  const [selectedDates, setSelectedDates] = useState<{start?: string, end?: string}>({});
   const [selectedPeople, setSelectedPeople] = useState<number>(0);
   
   const { user } = useAuth();
@@ -382,14 +355,6 @@ export default function OneClickAssistant() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Calcolo del prezzo totale quando cambiano gli elementi selezionati
-  useEffect(() => {
-    const newTotal = packageItems
-      .filter(item => item.selected)
-      .reduce((acc, item) => acc + item.price, 0);
-    setTotalPrice(newTotal);
-  }, [packageItems]);
 
   // Function to detect city from user message
   const detectCity = (message: string): string | null => {
