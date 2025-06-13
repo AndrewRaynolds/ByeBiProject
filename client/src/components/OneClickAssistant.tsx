@@ -70,6 +70,7 @@ export default function OneClickAssistant() {
     startDate: '',
     adventureType: ''
   });
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -288,18 +289,22 @@ export default function OneClickAssistant() {
       return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('ibiza')) {
       setSelectedDestination('ibiza');
+      setAskedQuestions([]); // Reset asked questions for new destination
+      setTripDetails({ people: 0, days: 0, startDate: '', adventureType: '' }); // Reset trip details
       return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nPer crearvi un itinerario personalizzato perfetto, ho bisogno di alcune info:\n\n1️⃣ Quante persone siete?\n2️⃣ Quando partite e per quanti giorni?\n3️⃣ Che tipo di avventura cercate?\n   • Relax e divertimento moderato\n   • Party intenso e vita notturna\n   • Mix di cultura, cibo e festa\n   • Lusso totale senza limiti\n\nDitemi questi dettagli e vi creo un itinerario giorno per giorno con ristoranti, locali e attività specifiche!";
     } else if (
-      normalizedMessage.includes('date') || 
-      normalizedMessage.includes('quando') || 
-      normalizedMessage.includes('giorno')
+      (normalizedMessage.includes('date') || 
+       normalizedMessage.includes('quando') || 
+       normalizedMessage.includes('giorno')) &&
+      selectedDestination !== 'ibiza'
     ) {
       return "Perfetto! E quante persone parteciperanno al viaggio? Così posso consigliarti le migliori opzioni per alloggi e attività.";
     } else if (
-      normalizedMessage.includes('person') || 
-      normalizedMessage.includes('amici') || 
-      normalizedMessage.includes('partecipanti') || 
-      normalizedMessage.includes('gruppo')
+      (normalizedMessage.includes('person') || 
+       normalizedMessage.includes('amici') || 
+       normalizedMessage.includes('partecipanti') || 
+       normalizedMessage.includes('gruppo')) &&
+      selectedDestination !== 'ibiza'
     ) {
       return "Ottimo! Ti interessano più attività rilassanti o preferisci un'esperienza più movimentata? Hai interessi particolari come sport, degustazioni, esperienze culturali?";
     } else if (
@@ -339,7 +344,7 @@ export default function OneClickAssistant() {
       return autoItineraryResponse;
     }
     
-    // Provide contextual responses based on destination and missing info
+    // Provide contextual responses based on destination and missing info for Ibiza
     if (selectedDestination === 'ibiza') {
       const missing = [];
       if (tripDetails.people === 0) missing.push("numero di persone");
@@ -347,7 +352,14 @@ export default function OneClickAssistant() {
       if (!tripDetails.adventureType) missing.push("tipo di avventura");
       
       if (missing.length > 0) {
-        return `Perfetto! Mi manca ancora: ${missing.join(', ')}. Ditemi questi dettagli e creo subito il vostro itinerario personalizzato!`;
+        // Only ask for missing information if we haven't collected it yet
+        if (tripDetails.people === 0) {
+          return "Ottimo! Mi serve sapere: quante persone siete?";
+        } else if (tripDetails.days === 0) {
+          return "Perfetto! Per quanti giorni partite?";
+        } else if (!tripDetails.adventureType) {
+          return "Fantastico! Che tipo di avventura cercate?\n• Relax e divertimento moderato\n• Party intenso e vita notturna\n• Mix di cultura, cibo e festa\n• Lusso totale senza limiti";
+        }
       }
     }
     
