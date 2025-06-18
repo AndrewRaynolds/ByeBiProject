@@ -362,3 +362,77 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
     return generateFallbackItinerary(request);
   }
 }
+
+export async function generateAssistantResponse(context: {
+  userMessage: string;
+  selectedDestination: string;
+  tripDetails: any;
+  conversationState: any;
+}): Promise<{
+  response: string;
+  updatedTripDetails?: any;
+  updatedConversationState?: any;
+  selectedDestination?: string;
+}> {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    const { userMessage, selectedDestination, tripDetails, conversationState } = context;
+    
+    const systemPrompt = `Sei l'assistente ByeBro per organizzare addii al celibato. Rispondi sempre in italiano con tono informale ed entusiasta.
+
+DESTINAZIONI DISPONIBILI: Amsterdam, Praga, Budapest, Barcellona, Ibiza, Berlino
+
+REGOLE CONVERSAZIONE:
+1. Se l'utente menziona una destinazione, impostala e chiedi dettagli
+2. Per Ibiza, raccogli step-by-step: numero persone → giorni → tipo avventura
+3. Quando hai tutti i dettagli per Ibiza, genera un itinerario dettagliato
+4. Usa emoji e tono entusiasta
+5. Non ripetere domande già fatte
+
+STATO ATTUALE:
+- Destinazione: ${selectedDestination || 'nessuna'}
+- Persone: ${tripDetails?.people || 0}
+- Giorni: ${tripDetails?.days || 0}
+- Tipo avventura: ${tripDetails?.adventureType || 'non specificato'}
+- Step conversazione: ${conversationState?.currentStep || 'initial'}
+
+Rispondi al messaggio dell'utente basandoti su questo contesto. Restituisci la risposta in formato JSON con questa struttura:
+{
+  "response": "la tua risposta",
+  "updatedTripDetails": { "people": numero, "days": numero, "adventureType": "tipo" },
+  "updatedConversationState": { "currentStep": "step", "askedForPeople": boolean },
+  "selectedDestination": "destinazione"
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: userMessage
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    
+    return {
+      response: result.response || "Scusa, non ho capito. Puoi ripetere?",
+      updatedTripDetails: result.updatedTripDetails,
+      updatedConversationState: result.updatedConversationState,
+      selectedDestination: result.selectedDestination
+    };
+
+  } catch (error) {
+    console.error("OpenAI Assistant Error:", error);
+    throw error;
+  }
+}
