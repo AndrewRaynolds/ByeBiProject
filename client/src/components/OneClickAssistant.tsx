@@ -50,7 +50,7 @@ export default function OneClickAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      content: 'Ciao! Sono il tuo assistente ByeBro. Ti aiuterò a creare un pacchetto completo per l\'addio al celibato perfetto. Dimmi quale destinazione ti interessa e quali date stai considerando!',
+      content: 'Ciao! Sono il tuo assistente ByeBro per organizzare il perfetto addio al celibato!\n\nDimmi dove vuoi andare e creo un pacchetto personalizzato con tutto incluso. Le destinazioni top sono:\n\n🇪🇸 Ibiza - Itinerari personalizzati\n🇳🇱 Amsterdam - Vita notturna\n🇨🇿 Praga - Prezzi ottimi\n🇭🇺 Budapest - Bagni termali\n🇪🇸 Barcellona - Spiagge e festa\n🇩🇪 Berlino - Club leggendari\n\nScrivi semplicemente il nome della città!',
       sender: 'assistant',
       timestamp: new Date(),
     },
