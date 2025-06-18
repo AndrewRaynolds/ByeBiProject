@@ -115,50 +115,48 @@ export default function OneClickAssistant() {
     setIsLoading(true);
 
     try {
-      // Call OpenAI API for intelligent responses
-      const response = await apiRequest('POST', '/api/chat/assistant', {
-        message: data.message,
-        selectedDestination,
-        tripDetails,
-        conversationState
-      });
+      // Check if OpenAI is available, otherwise use local response generation
+      let assistantResponse;
       
-      const result = await response.json();
-      
-      if (result.success) {
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: result.response,
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
+      try {
+        const response = await apiRequest('POST', '/api/chat/assistant', {
+          message: data.message,
+          selectedDestination,
+          tripDetails,
+          conversationState
+        });
         
-        setMessages(prev => [...prev, assistantMessage]);
+        const result = await response.json();
         
-        // Update trip details and conversation state from AI response
-        if (result.updatedTripDetails) {
-          setTripDetails(result.updatedTripDetails);
+        if (result.success) {
+          assistantResponse = result.response;
+          
+          // Update trip details and conversation state from AI response
+          if (result.updatedTripDetails) {
+            setTripDetails(result.updatedTripDetails);
+          }
+          if (result.updatedConversationState) {
+            setConversationState(result.updatedConversationState);
+          }
+          if (result.selectedDestination) {
+            setSelectedDestination(result.selectedDestination);
+          }
+        } else {
+          throw new Error('OpenAI not available');
         }
-        if (result.updatedConversationState) {
-          setConversationState(result.updatedConversationState);
-        }
-        if (result.selectedDestination) {
-          setSelectedDestination(result.selectedDestination);
-        }
-      } else {
-        // Fallback to local response generation if OpenAI fails
-        const assistantResponse = generateResponse(data.message);
-        
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: assistantResponse,
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
+      } catch (openaiError) {
+        // Fallback to local response generation
+        assistantResponse = generateResponse(data.message);
       }
       
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: assistantResponse,
+        sender: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
       setIsLoading(false);
       
       // Se l'utente ha fornito abbastanza informazioni, suggeriamo di generare un pacchetto
