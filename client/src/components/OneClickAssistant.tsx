@@ -157,38 +157,49 @@ export default function OneClickAssistant() {
   // Function to extract trip details from user messages
   const extractTripDetails = (message: string) => {
     const normalizedMessage = message.toLowerCase();
+    let detailsUpdated = false;
     
-    // Extract number of people
-    const peopleMatch = normalizedMessage.match(/(\d+)\s*(person|amici|partecipanti|gente|ragazzi|siamo)/);
-    if (peopleMatch) {
-      setTripDetails(prev => ({ ...prev, people: parseInt(peopleMatch[1]) }));
-    }
-    
-    // Extract number of days
-    const daysMatch = normalizedMessage.match(/(\d+)\s*(giorni|day|giorno)/);
-    if (daysMatch) {
-      setTripDetails(prev => ({ ...prev, days: parseInt(daysMatch[1]) }));
-    }
-    
-    // Extract adventure type
-    if (normalizedMessage.includes('relax') || normalizedMessage.includes('moderato')) {
-      setTripDetails(prev => ({ ...prev, adventureType: 'relax' }));
-    } else if (normalizedMessage.includes('party') || normalizedMessage.includes('intenso') || normalizedMessage.includes('vita notturna')) {
-      setTripDetails(prev => ({ ...prev, adventureType: 'party' }));
-    } else if (normalizedMessage.includes('mix') || normalizedMessage.includes('cultura') || normalizedMessage.includes('cibo')) {
-      setTripDetails(prev => ({ ...prev, adventureType: 'mix' }));
-    } else if (normalizedMessage.includes('lusso') || normalizedMessage.includes('senza limiti')) {
-      setTripDetails(prev => ({ ...prev, adventureType: 'luxury' }));
-    }
-    
-    // Extract dates
-    const monthNames = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 
-                       'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
-    monthNames.forEach((month, index) => {
-      if (normalizedMessage.includes(month)) {
-        setTripDetails(prev => ({ ...prev, startDate: `2025-${String(index + 1).padStart(2, '0')}-15` }));
+    // Extract number of people - improved regex patterns
+    const peopleMatch = normalizedMessage.match(/(\d+)\s*(person|amici|partecipanti|gente|ragazzi|siamo|persone)/i) || 
+                       normalizedMessage.match(/siamo\s*(\d+)/i) || 
+                       normalizedMessage.match(/(\d+)/);
+    if (peopleMatch && conversationState.currentStep === 'people') {
+      const peopleCount = parseInt(peopleMatch[1] || peopleMatch[0]);
+      if (peopleCount > 0 && peopleCount <= 50) {
+        setTripDetails(prev => ({ ...prev, people: peopleCount }));
+        detailsUpdated = true;
       }
-    });
+    }
+    
+    // Extract number of days - improved regex patterns
+    const daysMatch = normalizedMessage.match(/(\d+)\s*(giorni|day|giorno)/i) || 
+                     (conversationState.currentStep === 'days' && normalizedMessage.match(/(\d+)/));
+    if (daysMatch && conversationState.currentStep === 'days') {
+      const daysCount = parseInt(daysMatch[1] || daysMatch[0]);
+      if (daysCount > 0 && daysCount <= 30) {
+        setTripDetails(prev => ({ ...prev, days: daysCount }));
+        detailsUpdated = true;
+      }
+    }
+    
+    // Extract adventure type - improved matching
+    if (conversationState.currentStep === 'adventure') {
+      if (normalizedMessage.includes('relax') || normalizedMessage.includes('moderato') || normalizedMessage.includes('1')) {
+        setTripDetails(prev => ({ ...prev, adventureType: 'relax' }));
+        detailsUpdated = true;
+      } else if (normalizedMessage.includes('party') || normalizedMessage.includes('intenso') || normalizedMessage.includes('vita notturna') || normalizedMessage.includes('2')) {
+        setTripDetails(prev => ({ ...prev, adventureType: 'party' }));
+        detailsUpdated = true;
+      } else if (normalizedMessage.includes('mix') || normalizedMessage.includes('cultura') || normalizedMessage.includes('cibo') || normalizedMessage.includes('3')) {
+        setTripDetails(prev => ({ ...prev, adventureType: 'mix' }));
+        detailsUpdated = true;
+      } else if (normalizedMessage.includes('lusso') || normalizedMessage.includes('senza limiti') || normalizedMessage.includes('4')) {
+        setTripDetails(prev => ({ ...prev, adventureType: 'luxury' }));
+        detailsUpdated = true;
+      }
+    }
+    
+    return detailsUpdated;
   };
 
   // Generate personalized itinerary for Ibiza
@@ -275,7 +286,7 @@ export default function OneClickAssistant() {
     const normalizedMessage = userMessage.toLowerCase();
     
     // Extract trip details from user message
-    extractTripDetails(userMessage);
+    const detailsUpdated = extractTripDetails(userMessage);
     
     if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
       setSelectedDestination('amsterdam');
@@ -356,29 +367,38 @@ export default function OneClickAssistant() {
     
     // Handle Ibiza conversation flow
     if (selectedDestination === 'ibiza') {
-      // Step-by-step conversation flow to prevent duplicate questions
-      if (conversationState.currentStep === 'people' && tripDetails.people > 0 && !conversationState.askedForDays) {
-        setConversationState(prev => ({ ...prev, askedForPeople: true, currentStep: 'days' }));
-        return "Perfetto! E per quanti giorni partite?";
-      } else if (conversationState.currentStep === 'days' && tripDetails.days > 0 && !conversationState.askedForAdventure) {
-        setConversationState(prev => ({ ...prev, askedForDays: true, currentStep: 'adventure' }));
-        return "Ottimo! Ora dimmi che tipo di avventura cercate:\n• Relax e divertimento moderato\n• Party intenso e vita notturna\n• Mix di cultura, cibo e festa\n• Lusso totale senza limiti";
-      } else if (conversationState.currentStep === 'adventure' && tripDetails.adventureType && !conversationState.askedForAdventure) {
-        setConversationState(prev => ({ ...prev, askedForAdventure: true, currentStep: 'complete' }));
-        // Auto-generate itinerary when all details are collected
-        const itineraryResponse = checkAndGenerateItinerary();
-        if (itineraryResponse) {
-          return itineraryResponse;
+      // Check if details were just updated and advance the conversation
+      if (detailsUpdated) {
+        // Move to next step based on what was just collected
+        if (conversationState.currentStep === 'people' && tripDetails.people > 0) {
+          setTimeout(() => {
+            setConversationState(prev => ({ ...prev, askedForPeople: true, currentStep: 'days' }));
+          }, 100);
+          return `Perfetto! Siete ${tripDetails.people} persone. Per quanti giorni partite?`;
+        } else if (conversationState.currentStep === 'days' && tripDetails.days > 0) {
+          setTimeout(() => {
+            setConversationState(prev => ({ ...prev, askedForDays: true, currentStep: 'adventure' }));
+          }, 100);
+          return `Ottimo! ${tripDetails.days} giorni saranno fantastici! Che tipo di avventura cercate?\n\n1. Relax e divertimento moderato\n2. Party intenso e vita notturna\n3. Mix di cultura, cibo e festa\n4. Lusso totale senza limiti\n\nScrivete il numero o il tipo!`;
+        } else if (conversationState.currentStep === 'adventure' && tripDetails.adventureType) {
+          setTimeout(() => {
+            setConversationState(prev => ({ ...prev, askedForAdventure: true, currentStep: 'complete' }));
+          }, 100);
+          // Auto-generate itinerary when all details are collected
+          const itineraryResponse = checkAndGenerateItinerary();
+          if (itineraryResponse) {
+            return itineraryResponse;
+          }
         }
       }
       
       // Fallback responses for incomplete information
-      if (tripDetails.people === 0 && conversationState.currentStep === 'people') {
-        return "Mi serve sapere quante persone siete per continuare!";
-      } else if (tripDetails.days === 0 && conversationState.currentStep === 'days') {
-        return "Dimmi per quanti giorni partite!";
-      } else if (!tripDetails.adventureType && conversationState.currentStep === 'adventure') {
-        return "Scegli il tipo di avventura che preferite!";
+      if (conversationState.currentStep === 'people' && tripDetails.people === 0) {
+        return "Perfetto! Dimmi solo: quante persone siete? (scrivi solo il numero)";
+      } else if (conversationState.currentStep === 'days' && tripDetails.days === 0) {
+        return "Dimmi per quanti giorni partite! (scrivi solo il numero)";
+      } else if (conversationState.currentStep === 'adventure' && !tripDetails.adventureType) {
+        return "Scegli il tipo di avventura:\n\n1. Relax e divertimento moderato\n2. Party intenso e vita notturna\n3. Mix di cultura, cibo e festa\n4. Lusso totale senza limiti\n\nScrivi il numero o il tipo!";
       }
     }
     
@@ -675,13 +695,16 @@ export default function OneClickAssistant() {
       {/* Chat Container */}
       <div className="flex-1 container mx-auto max-w-4xl p-4">
         <Card className="h-[600px] flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Chat Assistant
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              ByeBro Chat Assistant
             </CardTitle>
-            <CardDescription>
-              Chatta con il nostro assistente per organizzare il tuo addio al celibato
+            <CardDescription className="text-sm">
+              {selectedDestination === 'ibiza' 
+                ? `Ibiza - ${tripDetails.people > 0 ? `${tripDetails.people} persone` : 'Raccolta info'} ${tripDetails.days > 0 ? `• ${tripDetails.days} giorni` : ''} ${tripDetails.adventureType ? `• ${tripDetails.adventureType}` : ''}`
+                : 'Dimmi dove vuoi andare per il tuo addio al celibato!'
+              }
             </CardDescription>
           </CardHeader>
 
