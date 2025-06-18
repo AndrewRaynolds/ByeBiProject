@@ -70,7 +70,12 @@ export default function OneClickAssistant() {
     startDate: '',
     adventureType: ''
   });
-  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+  const [conversationState, setConversationState] = useState({
+    askedForPeople: false,
+    askedForDays: false,
+    askedForAdventure: false,
+    currentStep: 'initial' as 'initial' | 'people' | 'days' | 'adventure' | 'complete'
+  });
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -289,9 +294,14 @@ export default function OneClickAssistant() {
       return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
     } else if (normalizedMessage.includes('ibiza')) {
       setSelectedDestination('ibiza');
-      setAskedQuestions([]); // Reset asked questions for new destination
-      setTripDetails({ people: 0, days: 0, startDate: '', adventureType: '' }); // Reset trip details
-      return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nPer crearvi un itinerario personalizzato perfetto, ho bisogno di alcune info:\n\n1️⃣ Quante persone siete?\n2️⃣ Quando partite e per quanti giorni?\n3️⃣ Che tipo di avventura cercate?\n   • Relax e divertimento moderato\n   • Party intenso e vita notturna\n   • Mix di cultura, cibo e festa\n   • Lusso totale senza limiti\n\nDitemi questi dettagli e vi creo un itinerario giorno per giorno con ristoranti, locali e attività specifiche!";
+      setTripDetails({ people: 0, days: 0, startDate: '', adventureType: '' });
+      setConversationState({
+        askedForPeople: false,
+        askedForDays: false,
+        askedForAdventure: false,
+        currentStep: 'people'
+      });
+      return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nPer crearvi un itinerario personalizzato perfetto, iniziamo con la prima domanda:\n\nQuante persone siete?";
     } else if (
       (normalizedMessage.includes('date') || 
        normalizedMessage.includes('quando') || 
@@ -344,22 +354,31 @@ export default function OneClickAssistant() {
       return autoItineraryResponse;
     }
     
-    // Provide contextual responses based on destination and missing info for Ibiza
+    // Handle Ibiza conversation flow
     if (selectedDestination === 'ibiza') {
-      const missing = [];
-      if (tripDetails.people === 0) missing.push("numero di persone");
-      if (tripDetails.days === 0) missing.push("durata del viaggio");
-      if (!tripDetails.adventureType) missing.push("tipo di avventura");
-      
-      if (missing.length > 0) {
-        // Only ask for missing information if we haven't collected it yet
-        if (tripDetails.people === 0) {
-          return "Ottimo! Mi serve sapere: quante persone siete?";
-        } else if (tripDetails.days === 0) {
-          return "Perfetto! Per quanti giorni partite?";
-        } else if (!tripDetails.adventureType) {
-          return "Fantastico! Che tipo di avventura cercate?\n• Relax e divertimento moderato\n• Party intenso e vita notturna\n• Mix di cultura, cibo e festa\n• Lusso totale senza limiti";
+      // Step-by-step conversation flow to prevent duplicate questions
+      if (conversationState.currentStep === 'people' && tripDetails.people > 0 && !conversationState.askedForDays) {
+        setConversationState(prev => ({ ...prev, askedForPeople: true, currentStep: 'days' }));
+        return "Perfetto! E per quanti giorni partite?";
+      } else if (conversationState.currentStep === 'days' && tripDetails.days > 0 && !conversationState.askedForAdventure) {
+        setConversationState(prev => ({ ...prev, askedForDays: true, currentStep: 'adventure' }));
+        return "Ottimo! Ora dimmi che tipo di avventura cercate:\n• Relax e divertimento moderato\n• Party intenso e vita notturna\n• Mix di cultura, cibo e festa\n• Lusso totale senza limiti";
+      } else if (conversationState.currentStep === 'adventure' && tripDetails.adventureType && !conversationState.askedForAdventure) {
+        setConversationState(prev => ({ ...prev, askedForAdventure: true, currentStep: 'complete' }));
+        // Auto-generate itinerary when all details are collected
+        const itineraryResponse = checkAndGenerateItinerary();
+        if (itineraryResponse) {
+          return itineraryResponse;
         }
+      }
+      
+      // Fallback responses for incomplete information
+      if (tripDetails.people === 0 && conversationState.currentStep === 'people') {
+        return "Mi serve sapere quante persone siete per continuare!";
+      } else if (tripDetails.days === 0 && conversationState.currentStep === 'days') {
+        return "Dimmi per quanti giorni partite!";
+      } else if (!tripDetails.adventureType && conversationState.currentStep === 'adventure') {
+        return "Scegli il tipo di avventura che preferite!";
       }
     }
     
@@ -666,44 +685,39 @@ export default function OneClickAssistant() {
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col">
+          <CardContent className="flex-1 flex flex-col overflow-hidden">
             {/* Messages Area */}
-            <ScrollArea className="flex-1 pr-4 mb-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 pr-2 mb-4">
+              <div className="space-y-4 p-1">
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className="flex items-start gap-2 max-w-[80%]">
-                      {message.sender === 'assistant' && (
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-red-600 text-white text-xs">
-                            BB
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
+                    <div className={`flex items-start gap-2 max-w-[85%] ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarFallback className={`text-white text-xs ${
+                          message.sender === 'assistant' ? 'bg-red-600' : 'bg-gray-600'
+                        }`}>
+                          {message.sender === 'assistant' ? 'BB' : (user?.username?.[0]?.toUpperCase() || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
                       
                       <div
-                        className={`rounded-lg px-4 py-2 ${
+                        className={`rounded-lg px-4 py-2 break-words ${
                           message.sender === 'user'
                             ? 'bg-red-600 text-white'
                             : 'bg-gray-100 text-gray-900'
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-line">{message.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                         <p className="text-xs mt-1 opacity-70">
-                          {message.timestamp.toLocaleTimeString()}
+                          {message.timestamp.toLocaleTimeString('it-IT', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
                         </p>
                       </div>
-                      
-                      {message.sender === 'user' && (
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-gray-600 text-white text-xs">
-                            {user?.username?.[0]?.toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -711,7 +725,7 @@ export default function OneClickAssistant() {
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="flex items-start gap-2">
-                      <Avatar className="w-8 h-8">
+                      <Avatar className="w-8 h-8 flex-shrink-0">
                         <AvatarFallback className="bg-red-600 text-white text-xs">
                           BB
                         </AvatarFallback>
@@ -730,17 +744,19 @@ export default function OneClickAssistant() {
             </ScrollArea>
 
             {/* Input Form */}
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
-              <Input
-                {...form.register('message')}
-                placeholder="Scrivi qui il tuo messaggio..."
-                className="flex-1"
-                disabled={isLoading}
-              />
-              <Button type="submit" disabled={isLoading}>
-                <Send className="w-4 h-4" />
-              </Button>
-            </form>
+            <div className="border-t pt-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
+                <Input
+                  {...form.register('message')}
+                  placeholder="Scrivi qui il tuo messaggio..."
+                  className="flex-1"
+                  disabled={isLoading}
+                />
+                <Button type="submit" disabled={isLoading} className="flex-shrink-0">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </div>
           </CardContent>
         </Card>
       </div>
