@@ -115,9 +115,38 @@ export default function OneClickAssistant() {
     setIsLoading(true);
 
     try {
-      // In una implementazione reale, qui chiameremmo l'API OpenAI
-      // Per ora simuliamo una risposta dopo un breve ritardo
-      setTimeout(() => {
+      // Call OpenAI API for intelligent responses
+      const response = await apiRequest('POST', '/api/chat/assistant', {
+        message: data.message,
+        selectedDestination,
+        tripDetails,
+        conversationState
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          content: result.response,
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, assistantMessage]);
+        
+        // Update trip details and conversation state from AI response
+        if (result.updatedTripDetails) {
+          setTripDetails(result.updatedTripDetails);
+        }
+        if (result.updatedConversationState) {
+          setConversationState(result.updatedConversationState);
+        }
+        if (result.selectedDestination) {
+          setSelectedDestination(result.selectedDestination);
+        }
+      } else {
+        // Fallback to local response generation if OpenAI fails
         const assistantResponse = generateResponse(data.message);
         
         const assistantMessage: ChatMessage = {
@@ -128,22 +157,23 @@ export default function OneClickAssistant() {
         };
         
         setMessages(prev => [...prev, assistantMessage]);
-        setIsLoading(false);
-        
-        // Se l'utente ha fornito abbastanza informazioni, suggeriamo di generare un pacchetto
-        if (messages.length > 4) {
-          setTimeout(() => {
-            const finalMessage: ChatMessage = {
-              id: (Date.now() + 2).toString(),
-              content: "Grazie per le informazioni! Vuoi che generi un pacchetto personalizzato per te?",
-              sender: 'assistant',
-              timestamp: new Date(),
-            };
-            
-            setMessages(prev => [...prev, finalMessage]);
-          }, 1000);
-        }
-      }, 1500);
+      }
+      
+      setIsLoading(false);
+      
+      // Se l'utente ha fornito abbastanza informazioni, suggeriamo di generare un pacchetto
+      if (messages.length > 4) {
+        setTimeout(() => {
+          const finalMessage: ChatMessage = {
+            id: (Date.now() + 2).toString(),
+            content: "Grazie per le informazioni! Vuoi che generi un pacchetto personalizzato per te?",
+            sender: 'assistant',
+            timestamp: new Date(),
+          };
+          
+          setMessages(prev => [...prev, finalMessage]);
+        }, 1000);
+      }
     } catch (error) {
       toast({
         title: "Errore",

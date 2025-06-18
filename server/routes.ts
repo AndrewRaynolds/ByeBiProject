@@ -728,6 +728,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Zapier integration routes
   registerZapierRoutes(app);
 
+  // OneClick Assistant chat endpoint
+  app.post("/api/chat/assistant", async (req: Request, res: Response) => {
+    try {
+      const { message, selectedDestination, tripDetails, conversationState } = req.body;
+      
+      if (!process.env.OPENAI_API_KEY) {
+        return res.json({ 
+          success: false, 
+          error: "OpenAI API key not configured" 
+        });
+      }
+
+      // Import OpenAI service
+      const { generateAssistantResponse } = await import('./services/openai');
+      
+      const result = await generateAssistantResponse({
+        userMessage: message,
+        selectedDestination,
+        tripDetails,
+        conversationState
+      });
+
+      res.json({
+        success: true,
+        response: result.response,
+        updatedTripDetails: result.updatedTripDetails,
+        updatedConversationState: result.updatedConversationState,
+        selectedDestination: result.selectedDestination
+      });
+
+    } catch (error: any) {
+      console.error('OpenAI Assistant Error:', error);
+      res.json({ 
+        success: false, 
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
