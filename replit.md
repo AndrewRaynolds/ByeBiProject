@@ -4,6 +4,7 @@
 AI-powered travel platform for bachelor party planning with comprehensive expense management system. Features OneClick Assistant for conversational trip planning, particularly specialized for Ibiza with detailed restaurant and nightlife database.
 
 ## Recent Changes
+- **2025-01-02**: Updated all destinations across the entire app to only include 10 specified cities
 - **2025-06-18**: Fixed OneClick Assistant chat bugs - eliminated duplicate questions and improved layout
 - **Previous**: Integrated comprehensive Ibiza database with restaurants, nightlife venues, and pricing
 - **Previous**: Implemented conversational flow system for personalized itinerary generation
@@ -22,8 +23,21 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 - APIs: Integrated Booking.com, Kiwi.com, OpenAI
 - Features: OneClick Assistant, SplittaBro expense splitting, travel booking
 
+## Available Destinations (Only 10)
+1. Roma - La Città Eterna
+2. Ibiza - Club leggendari
+3. Barcellona - Spiagge e festa  
+4. Praga - Prezzi ottimi
+5. Budapest - Bagni termali
+6. Cracovia - Prezzi imbattibili
+7. Amsterdam - Vita notturna
+8. Berlino - Club underground
+9. Lisbona - Fascino costiero
+10. Palma de Mallorca - Beach club
+
 ## Technical Notes
 - OneClick Assistant uses step-by-step conversation flow to prevent duplicate questions
 - Ibiza destination has specialized database with real venue pricing and seasonal advice
 - Chat interface contains messages within proper boundaries with responsive design
 - Authentication system supports user sessions and premium features
+- All destination data updated to match the 10 specified cities only
