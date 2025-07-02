@@ -383,7 +383,7 @@ export async function generateAssistantResponse(context: {
     
     const systemPrompt = `Sei l'assistente ByeBro per organizzare addii al celibato. Rispondi sempre in italiano con tono informale ed entusiasta.
 
-DESTINAZIONI DISPONIBILI: Amsterdam, Praga, Budapest, Barcellona, Ibiza, Berlino
+DESTINAZIONI DISPONIBILI: Roma, Ibiza, Barcellona, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca
 
 REGOLE CONVERSAZIONE:
 1. Se l'utente menziona una destinazione, impostala e chiedi dettagli
