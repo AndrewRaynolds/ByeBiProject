@@ -350,7 +350,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain", 
-        image: "https://images.unsplash.com/photo-1570824104453-508955ab713e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80",
         description: "L'isola del divertimento - club leggendari, spiagge da sogno e feste senza fine.",
         tags: ["Club", "Spiagge", "Festa"],
         rating: "4.9",

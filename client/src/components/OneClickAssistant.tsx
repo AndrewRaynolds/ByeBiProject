@@ -472,7 +472,7 @@ export default function OneClickAssistant() {
             title: 'Ushuaïa Ibiza Beach Hotel',
             description: 'Hotel luxury con pool party e eventi esclusivi',
             price: 350.99,
-            imageUrl: 'https://images.unsplash.com/photo-1570824104453-508955ab713e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
             location: 'Platja d\'en Bossa',
             rating: '4.8',
             selected: false
@@ -505,7 +505,7 @@ export default function OneClickAssistant() {
             title: 'Ingresso Pacha Club',
             description: 'Notte al club più famoso di Ibiza (include 1 drink)',
             price: 65.99,
-            imageUrl: 'https://images.unsplash.com/photo-1570824104453-508955ab713e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
             location: 'Ibiza Town',
             duration: 'Tutta la notte',
             selected: true
@@ -516,7 +516,7 @@ export default function OneClickAssistant() {
             title: 'Hï Ibiza VIP Experience',
             description: 'Tavolo VIP al club più tecnologico di Ibiza (€80-120 + consumazioni)',
             price: 450.99,
-            imageUrl: 'https://images.unsplash.com/photo-1570824104453-508955ab713e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
+            imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80',
             location: 'Platja d\'en Bossa',
             duration: 'Esperienza VIP',
             selected: false
