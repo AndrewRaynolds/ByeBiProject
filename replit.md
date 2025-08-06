@@ -6,7 +6,7 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 ## Recent Changes
 - **2025-08-06**: COMPLETATO - Implementato sistema di ricerca immagini funzionante con Pexels API
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Barcellona a vista aerea panoramica con Sagrada Familia
-- **2025-08-06**: COMPLETATO - Aggiornata immagine Ibiza con foto originale Ushuaia club con scritta visibile e folla
+- **2025-08-06**: COMPLETATO - Aggiornata immagine Ibiza con vista aerea di Es Vedrà al tramonto (iconica isola di Ibiza)
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Budapest con vista aerea caratteristica con Parlamento e Danubio
 - **2025-08-06**: COMPLETATO - Cracovia: monumento principale (Piazza del Mercato con Monumento Adam Mickiewicz)
 - **2025-08-06**: COMPLETATO - Amsterdam: caratteristici canali e ponti della città
