@@ -386,7 +386,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cracovia",
         country: "Poland",
-        image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.pexels.com/photos/32861252/pexels-photo-32861252.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
         description: "Città storica con prezzi accessibili e vita notturna vivace nel cuore della Polonia.",
         tags: ["Storia", "Prezzi bassi", "Vita notturna"],
         rating: "4.5",
@@ -395,7 +395,7 @@ export class MemStorage implements IStorage {
       {
         name: "Amsterdam",
         country: "Netherlands",
-        image: "https://images.unsplash.com/photo-1558618047-0c8ac2bd1968?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.pexels.com/photos/3884483/pexels-photo-3884483.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
         description: "La Venezia del Nord - tour sui canali, vita notturna e addii al celibato indimenticabili.",
         tags: ["Canali", "Vita notturna", "Cultura"],
         rating: "4.7",
@@ -422,7 +422,7 @@ export class MemStorage implements IStorage {
       {
         name: "Palma de Mallorca",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1598948485421-33a1655d3928?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.pexels.com/photos/8763806/pexels-photo-8763806.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
         description: "Isola balearica con spiagge cristalline, beach club e vita notturna mediterranea.",
         tags: ["Spiagge", "Beach club", "Isola"],
         rating: "4.6",
