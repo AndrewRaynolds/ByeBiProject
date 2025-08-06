@@ -359,7 +359,7 @@ export class MemStorage implements IStorage {
       {
         name: "Barcellona", 
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1544738413-433b2b94e57e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.pexels.com/photos/819767/pexels-photo-819767.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
         description: "Sole, mare, sangria e vita notturna spettacolare - la destinazione mediterranea perfetta.",
         tags: ["Spiagge", "Vita notturna", "Cultura"],
         rating: "4.9",
