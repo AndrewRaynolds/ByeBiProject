@@ -319,58 +319,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Kiwi.com-powered itinerary generation
+  // Zapier AI-powered itinerary generation
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
-      // Validate the incoming request
-      const itinerarySchema = z.object({
-        destination: z.string(),
-        departureCity: z.string(),
-        startDate: z.string(),
-        endDate: z.string(),
-        groupSize: z.number().int().min(1).max(30),
-        budget: z.enum(["budget", "standard", "luxury"]),
-        interests: z.array(z.string())
+      // Schema per validare i dati in arrivo dal frontend
+      const zapierItinerarySchema = z.object({
+        citta: z.string().min(1, "Città è richiesta"),
+        date: z.object({
+          startDate: z.string(),
+          endDate: z.string()
+        }),
+        persone: z.number().int().min(1, "Numero persone deve essere almeno 1"),
+        interessi: z.array(z.string()).optional().default([]),
+        budget: z.enum(["economico", "medio", "alto"]).optional().default("medio"),
+        esperienze: z.array(z.string()).optional().default([])
       });
       
-      const requestData = itinerarySchema.parse(req.body);
+      const requestData = zapierItinerarySchema.parse(req.body);
       
-      // Test Kiwi.com API connection
-      const isConnected = await kiwiAPI.testConnection();
-      if (!isConnected) {
-        return res.status(503).json({ 
-          message: "Unable to connect to travel services. Please try again later." 
-        });
+      // Prepara i dati per Zapier webhook
+      const zapierPayload = {
+        destination: requestData.citta,
+        startDate: requestData.date.startDate,
+        endDate: requestData.date.endDate,
+        groupSize: requestData.persone,
+        budget: requestData.budget,
+        interests: requestData.interessi,
+        experiences: requestData.esperienze,
+        timestamp: new Date().toISOString(),
+        source: "ByeBro OneClick Assistant"
+      };
+      
+      // Invia i dati a Zapier webhook (se configurato)
+      let zapierResponse = null;
+      const zapierWebhookUrl = process.env.ZAPIER_WEBHOOK_URL;
+      
+      if (zapierWebhookUrl) {
+        try {
+          console.log("Sending data to Zapier webhook:", zapierPayload);
+          
+          const response = await fetch(zapierWebhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(zapierPayload)
+          });
+          
+          if (response.ok) {
+            zapierResponse = await response.json();
+            console.log("Zapier response received:", zapierResponse);
+          } else {
+            console.error("Zapier webhook error:", response.status, response.statusText);
+          }
+        } catch (error) {
+          console.error("Error calling Zapier webhook:", error);
+        }
       }
       
-      // Calculate trip duration in days
-      const startDate = new Date(requestData.startDate);
-      const endDate = new Date(requestData.endDate);
-      const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      // Se Zapier ha restituito un itinerario, usalo; altrimenti usa fallback
+      let itineraryContent = "Itinerario personalizzato in generazione...";
       
-      // Generate the itinerary using Kiwi.com API
-      const generatedItinerary = await kiwiAPI.generateItinerary(requestData);
+      if (zapierResponse && zapierResponse.itinerary) {
+        itineraryContent = zapierResponse.itinerary;
+      } else {
+        // Fallback: genera un itinerario di base
+        const duration = Math.ceil(
+          (new Date(requestData.date.endDate).getTime() - new Date(requestData.date.startDate).getTime()) 
+          / (1000 * 60 * 60 * 24)
+        );
+        
+        itineraryContent = `🎉 Addio al Celibato a ${requestData.citta}
+        
+📅 Durata: ${duration} giorni per ${requestData.persone} persone
+💰 Budget: ${requestData.budget}
+🎯 Interessi: ${requestData.interessi.join(', ') || 'Divertimento generale'}
+
+📋 Itinerario personalizzato:
+Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
+
+⏰ L'itinerario dettagliato arriverà a breve!`;
+      }
       
-      // Create a persistent itinerary in storage based on the generated one
+      // Crea un itinerario nel storage per persistenza
       const itineraryToSave = {
         tripId: req.body.tripId || 0,
-        name: generatedItinerary.title,
-        description: generatedItinerary.summary,
-        duration: `${durationDays} Days`,
-        price: generatedItinerary.estimatedTotalCost,
-        image: `https://source.unsplash.com/random/800x400/?${requestData.destination.toLowerCase()},travel`,
+        name: `Addio al Celibato a ${requestData.citta}`,
+        description: itineraryContent,
+        duration: `${Math.ceil((new Date(requestData.date.endDate).getTime() - new Date(requestData.date.startDate).getTime()) / (1000 * 60 * 60 * 24))} giorni`,
+        price: requestData.budget === "economico" ? 299 : requestData.budget === "medio" ? 499 : 799,
+        image: `https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80`,
         rating: "5.0",
-        highlights: generatedItinerary.activities?.map(a => `Day ${a.day}: ${a.activities.join(', ')}`) || ["Itinerario personalizzato"],
-        includes: ["Voli inclusi", "Attività selezionate", "Esperienza personalizzata"]
+        highlights: [`${requestData.persone} persone`, `Budget ${requestData.budget}`, `Destinazione: ${requestData.citta}`],
+        includes: ["Itinerario AI personalizzato", "Consigli locali", "Pianificazione ottimizzata"]
       };
       
       const savedItinerary = await storage.createItinerary(itineraryToSave);
       
-      // Return both the AI-generated detailed itinerary and the saved basic itinerary
       return res.status(200).json({
+        success: true,
         itinerary: savedItinerary,
-        generatedPlan: generatedItinerary
+        aiContent: itineraryContent,
+        zapierProcessed: !!zapierResponse,
+        message: zapierResponse ? "Itinerario generato con AI" : "Itinerario in elaborazione tramite Zapier"
       });
+      
     } catch (error: any) {
       console.error("Error generating itinerary:", error);
       

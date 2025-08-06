@@ -434,10 +434,64 @@ export default function OneClickAssistant() {
   };
 
   // Genera un pacchetto con opzioni per volo, hotel, ristoranti e attività
-  const generatePackage = () => {
+  const generatePackage = async () => {
     setIsGeneratingPackage(true);
     
-    // Simuliamo una chiamata API
+    try {
+      // Prepara i dati per la chiamata a Zapier
+      const zapierData = {
+        citta: selectedDestination || 'Roma',
+        date: {
+          startDate: tripDetails.startDate || new Date().toISOString().split('T')[0],
+          endDate: tripDetails.endDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        },
+        persone: tripDetails.people || 4,
+        interessi: tripDetails.interests || [],
+        budget: tripDetails.budget || 'medio',
+        esperienze: tripDetails.adventureType ? [tripDetails.adventureType] : []
+      };
+
+      // Chiama la route Zapier per generare l'itinerario AI
+      const response = await apiRequest('POST', '/api/generate-itinerary', zapierData);
+      const result = await response.json();
+
+      if (result.success) {
+        // Mostra messaggio di successo
+        const aiMessage: ChatMessage = {
+          id: (Date.now() + 4).toString(),
+          content: `🎉 ${result.message}\n\n${result.aiContent}`,
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+        
+        // Salva l'itinerario generato
+        setItineraryData({
+          title: result.itinerary.name,
+          subtitle: result.itinerary.description,
+          days: []
+        });
+        
+        toast({
+          title: "Itinerario Generato",
+          description: result.zapierProcessed ? "Itinerario creato con AI" : "Itinerario in elaborazione",
+        });
+      } else {
+        throw new Error('Errore nella generazione');
+      }
+    } catch (error) {
+      // Fallback alla generazione locale
+      console.log("Fallback to local generation");
+      
+      toast({
+        title: "Connessione Zapier",
+        description: "Utilizzo generazione locale come fallback",
+        variant: "default",
+      });
+    }
+    
+    // Simulazione locale di generazione pacchetto
     setTimeout(() => {
       let dummyPackage: PackageItem[] = [];
       

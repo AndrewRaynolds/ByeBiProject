@@ -4,6 +4,9 @@
 AI-powered travel platform for bachelor party planning with comprehensive expense management system. Features OneClick Assistant for conversational trip planning, particularly specialized for Ibiza with detailed restaurant and nightlife database.
 
 ## Recent Changes
+- **2025-08-06**: Implemented Zapier + ChatGPT integration for AI-powered itinerary generation
+- **2025-08-06**: Created /api/generate-itinerary route with structured payload for Zapier webhook
+- **2025-08-06**: Updated Ibiza destination images with crystal clear beach photos per user request
 - **2025-01-02**: Updated all destinations across the entire app to only include 10 specified cities
 - **2025-06-18**: Fixed OneClick Assistant chat bugs - eliminated duplicate questions and improved layout
 - **Previous**: Integrated comprehensive Ibiza database with restaurants, nightlife venues, and pricing
@@ -37,7 +40,10 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 
 ## Technical Notes
 - OneClick Assistant uses step-by-step conversation flow to prevent duplicate questions
+- **Zapier Integration**: /api/generate-itinerary sends structured data to Zapier webhook for ChatGPT processing
+- **AI Fallback**: Local itinerary generation when Zapier webhook unavailable or unconfigured
 - Ibiza destination has specialized database with real venue pricing and seasonal advice
 - Chat interface contains messages within proper boundaries with responsive design
 - Authentication system supports user sessions and premium features
 - All destination data updated to match the 10 specified cities only
+- Environment variable ZAPIER_WEBHOOK_URL required for AI integration
