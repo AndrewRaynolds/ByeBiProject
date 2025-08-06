@@ -1,208 +1,140 @@
-/**
- * Image Search Service
- * Servizio per la ricerca di immagini tramite API esterna
- */
-
-interface ImageSearchResult {
+interface ImageResult {
   id: string;
   url: string;
   thumbnail: string;
-  title: string;
-  description?: string;
-  width?: number;
-  height?: number;
-  source?: string;
+  description: string;
+  tags: string[];
 }
 
 interface ImageSearchResponse {
   success: boolean;
-  images: ImageSearchResult[];
-  total: number;
+  images: ImageResult[];
   message?: string;
 }
 
-class ImageSearchService {
+export class ImageSearchService {
   private apiKey: string;
-  private baseUrl: string = 'https://api.unsplash.com'; // Default a Unsplash come fallback
 
   constructor() {
     this.apiKey = process.env.IMAGE_SEARCH_API_KEY || '';
-    
-    if (!this.apiKey) {
-      console.warn('⚠️ IMAGE_SEARCH_API_KEY not found in environment');
-    } else {
-      console.log('✅ IMAGE_SEARCH_API_KEY configured successfully');
-    }
   }
 
   /**
-   * Cerca immagini per query
+   * Cerca immagini usando l'API fornita dall'utente
    */
-  async searchImages(
-    query: string, 
-    limit: number = 20,
-    orientation: 'all' | 'landscape' | 'portrait' = 'all'
-  ): Promise<ImageSearchResponse> {
+  async searchImages(query: string, limit: number = 10): Promise<ImageSearchResponse> {
     try {
       if (!this.apiKey) {
         return {
           success: false,
           images: [],
-          total: 0,
-          message: 'API key non configurata'
+          message: 'API key non configurata per la ricerca immagini'
         };
       }
 
-      // Configura URL basato sul tipo di API
-      const url = `${this.baseUrl}/search/photos`;
+      // Test prima quale API stiamo usando
+      console.log(`Cercando immagini per: ${query}`);
+      console.log(`API Key presente: ${this.apiKey.substring(0, 10)}...`);
+
+      // Prova con Unsplash API
+      const unsplashUrl = `https://api.unsplash.com/search/photos`;
       const params = new URLSearchParams({
         query: query,
         per_page: limit.toString(),
         client_id: this.apiKey
       });
 
-      if (orientation !== 'all') {
-        params.append('orientation', orientation);
-      }
-
-      console.log(`🔍 Searching images for: "${query}"`);
-      
-      const response = await fetch(`${url}?${params}`, {
+      const response = await fetch(`${unsplashUrl}?${params}`, {
+        method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'ByeBro-Travel/1.0'
+          'Content-Type': 'application/json'
         }
       });
+
+      console.log(`Response status: ${response.status}`);
+      console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Trasforma i risultati Unsplash nel formato standard
-      const images: ImageSearchResult[] = data.results?.map((item: any) => ({
-        id: item.id,
-        url: item.urls?.full || item.urls?.regular,
-        thumbnail: item.urls?.thumb || item.urls?.small,
-        title: item.description || item.alt_description || 'Immagine',
-        description: item.description,
-        width: item.width,
-        height: item.height,
-        source: 'Unsplash'
-      })) || [];
-
-      console.log(`✅ Found ${images.length} images for "${query}"`);
-
-      return {
-        success: true,
-        images,
-        total: data.total || images.length,
-        message: `Trovate ${images.length} immagini`
-      };
-
-    } catch (error: any) {
-      console.error('❌ Error searching images:', error);
-      
-      return {
-        success: false,
-        images: [],
-        total: 0,
-        message: `Errore nella ricerca: ${error.message}`
-      };
-    }
-  }
-
-  /**
-   * Cerca immagini specifiche per destinazioni di viaggio
-   */
-  async searchDestinationImages(destination: string, count: number = 10): Promise<ImageSearchResponse> {
-    // Query specializzate per destinazione
-    let queries: string[];
-    
-    if (destination.toLowerCase().includes('barcellona') || destination.toLowerCase().includes('barcelona')) {
-      queries = [
-        'Barcelona skyline Sagrada Familia aerial view',
-        'Barcelona cityscape from above',
-        'Sagrada Familia Barcelona overview',
-        'Barcelona architecture aerial'
-      ];
-    } else {
-      queries = [
-        `${destination} travel destination`,
-        `${destination} cityscape`,
-        `${destination} landmarks`,
-        `${destination} nightlife`
-      ];
-    }
-
-    try {
-      // Cerca con query multiple e combina i risultati
-      const allResults = await Promise.all(
-        queries.map(query => this.searchImages(query, Math.ceil(count / queries.length)))
-      );
-
-      const combinedImages: ImageSearchResult[] = [];
-      allResults.forEach(result => {
-        if (result.success) {
-          combinedImages.push(...result.images);
-        }
-      });
-
-      // Rimuovi duplicati e limita il numero
-      const uniqueImages = combinedImages
-        .filter((image, index, self) => self.findIndex(i => i.id === image.id) === index)
-        .slice(0, count);
-
-      return {
-        success: true,
-        images: uniqueImages,
-        total: uniqueImages.length,
-        message: `Trovate ${uniqueImages.length} immagini per ${destination}`
-      };
-
-    } catch (error: any) {
-      console.error(`❌ Error searching destination images for ${destination}:`, error);
-      
-      return {
-        success: false,
-        images: [],
-        total: 0,
-        message: `Errore nella ricerca per ${destination}`
-      };
-    }
-  }
-
-  /**
-   * Test della connessione API
-   */
-  async testConnection(): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!this.apiKey) {
+        const errorText = await response.text();
+        console.error(`API Error: ${response.status} - ${errorText}`);
         return {
           success: false,
-          message: 'IMAGE_SEARCH_API_KEY non configurata'
+          images: [],
+          message: `Errore API: ${response.status} - ${errorText.substring(0, 100)}`
         };
       }
 
-      const result = await this.searchImages('test', 1);
-      
+      const data = await response.json();
+      console.log(`Risposta API ricevuta:`, JSON.stringify(data, null, 2).substring(0, 500));
+
+      if (!data.results || !Array.isArray(data.results)) {
+        return {
+          success: false,
+          images: [],
+          message: 'Formato risposta API non valido'
+        };
+      }
+
+      const images: ImageResult[] = data.results.map((item: any) => ({
+        id: item.id,
+        url: item.urls?.regular || item.urls?.small || '',
+        thumbnail: item.urls?.thumb || item.urls?.small || '',
+        description: item.description || item.alt_description || '',
+        tags: item.tags ? item.tags.map((tag: any) => tag.title || tag.name || '') : []
+      }));
+
       return {
-        success: result.success,
-        message: result.success ? 'API collegata correttamente' : result.message || 'Errore di connessione'
+        success: true,
+        images: images,
+        message: `Trovate ${images.length} immagini`
       };
 
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Errore nella ricerca immagini:', error);
       return {
         success: false,
-        message: `Errore di connessione: ${error.message}`
+        images: [],
+        message: `Errore: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
       };
     }
   }
+
+  /**
+   * Cerca immagini specifiche per Barcellona con vista aerea e Sagrada Familia
+   */
+  async searchBarcelonaImages(): Promise<ImageSearchResponse> {
+    const queries = [
+      'Barcelona aerial view Sagrada Familia',
+      'Barcelona skyline from above',
+      'Barcelona cityscape aerial Sagrada Familia',
+      'Barcelona overview architecture'
+    ];
+
+    for (const query of queries) {
+      const result = await this.searchImages(query, 5);
+      if (result.success && result.images.length > 0) {
+        return result;
+      }
+    }
+
+    return {
+      success: false,
+      images: [],
+      message: 'Nessuna immagine trovata per Barcellona'
+    };
+  }
+
+  /**
+   * Cerca immagini per una destinazione specifica
+   */
+  async searchDestinationImages(destination: string, count: number = 10): Promise<ImageSearchResponse> {
+    if (destination.toLowerCase().includes('barcellona') || destination.toLowerCase().includes('barcelona')) {
+      return this.searchBarcelonaImages();
+    }
+
+    return this.searchImages(`${destination} travel destination`, count);
+  }
 }
 
-// Singleton instance
 export const imageSearchService = new ImageSearchService();
-
-// Export types
-export type { ImageSearchResult, ImageSearchResponse };

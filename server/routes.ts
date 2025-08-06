@@ -784,6 +784,62 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // Register Zapier integration routes
   registerZapierRoutes(app);
 
+  // Image Search API routes
+  app.get("/api/images/search", async (req: Request, res: Response) => {
+    try {
+      const query = req.query.query as string;
+      const limit = parseInt(req.query.limit as string) || 10;
+      
+      if (!query) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Query parameter is required" 
+        });
+      }
+
+      const result = await imageSearchService.searchImages(query, limit);
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Error in image search:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Internal server error" 
+      });
+    }
+  });
+
+  app.get("/api/images/destinations/:destination", async (req: Request, res: Response) => {
+    try {
+      const destination = req.params.destination;
+      const count = parseInt(req.query.count as string) || 10;
+      
+      const result = await imageSearchService.searchDestinationImages(destination, count);
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Error in destination image search:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Internal server error" 
+      });
+    }
+  });
+
+  app.get("/api/images/test", async (req: Request, res: Response) => {
+    try {
+      const result = await imageSearchService.searchBarcelonaImages();
+      return res.status(200).json({
+        test: "Barcelona aerial images",
+        ...result
+      });
+    } catch (error) {
+      console.error("Error in image test:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Internal server error" 
+      });
+    }
+  });
+
   // OneClick Assistant chat endpoint
   app.post("/api/chat/assistant", async (req: Request, res: Response) => {
     try {
