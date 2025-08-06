@@ -350,7 +350,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain", 
-        image: "https://images.pexels.com/photos/17528772/pexels-photo-17528772.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.pexels.com/photos/3580532/pexels-photo-3580532.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
         description: "L'isola del divertimento - club leggendari, spiagge da sogno e feste senza fine.",
         tags: ["Club", "Spiagge", "Festa"],
         rating: "4.9",
@@ -422,7 +422,7 @@ export class MemStorage implements IStorage {
       {
         name: "Palma de Mallorca",
         country: "Spain",
-        image: "https://images.pexels.com/photos/8763806/pexels-photo-8763806.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.pexels.com/photos/386158/pexels-photo-386158.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
         description: "Isola balearica con spiagge cristalline, beach club e vita notturna mediterranea.",
         tags: ["Spiagge", "Beach club", "Isola"],
         rating: "4.6",

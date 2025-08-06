@@ -6,11 +6,11 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 ## Recent Changes
 - **2025-08-06**: COMPLETATO - Implementato sistema di ricerca immagini funzionante con Pexels API
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Barcellona a vista aerea panoramica con Sagrada Familia
-- **2025-08-06**: COMPLETATO - Aggiornata immagine Ibiza con vista aerea di Es Vedrà al tramonto (iconica isola di Ibiza)
+- **2025-08-06**: COMPLETATO - Aggiornata immagine Ibiza con vista aerea della costa con barche e acque turchesi cristalline
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Budapest con vista aerea caratteristica con Parlamento e Danubio
 - **2025-08-06**: COMPLETATO - Cracovia: monumento principale (Piazza del Mercato con Monumento Adam Mickiewicz)
 - **2025-08-06**: COMPLETATO - Amsterdam: caratteristici canali e ponti della città
-- **2025-08-06**: COMPLETATO - Palma de Mallorca: splendida vista aerea delle acque turchesi e costa
+- **2025-08-06**: COMPLETATO - Palma de Mallorca: vista aerea di spiaggia serena con acqua turchese cristallina e sabbia bianca
 - **2025-08-06**: Implemented Image Search API with IMAGE_SEARCH_API_KEY for dynamic destination images
 - **2025-08-06**: Implemented Zapier + ChatGPT integration for AI-powered itinerary generation
 - **2025-08-06**: Created /api/generate-itinerary route with structured payload for Zapier webhook
