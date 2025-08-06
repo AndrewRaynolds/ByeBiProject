@@ -53,14 +53,17 @@ class ImageSearchService {
         };
       }
 
-      // Usa Unsplash API come esempio (sostituisci con la tua API)
+      // Configura URL basato sul tipo di API
       const url = `${this.baseUrl}/search/photos`;
       const params = new URLSearchParams({
         query: query,
         per_page: limit.toString(),
-        orientation: orientation === 'all' ? '' : orientation,
         client_id: this.apiKey
       });
+
+      if (orientation !== 'all') {
+        params.append('orientation', orientation);
+      }
 
       console.log(`🔍 Searching images for: "${query}"`);
       
@@ -114,12 +117,24 @@ class ImageSearchService {
    * Cerca immagini specifiche per destinazioni di viaggio
    */
   async searchDestinationImages(destination: string, count: number = 10): Promise<ImageSearchResponse> {
-    const queries = [
-      `${destination} travel destination`,
-      `${destination} cityscape`,
-      `${destination} landmarks`,
-      `${destination} nightlife`
-    ];
+    // Query specializzate per destinazione
+    let queries: string[];
+    
+    if (destination.toLowerCase().includes('barcellona') || destination.toLowerCase().includes('barcelona')) {
+      queries = [
+        'Barcelona skyline Sagrada Familia aerial view',
+        'Barcelona cityscape from above',
+        'Sagrada Familia Barcelona overview',
+        'Barcelona architecture aerial'
+      ];
+    } else {
+      queries = [
+        `${destination} travel destination`,
+        `${destination} cityscape`,
+        `${destination} landmarks`,
+        `${destination} nightlife`
+      ];
+    }
 
     try {
       // Cerca con query multiple e combina i risultati
