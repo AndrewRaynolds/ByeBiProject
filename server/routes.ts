@@ -13,6 +13,7 @@ import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
 import { travelAPI } from "./services/travel-api";
+import { imageSearchService } from "./services/image-search";
 import { kiwiAPI } from "./services/kiwi-api";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -440,6 +441,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       });
     }
   });
+
+
 
   // Travel API routes
   app.get("/api/travel/flights", async (req: Request, res: Response) => {

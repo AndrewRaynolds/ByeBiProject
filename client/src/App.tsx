@@ -17,6 +17,7 @@ import OneClickPackagePage from "@/pages/OneClickPackagePage";
 import ZapierWebhooksPage from "@/pages/ZapierWebhooksPage";
 import KiwiTestPage from "@/pages/KiwiTestPage";
 import ApiTestPage from "@/pages/ApiTestPage";
+import ImageTestPage from "@/pages/ImageTestPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/one-click-package" component={OneClickPackagePage} />
       <Route path="/kiwi-test" component={KiwiTestPage} />
       <Route path="/api-test" component={ApiTestPage} />
+      <Route path="/image-test" component={ImageTestPage} />
       <Route path="/zapier-webhooks" component={ZapierWebhooksPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
