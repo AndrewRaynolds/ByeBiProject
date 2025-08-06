@@ -6,6 +6,7 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 ## Recent Changes
 - **2025-08-06**: COMPLETATO - Implementato sistema di ricerca immagini funzionante con Pexels API
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Barcellona a vista aerea panoramica con Sagrada Familia
+- **2025-08-06**: COMPLETATO - Cambiata immagine Ibiza con club Ushuaia pieno di gente che balla
 - **2025-08-06**: Implemented Image Search API with IMAGE_SEARCH_API_KEY for dynamic destination images
 - **2025-08-06**: Implemented Zapier + ChatGPT integration for AI-powered itinerary generation
 - **2025-08-06**: Created /api/generate-itinerary route with structured payload for Zapier webhook
