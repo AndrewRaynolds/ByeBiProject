@@ -309,6 +309,60 @@ export default function OneClickAssistant() {
     return null;
   };
 
+  // Varie risposte per evitare ripetizioni
+  const getVariedResponses = (destinationName: string, destinationKey: string) => {
+    const responses = {
+      amsterdam: [
+        "Amsterdam! Fantastica scelta! 🍺 Canali romantici di giorno, follia totale di notte! Quanti siete? E per quanto tempo volete conquistare la città?",
+        "AMSTERDAM! Red Light District, coffee shops e vita notturna leggendaria! Dimmi: il gruppo è numeroso? Quando pensate di partire?",
+        "Amsterdam è PERFETTA per un addio al celibato! Birra a fiumi, club fantastici e un'atmosfera unica! Siete un gruppo grande? Che periodo avete in mente?"
+      ],
+      praga: [
+        "PRAGA! Birra buonissima e prezzi da sogno! 🍻 La combo perfetta per un addio al celibato! Quanti amici si uniscono? Quale weekend preferite?",
+        "Praga è una BOMBA per l'addio al celibato! Castelli da favola di giorno, locali pazzeschi di notte! Dimmi del gruppo: quanti partecipanti? Date in mente?",
+        "ECCELLENTE scelta Praga! Birra a 1€, club fantastici e tutto spettacolare! Il budget ringrazierà! Quante persone? Quando volete scatenarvi?"
+      ],
+      budapest: [
+        "BUDAPEST! Bagni termali per il relax, ruin bar per la follia! 🛁🍻 Perfetto mix! Quanti brave warriors? Quando conquistate la città?",
+        "Budapest è magica! Terme di giorno, locali underground di notte! Un addio al celibato leggendario! Gruppo numeroso? Che periodo?",
+        "FANTASTICO! Budapest = terme + ruin bar + prezzi ottimi! Addio al celibato da SOGNO! Dimmi: quanti partecipanti? Date preferite?"
+      ],
+      barcellona: [
+        "BARCELLONA! Spiagge, tapas e vita notturna pazzesca! 🏖️🌮 La combo vincente! Quanti amici? Quando pensate di conquistare la città catalana?",
+        "Barcellona è PERFETTA! Mare di giorno, locali di notte, cibo spettacolare sempre! Dimmi del gruppo: quanti siete? Periodo in mente?",
+        "ECCELLENTE! Barcellona = spiagge + festa + cultura! Un mix esplosivo per l'addio al celibato! Gruppo grande? Date favorite?"
+      ],
+      berlino: [
+        "BERLINO! Club underground fino all'alba! 🎵 La capitale europea della vita notturna! Quanti party animals? Quando invadete la città?",
+        "Berlino è LEGGENDARIA! Techno, club aperti 48h, esperienze uniche! Perfetto per un addio memorabile! Gruppo numeroso? Che weekend?",
+        "BOMBA! Berlino = club senza fine + cultura alternativa! Un addio al celibato da FILM! Dimmi: quanti partecipanti? Date in mente?"
+      ],
+      roma: [
+        "ROMA! La Città Eterna per un addio al celibato epico! 🏛️🍕 Storia, cibo e vita notturna! Quanti gladiatori moderni? Quando conquistate l'impero?",
+        "Roma è SPETTACOLARE! Colosseo di giorno, aperitivi a Trastevere di sera! Un mix perfetto! Gruppo grande? Periodo preferito?",
+        "FANTASTICO! Roma = storia + cibo incredibile + locali fantastici! Addio al celibato da imperatori! Quanti amici? Quale weekend?"
+      ],
+      lisbona: [
+        "LISBONA! Fascino costiero e vita notturna autentica! 🌊🍷 Una gemma nascosta! Quanti avventurieri? Quando esplorate il Portogallo?",
+        "Lisbona è una SCOPERTA! Fado, vino e locali caratteristici! Perfetta per un addio originale! Dimmi del gruppo: quanti siete?",
+        "ECCELLENTE! Lisbona = fascino + autenticità + prezzi ottimi! Un addio al celibato diverso dal solito! Gruppo numeroso? Date?"
+      ],
+      "palma de mallorca": [
+        "PALMA DE MALLORCA! Beach club paradisiaci e acque cristalline! 🏖️🍹 Il sogno mediterraneo! Quanti beach lovers? Quando in paradiso?",
+        "Palma è PERFETTA! Spiagge da sogno, yacht party e vita notturna con vista mare! Dimmi: quanti amici? Periodo ideale?",
+        "BOMBA! Palma = spiagge + beach club + atmosfera esclusiva! Un addio al celibato VIP! Gruppo grande? Quando partite?"
+      ],
+      cracovia: [
+        "CRACOVIA! Prezzi imbattibili e centro storico da favola! 💰🏰 Il massimo risparmio, il massimo divertimento! Quanti? Date?",
+        "Cracovia è GENIALE! Spendi poco, ti diverti tanto! Centro UNESCO e locali fantastici! Gruppo numeroso? Quando conquistate la Polonia?",
+        "ECCELLENTE! Cracovia = budget friendly + storia + vita notturna! L'addio al celibato intelligente! Quanti partecipanti? Periodo?"
+      ]
+    };
+    
+    const destinationResponses = responses[destinationKey] || responses.roma;
+    return destinationResponses[Math.floor(Math.random() * destinationResponses.length)];
+  };
+
   // Simulazione delle risposte dell'assistente (in un'implementazione reale utilizzerebbe OpenAI)
   const generateResponse = (userMessage: string): string => {
     const normalizedMessage = userMessage.toLowerCase();
@@ -318,19 +372,31 @@ export default function OneClickAssistant() {
     
     if (normalizedMessage.includes('amsterdam') || normalizedMessage.includes('olanda')) {
       setSelectedDestination('amsterdam');
-      return "Amsterdam è una scelta eccellente per un addio al celibato! Offre locali notturni, ottima birra e molto altro. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return getVariedResponses('Amsterdam', 'amsterdam');
     } else if (normalizedMessage.includes('praga') || normalizedMessage.includes('repubblica ceca')) {
       setSelectedDestination('praga');
-      return "Praga è una destinazione fantastica per un addio al celibato! È famosa per la sua birra, vita notturna e prezzi accessibili. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return getVariedResponses('Praga', 'praga');
     } else if (normalizedMessage.includes('budapest') || normalizedMessage.includes('ungheria')) {
       setSelectedDestination('budapest');
-      return "Budapest è una meta popolare per gli addii al celibato! Offre bagni termali, ruin bar e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return getVariedResponses('Budapest', 'budapest');
     } else if (normalizedMessage.includes('barcellona') || normalizedMessage.includes('spagna')) {
       setSelectedDestination('barcellona');
-      return "Barcellona è perfetta per un addio al celibato! Offre belle spiagge, vita notturna eccezionale e ottimo cibo. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return getVariedResponses('Barcellona', 'barcellona');
     } else if (normalizedMessage.includes('berlino') || normalizedMessage.includes('germania')) {
       setSelectedDestination('berlino');
-      return "Berlino è una scelta fantastica per un addio al celibato! Ha una vita notturna leggendaria e molte esperienze uniche. In quali date vorresti andarci? E quante persone parteciperanno?";
+      return getVariedResponses('Berlino', 'berlino');
+    } else if (normalizedMessage.includes('roma') || normalizedMessage.includes('italia')) {
+      setSelectedDestination('roma');
+      return getVariedResponses('Roma', 'roma');
+    } else if (normalizedMessage.includes('lisbona') || normalizedMessage.includes('portogallo')) {
+      setSelectedDestination('lisbona');
+      return getVariedResponses('Lisbona', 'lisbona');
+    } else if (normalizedMessage.includes('palma') || normalizedMessage.includes('mallorca')) {
+      setSelectedDestination('palma de mallorca');
+      return getVariedResponses('Palma de Mallorca', 'palma de mallorca');
+    } else if (normalizedMessage.includes('cracovia') || normalizedMessage.includes('polonia')) {
+      setSelectedDestination('cracovia');
+      return getVariedResponses('Cracovia', 'cracovia');
     } else if (normalizedMessage.includes('ibiza')) {
       setSelectedDestination('ibiza');
       setTripDetails({ people: 0, days: 0, startDate: '', adventureType: '' });
@@ -347,7 +413,13 @@ export default function OneClickAssistant() {
        normalizedMessage.includes('giorno')) &&
       selectedDestination !== 'ibiza'
     ) {
-      return "Perfetto! E quante persone parteciperanno al viaggio? Così posso consigliarti le migliori opzioni per alloggi e attività.";
+      const dateResponses = [
+        "Perfetto! E quante persone parteciperanno al viaggio? Così posso consigliarti le migliori opzioni per alloggi e attività.",
+        "Ottimo! Ora dimmi: quanti amici si uniscono all'avventura? In base al numero posso personalizzare tutto!",
+        "Grande! E il gruppo quanto è numeroso? Voglio creare qualcosa di perfetto per tutti voi!",
+        "Perfetto per quelle date! Quanti siete in totale? Così organizzo tutto nei dettagli!"
+      ];
+      return dateResponses[Math.floor(Math.random() * dateResponses.length)];
     } else if (
       (normalizedMessage.includes('person') || 
        normalizedMessage.includes('amici') || 
@@ -355,7 +427,13 @@ export default function OneClickAssistant() {
        normalizedMessage.includes('gruppo')) &&
       selectedDestination !== 'ibiza'
     ) {
-      return "Ottimo! Ti interessano più attività rilassanti o preferisci un'esperienza più movimentata? Hai interessi particolari come sport, degustazioni, esperienze culturali?";
+      const peopleResponses = [
+        "Ottimo! Ti interessano più attività rilassanti o preferisci un'esperienza più movimentata? Hai interessi particolari come sport, degustazioni, esperienze culturali?",
+        "Perfetto per quel numero! Ora dimmi: volete un'avventura tranquilla o totale follia? Club, ristoranti gourmet, attività adrenaliniche?",
+        "Grande gruppo! Che tipo di esperienza cercate? Relax e cultura, vita notturna sfrenata, mix di tutto, o qualcos'altro di specifico?",
+        "Fantastico! E ora: siete più tipi da serate pazze nei club o preferite esperienze esclusive? Attività particolari in mente?"
+      ];
+      return peopleResponses[Math.floor(Math.random() * peopleResponses.length)];
     } else if (
       normalizedMessage.includes('budget') && 
       selectedDestination === 'ibiza'
@@ -420,17 +498,43 @@ export default function OneClickAssistant() {
         }
       }
       
-      // Fallback responses for incomplete information
+      // Fallback responses for incomplete information with variety
       if (conversationState.currentStep === 'people' && tripDetails.people === 0) {
-        return "Perfetto! Dimmi solo: quante persone siete? (scrivi solo il numero)";
+        const peoplePrompts = [
+          "Perfetto! Dimmi solo: quante persone siete? (scrivi solo il numero)",
+          "Fantastico! Ora dimmi il numero esatto di partecipanti:",
+          "Grande! Quanti amici partecipano all'avventura? (solo il numero)",
+          "Ottimo! Il gruppo quanto è numeroso? Dimmi il numero!"
+        ];
+        return peoplePrompts[Math.floor(Math.random() * peoplePrompts.length)];
       } else if (conversationState.currentStep === 'days' && tripDetails.days === 0) {
-        return "Dimmi per quanti giorni partite! (scrivi solo il numero)";
+        const dayPrompts = [
+          "Dimmi per quanti giorni partite! (scrivi solo il numero)",
+          "Perfetto! Quanti giorni volete restare a Ibiza?",
+          "Fantastico! Durata del viaggio? Quanti giorni?",
+          "Grande! Per quanto tempo conquistate Ibiza?"
+        ];
+        return dayPrompts[Math.floor(Math.random() * dayPrompts.length)];
       } else if (conversationState.currentStep === 'adventure' && !tripDetails.adventureType) {
-        return "Scegli il tipo di avventura:\n\n1. Relax e divertimento moderato\n2. Party intenso e vita notturna\n3. Mix di cultura, cibo e festa\n4. Lusso totale senza limiti\n\nScrivi il numero o il tipo!";
+        const adventurePrompts = [
+          "Scegli il tipo di avventura:\n\n1. Relax e divertimento moderato\n2. Party intenso e vita notturna\n3. Mix di cultura, cibo e festa\n4. Lusso totale senza limiti\n\nScrivi il numero o il tipo!",
+          "Che esperienza volete vivere?\n\n1. Chill e divertimento tranquillo\n2. Follia totale e club\n3. Mix perfetto di tutto\n4. Lusso senza compromessi\n\nDimmi il numero!",
+          "Quale vibe cercate?\n\n1. Relax con un po' di festa\n2. Party hard senza fine\n3. Cultura, cibo e divertimento\n4. Esperienza VIP esclusiva\n\nScegli!"
+        ];
+        return adventurePrompts[Math.floor(Math.random() * adventurePrompts.length)];
       }
     }
     
-    return "Grazie per queste informazioni! Hai altre preferenze o richieste particolari per il tuo addio al celibato?";
+    // Varied final responses
+    const finalResponses = [
+      "Grazie per queste informazioni! Hai altre preferenze o richieste particolari per il tuo addio al celibato?",
+      "Perfetto! C'è qualcos'altro che vorresti aggiungere per rendere questo viaggio indimenticabile?",
+      "Fantastico! Dimmi se hai altri desideri speciali per questo addio al celibato epico!",
+      "Ottimo! Altre preferenze particolari che dovrei considerare per il vostro viaggio?",
+      "Grande! Hai richieste speciali o attività particolari in mente?"
+    ];
+    
+    return finalResponses[Math.floor(Math.random() * finalResponses.length)];
   };
 
   // Genera un pacchetto con opzioni per volo, hotel, ristoranti e attività
