@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import OneClickAssistant from '@/components/OneClickAssistant';
 import { MessageSquare, Package, ShoppingBag, Info } from 'lucide-react';
+import assistantImage from '@assets/generated_images/Professional_female_digital_assistant_bc9c1e47.png';
 
 export default function OneClickPackagePage() {
   const [activeTab, setActiveTab] = useState<string>('assistant');
@@ -27,8 +28,8 @@ export default function OneClickPackagePage() {
                 </div>
                 <div className="hidden md:block">
                   <img 
-                    src="https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80" 
-                    alt="ByeBro One Click" 
+                    src={assistantImage} 
+                    alt="Assistente ByeBro" 
                     className="h-16 w-16 object-cover rounded-full ring-2 ring-red-600"
                   />
                 </div>
