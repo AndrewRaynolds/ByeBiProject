@@ -68,7 +68,10 @@ export default function OneClickAssistant() {
     people: 0,
     days: 0,
     startDate: '',
-    adventureType: ''
+    endDate: '',
+    adventureType: '',
+    interests: [] as string[],
+    budget: 'medio' as string
   });
   const [conversationState, setConversationState] = useState({
     askedForPeople: false,
@@ -114,40 +117,95 @@ export default function OneClickAssistant() {
     form.reset();
     setIsLoading(true);
 
+    // Create conversation history for GROQ (last 6 messages)
+    const conversationHistory = messages.slice(-6).map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    }));
+
     try {
-      // Check if OpenAI is available, otherwise use local response generation
-      let assistantResponse;
-      
-      try {
-        const response = await apiRequest('POST', '/api/chat/assistant', {
+      // Try GROQ streaming first (ultra-fast!)
+      const response = await fetch('/api/chat/groq-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           message: data.message,
           selectedDestination,
           tripDetails,
-          conversationState
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          assistantResponse = result.response;
-          
-          // Update trip details and conversation state from AI response
-          if (result.updatedTripDetails) {
-            setTripDetails(result.updatedTripDetails);
-          }
-          if (result.updatedConversationState) {
-            setConversationState(result.updatedConversationState);
-          }
-          if (result.selectedDestination) {
-            setSelectedDestination(result.selectedDestination);
-          }
-        } else {
-          throw new Error('OpenAI not available');
-        }
-      } catch (openaiError) {
-        // Fallback to local response generation
-        assistantResponse = generateResponse(data.message);
+          conversationHistory
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('GROQ streaming not available');
       }
+
+      // Create a placeholder message for streaming
+      const assistantMessageId = (Date.now() + 1).toString();
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        content: '',
+        sender: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsLoading(false);
+
+      // Read the stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonData = JSON.parse(line.slice(6));
+              
+              if (jsonData.error) {
+                throw new Error(jsonData.error);
+              }
+              
+              if (jsonData.done) {
+                // Streaming complete
+                break;
+              }
+              
+              if (jsonData.content) {
+                accumulatedContent += jsonData.content;
+                
+                // Update message in real-time
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: accumulatedContent }
+                    : msg
+                ));
+              }
+            } catch (parseError) {
+              console.error('Error parsing SSE data:', parseError);
+            }
+          }
+        }
+      }
+
+      // Extract trip details from response if needed
+      extractTripDetails(data.message);
+
+    } catch (error) {
+      // Fallback to local response generation
+      console.log("GROQ not available, using fallback:", error);
+      
+      const assistantResponse = generateResponse(data.message);
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -156,27 +214,10 @@ export default function OneClickAssistant() {
         timestamp: new Date(),
       };
       
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-      
-      // Se l'utente ha fornito abbastanza informazioni, suggeriamo di generare un pacchetto
-      if (messages.length > 4) {
-        setTimeout(() => {
-          const finalMessage: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            content: "Grazie per le informazioni! Vuoi che generi un pacchetto personalizzato per te?",
-            sender: 'assistant',
-            timestamp: new Date(),
-          };
-          
-          setMessages(prev => [...prev, finalMessage]);
-        }, 1000);
-      }
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore nella comunicazione con l'assistente",
-        variant: "destructive",
+      setMessages(prev => {
+        // Remove any empty streaming message
+        const filtered = prev.filter(msg => msg.content !== '');
+        return [...filtered, assistantMessage];
       });
       setIsLoading(false);
     }
@@ -359,7 +400,7 @@ export default function OneClickAssistant() {
       ]
     };
     
-    const destinationResponses = responses[destinationKey] || responses.roma;
+    const destinationResponses = responses[destinationKey as keyof typeof responses] || responses.roma;
     return destinationResponses[Math.floor(Math.random() * destinationResponses.length)];
   };
 
@@ -399,7 +440,7 @@ export default function OneClickAssistant() {
       return getVariedResponses('Cracovia', 'cracovia');
     } else if (normalizedMessage.includes('ibiza')) {
       setSelectedDestination('ibiza');
-      setTripDetails({ people: 0, days: 0, startDate: '', adventureType: '' });
+      setTripDetails({ people: 0, days: 0, startDate: '', endDate: '', adventureType: '', interests: [], budget: 'medio' });
       setConversationState({
         askedForPeople: false,
         askedForDays: false,

@@ -840,7 +840,48 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
-  // OneClick Assistant chat endpoint
+  // GROQ Streaming Chat endpoint (NEW - Ultra-fast LLM streaming)
+  app.post("/api/chat/groq-stream", async (req: Request, res: Response) => {
+    try {
+      const { message, selectedDestination, tripDetails, conversationHistory } = req.body;
+      
+      if (!process.env.GROQ_API_KEY) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "GROQ API key not configured" 
+        });
+      }
+
+      // Setup Server-Sent Events (SSE) for streaming
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      // Import GROQ service
+      const { streamGroqChatCompletion } = await import('./services/groq');
+      
+      const context = {
+        selectedDestination,
+        tripDetails,
+      };
+
+      // Stream response chunks
+      for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
+        res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+      }
+
+      // Send completion signal
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+
+    } catch (error: any) {
+      console.error('GROQ Streaming Error:', error);
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
+  });
+
+  // OneClick Assistant chat endpoint (Fallback to OpenAI)
   app.post("/api/chat/assistant", async (req: Request, res: Response) => {
     try {
       const { message, selectedDestination, tripDetails, conversationState } = req.body;
