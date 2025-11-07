@@ -9,6 +9,7 @@ import SecretBlog from "@/components/SecretBlog";
 import PremiumFeatures from "@/components/PremiumFeatures";
 import CustomMerchandise from "@/components/CustomMerchandise";
 import Testimonials from "@/components/Testimonials";
+import ActivitySuggestions from "@/components/ActivitySuggestions";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
@@ -52,6 +53,9 @@ export default function Home() {
         
         {/* Testimonials */}
         <Testimonials />
+        
+        {/* Activity Suggestions */}
+        <ActivitySuggestions />
         
         {/* Newsletter */}
         <Newsletter />
