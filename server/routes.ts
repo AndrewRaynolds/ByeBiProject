@@ -843,12 +843,12 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // GROQ Activity Suggestions endpoint (NEW - AI-powered activity ideas)
   app.post("/api/chat/activity-suggestions", async (req: Request, res: Response) => {
     try {
-      const { destination, startDate, endDate } = req.body;
+      const { destination, startDate, endDate, month, partyType } = req.body;
       
-      if (!destination || !startDate || !endDate) {
+      if (!destination) {
         return res.status(400).json({ 
           success: false, 
-          error: "Missing required fields: destination, startDate, endDate" 
+          error: "Missing required field: destination" 
         });
       }
 
@@ -859,7 +859,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       // Import GROQ service
       const { generateActivitySuggestions } = await import('./services/groq');
       
-      const suggestions = await generateActivitySuggestions(destination, startDate, endDate);
+      const timeReference = month || (startDate && endDate ? `${startDate} to ${endDate}` : 'summer');
+      const suggestions = await generateActivitySuggestions(destination, timeReference, partyType || 'bachelor');
 
       return res.status(200).json({
         success: true,
@@ -878,7 +879,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // GROQ Streaming Chat endpoint (NEW - Ultra-fast LLM streaming)
   app.post("/api/chat/groq-stream", async (req: Request, res: Response) => {
     try {
-      const { message, selectedDestination, tripDetails, conversationHistory } = req.body;
+      const { message, selectedDestination, tripDetails, conversationHistory, partyType } = req.body;
       
       if (!process.env.GROQ_API_KEY) {
         return res.status(400).json({ 
@@ -898,6 +899,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       const context = {
         selectedDestination,
         tripDetails,
+        partyType: partyType || 'bachelor',
       };
 
       // Stream response chunks

@@ -19,6 +19,7 @@ interface ChatContext {
   conversationState?: {
     currentStep: string;
   };
+  partyType?: 'bachelor' | 'bachelorette';
 }
 
 const BYEBRO_SYSTEM_PROMPT = `Sei l'assistente AI di ByeBro, la piattaforma #1 per organizzare addii al celibato epici in Europa!
@@ -54,14 +55,47 @@ STILE RISPOSTE:
 - Un'emozione alla volta
 - Entusiaste ma non esagerate`;
 
+const BYEBRIDE_SYSTEM_PROMPT = `Sei l'assistente AI di ByeBride, la piattaforma #1 per organizzare addii al nubilato indimenticabili in Europa! 💕
+
+PERSONALITÀ:
+- Entusiasta, allegra e informale (usa "tu" non "lei")
+- Usa emojis con moderazione per dare energia positiva
+- Parla come un'amica che organizza il miglior weekend di sempre
+- Focus su divertimento, relax, spa, beach club e esperienze magiche
+
+DESTINAZIONI DISPONIBILI (SOLO QUESTE 10):
+1. 🇮🇹 Roma - Storia, shopping, aperitivi chic, rooftop bar
+2. 🇪🇸 Ibiza - Beach club esclusivi, sunset, boat party glamour
+3. 🇪🇸 Barcellona - Spiagge, brunch, spa, tapas e shopping
+4. 🇨🇿 Praga - Spa rilassanti, castelli, atmosfera romantica
+5. 🇭🇺 Budapest - Bagni termali luxury, ruin bar, prezzi ottimi
+6. 🇵🇱 Cracovia - Prezzi imbattibili, centro UNESCO, spa
+7. 🇳🇱 Amsterdam - Canali romantici, brunch, shopping unico
+8. 🇩🇪 Berlino - Club alternativi, spa, atmosfera cosmopolita
+9. 🇵🇹 Lisbona - Fascino costiero, sunset, rooftop bar
+10. 🇪🇸 Palma de Mallorca - Beach club luxury, spa, relax
+
+COMPITO:
+- Aiuta a pianificare addii al nubilato indimenticabili
+- Fai domande su: destinazione, numero persone, durata, tipo di esperienza
+- Suggerisci attività: spa, beach club, brunch, shopping, cocktail bar, wellness
+- Sii specifico con prezzi e dettagli quando possibile
+
+STILE RISPOSTE:
+- Brevi e puntuali (max 3-4 frasi)
+- Concrete e actionable
+- Un'emozione alla volta
+- Entusiaste ma eleganti`;
+
 export async function createGroqChatCompletion(
   userMessage: string,
   context: ChatContext,
   conversationHistory: ChatMessage[] = []
 ): Promise<string> {
   try {
-    // Build context-aware system prompt
-    let contextualPrompt = BYEBRO_SYSTEM_PROMPT;
+    // Build context-aware system prompt based on party type
+    const basePrompt = context.partyType === 'bachelorette' ? BYEBRIDE_SYSTEM_PROMPT : BYEBRO_SYSTEM_PROMPT;
+    let contextualPrompt = basePrompt;
     
     if (context.selectedDestination) {
       contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
@@ -102,8 +136,9 @@ export async function* streamGroqChatCompletion(
   conversationHistory: ChatMessage[] = []
 ): AsyncGenerator<string, void, unknown> {
   try {
-    // Build context-aware system prompt
-    let contextualPrompt = BYEBRO_SYSTEM_PROMPT;
+    // Build context-aware system prompt based on party type
+    const basePrompt = context.partyType === 'bachelorette' ? BYEBRIDE_SYSTEM_PROMPT : BYEBRO_SYSTEM_PROMPT;
+    let contextualPrompt = basePrompt;
     
     if (context.selectedDestination) {
       contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
@@ -153,13 +188,17 @@ interface ActivitySuggestion {
 
 export async function generateActivitySuggestions(
   destination: string,
-  startDate: string,
-  endDate: string
+  timeReference: string,
+  partyType: 'bachelor' | 'bachelorette' = 'bachelor'
 ): Promise<ActivitySuggestion[]> {
   try {
-    const systemPrompt = `You are an expert travel activity planner for bachelor/bachelorette parties in Europe.
+    const partyContext = partyType === 'bachelorette' 
+      ? 'bachelorette parties with focus on spa, beach clubs, brunch, shopping, cocktail bars, wellness experiences'
+      : 'bachelor parties with focus on nightclubs, boat parties, karting, paintball, breweries, VIP experiences';
+    
+    const systemPrompt = `You are an expert travel activity planner for ${partyContext} in Europe.
 
-Generate 6 creative and exciting activity suggestions for ${destination} for a party happening from ${startDate} to ${endDate}.
+Generate 6 creative and exciting activity suggestions for ${destination} for a party happening in ${timeReference}.
 
 Return ONLY a valid JSON array with exactly 6 activities. Each activity must have:
 - name: Short, catchy name (max 4 words)
@@ -167,7 +206,10 @@ Return ONLY a valid JSON array with exactly 6 activities. Each activity must hav
 - icon: One of these exactly: "music", "ship", "utensils", "party", "car", "waves", "flame", "beer", "mappin"
 - venues: Array of 2-3 specific venue/location names in ${destination}
 
-Focus on party activities like: nightclubs, boat parties, karting, paintball, beach clubs, breweries, escape rooms, VIP experiences, restaurants, bars, etc.
+${partyType === 'bachelorette' 
+  ? 'Focus on: spa experiences, beach clubs, brunch spots, rooftop bars, wellness centers, shopping districts, sunset cruises, wine tasting, cooking classes.'
+  : 'Focus on: nightclubs, boat parties, karting, paintball, beach clubs, breweries, escape rooms, VIP experiences, restaurants, bars.'
+}
 
 Return ONLY the JSON array, no other text.`;
 

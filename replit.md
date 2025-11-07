@@ -1,9 +1,14 @@
-# ByeBro Travel Platform
+# ByeBi Dual-Brand Travel Platform
 
 ## Project Overview
-AI-powered travel platform for bachelor party planning with comprehensive expense management system. Features OneClick Assistant for conversational trip planning, particularly specialized for Ibiza with detailed restaurant and nightlife database.
+AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-07**: Created dual-brand system with ByeBi initial landing page
+- **2025-11-07**: Implemented elegant brand selection with ByeBro (red/black) and ByeBride (pink/black)
+- **2025-11-07**: Created ByeBride version with HeroSectionBride, ActivityIdeasCompactBride, ChatDialogCompactBride
+- **2025-11-07**: Added partyType support to GROQ streaming and activity suggestions endpoints
+- **2025-11-07**: Created BYEBRIDE_SYSTEM_PROMPT focused on spa, beach clubs, brunch, wellness experiences
 - **2025-11-07**: Completely redesigned hero section with integrated two-column layout (Activity Ideas + Chat)
 - **2025-11-07**: Simplified Activity Ideas form to use only destination and month (no start/end dates)
 - **2025-11-07**: Activity suggestions now display in modal dialog instead of separate section
@@ -64,13 +69,17 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 10. Palma de Mallorca - Beach club
 
 ## Technical Notes
-- **Chat Integration**: Chat now opens in modal dialog directly on landing page - no page navigation required
+- **Dual-Brand Architecture**: BrandSelection component → localStorage brand → dynamic Home/HomeBride routing
+- **ByeBro**: Red/black theme, bachelor party focus (clubs, boat parties, nightlife)
+- **ByeBride**: Pink/black theme, bachelorette party focus (spa, beach clubs, brunch, wellness)
+- **Party Type Support**: partyType parameter throughout GROQ endpoints for context-aware responses
+- **Chat Integration**: Chat opens in modal dialog directly on landing page - no page navigation required
 - **Activity Suggestions**: Non-chatbot GROQ-powered activity generator - users input destination/month, AI returns structured suggestions
 - **Activity Display**: Card-based layout with lucide-react icons (music, ship, utensils, party, car, waves, flame, beer, mappin)
 - **GROQ Streaming**: Real-time SSE streaming with /api/chat/groq-stream endpoint using llama-3.3-70b-versatile
 - **GROQ JSON Mode**: /api/chat/activity-suggestions generates structured JSON for activity ideas with graceful fallback
 - **Hero Section**: Two-column integrated layout with Activity Ideas Generator (left) and Chat Assistant (right)
-- **AI System**: Primary GROQ, graceful fallback to local response generation if unavailable
+- **AI System**: Primary GROQ with brand-specific prompts (BYEBRO_SYSTEM_PROMPT, BYEBRIDE_SYSTEM_PROMPT)
 - OneClick Assistant uses step-by-step conversation flow to prevent duplicate questions
 - **Image Search API**: /api/images/search, /api/images/destinations, /api/images/test routes funzionanti
 - **Dynamic Images**: IMAGE_SEARCH_API_KEY configurata con Pexels API (funzionante) + fallback Unsplash
