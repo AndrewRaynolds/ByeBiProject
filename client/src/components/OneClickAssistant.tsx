@@ -104,6 +104,19 @@ export default function OneClickAssistant() {
     setTotalPrice(newTotal);
   }, [packageItems]);
 
+  // Check for initial message from hero section
+  useEffect(() => {
+    const initialMessage = localStorage.getItem('byebro-initial-message');
+    if (initialMessage) {
+      localStorage.removeItem('byebro-initial-message');
+      // Wait a bit for the component to mount
+      setTimeout(() => {
+        form.setValue('message', initialMessage);
+        form.handleSubmit(onSubmit)();
+      }, 500);
+    }
+  }, []);
+
   const onSubmit = async (data: MessageFormValues) => {
     // Aggiungi il messaggio dell'utente alla chat
     const userMessage: ChatMessage = {

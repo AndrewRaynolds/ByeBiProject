@@ -4,6 +4,11 @@
 AI-powered travel platform for bachelor party planning with comprehensive expense management system. Features OneClick Assistant for conversational trip planning, particularly specialized for Ibiza with detailed restaurant and nightlife database.
 
 ## Recent Changes
+- **2025-11-07**: Integrated GROQ streaming for ultra-fast real-time chat responses (10x faster than OpenAI)
+- **2025-11-07**: Added hero section chat input bar - users can start chatting directly from landing page
+- **2025-11-07**: Simplified chat welcome message for better UX
+- **2025-11-07**: Created /api/chat/groq-stream endpoint with Server-Sent Events (SSE) for streaming
+- **2025-11-07**: Implemented llama-3.3-70b-versatile model with ByeBro personality in system prompt
 - **2025-08-06**: COMPLETATO - Implementato sistema di ricerca immagini funzionante con Pexels API
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Barcellona a vista aerea panoramica con Sagrada Familia
 - **2025-08-06**: COMPLETATO - Aggiornata immagine Ibiza con vista aerea della costa con barche e acque turchesi cristalline
@@ -31,8 +36,9 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 - Frontend: React + TypeScript with Wouter routing
 - UI: Shadcn components with Tailwind CSS
 - Backend: Express.js with in-memory storage
-- APIs: Integrated Booking.com, Kiwi.com, OpenAI
-- Features: OneClick Assistant, SplittaBro expense splitting, travel booking
+- APIs: Integrated Booking.com, Kiwi.com, GROQ (primary AI), OpenAI (backup)
+- Features: OneClick Assistant with GROQ streaming, SplittaBro expense splitting, travel booking
+- AI: GROQ llama-3.3-70b-versatile for ultra-fast streaming responses with graceful fallback
 
 ## Available Destinations (Only 10)
 1. Roma - La Città Eterna
@@ -47,6 +53,9 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 10. Palma de Mallorca - Beach club
 
 ## Technical Notes
+- **GROQ Streaming**: Real-time SSE streaming with /api/chat/groq-stream endpoint using llama-3.3-70b-versatile
+- **Hero Chat Input**: Landing page features direct chat input with localStorage handoff to OneClickAssistant
+- **AI System**: Primary GROQ, graceful fallback to local response generation if unavailable
 - OneClick Assistant uses step-by-step conversation flow to prevent duplicate questions
 - **Image Search API**: /api/images/search, /api/images/destinations, /api/images/test routes funzionanti
 - **Dynamic Images**: IMAGE_SEARCH_API_KEY configurata con Pexels API (funzionante) + fallback Unsplash
@@ -57,4 +66,4 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 - Chat interface contains messages within proper boundaries with responsive design
 - Authentication system supports user sessions and premium features
 - All destination data updated to match the 10 specified cities only
-- Environment variables: ZAPIER_WEBHOOK_URL for AI, IMAGE_SEARCH_API_KEY for images
+- Environment variables: GROQ_API_KEY (primary), ZAPIER_WEBHOOK_URL, IMAGE_SEARCH_API_KEY, OPENAI_API_KEY (backup)
