@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import HomeBride from "@/pages/HomeBride";
 import Dashboard from "@/pages/Dashboard";
 import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
@@ -21,13 +22,34 @@ import ImageTestPage from "@/pages/ImageTestPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import PerformanceOptimizer from "@/lib/performance-optimizer";
+import BrandSelection from "@/components/BrandSelection";
 
 function Router() {
+  const [selectedBrand, setSelectedBrand] = useState<'byebro' | 'byebride' | null>(null);
+
+  useEffect(() => {
+    const savedBrand = localStorage.getItem('selectedBrand') as 'byebro' | 'byebride' | null;
+    if (savedBrand) {
+      setSelectedBrand(savedBrand);
+    }
+  }, []);
+
+  const handleBrandSelection = (brand: 'byebro' | 'byebride') => {
+    setSelectedBrand(brand);
+    localStorage.setItem('selectedBrand', brand);
+  };
+
+  if (!selectedBrand) {
+    return <BrandSelection onSelectBrand={handleBrandSelection} />;
+  }
+
+  const HomePage = selectedBrand === 'byebride' ? HomeBride : Home;
+
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={HomePage} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/destinations" component={DestinationsPage} />
       <Route path="/experiences" component={ExperiencesPage} />
