@@ -4,6 +4,9 @@
 AI-powered travel platform for bachelor party planning with comprehensive expense management system. Features OneClick Assistant for conversational trip planning, particularly specialized for Ibiza with detailed restaurant and nightlife database.
 
 ## Recent Changes
+- **2025-11-07**: Added Activity Suggestions section - AI generates personalized activity ideas based on destination and dates
+- **2025-11-07**: Created /api/chat/activity-suggestions endpoint using GROQ for structured JSON generation
+- **2025-11-07**: Implemented visual card display with icons for each activity suggestion (clubs, boats, dining, etc.)
 - **2025-11-07**: Integrated GROQ streaming for ultra-fast real-time chat responses (10x faster than OpenAI)
 - **2025-11-07**: Added hero section chat input bar - users can start chatting directly from landing page
 - **2025-11-07**: Simplified chat welcome message for better UX
@@ -53,7 +56,10 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 10. Palma de Mallorca - Beach club
 
 ## Technical Notes
+- **Activity Suggestions**: Non-chatbot GROQ-powered activity generator - users input destination/dates, AI returns structured suggestions
+- **Activity Display**: Card-based layout with lucide-react icons (music, ship, utensils, party, car, waves, flame, beer, mappin)
 - **GROQ Streaming**: Real-time SSE streaming with /api/chat/groq-stream endpoint using llama-3.3-70b-versatile
+- **GROQ JSON Mode**: /api/chat/activity-suggestions generates structured JSON for activity ideas with graceful fallback
 - **Hero Chat Input**: Landing page features direct chat input with localStorage handoff to OneClickAssistant
 - **AI System**: Primary GROQ, graceful fallback to local response generation if unavailable
 - OneClick Assistant uses step-by-step conversation flow to prevent duplicate questions
