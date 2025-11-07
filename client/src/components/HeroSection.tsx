@@ -34,6 +34,21 @@ export default function HeroSection({ onGetStarted }: HeroSectionProps) {
               </Button>
             </Link>
           </div>
+
+          {/* Quick Chat CTA */}
+          <div className="mt-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-white text-lg font-medium">
+              Dove vuoi andare? 💬
+            </p>
+            <Link href="/one-click-package">
+              <Button 
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200"
+                data-testid="button-chat-cta"
+              >
+                Chatta con l'assistente
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>
