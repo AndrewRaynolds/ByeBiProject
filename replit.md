@@ -4,6 +4,8 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-07**: Added "Cambia brand" button in Header to return to ByeBi brand selection
+- **2025-11-07**: Header now displays dynamic branding (ByeBro/ByeBride) with theme colors
 - **2025-11-07**: Created dual-brand system with ByeBi initial landing page
 - **2025-11-07**: Implemented elegant brand selection with ByeBro (red/black) and ByeBride (pink/black)
 - **2025-11-07**: Created ByeBride version with HeroSectionBride, ActivityIdeasCompactBride, ChatDialogCompactBride
