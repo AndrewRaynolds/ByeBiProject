@@ -143,3 +143,111 @@ export async function* streamGroqChatCompletion(
     yield "Mi dispiace, c'è stato un problema con lo streaming. Riprova!";
   }
 }
+
+interface ActivitySuggestion {
+  name: string;
+  description: string;
+  icon: string;
+  venues: string[];
+}
+
+export async function generateActivitySuggestions(
+  destination: string,
+  startDate: string,
+  endDate: string
+): Promise<ActivitySuggestion[]> {
+  try {
+    const systemPrompt = `You are an expert travel activity planner for bachelor/bachelorette parties in Europe.
+
+Generate 6 creative and exciting activity suggestions for ${destination} for a party happening from ${startDate} to ${endDate}.
+
+Return ONLY a valid JSON array with exactly 6 activities. Each activity must have:
+- name: Short, catchy name (max 4 words)
+- description: Brief description (max 15 words)
+- icon: One of these exactly: "music", "ship", "utensils", "party", "car", "waves", "flame", "beer", "mappin"
+- venues: Array of 2-3 specific venue/location names in ${destination}
+
+Focus on party activities like: nightclubs, boat parties, karting, paintball, beach clubs, breweries, escape rooms, VIP experiences, restaurants, bars, etc.
+
+Return ONLY the JSON array, no other text.`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Generate 6 activity suggestions for ${destination}` }
+      ],
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.9,
+      max_tokens: 1000,
+      top_p: 0.95,
+    });
+
+    const responseText = chatCompletion.choices[0]?.message?.content || "[]";
+    
+    // Try to parse JSON from response
+    let jsonMatch = responseText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error("No JSON array found in response");
+      return getFallbackActivities(destination);
+    }
+
+    const suggestions: ActivitySuggestion[] = JSON.parse(jsonMatch[0]);
+    
+    // Validate and clean suggestions
+    if (!Array.isArray(suggestions) || suggestions.length === 0) {
+      return getFallbackActivities(destination);
+    }
+
+    return suggestions.slice(0, 6).map(s => ({
+      name: s.name || "Party Activity",
+      description: s.description || "Fun activity for your group",
+      icon: s.icon || "party",
+      venues: Array.isArray(s.venues) ? s.venues.slice(0, 3) : []
+    }));
+
+  } catch (error) {
+    console.error("Error generating activity suggestions:", error);
+    return getFallbackActivities(destination);
+  }
+}
+
+function getFallbackActivities(destination: string): ActivitySuggestion[] {
+  return [
+    {
+      name: "Club Night",
+      description: "Experience the best nightlife in the city",
+      icon: "music",
+      venues: ["Local Club 1", "Local Club 2", "Local Club 3"]
+    },
+    {
+      name: "Boat Party",
+      description: "Private boat with drinks and music",
+      icon: "ship",
+      venues: ["Marina Charter", "Party Boats Co", "Sunset Cruises"]
+    },
+    {
+      name: "Group Dinner",
+      description: "Exclusive dining experience with great food",
+      icon: "utensils",
+      venues: ["Restaurant 1", "Restaurant 2", "Restaurant 3"]
+    },
+    {
+      name: "Beach Club",
+      description: "Relax and party at a premium beach club",
+      icon: "waves",
+      venues: ["Beach Club 1", "Beach Club 2", "Beach Club 3"]
+    },
+    {
+      name: "Karting Race",
+      description: "Competitive go-kart racing for the group",
+      icon: "car",
+      venues: ["Racing Track", "Karting Center", "Speed Zone"]
+    },
+    {
+      name: "Bar Crawl",
+      description: "Tour the best bars with a guide",
+      icon: "beer",
+      venues: ["Bar District", "Pub Street", "Nightlife Area"]
+    }
+  ];
+}
