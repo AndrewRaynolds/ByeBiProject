@@ -64,11 +64,12 @@ AI-powered travel platform for bachelor party planning with comprehensive expens
 10. Palma de Mallorca - Beach club
 
 ## Technical Notes
-- **Activity Suggestions**: Non-chatbot GROQ-powered activity generator - users input destination/dates, AI returns structured suggestions
+- **Chat Integration**: Chat now opens in modal dialog directly on landing page - no page navigation required
+- **Activity Suggestions**: Non-chatbot GROQ-powered activity generator - users input destination/month, AI returns structured suggestions
 - **Activity Display**: Card-based layout with lucide-react icons (music, ship, utensils, party, car, waves, flame, beer, mappin)
 - **GROQ Streaming**: Real-time SSE streaming with /api/chat/groq-stream endpoint using llama-3.3-70b-versatile
 - **GROQ JSON Mode**: /api/chat/activity-suggestions generates structured JSON for activity ideas with graceful fallback
-- **Hero Chat Input**: Landing page features direct chat input with localStorage handoff to OneClickAssistant
+- **Hero Section**: Two-column integrated layout with Activity Ideas Generator (left) and Chat Assistant (right)
 - **AI System**: Primary GROQ, graceful fallback to local response generation if unavailable
 - OneClick Assistant uses step-by-step conversation flow to prevent duplicate questions
 - **Image Search API**: /api/images/search, /api/images/destinations, /api/images/test routes funzionanti
