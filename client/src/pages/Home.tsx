@@ -4,20 +4,18 @@ import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
 import FeaturedDestinations from "@/components/FeaturedDestinations";
 import ExperienceTypes from "@/components/ExperienceTypes";
-import TripPlanningForm from "@/components/TripPlanningForm";
 import SecretBlog from "@/components/SecretBlog";
 import PremiumFeatures from "@/components/PremiumFeatures";
-import CustomMerchandise from "@/components/CustomMerchandise";
 import Testimonials from "@/components/Testimonials";
 import ActivitySuggestions from "@/components/ActivitySuggestions";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
 export default function Home() {
-  const tripPlanningRef = useRef<HTMLDivElement>(null);
+  const activityIdeasRef = useRef<HTMLDivElement>(null);
 
-  const scrollToTripPlanning = () => {
-    tripPlanningRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToActivityIdeas = () => {
+    activityIdeasRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -26,7 +24,7 @@ export default function Home() {
       
       <main className="flex-grow">
         {/* Hero Section */}
-        <HeroSection onGetStarted={scrollToTripPlanning} />
+        <HeroSection onGetIdeas={scrollToActivityIdeas} />
         
         {/* How It Works */}
         <HowItWorks />
@@ -37,9 +35,9 @@ export default function Home() {
         {/* Experience Types */}
         <ExperienceTypes />
         
-        {/* Trip Planning Form */}
-        <div ref={tripPlanningRef}>
-          <TripPlanningForm />
+        {/* Activity Ideas Generator */}
+        <div ref={activityIdeasRef}>
+          <ActivitySuggestions />
         </div>
         
         {/* Secret Blog */}
@@ -48,14 +46,8 @@ export default function Home() {
         {/* Premium Features */}
         <PremiumFeatures />
         
-        {/* Custom Merchandise */}
-        <CustomMerchandise />
-        
         {/* Testimonials */}
         <Testimonials />
-        
-        {/* Activity Suggestions */}
-        <ActivitySuggestions />
         
         {/* Newsletter */}
         <Newsletter />
