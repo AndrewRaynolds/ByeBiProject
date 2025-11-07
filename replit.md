@@ -4,6 +4,10 @@
 AI-powered travel platform for bachelor party planning with comprehensive expense management system. Features OneClick Assistant for conversational trip planning, particularly specialized for Ibiza with detailed restaurant and nightlife database.
 
 ## Recent Changes
+- **2025-11-07**: Reorganized hero section with two main CTAs: "Get Trip Ideas" and "Chat Assistant"
+- **2025-11-07**: Replaced Trip Planning Form with Activity Suggestions as main planning tool
+- **2025-11-07**: Hidden Custom Merchandise section (temporarily)
+- **2025-11-07**: Improved UX flow: users choose between AI activity suggestions or conversational assistant
 - **2025-11-07**: Added Activity Suggestions section - AI generates personalized activity ideas based on destination and dates
 - **2025-11-07**: Created /api/chat/activity-suggestions endpoint using GROQ for structured JSON generation
 - **2025-11-07**: Implemented visual card display with icons for each activity suggestion (clubs, boats, dining, etc.)
