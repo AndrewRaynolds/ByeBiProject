@@ -80,47 +80,58 @@ export default function Checkout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
       <Header />
       
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Riepilogo Ordine</h1>
-          <div className="flex flex-wrap gap-4 text-gray-600 mt-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-red-600" />
+      {/* Hero Header */}
+      <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
+              Riepilogo Ordine
+            </h1>
+            <p className="text-white/80 text-lg">Conferma il tuo viaggio da sogno</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 text-white/90">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+              <MapPin className="w-5 h-5 text-red-400" />
               <span className="font-medium">{checkoutData.destination}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-red-600" />
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+              <Calendar className="w-5 h-5 text-red-400" />
               <span className="font-medium">{checkoutData.dates}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-red-600" />
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+              <Users className="w-5 h-5 text-red-400" />
               <span className="font-medium">{checkoutData.people} persone</span>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
 
         <div className="space-y-6">
           {groupedItems.flights.length > 0 && (
-            <Card>
+            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plane className="w-5 h-5 text-red-600" />
+                <CardTitle className="flex items-center gap-3 text-white text-xl">
+                  <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                    <Plane className="w-5 h-5 text-white" />
+                  </div>
                   Voli
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {groupedItems.flights.map(item => (
-                  <div key={item.id} className="flex justify-between items-start pb-3 border-b last:border-0">
+                  <div key={item.id} className="flex justify-between items-start pb-3 border-b border-white/10 last:border-0">
                     <div className="flex-1">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <p className="font-semibold text-white">{item.name}</p>
+                      <p className="text-sm text-white/70">{item.description}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-red-600">€{item.price * checkoutData.people}</p>
-                      <p className="text-xs text-gray-500">€{item.price} x {checkoutData.people}</p>
+                      <p className="font-bold text-red-400 text-lg">€{item.price * checkoutData.people}</p>
+                      <p className="text-xs text-white/60">€{item.price} x {checkoutData.people}</p>
                     </div>
                   </div>
                 ))}
@@ -129,23 +140,25 @@ export default function Checkout() {
           )}
 
           {groupedItems.hotels.length > 0 && (
-            <Card>
+            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Hotel className="w-5 h-5 text-red-600" />
+                <CardTitle className="flex items-center gap-3 text-white text-xl">
+                  <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                    <Hotel className="w-5 h-5 text-white" />
+                  </div>
                   Alloggi
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {groupedItems.hotels.map(item => (
-                  <div key={item.id} className="flex justify-between items-start pb-3 border-b last:border-0">
+                  <div key={item.id} className="flex justify-between items-start pb-3 border-b border-white/10 last:border-0">
                     <div className="flex-1">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <p className="font-semibold text-white">{item.name}</p>
+                      <p className="text-sm text-white/70">{item.description}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-red-600">€{item.price * checkoutData.people}</p>
-                      <p className="text-xs text-gray-500">€{item.price} x {checkoutData.people}</p>
+                      <p className="font-bold text-red-400 text-lg">€{item.price * checkoutData.people}</p>
+                      <p className="text-xs text-white/60">€{item.price} x {checkoutData.people}</p>
                     </div>
                   </div>
                 ))}
@@ -154,23 +167,25 @@ export default function Checkout() {
           )}
 
           {groupedItems.cars.length > 0 && (
-            <Card>
+            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Car className="w-5 h-5 text-red-600" />
+                <CardTitle className="flex items-center gap-3 text-white text-xl">
+                  <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                    <Car className="w-5 h-5 text-white" />
+                  </div>
                   Noleggio Auto
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {groupedItems.cars.map(item => (
-                  <div key={item.id} className="flex justify-between items-start pb-3 border-b last:border-0">
+                  <div key={item.id} className="flex justify-between items-start pb-3 border-b border-white/10 last:border-0">
                     <div className="flex-1">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <p className="font-semibold text-white">{item.name}</p>
+                      <p className="text-sm text-white/70">{item.description}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-red-600">€{item.price * checkoutData.people}</p>
-                      <p className="text-xs text-gray-500">€{item.price} x {checkoutData.people}</p>
+                      <p className="font-bold text-red-400 text-lg">€{item.price * checkoutData.people}</p>
+                      <p className="text-xs text-white/60">€{item.price} x {checkoutData.people}</p>
                     </div>
                   </div>
                 ))}
@@ -179,23 +194,25 @@ export default function Checkout() {
           )}
 
           {groupedItems.activities.length > 0 && (
-            <Card>
+            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="w-5 h-5 text-red-600" />
+                <CardTitle className="flex items-center gap-3 text-white text-xl">
+                  <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                    <Music className="w-5 h-5 text-white" />
+                  </div>
                   Attività & Esperienze
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {groupedItems.activities.map(item => (
-                  <div key={item.id} className="flex justify-between items-start pb-3 border-b last:border-0">
+                  <div key={item.id} className="flex justify-between items-start pb-3 border-b border-white/10 last:border-0">
                     <div className="flex-1">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <p className="font-semibold text-white">{item.name}</p>
+                      <p className="text-sm text-white/70">{item.description}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-red-600">€{item.price * checkoutData.people}</p>
-                      <p className="text-xs text-gray-500">€{item.price} x {checkoutData.people}</p>
+                      <p className="font-bold text-red-400 text-lg">€{item.price * checkoutData.people}</p>
+                      <p className="text-xs text-white/60">€{item.price} x {checkoutData.people}</p>
                     </div>
                   </div>
                 ))}
@@ -203,17 +220,17 @@ export default function Checkout() {
             </Card>
           )}
 
-          <Card className="bg-red-50 border-red-200">
+          <Card className="bg-gradient-to-br from-red-500/20 to-red-600/10 backdrop-blur-sm border-2 border-red-500/50 shadow-2xl">
             <CardContent className="pt-6">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-semibold">Totale</span>
-                <span className="text-3xl font-bold text-red-600">
+                <span className="text-xl font-semibold text-white">Totale</span>
+                <span className="text-4xl font-bold bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
                   €{checkoutData.total.toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-sm text-gray-600">
+              <div className="flex justify-between items-center text-sm text-white/70">
                 <span>Prezzo per persona</span>
-                <span className="font-semibold">
+                <span className="font-semibold text-white">
                   €{Math.round(checkoutData.total / checkoutData.people)}
                 </span>
               </div>
@@ -221,11 +238,11 @@ export default function Checkout() {
           </Card>
         </div>
 
-        <div className="flex gap-4 mt-8">
+        <div className="flex flex-col md:flex-row gap-4 mt-8">
           <Button
             variant="outline"
             size="lg"
-            className="flex-1"
+            className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
             onClick={() => setLocation('/itinerary')}
             data-testid="button-back"
           >
@@ -233,7 +250,7 @@ export default function Checkout() {
           </Button>
           <Button
             size="lg"
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-xl shadow-red-500/30 transform transition-all hover:scale-105"
             onClick={handlePurchase}
             data-testid="button-purchase"
           >

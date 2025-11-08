@@ -180,30 +180,41 @@ export default function Itinerary() {
   const renderItemCard = (item: BookingItem, isSelected: boolean, isRequired = false) => (
     <Card 
       key={item.id} 
-      className={`transition-all ${isSelected ? 'border-red-500 border-2 bg-red-50' : 'hover:shadow-md'} ${isRequired ? 'opacity-100' : ''}`}
+      className={`transition-all duration-300 backdrop-blur-sm border-2 transform hover:scale-[1.02] ${
+        isSelected 
+          ? 'border-red-500 bg-gradient-to-br from-red-500/20 to-red-600/10 shadow-lg shadow-red-500/20' 
+          : 'border-white/20 bg-white/10 hover:border-white/30 hover:shadow-xl'
+      } ${isRequired ? 'opacity-100' : ''}`}
       data-testid={`card-${item.type}-${item.id}`}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
-            <div className="p-2 bg-red-100 rounded-lg text-red-600">
+            <div className={`p-3 rounded-xl transition-all ${
+              isSelected 
+                ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg' 
+                : 'bg-white/20 text-red-400'
+            }`}>
               {getIcon(item.type)}
             </div>
             <div className="flex-1">
-              <CardTitle className="text-lg">{item.name}</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+              <CardTitle className="text-lg text-white">{item.name}</CardTitle>
+              <p className="text-sm text-white/70 mt-1">{item.description}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-2xl font-bold text-red-600">€{item.price}</p>
-              <p className="text-xs text-gray-500">a persona</p>
+              <p className={`text-2xl font-bold ${isSelected ? 'text-red-400' : 'text-white'}`}>
+                €{item.price}
+              </p>
+              <p className="text-xs text-white/60">a persona</p>
             </div>
             <Switch
               checked={isSelected}
               onCheckedChange={() => toggleItem(item.id)}
               disabled={isRequired}
               data-testid={`toggle-${item.id}`}
+              className="data-[state=checked]:bg-red-500"
             />
           </div>
         </div>
@@ -211,8 +222,8 @@ export default function Itinerary() {
       <CardContent>
         <ul className="space-y-1">
           {item.details?.map((detail, idx) => (
-            <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-              <span className="text-red-600 mt-0.5">•</span>
+            <li key={idx} className="text-sm text-white/80 flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">•</span>
               <span>{detail}</span>
             </li>
           ))}
@@ -241,34 +252,43 @@ export default function Itinerary() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
       <Header />
       
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            Il Tuo Viaggio a <span className="text-red-600">{mockupData.destination}</span>
-          </h1>
-          <div className="flex flex-wrap gap-4 text-gray-600 mt-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-red-600" />
+      {/* Hero Header */}
+      <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-6">
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
+              Il Tuo Viaggio a {mockupData.destination}
+            </h1>
+            <p className="text-white/80 text-lg">Personalizza il tuo pacchetto perfetto</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 text-white/90">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+              <Calendar className="w-5 h-5 text-red-400" />
               <span className="font-medium">{mockupData.dates}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-red-600" />
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+              <Users className="w-5 h-5 text-red-400" />
               <span className="font-medium">{mockupData.people} persone</span>
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-red-600" />
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+              <MapPin className="w-5 h-5 text-red-400" />
               <span className="font-medium">Isole Baleari, Spagna</span>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
 
         <div className="space-y-8">
           <section>
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Plane className="w-6 h-6 text-red-600" />
+            <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+              <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                <Plane className="w-6 h-6 text-white" />
+              </div>
               Volo
             </h2>
             <div className="grid gap-4">
@@ -276,12 +296,16 @@ export default function Itinerary() {
                 renderItemCard(flight, selectedItems.has(flight.id), true)
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-2 ml-1">Il volo è obbligatorio per questo viaggio</p>
+            <p className="text-sm text-white/60 mt-2 ml-1 bg-white/5 inline-block px-3 py-1 rounded-full">
+              ✈️ Il volo è obbligatorio per questo viaggio
+            </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Hotel className="w-6 h-6 text-red-600" />
+            <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+              <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                <Hotel className="w-6 h-6 text-white" />
+              </div>
               Hotel & Alloggi
             </h2>
             <div className="grid gap-4">
@@ -292,8 +316,10 @@ export default function Itinerary() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Car className="w-6 h-6 text-red-600" />
+            <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+              <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                <Car className="w-6 h-6 text-white" />
+              </div>
               Noleggio Auto
             </h2>
             <div className="grid gap-4">
@@ -304,8 +330,10 @@ export default function Itinerary() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Ship className="w-6 h-6 text-red-600" />
+            <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+              <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
+                <Ship className="w-6 h-6 text-white" />
+              </div>
               Attività & Esperienze
             </h2>
             <div className="grid gap-4">
@@ -316,20 +344,20 @@ export default function Itinerary() {
           </section>
         </div>
 
-        <div className="sticky bottom-0 left-0 right-0 bg-white border-t-2 border-red-600 shadow-lg mt-12 p-6 rounded-t-2xl">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Totale per {mockupData.people} persone</p>
-              <p className="text-4xl font-bold text-red-600">
+        <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-r from-black/90 via-red-900/90 to-black/90 backdrop-blur-md border-t-2 border-red-500/50 shadow-2xl mt-12 p-6 rounded-t-3xl">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="text-center md:text-left">
+              <p className="text-sm text-white/70 mb-1">Totale per {mockupData.people} persone</p>
+              <p className="text-5xl font-bold bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
                 €{calculateTotal().toLocaleString()}
               </p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-white/60 mt-1">
                 €{Math.round(calculateTotal() / mockupData.people)} a persona
               </p>
             </div>
             <Button
               size="lg"
-              className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-10 py-7 text-lg font-bold shadow-xl shadow-red-500/30 transform transition-all hover:scale-105"
               onClick={handleCheckout}
               data-testid="button-checkout"
             >
