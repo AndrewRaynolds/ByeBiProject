@@ -4,6 +4,12 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-08**: Created complete booking flow mockup (Chat → Itinerary → Checkout → Purchase)
+- **2025-11-08**: Added "Genera Itinerario" button in chat after 2+ messages exchanged
+- **2025-11-08**: Built Itinerary page with Ibiza mockup (flights, hotels, cars, activities)
+- **2025-11-08**: Implemented toggle selection system with dynamic total price calculation
+- **2025-11-08**: Created Checkout page with purchase summary and fake payment popup
+- **2025-11-08**: All mockup data is static front-end only (no backend integration)
 - **2025-11-07**: Added "Cambia brand" button in Header to return to ByeBi brand selection
 - **2025-11-07**: Header now displays dynamic branding (ByeBro/ByeBride) with theme colors
 - **2025-11-07**: Created dual-brand system with ByeBi initial landing page
@@ -71,6 +77,11 @@ AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning an
 10. Palma de Mallorca - Beach club
 
 ## Technical Notes
+- **Booking Flow Mockup**: Chat → "Genera Itinerario" button → /itinerary → /checkout → purchase popup
+- **Itinerary Mockup**: Static Ibiza trip (2-5 July, 6 people) with selectable cards for flights, hotels, cars, activities
+- **Dynamic Pricing**: Real-time total calculation based on selected items (price × people)
+- **Checkout Flow**: Summary page with purchase simulation (2-second loading → success popup)
+- **Data Storage**: Uses localStorage to pass selected items between Itinerary and Checkout pages
 - **Dual-Brand Architecture**: BrandSelection component → localStorage brand → dynamic Home/HomeBride routing
 - **ByeBro**: Red/black theme, bachelor party focus (clubs, boat parties, nightlife)
 - **ByeBride**: Pink/black theme, bachelorette party focus (spa, beach clubs, brunch, wellness)
