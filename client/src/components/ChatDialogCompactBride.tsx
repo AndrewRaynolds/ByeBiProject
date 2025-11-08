@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Send, Heart, User } from 'lucide-react';
+import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -29,6 +30,7 @@ interface ChatDialogCompactBrideProps {
 }
 
 export default function ChatDialogCompactBride({ open, onOpenChange, initialMessage }: ChatDialogCompactBrideProps) {
+  const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -38,6 +40,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<MessageFormValues>({
@@ -150,6 +153,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       }
 
       setIsLoading(false);
+      
+      // Show generate button after 2 messages
+      if (messages.length >= 3) {
+        setShowGenerateButton(true);
+      }
 
     } catch (error) {
       console.error('Chat error:', error);
@@ -166,6 +174,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       setMessages(prev => [...prev, errorMessage]);
       setIsLoading(false);
     }
+  };
+
+  const handleGenerateItinerary = () => {
+    onOpenChange(false);
+    setLocation('/itinerary');
   };
 
   return (
@@ -219,7 +232,18 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           </div>
         </ScrollArea>
 
-        <div className="px-6 py-4 border-t">
+        <div className="px-6 py-4 border-t space-y-3">
+          {showGenerateButton && (
+            <Button
+              onClick={handleGenerateItinerary}
+              className="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white font-semibold py-6 shadow-lg"
+              data-testid="button-generate-itinerary-bride"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Genera Itinerario Completo
+            </Button>
+          )}
+          
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
             <Input
               {...form.register('message')}

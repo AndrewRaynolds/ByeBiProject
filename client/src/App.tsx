@@ -11,6 +11,8 @@ import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
 import ItineraryPage from "@/pages/ItineraryPage";
 import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
+import Itinerary from "@/pages/Itinerary";
+import Checkout from "@/pages/Checkout";
 import SplittaBroPage from "@/pages/SplittaBroPage";
 import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
@@ -55,6 +57,8 @@ function Router() {
       <Route path="/experiences" component={ExperiencesPage} />
       <ProtectedRoute path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
+      <Route path="/itinerary" component={Itinerary} />
+      <Route path="/checkout" component={Checkout} />
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
       <Route path="/splitta-bro" component={SplittaBroPage} />
