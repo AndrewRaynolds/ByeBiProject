@@ -19,22 +19,22 @@ export default function Home() {
         <HeroSection />
         
         {/* How It Works */}
-        <HowItWorks />
+        <HowItWorks brand="bro" />
         
         {/* Featured Destinations */}
-        <FeaturedDestinations />
+        <FeaturedDestinations brand="bro" />
         
         {/* Experience Types */}
-        <ExperienceTypes />
+        <ExperienceTypes brand="bro" />
         
         {/* Secret Blog */}
-        <SecretBlog />
+        <SecretBlog brand="bro" />
         
         {/* Premium Features */}
-        <PremiumFeatures />
+        <PremiumFeatures brand="bro" />
         
         {/* Testimonials */}
-        <Testimonials />
+        <Testimonials brand="bro" />
         
         {/* Newsletter */}
         <Newsletter />

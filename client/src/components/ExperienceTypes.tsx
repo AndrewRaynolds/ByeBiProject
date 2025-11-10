@@ -4,10 +4,40 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight } from "lucide-react";
 
-export default function ExperienceTypes() {
+type Brand = 'bro' | 'bride';
+
+interface ExperienceTypesProps {
+  brand?: Brand;
+}
+
+const COPY = {
+  bro: {
+    title: "Choose Your Experience",
+    subtitle: "From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelor party."
+  },
+  bride: {
+    title: "Choose Your Experience",
+    subtitle: "From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelorette party."
+  }
+};
+
+const EXPERIENCE_NAME_MAP: Record<string, string> = {
+  "The Ultimate BroNight": "The Ultimate BrideNight",
+  "My Olympic Bro": "My Olympic Bride",
+  "Chill and Feel the Bro": "Chill and Feel the Bride",
+  "The Wild Broventure": "The Wild Brideventure"
+};
+
+export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps) {
   const { data: experiences, isLoading, error } = useQuery<Experience[]>({
     queryKey: ["/api/experiences"],
   });
+  
+  const copy = COPY[brand];
+  const mappedExperiences = experiences?.map(exp => ({
+    ...exp,
+    name: brand === 'bride' && EXPERIENCE_NAME_MAP[exp.name] ? EXPERIENCE_NAME_MAP[exp.name] : exp.name
+  }));
 
   if (isLoading) {
     return (
@@ -52,12 +82,12 @@ export default function ExperienceTypes() {
     <section className="py-16 bg-black">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Choose Your Experience</h2>
-          <p className="text-gray-300 max-w-3xl mx-auto">From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelor party.</p>
+          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{copy.title}</h2>
+          <p className="text-gray-300 max-w-3xl mx-auto">{copy.subtitle}</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {experiences?.map((experience) => (
+          {mappedExperiences?.map((experience) => (
             <div key={experience.id} className="bg-gray-900 rounded-xl overflow-hidden shadow-md group hover:shadow-lg transition duration-300">
               <div className="relative h-48 overflow-hidden">
                 <img 

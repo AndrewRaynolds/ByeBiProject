@@ -5,11 +5,45 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-export default function PremiumFeatures() {
+type Brand = 'bro' | 'bride';
+
+interface PremiumFeaturesProps {
+  brand?: Brand;
+}
+
+const COPY = {
+  bro: {
+    subtitle: "Get exclusive access to premium features and take your bachelor party planning to the next level.",
+    benefits: {
+      blog: { title: "Unlimited Secret Blog Access", desc: "Read and share real bachelor party stories without limits" },
+      avatar: { title: "Create Custom Groom Avatar", desc: "Design a fun avatar of the groom for your trip" },
+      itinerary: { title: "Priority Itinerary Generation", desc: "Get faster and more detailed trip recommendations" },
+      discounts: { title: "Exclusive Discounts", desc: "Special pricing on accommodation and activities" },
+      support: { title: "24/7 Travel Support", desc: "Get help with your trip anytime you need it" }
+    },
+    premiumStatus: "You already have access to all premium features including unlimited blog posts, custom groom avatars, priority itineraries, and exclusive discounts.",
+    annualPlanDesc: "Best value for bachelor party pros"
+  },
+  bride: {
+    subtitle: "Get exclusive access to premium features and take your bachelorette party planning to the next level.",
+    benefits: {
+      blog: { title: "Unlimited Secret Blog Access", desc: "Read and share real bachelorette party stories without limits" },
+      avatar: { title: "Create Custom Bride Avatar", desc: "Design a fun avatar of the bride for your trip" },
+      itinerary: { title: "Priority Itinerary Generation", desc: "Get faster and more detailed trip recommendations" },
+      discounts: { title: "Exclusive Discounts", desc: "Special pricing on accommodation and activities" },
+      support: { title: "24/7 Travel Support", desc: "Get help with your trip anytime you need it" }
+    },
+    premiumStatus: "You already have access to all premium features including unlimited blog posts, custom bride avatars, priority itineraries, and exclusive discounts.",
+    annualPlanDesc: "Best value for bachelorette party pros"
+  }
+};
+
+export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps) {
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("monthly");
   const { user, isAuthenticated, updateUser } = useAuth();
   const { toast } = useToast();
   const isPremium = user?.isPremium || false;
+  const copy = COPY[brand];
 
   const handleUpgrade = async () => {
     if (!isAuthenticated) {
@@ -51,7 +85,7 @@ export default function PremiumFeatures() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Upgrade to Premium</h2>
-          <p className="text-white opacity-90 max-w-3xl mx-auto">Get exclusive access to premium features and take your bachelor party planning to the next level.</p>
+          <p className="text-white opacity-90 max-w-3xl mx-auto">{copy.subtitle}</p>
         </div>
         
         <div className="max-w-4xl mx-auto bg-black rounded-xl overflow-hidden shadow-xl border border-red-600">
@@ -62,36 +96,36 @@ export default function PremiumFeatures() {
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">Unlimited Secret Blog Access</span>
-                    <p className="text-sm text-gray-300 mt-1">Read and share real bachelor party stories without limits</p>
+                    <span className="font-medium text-white">{copy.benefits.blog.title}</span>
+                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.blog.desc}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">Create Custom Groom Avatar</span>
-                    <p className="text-sm text-gray-300 mt-1">Design a fun avatar of the groom for your trip</p>
+                    <span className="font-medium text-white">{copy.benefits.avatar.title}</span>
+                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.avatar.desc}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">Priority Itinerary Generation</span>
-                    <p className="text-sm text-gray-300 mt-1">Get faster and more detailed trip recommendations</p>
+                    <span className="font-medium text-white">{copy.benefits.itinerary.title}</span>
+                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.itinerary.desc}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">Exclusive Discounts</span>
-                    <p className="text-sm text-gray-300 mt-1">Special pricing on accommodation and activities</p>
+                    <span className="font-medium text-white">{copy.benefits.discounts.title}</span>
+                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.discounts.desc}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">24/7 Travel Support</span>
-                    <p className="text-sm text-gray-300 mt-1">Get help with your trip anytime you need it</p>
+                    <span className="font-medium text-white">{copy.benefits.support.title}</span>
+                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.support.desc}</p>
                   </div>
                 </li>
               </ul>
@@ -104,7 +138,7 @@ export default function PremiumFeatures() {
                 <div className="text-center p-6 bg-gray-900 rounded-lg border border-red-600">
                   <h4 className="text-xl font-bold text-red-600 mb-2">You're a Premium Member!</h4>
                   <p className="text-gray-300">
-                    You already have access to all premium features including unlimited blog posts, custom groom avatars, priority itineraries, and exclusive discounts.
+                    {copy.premiumStatus}
                   </p>
                   <Button className="mt-4 bg-red-600 hover:bg-red-700">
                     Go to Dashboard
@@ -160,7 +194,7 @@ export default function PremiumFeatures() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="text-xl font-bold text-white">Annual</h4>
-                        <p className="text-gray-300 text-sm">Best value for bachelor party pros</p>
+                        <p className="text-gray-300 text-sm">{copy.annualPlanDesc}</p>
                       </div>
                       <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Save 33%</div>
                     </div>

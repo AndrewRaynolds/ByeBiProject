@@ -90,11 +90,28 @@ const DestinationCard = memo(({ destination, onExplore }: {
 
 DestinationCard.displayName = "DestinationCard";
 
+type Brand = 'bro' | 'bride';
+
+interface FeaturedDestinationsProps {
+  brand?: Brand;
+}
+
+const COPY = {
+  bro: {
+    subtitle: "Top picks for your unforgettable bachelor party"
+  },
+  bride: {
+    subtitle: "Top picks for your unforgettable bachelorette party"
+  }
+};
+
 // Componente principale ottimizzato
-const FeaturedDestinations = memo(function FeaturedDestinations() {
+const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' }: FeaturedDestinationsProps) {
   const { data: destinations, isLoading, error } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
+  
+  const copy = COPY[brand];
   
   // Throttle della funzione di navigazione
   const handleExplore = useCallback(throttle(() => {
@@ -151,7 +168,7 @@ const FeaturedDestinations = memo(function FeaturedDestinations() {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">Popular Destinations</h2>
-            <p className="text-gray-300 mt-2">Top picks for your unforgettable bachelor party</p>
+            <p className="text-gray-300 mt-2">{copy.subtitle}</p>
           </div>
           <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
             View all destinations

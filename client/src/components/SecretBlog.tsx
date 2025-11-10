@@ -6,9 +6,25 @@ import { Lock } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function SecretBlog() {
+type Brand = 'bro' | 'bride';
+
+interface SecretBlogProps {
+  brand?: Brand;
+}
+
+const COPY = {
+  bro: {
+    subtitle: "Real, anonymous stories from bachelor parties around Europe. Learn from others' experiences and share your own."
+  },
+  bride: {
+    subtitle: "Real, anonymous stories from bachelorette parties around Europe. Learn from others' experiences and share your own."
+  }
+};
+
+export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
   const { isAuthenticated, user } = useAuth();
   const isPremium = user?.isPremium || false;
+  const copy = COPY[brand];
 
   const { data: blogPosts, isLoading, error } = useQuery<BlogPost[]>({
     queryKey: ["/api/blog-posts"],
@@ -72,7 +88,7 @@ export default function SecretBlog() {
         <div className="flex flex-col md:flex-row justify-between items-center mb-12">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Secret Blog</h2>
-            <p className="text-gray-300 max-w-2xl">Real, anonymous stories from bachelor parties around Europe. Learn from others' experiences and share your own.</p>
+            <p className="text-gray-300 max-w-2xl">{copy.subtitle}</p>
           </div>
           <div className="mt-6 md:mt-0">
             {!isPremium && (

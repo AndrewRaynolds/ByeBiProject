@@ -16,12 +16,12 @@ export default function HomeBride() {
       
       <main className="flex-grow">
         <HeroSectionBride />
-        <HowItWorks />
-        <FeaturedDestinations />
-        <ExperienceTypes />
-        <SecretBlog />
-        <PremiumFeatures />
-        <Testimonials />
+        <HowItWorks brand="bride" />
+        <FeaturedDestinations brand="bride" />
+        <ExperienceTypes brand="bride" />
+        <SecretBlog brand="bride" />
+        <PremiumFeatures brand="bride" />
+        <Testimonials brand="bride" />
         <Newsletter />
       </main>
       
