@@ -128,12 +128,12 @@ const Header = memo(function Header() {
           }`}>
             Merch
           </Link>
-          <Link href="/splitta-bro" className={`text-dark transition font-medium text-sm ${
+          <Link href={selectedBrand === 'byebride' ? "/splitta-bride" : "/splitta-bro"} className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride'
-              ? `hover:text-pink-600 ${location.startsWith("/splitta-bro") ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${location.startsWith("/splitta-bro") ? "text-red-600" : ""}`
+              ? `hover:text-pink-600 ${(location.startsWith("/splitta-bro") || location.startsWith("/splitta-bride")) ? "text-pink-600" : ""}`
+              : `hover:text-red-600 ${(location.startsWith("/splitta-bro") || location.startsWith("/splitta-bride")) ? "text-red-600" : ""}`
           }`}>
-            SplittaBro
+            {selectedBrand === 'byebride' ? 'SplittaBride' : 'SplittaBro'}
           </Link>
         </div>
         
@@ -232,9 +232,9 @@ const Header = memo(function Header() {
             <Link href="/merchandise" className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
             }`}>Merch</Link>
-            <Link href="/splitta-bro" className={`text-dark transition font-medium ${
+            <Link href={selectedBrand === 'byebride' ? "/splitta-bride" : "/splitta-bro"} className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>SplittaBro</Link>
+            }`}>{selectedBrand === 'byebride' ? 'SplittaBride' : 'SplittaBro'}</Link>
             
             <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200 mt-2">
               {user ? (

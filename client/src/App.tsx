@@ -14,6 +14,7 @@ import ItineraryPreviewPage from "@/pages/ItineraryPreviewPage";
 import Itinerary from "@/pages/Itinerary";
 import Checkout from "@/pages/Checkout";
 import SplittaBroPage from "@/pages/SplittaBroPage";
+import SplittaBridePage from "@/pages/SplittaBridePage";
 import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
 import OneClickPackagePage from "@/pages/OneClickPackagePage";
@@ -48,6 +49,7 @@ function Router() {
   }
 
   const HomePage = selectedBrand === 'byebride' ? HomeBride : Home;
+  const SplittaPage = selectedBrand === 'byebride' ? SplittaBridePage : SplittaBroPage;
 
   return (
     <Switch>
@@ -61,7 +63,8 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/itinerary/preview" component={ItineraryPreviewPage} />
       <ProtectedRoute path="/itinerary/:id" component={ItineraryPage} />
-      <Route path="/splitta-bro" component={SplittaBroPage} />
+      <Route path="/splitta-bro" component={SplittaPage} />
+      <Route path="/splitta-bride" component={SplittaPage} />
       <Route path="/one-click-package" component={OneClickPackagePage} />
       <Route path="/kiwi-test" component={KiwiTestPage} />
       <Route path="/api-test" component={ApiTestPage} />
