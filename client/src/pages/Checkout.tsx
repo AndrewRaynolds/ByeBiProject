@@ -23,6 +23,8 @@ interface CheckoutData {
   total: number;
 }
 
+type PaymentMethod = 'card' | 'paypal' | 'applepay';
+
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
@@ -30,6 +32,7 @@ export default function Checkout() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -75,6 +78,7 @@ export default function Checkout() {
     setPurchaseComplete(false);
     setIsPurchasing(false);
     setShowPaymentForm(false);
+    setPaymentMethod('card');
     setCardNumber('');
     setCardName('');
     setCardExpiry('');
@@ -342,90 +346,176 @@ export default function Checkout() {
                   </Button>
                 </div>
               ) : showPaymentForm ? (
-                <form onSubmit={handleSubmitPayment} className="space-y-4 pt-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lock className="w-4 h-4 text-blue-600" />
-                      <p className="text-sm font-semibold text-blue-800">Pagamento protetto da PayPal</p>
-                    </div>
-                    <p className="text-xs text-blue-700">I tuoi dati sono crittografati e sicuri</p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600">Totale da pagare:</span>
-                      <span className="text-2xl font-bold text-gray-900">€{checkoutData.total.toLocaleString()}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">{checkoutData.destination} • {checkoutData.dates}</p>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="card-number">Numero Carta</Label>
-                      <Input
-                        id="card-number"
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        maxLength={19}
-                        required
-                        className="mt-1"
-                        data-testid="input-card-number"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="card-name">Nome sulla Carta</Label>
-                      <Input
-                        id="card-name"
-                        type="text"
-                        placeholder="Mario Rossi"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        required
-                        className="mt-1"
-                        data-testid="input-card-name"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="card-expiry">Scadenza</Label>
-                        <Input
-                          id="card-expiry"
-                          type="text"
-                          placeholder="MM/AA"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          maxLength={5}
-                          required
-                          className="mt-1"
-                          data-testid="input-card-expiry"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="card-cvv">CVV</Label>
-                        <Input
-                          id="card-cvv"
-                          type="text"
-                          placeholder="123"
-                          value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value)}
-                          maxLength={3}
-                          required
-                          className="mt-1"
-                          data-testid="input-card-cvv"
-                        />
+                <form onSubmit={handleSubmitPayment} className="space-y-5 pt-4">
+                  <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-5 border border-red-500/30">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm text-gray-400">Totale da pagare</span>
+                      <div className="flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-green-500" />
+                        <span className="text-xs text-green-500 font-medium">Sicuro</span>
                       </div>
                     </div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
+                      €{checkoutData.total.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">{checkoutData.destination} • {checkoutData.dates}</p>
                   </div>
 
-                  <div className="flex gap-3 pt-4">
+                  <div>
+                    <Label className="text-gray-300 mb-3 block">Seleziona Metodo di Pagamento</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('card')}
+                        className={`p-4 rounded-xl border-2 transition-all ${
+                          paymentMethod === 'card'
+                            ? 'border-red-500 bg-gradient-to-br from-red-500/20 to-red-600/10 shadow-lg shadow-red-500/20'
+                            : 'border-gray-600 bg-gray-800/50 hover:border-red-400'
+                        }`}
+                        data-testid="button-method-card"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex gap-1">
+                            <div className="w-8 h-6 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-[8px] font-bold text-white">VISA</div>
+                            <div className="w-8 h-6 bg-gradient-to-br from-red-600 to-orange-600 rounded flex items-center justify-center">
+                              <div className="flex gap-[1px]">
+                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                <div className="w-2 h-2 bg-orange-400 rounded-full -ml-1"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-xs text-white font-medium">Carta</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('paypal')}
+                        className={`p-4 rounded-xl border-2 transition-all ${
+                          paymentMethod === 'paypal'
+                            ? 'border-red-500 bg-gradient-to-br from-red-500/20 to-red-600/10 shadow-lg shadow-red-500/20'
+                            : 'border-gray-600 bg-gray-800/50 hover:border-red-400'
+                        }`}
+                        data-testid="button-method-paypal"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-16 h-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded flex items-center justify-center">
+                            <span className="text-white font-bold text-[10px] italic">PayPal</span>
+                          </div>
+                          <span className="text-xs text-white font-medium">PayPal</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('applepay')}
+                        className={`p-4 rounded-xl border-2 transition-all ${
+                          paymentMethod === 'applepay'
+                            ? 'border-red-500 bg-gradient-to-br from-red-500/20 to-red-600/10 shadow-lg shadow-red-500/20'
+                            : 'border-gray-600 bg-gray-800/50 hover:border-red-400'
+                        }`}
+                        data-testid="button-method-applepay"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-16 h-6 bg-black rounded flex items-center justify-center gap-1">
+                            <span className="text-white text-xl">􀣺</span>
+                            <span className="text-white font-medium text-[10px]">Pay</span>
+                          </div>
+                          <span className="text-xs text-white font-medium">Apple Pay</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {paymentMethod === 'card' && (
+                    <div className="space-y-3 bg-gray-800/30 p-4 rounded-xl border border-gray-700">
+                      <div>
+                        <Label htmlFor="card-number" className="text-gray-300">Numero Carta</Label>
+                        <Input
+                          id="card-number"
+                          type="text"
+                          placeholder="1234 5678 9012 3456"
+                          value={cardNumber}
+                          onChange={(e) => setCardNumber(e.target.value)}
+                          maxLength={19}
+                          required
+                          className="mt-1 bg-gray-900 border-gray-600 text-white placeholder:text-gray-500"
+                          data-testid="input-card-number"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="card-name" className="text-gray-300">Nome sulla Carta</Label>
+                        <Input
+                          id="card-name"
+                          type="text"
+                          placeholder="Mario Rossi"
+                          value={cardName}
+                          onChange={(e) => setCardName(e.target.value)}
+                          required
+                          className="mt-1 bg-gray-900 border-gray-600 text-white placeholder:text-gray-500"
+                          data-testid="input-card-name"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="card-expiry" className="text-gray-300">Scadenza</Label>
+                          <Input
+                            id="card-expiry"
+                            type="text"
+                            placeholder="MM/AA"
+                            value={cardExpiry}
+                            onChange={(e) => setCardExpiry(e.target.value)}
+                            maxLength={5}
+                            required
+                            className="mt-1 bg-gray-900 border-gray-600 text-white placeholder:text-gray-500"
+                            data-testid="input-card-expiry"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="card-cvv" className="text-gray-300">CVV</Label>
+                          <Input
+                            id="card-cvv"
+                            type="text"
+                            placeholder="123"
+                            value={cardCvv}
+                            onChange={(e) => setCardCvv(e.target.value)}
+                            maxLength={3}
+                            required
+                            className="mt-1 bg-gray-900 border-gray-600 text-white placeholder:text-gray-500"
+                            data-testid="input-card-cvv"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'paypal' && (
+                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/30 rounded-xl p-6 text-center">
+                      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-2xl italic">P</span>
+                      </div>
+                      <p className="text-white font-semibold mb-2">Continua con PayPal</p>
+                      <p className="text-sm text-gray-400">Verrai reindirizzato al sito PayPal per completare il pagamento in modo sicuro</p>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'applepay' && (
+                    <div className="bg-gradient-to-br from-gray-700/50 to-gray-800/50 border border-gray-600 rounded-xl p-6 text-center">
+                      <div className="w-20 h-20 mx-auto mb-4 bg-black rounded-full flex items-center justify-center">
+                        <span className="text-white text-5xl">􀣺</span>
+                      </div>
+                      <p className="text-white font-semibold mb-2">Paga con Apple Pay</p>
+                      <p className="text-sm text-gray-400">Usa Touch ID o Face ID per un pagamento rapido e sicuro</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1"
+                      className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
                       onClick={handleClosePurchaseDialog}
                       data-testid="button-cancel-payment"
                     >
@@ -433,7 +523,7 @@ export default function Checkout() {
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-500/30"
                       data-testid="button-submit-payment"
                     >
                       <Lock className="w-4 h-4 mr-2" />
@@ -441,9 +531,10 @@ export default function Checkout() {
                     </Button>
                   </div>
 
-                  <p className="text-xs text-gray-500 text-center pt-2">
-                    Cliccando su "Paga", accetti i termini e le condizioni di PayPal
-                  </p>
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    <Lock className="w-3 h-3 text-green-500" />
+                    <p className="text-xs text-gray-400">Pagamento protetto con crittografia SSL 256-bit</p>
+                  </div>
                 </form>
               ) : (
                 <div className="space-y-4 pt-4">
