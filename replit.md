@@ -4,6 +4,11 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-10**: Created SplittaBride component with pink theme for bachelorette parties
+- **2025-11-10**: Updated all references from "Bro" to "Bride" in ByeBride section
+- **2025-11-10**: Changed SplittaBro colors to pink-600 for SplittaBride (addio al nubilato context)
+- **2025-11-10**: Updated Header to show conditional SplittaBro/SplittaBride link based on brand
+- **2025-11-10**: Added routing for /splitta-bride page with brand-specific component
 - **2025-11-08**: Redesigned Itinerary and Checkout pages with modern UI (gradients, glassmorphism, animations)
 - **2025-11-08**: Aligned booking flow UI to match landing page aesthetic (dark gradients, backdrop-blur, red accents)
 - **2025-11-08**: Enhanced cards with glassmorphism effects, gradient icons, and hover animations
