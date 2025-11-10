@@ -332,7 +332,7 @@ export function SplittaBride() {
             onClick={() => navigate('/')}
             className="font-poppins font-bold text-2xl transform transition-transform hover:scale-105 cursor-pointer"
           >
-            <span className="text-white">Bye</span><span className="text-pink-600">Bro</span>
+            <span className="text-white">Bye</span><span className="text-pink-600">Bride</span>
           </button>
           <div className="text-center flex-1">
             <h1 className="text-4xl font-bold text-pink-600 mb-2">SplittaBride</h1>
