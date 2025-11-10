@@ -183,7 +183,7 @@ export default function Itinerary() {
       className={`transition-all duration-300 backdrop-blur-sm border-2 transform hover:scale-[1.02] ${
         isSelected 
           ? 'border-red-500 bg-gradient-to-br from-red-500/20 to-red-600/10 shadow-lg shadow-red-500/20' 
-          : 'border-white/20 bg-white/10 hover:border-white/30 hover:shadow-xl'
+          : 'border-gray-600 bg-gradient-to-br from-gray-800/90 to-gray-900/90 hover:border-red-400 hover:shadow-xl'
       } ${isRequired ? 'opacity-100' : ''}`}
       data-testid={`card-${item.type}-${item.id}`}
     >
@@ -193,13 +193,13 @@ export default function Itinerary() {
             <div className={`p-3 rounded-xl transition-all ${
               isSelected 
                 ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg' 
-                : 'bg-white/20 text-red-400'
+                : 'bg-gradient-to-br from-gray-700 to-gray-800 text-red-400'
             }`}>
               {getIcon(item.type)}
             </div>
             <div className="flex-1">
-              <CardTitle className="text-lg text-white">{item.name}</CardTitle>
-              <p className="text-sm text-white/70 mt-1">{item.description}</p>
+              <CardTitle className="text-lg text-white font-bold">{item.name}</CardTitle>
+              <p className="text-sm text-gray-300 mt-1">{item.description}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -207,7 +207,7 @@ export default function Itinerary() {
               <p className={`text-2xl font-bold ${isSelected ? 'text-red-400' : 'text-white'}`}>
                 €{item.price}
               </p>
-              <p className="text-xs text-white/60">a persona</p>
+              <p className="text-xs text-gray-400">a persona</p>
             </div>
             <Switch
               checked={isSelected}
@@ -222,7 +222,7 @@ export default function Itinerary() {
       <CardContent>
         <ul className="space-y-1">
           {item.details?.map((detail, idx) => (
-            <li key={idx} className="text-sm text-white/80 flex items-start gap-2">
+            <li key={idx} className="text-sm text-gray-200 flex items-start gap-2">
               <span className="text-red-400 mt-0.5">•</span>
               <span>{detail}</span>
             </li>
