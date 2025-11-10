@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Plane, Hotel, Car, Music, Calendar, Users, MapPin, CheckCircle, CreditCard } from 'lucide-react';
+import { Plane, Hotel, Car, Music, Calendar, Users, MapPin, CheckCircle, CreditCard, Lock } from 'lucide-react';
 import Header from '@/components/Header';
 
 interface CheckoutData {
@@ -25,8 +27,13 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
 
   useEffect(() => {
     const data = localStorage.getItem('checkoutItems');
@@ -49,6 +56,12 @@ export default function Checkout() {
 
   const handlePurchase = () => {
     setShowPurchaseDialog(true);
+    setShowPaymentForm(true);
+  };
+
+  const handleSubmitPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowPaymentForm(false);
     setIsPurchasing(true);
     
     setTimeout(() => {
@@ -61,6 +74,11 @@ export default function Checkout() {
     setShowPurchaseDialog(false);
     setPurchaseComplete(false);
     setIsPurchasing(false);
+    setShowPaymentForm(false);
+    setCardNumber('');
+    setCardName('');
+    setCardExpiry('');
+    setCardCvv('');
     
     if (purchaseComplete) {
       localStorage.removeItem('checkoutItems');
@@ -113,7 +131,7 @@ export default function Checkout() {
 
         <div className="space-y-6">
           {groupedItems.flights.length > 0 && (
-            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
+            <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-gray-600 shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-white text-xl">
                   <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
@@ -140,7 +158,7 @@ export default function Checkout() {
           )}
 
           {groupedItems.hotels.length > 0 && (
-            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
+            <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-gray-600 shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-white text-xl">
                   <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
@@ -167,7 +185,7 @@ export default function Checkout() {
           )}
 
           {groupedItems.cars.length > 0 && (
-            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
+            <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-gray-600 shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-white text-xl">
                   <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
@@ -194,7 +212,7 @@ export default function Checkout() {
           )}
 
           {groupedItems.activities.length > 0 && (
-            <Card className="bg-white/10 backdrop-blur-sm border-2 border-white/20 shadow-xl">
+            <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-gray-600 shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-3 text-white text-xl">
                   <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
@@ -220,7 +238,7 @@ export default function Checkout() {
             </Card>
           )}
 
-          <Card className="bg-gradient-to-br from-red-500/20 to-red-600/10 backdrop-blur-sm border-2 border-red-500/50 shadow-2xl">
+          <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-red-500 shadow-2xl shadow-red-500/20">
             <CardContent className="pt-6">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-xl font-semibold text-white">Totale</span>
@@ -228,7 +246,7 @@ export default function Checkout() {
                   €{checkoutData.total.toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-sm text-white/70">
+              <div className="flex justify-between items-center text-sm text-gray-300">
                 <span>Prezzo per persona</span>
                 <span className="font-semibold text-white">
                   €{Math.round(checkoutData.total / checkoutData.people)}
@@ -261,13 +279,18 @@ export default function Checkout() {
       </div>
 
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {purchaseComplete ? (
                 <>
                   <CheckCircle className="w-6 h-6 text-green-600" />
                   Acquisto Completato!
+                </>
+              ) : showPaymentForm ? (
+                <>
+                  <Lock className="w-6 h-6 text-blue-600" />
+                  Pagamento Sicuro
                 </>
               ) : (
                 <>
@@ -318,20 +341,124 @@ export default function Checkout() {
                     Torna alla Home
                   </Button>
                 </div>
+              ) : showPaymentForm ? (
+                <form onSubmit={handleSubmitPayment} className="space-y-4 pt-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lock className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-semibold text-blue-800">Pagamento protetto da PayPal</p>
+                    </div>
+                    <p className="text-xs text-blue-700">I tuoi dati sono crittografati e sicuri</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">Totale da pagare:</span>
+                      <span className="text-2xl font-bold text-gray-900">€{checkoutData.total.toLocaleString()}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">{checkoutData.destination} • {checkoutData.dates}</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="card-number">Numero Carta</Label>
+                      <Input
+                        id="card-number"
+                        type="text"
+                        placeholder="1234 5678 9012 3456"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                        maxLength={19}
+                        required
+                        className="mt-1"
+                        data-testid="input-card-number"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="card-name">Nome sulla Carta</Label>
+                      <Input
+                        id="card-name"
+                        type="text"
+                        placeholder="Mario Rossi"
+                        value={cardName}
+                        onChange={(e) => setCardName(e.target.value)}
+                        required
+                        className="mt-1"
+                        data-testid="input-card-name"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="card-expiry">Scadenza</Label>
+                        <Input
+                          id="card-expiry"
+                          type="text"
+                          placeholder="MM/AA"
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(e.target.value)}
+                          maxLength={5}
+                          required
+                          className="mt-1"
+                          data-testid="input-card-expiry"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="card-cvv">CVV</Label>
+                        <Input
+                          id="card-cvv"
+                          type="text"
+                          placeholder="123"
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value)}
+                          maxLength={3}
+                          required
+                          className="mt-1"
+                          data-testid="input-card-cvv"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleClosePurchaseDialog}
+                      data-testid="button-cancel-payment"
+                    >
+                      Annulla
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="button-submit-payment"
+                    >
+                      <Lock className="w-4 h-4 mr-2" />
+                      Paga €{checkoutData.total.toLocaleString()}
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 text-center pt-2">
+                    Cliccando su "Paga", accetti i termini e le condizioni di PayPal
+                  </p>
+                </form>
               ) : (
                 <div className="space-y-4 pt-4">
                   <div className="flex flex-col items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mb-4"></div>
                     <p className="text-gray-600">Stiamo processando il tuo pagamento...</p>
-                    <p className="text-sm text-gray-500 mt-2">Connessione con partner di pagamento sicuro</p>
+                    <p className="text-sm text-gray-500 mt-2">Connessione con PayPal sicuro</p>
                   </div>
                   
                   <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-                    <p className="font-semibold mb-2">Pagamento tramite partner:</p>
+                    <p className="font-semibold mb-2">Pagamento tramite PayPal:</p>
                     <ul className="space-y-1 ml-4 list-disc">
                       <li>Connessione sicura SSL</li>
                       <li>Dati protetti PCI-DSS</li>
-                      <li>Garanzia rimborso</li>
+                      <li>Garanzia rimborso PayPal</li>
                     </ul>
                   </div>
                 </div>
