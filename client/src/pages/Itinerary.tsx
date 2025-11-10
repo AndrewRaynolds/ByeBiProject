@@ -180,10 +180,10 @@ export default function Itinerary() {
   const renderItemCard = (item: BookingItem, isSelected: boolean, isRequired = false) => (
     <Card 
       key={item.id} 
-      className={`transition-all duration-300 backdrop-blur-sm border-2 transform hover:scale-[1.02] ${
+      className={`transition-all duration-300 backdrop-blur-sm border-2 transform hover:scale-[1.02] bg-gradient-to-br from-gray-800/90 to-gray-900/90 ${
         isSelected 
-          ? 'border-red-500 bg-gradient-to-br from-red-500/20 to-red-600/10 shadow-lg shadow-red-500/20' 
-          : 'border-gray-600 bg-gradient-to-br from-gray-800/90 to-gray-900/90 hover:border-red-400 hover:shadow-xl'
+          ? 'border-red-500 shadow-lg shadow-red-500/20' 
+          : 'border-gray-600 hover:border-red-400 hover:shadow-xl'
       } ${isRequired ? 'opacity-100' : ''}`}
       data-testid={`card-${item.type}-${item.id}`}
     >
