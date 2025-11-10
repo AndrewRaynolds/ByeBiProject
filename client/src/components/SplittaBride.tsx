@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Users, Receipt, DollarSign, User, Trash2, Edit, Calculator, ArrowRight } from 'lucide-react';
+import { Plus, Users, Receipt, DollarSign, User, Trash2, Edit, Calculator, ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -97,12 +97,10 @@ export function SplittaBride() {
     },
   });
 
-  // Carica i gruppi all'avvio
   useEffect(() => {
     loadGroups();
   }, []);
 
-  // Carica le spese quando viene selezionato un gruppo
   useEffect(() => {
     if (selectedGroup) {
       loadExpenses(selectedGroup.id);
@@ -195,7 +193,6 @@ export function SplittaBride() {
     if (!selectedGroup) return;
 
     try {
-      // Se è selezionato "dividi equamente", includi tutti i membri del gruppo
       const splitBetween = data.splitEqually ? selectedGroup.members : data.splitBetween;
       
       const response = await fetch('/api/expenses', {
@@ -206,7 +203,7 @@ export function SplittaBride() {
         body: JSON.stringify({
           groupId: selectedGroup.id,
           description: data.description,
-          amount: Math.round(data.amount * 100), // Convert to cents
+          amount: Math.round(data.amount * 100),
           paidBy: data.paidBy,
           splitBetween: splitBetween,
           category: data.category,
@@ -228,7 +225,6 @@ export function SplittaBride() {
           splitEqually: false,
         });
         
-        // Aggiorna il totale del gruppo (convert from cents to euros)
         const groupTotal = [...expenses, newExpense].reduce((sum, exp) => sum + exp.amount, 0) / 100;
         setGroups(prev => prev.map(g => 
           g.id === selectedGroup.id ? { ...g, totalAmount: groupTotal } : g
@@ -258,25 +254,18 @@ export function SplittaBride() {
 
     const balances: { [member: string]: number } = {};
     
-    // Inizializza i saldi a zero
     group.members.forEach(member => {
       balances[member] = 0;
     });
 
-    // Calcola i saldi per ogni spesa (amounts are in cents)
     expenses.forEach(expense => {
       const amountPerPerson = expense.amount / expense.splitBetween.length;
-      
-      // Chi ha pagato riceve credito
       balances[expense.paidBy] += expense.amount;
-      
-      // Chi deve dividere la spesa ha debito
       expense.splitBetween.forEach(member => {
         balances[member] -= amountPerPerson;
       });
     });
 
-    // Calcola i regolamenti
     const settlements: Settlement[] = [];
     const creditors = Object.entries(balances).filter(([_, amount]) => amount > 0);
     const debtors = Object.entries(balances).filter(([_, amount]) => amount < 0);
@@ -314,48 +303,63 @@ export function SplittaBride() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-pink-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-white">Caricamento SplittaBride...</p>
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-pink-600/30"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-pink-600 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-white text-lg">Caricamento SplittaBride...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
           <button
             onClick={() => navigate('/')}
-            className="font-poppins font-bold text-2xl transform transition-transform hover:scale-105 cursor-pointer"
+            className="font-poppins font-bold text-xl md:text-2xl transform transition-transform hover:scale-105 cursor-pointer"
+            data-testid="button-home"
           >
             <span className="text-white">Bye</span><span className="text-pink-600">Bride</span>
           </button>
           <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold text-pink-600 mb-2">SplittaBride</h1>
-            <p className="text-gray-300">Dividi le spese del tuo addio al nubilato</p>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Sparkles className="w-8 h-8 text-pink-500" />
+              <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-pink-500 via-pink-600 to-pink-500 bg-clip-text text-transparent">
+                SplittaBride
+              </h1>
+              <Sparkles className="w-8 h-8 text-pink-500" />
+            </div>
+            <p className="text-gray-400 text-sm md:text-base">Dividi le spese del tuo addio al nubilato</p>
           </div>
-          <div className="w-16"></div> {/* Spacer for balance */}
+          <div className="w-20 hidden md:block"></div>
         </div>
 
         {!selectedGroup ? (
           /* Vista Gruppi */
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">I tuoi gruppi</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                I tuoi gruppi
+              </h2>
               <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
                 <DialogTrigger asChild>
-                  <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+                  <Button 
+                    className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white shadow-lg shadow-pink-500/30 w-full sm:w-auto"
+                    data-testid="button-create-group"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Nuovo Gruppo
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-gray-900 border-gray-800 text-white">
+                <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-pink-500/20 text-white max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="text-white">Crea Nuovo Gruppo</DialogTitle>
+                    <DialogTitle className="text-white text-xl">Crea Nuovo Gruppo</DialogTitle>
                     <DialogDescription className="text-gray-400">
                       Crea un nuovo gruppo per dividere le spese del tuo addio al nubilato
                     </DialogDescription>
@@ -366,11 +370,12 @@ export function SplittaBride() {
                       <Input
                         id="name"
                         {...groupForm.register('name')}
-                        placeholder="es. Addio al Nubilato Marco"
-                        className="bg-gray-800 border-gray-700 text-white"
+                        placeholder="es. Addio al Nubilato Sara"
+                        className="bg-gray-800/50 border-gray-700 text-white mt-1"
+                        data-testid="input-group-name"
                       />
                       {groupForm.formState.errors.name && (
-                        <p className="text-pink-500 text-sm mt-1">
+                        <p className="text-pink-400 text-sm mt-1">
                           {groupForm.formState.errors.name.message}
                         </p>
                       )}
@@ -382,7 +387,8 @@ export function SplittaBride() {
                         id="description"
                         {...groupForm.register('description')}
                         placeholder="Descrizione del gruppo..."
-                        className="bg-gray-800 border-gray-700 text-white"
+                        className="bg-gray-800/50 border-gray-700 text-white mt-1"
+                        data-testid="input-group-description"
                       />
                     </div>
                     
@@ -394,40 +400,49 @@ export function SplittaBride() {
                             value={newMemberName}
                             onChange={(e) => setNewMemberName(e.target.value)}
                             placeholder="Nome del membro"
-                            className="bg-gray-800 border-gray-700 text-white flex-1"
+                            className="bg-gray-800/50 border-gray-700 text-white flex-1"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
                                 addMember();
                               }
                             }}
+                            data-testid="input-member-name"
                           />
                           <Button
                             type="button"
                             onClick={addMember}
                             className="bg-pink-600 hover:bg-pink-700"
+                            data-testid="button-add-member"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
                         </div>
-                        <div className="max-h-32 overflow-y-auto space-y-1">
-                          {groupForm.watch('members')?.map((member, index) => (
-                            <div key={index} className="flex items-center justify-between bg-gray-800 px-3 py-2 rounded border border-gray-700">
-                              <span className="text-white text-sm">{member}</span>
-                              <Button
-                                type="button"
-                                onClick={() => removeMember(member)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-pink-400 hover:text-pink-600 hover:bg-pink-900/20"
+                        <ScrollArea className="max-h-32">
+                          <div className="space-y-1">
+                            {groupForm.watch('members')?.map((member, index) => (
+                              <div 
+                                key={index} 
+                                className="flex items-center justify-between bg-gradient-to-r from-pink-500/10 to-pink-600/10 px-3 py-2 rounded-lg border border-pink-500/30"
+                                data-testid={`member-${index}`}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
+                                <span className="text-white text-sm font-medium">{member}</span>
+                                <Button
+                                  type="button"
+                                  onClick={() => removeMember(member)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-pink-400 hover:text-pink-300 hover:bg-pink-900/20 h-8 w-8 p-0"
+                                  data-testid={`button-remove-member-${index}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
                         {groupForm.formState.errors.members && (
-                          <p className="text-pink-500 text-sm">
+                          <p className="text-pink-400 text-sm">
                             {groupForm.formState.errors.members.message}
                           </p>
                         )}
@@ -435,7 +450,11 @@ export function SplittaBride() {
                     </div>
                     
                     <DialogFooter>
-                      <Button type="submit" className="bg-pink-600 hover:bg-pink-700">
+                      <Button 
+                        type="submit" 
+                        className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 w-full"
+                        data-testid="button-submit-group"
+                      >
                         Crea Gruppo
                       </Button>
                     </DialogFooter>
@@ -445,14 +464,17 @@ export function SplittaBride() {
             </div>
 
             {groups.length === 0 ? (
-              <Card className="bg-gray-900 border-gray-800">
-                <CardContent className="text-center py-12">
-                  <Users className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">Nessun gruppo ancora</h3>
-                  <p className="text-gray-400 mb-4">Crea il tuo primo gruppo per iniziare a dividere le spese!</p>
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-pink-500/20 backdrop-blur-sm">
+                <CardContent className="text-center py-16">
+                  <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-10 w-10 text-pink-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Nessun gruppo ancora</h3>
+                  <p className="text-gray-400 mb-6 max-w-md mx-auto">Crea il tuo primo gruppo per iniziare a dividere le spese del tuo addio al nubilato!</p>
                   <Button
                     onClick={() => setShowCreateGroup(true)}
-                    className="bg-pink-600 hover:bg-pink-700"
+                    className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 shadow-lg shadow-pink-500/30"
+                    data-testid="button-create-first-group"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Crea il primo gruppo
@@ -460,39 +482,42 @@ export function SplittaBride() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {groups.map((group) => (
                   <Card
                     key={group.id}
-                    className="bg-gray-900 border-gray-800 hover:border-pink-600 cursor-pointer transition-colors"
+                    className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-gray-700 hover:border-pink-500 cursor-pointer transition-all hover:shadow-xl hover:shadow-pink-500/20 backdrop-blur-sm group"
                     onClick={() => setSelectedGroup(group)}
+                    data-testid={`group-card-${group.id}`}
                   >
                     <CardHeader>
                       <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-white">{group.name}</CardTitle>
+                        <div className="flex-1">
+                          <CardTitle className="text-white text-lg mb-1 group-hover:text-pink-400 transition-colors">
+                            {group.name}
+                          </CardTitle>
                           {group.description && (
-                            <p className="text-gray-400 text-sm mt-1">{group.description}</p>
+                            <p className="text-gray-400 text-sm">{group.description}</p>
                           )}
                         </div>
-                        <Badge variant="outline" className="text-pink-600 border-pink-600">
-                          €{group.totalAmount.toFixed(2)}
-                        </Badge>
+                        <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 px-3 py-1 rounded-lg border border-pink-500/30">
+                          <p className="text-pink-400 font-bold text-sm">€{group.totalAmount.toFixed(2)}</p>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center text-gray-400 text-sm">
-                        <Users className="h-4 w-4 mr-2" />
+                      <div className="flex items-center text-gray-400 text-sm mb-3">
+                        <Users className="h-4 w-4 mr-2 text-pink-400" />
                         {group.members.length} membri
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {group.members.slice(0, 3).map((member) => (
-                          <Badge key={member} variant="secondary" className="text-xs bg-gray-800 text-gray-300">
+                          <Badge key={member} variant="secondary" className="text-xs bg-gradient-to-r from-gray-800 to-gray-700 text-gray-300 border border-gray-600">
                             {member}
                           </Badge>
                         ))}
                         {group.members.length > 3 && (
-                          <Badge variant="secondary" className="text-xs bg-gray-800 text-gray-300">
+                          <Badge variant="secondary" className="text-xs bg-gradient-to-r from-pink-900/30 to-pink-800/30 text-pink-400 border border-pink-500/30">
                             +{group.members.length - 3}
                           </Badge>
                         )}
@@ -506,30 +531,39 @@ export function SplittaBride() {
         ) : (
           /* Vista Dettaglio Gruppo */
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
                 <Button
                   onClick={() => setSelectedGroup(null)}
                   variant="outline"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="border-gray-700 text-white hover:bg-pink-900/20 hover:border-pink-500 w-full sm:w-auto"
+                  data-testid="button-back-to-groups"
                 >
                   ← Torna ai gruppi
                 </Button>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{selectedGroup.name}</h2>
-                  <p className="text-gray-400">Totale: €{selectedGroup.totalAmount.toFixed(2)}</p>
+                  <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    {selectedGroup.name}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <TrendingUp className="w-4 h-4 text-pink-400" />
+                    <p className="text-gray-400">Totale: <span className="text-pink-400 font-bold">€{selectedGroup.totalAmount.toFixed(2)}</span></p>
+                  </div>
                 </div>
               </div>
               <Dialog open={showCreateExpense} onOpenChange={setShowCreateExpense}>
                 <DialogTrigger asChild>
-                  <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+                  <Button 
+                    className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white shadow-lg shadow-pink-500/30 w-full md:w-auto"
+                    data-testid="button-add-expense"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Aggiungi Spesa
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-gray-900 border-gray-800 text-white">
+                <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-pink-500/20 text-white max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-white">Aggiungi Nuova Spesa</DialogTitle>
+                    <DialogTitle className="text-white text-xl">Aggiungi Nuova Spesa</DialogTitle>
                     <DialogDescription className="text-gray-400">
                       Registra una nuova spesa per il gruppo e seleziona chi deve partecipare alla divisione
                     </DialogDescription>
@@ -540,8 +574,9 @@ export function SplittaBride() {
                       <Input
                         id="description"
                         {...expenseForm.register('description')}
-                        placeholder="es. Cena al ristorante"
-                        className="bg-gray-800 border-gray-700 text-white"
+                        placeholder="es. Spa e massaggio"
+                        className="bg-gray-800/50 border-gray-700 text-white mt-1"
+                        data-testid="input-expense-description"
                       />
                     </div>
                     
@@ -553,14 +588,15 @@ export function SplittaBride() {
                         step="0.01"
                         {...expenseForm.register('amount', { valueAsNumber: true })}
                         placeholder="0.00"
-                        className="bg-gray-800 border-gray-700 text-white"
+                        className="bg-gray-800/50 border-gray-700 text-white mt-1"
+                        data-testid="input-expense-amount"
                       />
                     </div>
                     
                     <div>
                       <Label htmlFor="paidBy" className="text-white">Chi ha pagato</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('paidBy', value)}>
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                        <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white mt-1" data-testid="select-paid-by">
                           <SelectValue placeholder="Seleziona chi ha pagato" className="text-white" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
@@ -576,7 +612,7 @@ export function SplittaBride() {
                     <div>
                       <Label className="text-white">Dividi tra</Label>
                       <div className="space-y-2 mt-2">
-                        <label className="flex items-center space-x-2 text-white">
+                        <label className="flex items-center space-x-2 text-white p-2 rounded-lg bg-pink-500/10 border border-pink-500/30 cursor-pointer hover:bg-pink-500/20 transition-colors">
                           <input
                             type="checkbox"
                             {...expenseForm.register('splitEqually')}
@@ -588,12 +624,16 @@ export function SplittaBride() {
                               }
                             }}
                             className="rounded border-gray-600"
+                            data-testid="checkbox-split-equally"
                           />
-                          <span className="text-sm font-medium">Dividi equamente tra tutti</span>
+                          <span className="text-sm font-medium">Dividi equamente tra tutte</span>
                         </label>
                         <div className="grid grid-cols-2 gap-2">
-                          {selectedGroup.members.map((member) => (
-                            <label key={member} className="flex items-center space-x-2 text-white">
+                          {selectedGroup.members.map((member, idx) => (
+                            <label 
+                              key={member} 
+                              className="flex items-center space-x-2 text-white p-2 rounded-lg bg-gray-800/50 border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors"
+                            >
                               <input
                                 type="checkbox"
                                 checked={expenseForm.watch('splitBetween')?.includes(member) || false}
@@ -607,6 +647,7 @@ export function SplittaBride() {
                                   }
                                 }}
                                 className="rounded border-gray-600"
+                                data-testid={`checkbox-split-member-${idx}`}
                               />
                               <span className="text-sm">{member}</span>
                             </label>
@@ -617,8 +658,8 @@ export function SplittaBride() {
                     
                     <div>
                       <Label htmlFor="category" className="text-white">Categoria</Label>
-                      <Select onValueChange={(value) => expenseForm.setValue('category', value)}>
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <Select onValueChange={(value) => expenseForm.setValue('category', value)} defaultValue="food">
+                        <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white mt-1" data-testid="select-category">
                           <SelectValue placeholder="Seleziona categoria" className="text-white" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
@@ -638,12 +679,17 @@ export function SplittaBride() {
                         id="date"
                         type="date"
                         {...expenseForm.register('date')}
-                        className="bg-gray-800 border-gray-700 text-white"
+                        className="bg-gray-800/50 border-gray-700 text-white mt-1"
+                        data-testid="input-expense-date"
                       />
                     </div>
                     
                     <DialogFooter>
-                      <Button type="submit" className="bg-pink-600 hover:bg-pink-700">
+                      <Button 
+                        type="submit" 
+                        className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 w-full"
+                        data-testid="button-submit-expense"
+                      >
                         Aggiungi Spesa
                       </Button>
                     </DialogFooter>
@@ -655,50 +701,63 @@ export function SplittaBride() {
             <div className="grid lg:grid-cols-3 gap-6">
               {/* Lista Spese */}
               <div className="lg:col-span-2">
-                <Card className="bg-gray-900 border-gray-800">
+                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-gray-700 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center">
-                      <Receipt className="h-5 w-5 mr-2" />
+                    <CardTitle className="text-white flex items-center text-lg md:text-xl">
+                      <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-2 rounded-lg mr-3">
+                        <Receipt className="h-5 w-5 text-pink-400" />
+                      </div>
                       Spese ({expenses.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {expenses.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Receipt className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+                      <div className="text-center py-12">
+                        <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Receipt className="h-8 w-8 text-pink-400" />
+                        </div>
                         <p className="text-gray-400">Nessuna spesa ancora registrata</p>
                       </div>
                     ) : (
-                      <ScrollArea className="h-[400px]">
+                      <ScrollArea className="h-[500px] pr-4">
                         <div className="space-y-3">
-                          {expenses.map((expense) => (
+                          {expenses.map((expense, idx) => (
                             <div
                               key={expense.id}
-                              className="p-4 bg-gray-800 rounded-lg border border-gray-700"
+                              className="p-4 bg-gradient-to-r from-gray-800/50 to-gray-700/30 rounded-xl border border-gray-700 hover:border-pink-500/50 transition-all group"
+                              data-testid={`expense-${idx}`}
                             >
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-lg">
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-start space-x-3 flex-1">
+                                  <span className="text-2xl">
                                     {getCategoryIcon(expense.category)}
                                   </span>
-                                  <div>
-                                    <h4 className="font-semibold text-white">{expense.description}</h4>
-                                    <p className="text-sm text-gray-400">
-                                      Pagato da {expense.paidBy}
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-white group-hover:text-pink-400 transition-colors">
+                                      {expense.description}
+                                    </h4>
+                                    <p className="text-sm text-gray-400 mt-1">
+                                      Pagato da <span className="text-pink-400 font-medium">{expense.paidBy}</span>
                                     </p>
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <p className="font-bold text-pink-600">€{(expense.amount / 100).toFixed(2)}</p>
-                                  <p className="text-xs text-gray-400">
-                                    {new Date(expense.date).toLocaleDateString()}
+                                <div className="text-right ml-4">
+                                  <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 px-3 py-1 rounded-lg border border-pink-500/30">
+                                    <p className="font-bold text-pink-400">€{(expense.amount / 100).toFixed(2)}</p>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {new Date(expense.date).toLocaleDateString('it-IT')}
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex flex-wrap gap-1">
-                                <span className="text-xs text-gray-400">Diviso tra:</span>
+                              <div className="flex flex-wrap gap-1.5 items-center">
+                                <span className="text-xs text-gray-500">Diviso tra:</span>
                                 {expense.splitBetween.map((member) => (
-                                  <Badge key={member} variant="secondary" className="text-xs bg-gray-700 text-gray-300">
+                                  <Badge 
+                                    key={member} 
+                                    variant="secondary" 
+                                    className="text-xs bg-gradient-to-r from-gray-700 to-gray-600 text-gray-300 border border-gray-600"
+                                  >
                                     {member}
                                   </Badge>
                                 ))}
@@ -712,12 +771,15 @@ export function SplittaBride() {
                 </Card>
               </div>
 
-              {/* Regolamenti */}
-              <div>
-                <Card className="bg-gray-900 border-gray-800">
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Regolamenti */}
+                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-gray-700 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center">
-                      <Calculator className="h-5 w-5 mr-2" />
+                    <CardTitle className="text-white flex items-center text-lg">
+                      <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-2 rounded-lg mr-3">
+                        <Calculator className="h-5 w-5 text-pink-400" />
+                      </div>
                       Regolamenti
                     </CardTitle>
                   </CardHeader>
@@ -726,26 +788,31 @@ export function SplittaBride() {
                       const settlements = calculateSettlements(selectedGroup, expenses);
                       return settlements.length === 0 ? (
                         <div className="text-center py-8">
-                          <DollarSign className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-                          <p className="text-gray-400">Tutti i conti sono in pari!</p>
+                          <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <DollarSign className="h-8 w-8 text-green-400" />
+                          </div>
+                          <p className="text-gray-400 font-medium">Tutti i conti sono in pari!</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
                           {settlements.map((settlement, index) => (
                             <div
                               key={index}
-                              className="p-3 bg-gray-800 rounded-lg border border-gray-700"
+                              className="p-3 bg-gradient-to-r from-pink-500/10 to-pink-600/5 rounded-lg border border-pink-500/30"
+                              data-testid={`settlement-${index}`}
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <User className="h-4 w-4 text-gray-400" />
-                                  <span className="text-white font-medium">{settlement.from}</span>
-                                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                                  <span className="text-white font-medium">{settlement.to}</span>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-white font-medium truncate">{settlement.from}</span>
+                                  <ArrowRight className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                                  <span className="text-white font-medium truncate">{settlement.to}</span>
                                 </div>
-                                <span className="font-bold text-pink-600">
-                                  €{(settlement.amount / 100).toFixed(2)}
-                                </span>
+                                <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 px-2 py-1 rounded border border-pink-500/30 flex-shrink-0">
+                                  <span className="font-bold text-pink-400 text-sm whitespace-nowrap">
+                                    €{(settlement.amount / 100).toFixed(2)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -756,24 +823,27 @@ export function SplittaBride() {
                 </Card>
 
                 {/* Membri del gruppo */}
-                <Card className="bg-gray-900 border-gray-800 mt-6">
+                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-gray-700 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center">
-                      <Users className="h-5 w-5 mr-2" />
-                      Membri
+                    <CardTitle className="text-white flex items-center text-lg">
+                      <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-2 rounded-lg mr-3">
+                        <Users className="h-5 w-5 text-pink-400" />
+                      </div>
+                      Membri ({selectedGroup.members.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {selectedGroup.members.map((member) => (
+                      {selectedGroup.members.map((member, idx) => (
                         <div
                           key={member}
-                          className="flex items-center justify-between p-2 bg-gray-800 rounded border border-gray-700"
+                          className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-800/50 to-gray-700/30 rounded-lg border border-gray-700 hover:border-pink-500/50 transition-all"
+                          data-testid={`group-member-${idx}`}
                         >
-                          <div className="flex items-center space-x-2">
-                            <User className="h-4 w-4 text-gray-400" />
-                            <span className="text-white">{member}</span>
+                          <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-2 rounded-full">
+                            <User className="h-4 w-4 text-pink-400" />
                           </div>
+                          <span className="text-white font-medium">{member}</span>
                         </div>
                       ))}
                     </div>
