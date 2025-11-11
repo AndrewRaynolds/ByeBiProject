@@ -4,6 +4,12 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-11**: Implemented complete expense group creation flow with loader, redirect, and error handling for both SplittaBro and SplittaBride
+- **2025-11-11**: Added loading animation during group creation ("Creazione in corso...") with spinner
+- **2025-11-11**: Implemented automatic redirect to group detail page after successful creation
+- **2025-11-11**: Enhanced error handling with clear user messages for connection/database issues
+- **2025-11-11**: Fixed critical bug where totalAmount undefined caused app crash in both Splitta components
+- **2025-11-11**: Updated destination images for Ibiza, Budapest, Cracovia, Amsterdam, Berlino, Palma de Mallorca with higher quality iconic photos
 - **2025-11-10**: Implemented brand-aware props across all shared components (HowItWorks, ExperienceTypes, FeaturedDestinations, SecretBlog, PremiumFeatures, Testimonials)
 - **2025-11-10**: All ByeBride sections now display "Bride" terminology: "How ByeBride Works", "The Ultimate BrideNight", "My Olympic Bride", "Chill and Feel the Bride", "The Wild Brideventure"
 - **2025-11-10**: ExperienceTypes dynamically remaps experience names for ByeBride using EXPERIENCE_NAME_MAP
