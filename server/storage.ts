@@ -377,7 +377,7 @@ export class MemStorage implements IStorage {
       {
         name: "Budapest",
         country: "Hungary",
-        image: "https://images.unsplash.com/photo-1560759645-1496f193659d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
+        image: "https://images.unsplash.com/photo-1468824357306-a439d58ccb1c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Terme, ruin bar e vita notturna incredibile nella Perla del Danubio.",
         tags: ["Terme", "Ruin Bars", "Vita notturna"],
         rating: "4.6",
@@ -386,7 +386,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cracovia",
         country: "Poland",
-        image: "https://images.unsplash.com/photo-1613426792655-7b9f21c40e9d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
+        image: "https://images.unsplash.com/photo-1598970434795-0c54fe7c0648?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Città storica con prezzi accessibili e vita notturna vivace nel cuore della Polonia.",
         tags: ["Storia", "Prezzi bassi", "Vita notturna"],
         rating: "4.5",
