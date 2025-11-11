@@ -501,7 +501,7 @@ export function SplittaBro() {
                           )}
                         </div>
                         <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 px-3 py-1 rounded-lg border border-red-500/30">
-                          <p className="text-red-400 font-bold text-sm">€{group.totalAmount.toFixed(2)}</p>
+                          <p className="text-red-400 font-bold text-sm">€{(group.totalAmount || 0).toFixed(2)}</p>
                         </div>
                       </div>
                     </CardHeader>
@@ -547,7 +547,7 @@ export function SplittaBro() {
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
                     <TrendingUp className="w-4 h-4 text-red-400" />
-                    <p className="text-gray-400">Totale: <span className="text-red-400 font-bold">€{selectedGroup.totalAmount.toFixed(2)}</span></p>
+                    <p className="text-gray-400">Totale: <span className="text-red-400 font-bold">€{(selectedGroup.totalAmount || 0).toFixed(2)}</span></p>
                   </div>
                 </div>
               </div>
