@@ -341,7 +341,7 @@ export class MemStorage implements IStorage {
       {
         name: "Roma",
         country: "Italy",
-        image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "La Città Eterna - storia, cultura e vita notturna indimenticabile nella capitale italiana.",
         tags: ["Storia", "Cultura", "Vita notturna"],
         rating: "4.8",
@@ -350,7 +350,7 @@ export class MemStorage implements IStorage {
       {
         name: "Ibiza",
         country: "Spain", 
-        image: "https://images.pexels.com/photos/3580532/pexels-photo-3580532.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.unsplash.com/photo-1564399579883-451a5d44ec08?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "L'isola del divertimento - club leggendari, spiagge da sogno e feste senza fine.",
         tags: ["Club", "Spiagge", "Festa"],
         rating: "4.9",
@@ -359,7 +359,7 @@ export class MemStorage implements IStorage {
       {
         name: "Barcellona", 
         country: "Spain",
-        image: "https://images.pexels.com/photos/819767/pexels-photo-819767.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Sole, mare, sangria e vita notturna spettacolare - la destinazione mediterranea perfetta.",
         tags: ["Spiagge", "Vita notturna", "Cultura"],
         rating: "4.9",
@@ -368,7 +368,7 @@ export class MemStorage implements IStorage {
       {
         name: "Praga",
         country: "Czech Republic",
-        image: "https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1541849546-216549ae216d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Fascino medievale e vita notturna leggendaria - perfetta per gli amanti della birra.",
         tags: ["Birra", "Vita notturna", "Cultura"],
         rating: "4.8",
@@ -377,7 +377,7 @@ export class MemStorage implements IStorage {
       {
         name: "Budapest",
         country: "Hungary",
-        image: "https://images.pexels.com/photos/764494/pexels-photo-764494.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.unsplash.com/photo-1541789994879-750a6394f2b7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Terme, ruin bar e vita notturna incredibile nella Perla del Danubio.",
         tags: ["Terme", "Ruin Bars", "Vita notturna"],
         rating: "4.6",
@@ -386,7 +386,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cracovia",
         country: "Poland",
-        image: "https://images.pexels.com/photos/32861252/pexels-photo-32861252.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.unsplash.com/photo-1578894381163-e72c17f2d45f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Città storica con prezzi accessibili e vita notturna vivace nel cuore della Polonia.",
         tags: ["Storia", "Prezzi bassi", "Vita notturna"],
         rating: "4.5",
@@ -395,7 +395,7 @@ export class MemStorage implements IStorage {
       {
         name: "Amsterdam",
         country: "Netherlands",
-        image: "https://images.pexels.com/photos/3884483/pexels-photo-3884483.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.unsplash.com/photo-1534351450181-ea9f78427fe8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "La Venezia del Nord - tour sui canali, vita notturna e addii al celibato indimenticabili.",
         tags: ["Canali", "Vita notturna", "Cultura"],
         rating: "4.7",
@@ -404,7 +404,7 @@ export class MemStorage implements IStorage {
       {
         name: "Berlino",
         country: "Germany",
-        image: "https://images.unsplash.com/photo-1560969184-10fe8719e047?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1587330979470-3595ac045ab3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Club underground, street art e vita notturna senza fine nella capitale europea delle feste.",
         tags: ["Underground", "Club", "Arte"],
         rating: "4.5",
@@ -413,7 +413,7 @@ export class MemStorage implements IStorage {
       {
         name: "Lisbona",
         country: "Portugal",
-        image: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
+        image: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Fascino costiero, vita notturna vivace e pesce fresco nella splendida capitale portoghese.",
         tags: ["Costa", "Vita notturna", "Gastronomia"],
         rating: "4.4",
@@ -422,7 +422,7 @@ export class MemStorage implements IStorage {
       {
         name: "Palma de Mallorca",
         country: "Spain",
-        image: "https://images.pexels.com/photos/386158/pexels-photo-386158.jpeg?auto=compress&cs=tinysrgb&h=300&w=500",
+        image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Isola balearica con spiagge cristalline, beach club e vita notturna mediterranea.",
         tags: ["Spiagge", "Beach club", "Isola"],
         rating: "4.6",
