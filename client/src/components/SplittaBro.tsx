@@ -70,6 +70,7 @@ export function SplittaBro() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const { toast } = useToast();
   const [location, navigate] = useLocation();
 
@@ -134,6 +135,8 @@ export function SplittaBro() {
   };
 
   const onCreateGroup = async (data: CreateGroupFormValues) => {
+    setIsCreatingGroup(true);
+    
     try {
       const response = await fetch('/api/expense-groups', {
         method: 'POST',
@@ -158,19 +161,29 @@ export function SplittaBro() {
           members: [],
         });
         setNewMemberName('');
+        
+        // Redirect automatico al gruppo appena creato
+        setSelectedGroup(newGroup);
+        
         toast({
-          title: "Gruppo creato!",
-          description: "Il nuovo gruppo di spese è stato creato con successo.",
+          title: "✅ Gruppo creato con successo!",
+          description: `${newGroup.name} è stato creato. Ora puoi aggiungere le spese.`,
         });
       } else {
-        throw new Error('Errore nella creazione del gruppo');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Errore nella creazione del gruppo');
       }
     } catch (error) {
+      console.error('Errore creazione gruppo:', error);
       toast({
-        title: "Errore",
-        description: "Impossibile creare il gruppo. Riprova.",
+        title: "❌ Impossibile creare il gruppo",
+        description: error instanceof Error 
+          ? error.message 
+          : "Si è verificato un errore. Controlla la connessione e riprova più tardi.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingGroup(false);
     }
   };
 
@@ -452,10 +465,18 @@ export function SplittaBro() {
                     <DialogFooter>
                       <Button 
                         type="submit" 
-                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 w-full"
+                        disabled={isCreatingGroup}
+                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         data-testid="button-submit-group"
                       >
-                        Crea Gruppo
+                        {isCreatingGroup ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            Creazione in corso...
+                          </div>
+                        ) : (
+                          "Crea Gruppo"
+                        )}
                       </Button>
                     </DialogFooter>
                   </form>
