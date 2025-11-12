@@ -16,9 +16,6 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
               <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
                 Bye
               </span>
-              <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
-                Bi
-              </span>
             </h1>
             <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
           </div>
