@@ -148,11 +148,9 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Lobster+Two:wght@700&display=swap');
-
         /* Font Styles */
         .byebi-bye {
-          font-family: 'Great Vibes', cursive;
+          font-family: 'Great Vibes', 'Brush Script MT', cursive, serif;
           background: linear-gradient(90deg, #000000, #ef4444, #ffffff, #ec4899, #000000);
           background-size: 300% 100%;
           -webkit-background-clip: text;
@@ -162,7 +160,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         }
 
         .byebi-bi {
-          font-family: 'Lobster Two', cursive;
+          font-family: 'Lobster Two', 'Arial Black', 'Impact', sans-serif;
           font-weight: 700;
           background: linear-gradient(90deg, #000000, #ec4899, #ffffff, #ef4444, #000000);
           background-size: 300% 100%;
