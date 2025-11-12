@@ -12,38 +12,42 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <div className="flex items-center justify-center gap-4">
-              {/* Infinity Symbol */}
-              <div className="relative w-16 h-16 md:w-20 md:h-20">
-                <svg viewBox="0 0 100 100" className="w-full h-full">
+            <div className="flex items-center justify-center gap-6">
+              {/* Infinity Symbol - Gradient rosso→nero→rosa */}
+              <div className="relative w-20 h-20 md:w-24 md:h-24">
+                <svg viewBox="0 0 120 80" className="w-full h-full">
                   <path
-                    d="M 25,50 C 25,35 35,25 50,25 C 65,25 75,35 75,50 C 75,65 65,75 50,75 C 35,75 25,65 25,50 Z M 50,25 C 65,25 75,35 75,50 C 75,65 65,75 50,75"
+                    d="M 30,40 Q 30,20 45,20 Q 60,20 60,40 Q 60,60 45,60 Q 30,60 30,40 M 60,40 Q 60,20 75,20 Q 90,20 90,40 Q 90,60 75,60 Q 60,60 60,40"
                     fill="none"
-                    stroke="url(#infinityGradient)"
-                    strokeWidth="8"
+                    stroke="url(#infinityAnimatedGradient)"
+                    strokeWidth="12"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                   <defs>
-                    <linearGradient id="infinityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#ef4444" />
-                      <stop offset="50%" stopColor="#1f1f1f" />
-                      <stop offset="100%" stopColor="#ec4899" />
+                    <linearGradient id="infinityAnimatedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#ef4444" className="animate-gradient-stop-1" />
+                      <stop offset="33%" stopColor="#1a1a1a" className="animate-gradient-stop-2" />
+                      <stop offset="66%" stopColor="#ffffff" className="animate-gradient-stop-3" />
+                      <stop offset="100%" stopColor="#ec4899" className="animate-gradient-stop-4" />
                     </linearGradient>
                   </defs>
                 </svg>
               </div>
               
-              {/* ByeBi Text with Gradient */}
-              <h1 className="text-7xl md:text-8xl font-bold relative" style={{ fontFamily: "'Brush Script MT', cursive" }}>
-                <span className="bg-gradient-to-r from-red-500 via-black via-white to-pink-500 bg-clip-text text-transparent">
-                  Bye
-                </span>
-                <span className="bg-gradient-to-r from-red-500 via-black via-white to-pink-500 bg-clip-text text-transparent">
-                  Bi
-                </span>
-              </h1>
+              {/* ByeBi Text - Stile corsivo esattamente come nell'immagine */}
+              <div className="relative">
+                <h1 className="text-7xl md:text-8xl font-bold relative italic" style={{ fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive" }}>
+                  <span className="text-white">Bye</span>
+                  <span className="text-red-500">Bi</span>
+                </h1>
+                {/* Doppia linea rossa sotto come nell'immagine */}
+                <div className="mt-2 space-y-1">
+                  <div className="h-0.5 bg-gradient-to-r from-red-500 via-black via-white to-pink-500 rounded-full animate-gradient"></div>
+                  <div className="h-1 bg-gradient-to-r from-red-500 via-black via-white to-pink-500 rounded-full animate-gradient"></div>
+                </div>
+              </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-red-500 via-black via-white to-pink-500 rounded-full mt-4"></div>
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
             Your Ultimate Party Planning Experience
