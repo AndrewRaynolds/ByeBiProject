@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
+import byebiLogo from "@assets/WhatsApp Image 2025-11-11 at 20.55.38_1762935672584.jpeg";
 
 interface BrandSelectionProps {
   onSelectBrand: (brand: 'byebro' | 'byebride') => void;
@@ -12,11 +13,13 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <h1 className="text-7xl md:text-8xl font-bold mb-4 relative">
-              <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
-                Bye
-              </span>
-            </h1>
+            <div className="mb-4 relative animate-gradient">
+              <img 
+                src={byebiLogo} 
+                alt="ByeBi Logo" 
+                className="h-32 md:h-40 w-auto mx-auto drop-shadow-2xl"
+              />
+            </div>
             <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
