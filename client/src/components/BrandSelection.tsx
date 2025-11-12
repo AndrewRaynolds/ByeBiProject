@@ -12,15 +12,38 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <h1 className="text-7xl md:text-8xl font-bold mb-4 relative">
-              <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
-                Bye
-              </span>
-              <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
-                Bi
-              </span>
-            </h1>
-            <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
+            <div className="flex items-center justify-center gap-4">
+              {/* Infinity Symbol */}
+              <div className="relative w-16 h-16 md:w-20 md:h-20">
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <path
+                    d="M 25,50 C 25,35 35,25 50,25 C 65,25 75,35 75,50 C 75,65 65,75 50,75 C 35,75 25,65 25,50 Z M 50,25 C 65,25 75,35 75,50 C 75,65 65,75 50,75"
+                    fill="none"
+                    stroke="url(#infinityGradient)"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                  />
+                  <defs>
+                    <linearGradient id="infinityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#ef4444" />
+                      <stop offset="50%" stopColor="#1f1f1f" />
+                      <stop offset="100%" stopColor="#ec4899" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              
+              {/* ByeBi Text with Gradient */}
+              <h1 className="text-7xl md:text-8xl font-bold relative" style={{ fontFamily: "'Brush Script MT', cursive" }}>
+                <span className="bg-gradient-to-r from-red-500 via-black via-white to-pink-500 bg-clip-text text-transparent">
+                  Bye
+                </span>
+                <span className="bg-gradient-to-r from-red-500 via-black via-white to-pink-500 bg-clip-text text-transparent">
+                  Bi
+                </span>
+              </h1>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-red-500 via-black via-white to-pink-500 rounded-full mt-4"></div>
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
             Your Ultimate Party Planning Experience
