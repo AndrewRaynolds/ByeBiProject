@@ -14,12 +14,12 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
           <div className="inline-block">
             {/* Elegant BB Logo */}
             <div className="mb-6 flex justify-center">
-              <svg width="120" height="120" viewBox="0 0 120 120" className="drop-shadow-2xl">
+              <svg width="160" height="120" viewBox="0 0 160 120" className="drop-shadow-2xl" style={{ overflow: 'visible' }}>
                 {/* First B (Red gradient) */}
                 <text 
-                  x="25" 
-                  y="80" 
-                  fontSize="80" 
+                  x="15" 
+                  y="85" 
+                  fontSize="75" 
                   fontWeight="bold" 
                   fontFamily="serif"
                   className="bb-logo-first"
@@ -32,9 +32,9 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
                 </text>
                 {/* Second B (Pink gradient) */}
                 <text 
-                  x="50" 
-                  y="80" 
-                  fontSize="80" 
+                  x="65" 
+                  y="85" 
+                  fontSize="75" 
                   fontWeight="bold" 
                   fontFamily="serif"
                   className="bb-logo-second"
