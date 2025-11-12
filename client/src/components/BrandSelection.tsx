@@ -12,46 +12,15 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <div className="flex items-center justify-center gap-4">
-              {/* Infinity Symbol - Esattamente come nell'immagine */}
-              <div className="relative w-16 h-16 md:w-20 md:h-20">
-                <svg viewBox="0 0 100 60" className="w-full h-full">
-                  <path
-                    d="M 20,30 C 20,18 28,10 38,10 C 48,10 50,18 50,30 C 50,42 48,50 38,50 C 28,50 20,42 20,30 M 50,30 C 50,18 52,10 62,10 C 72,10 80,18 80,30 C 80,42 72,50 62,50 C 52,50 50,42 50,30"
-                    fill="none"
-                    stroke="url(#infinityGradient)"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                  />
-                  <defs>
-                    <linearGradient id="infinityGradient">
-                      <stop offset="0%" stopColor="#1a1a1a">
-                        <animate attributeName="stop-color" values="#1a1a1a; #ef4444; #ffffff; #ec4899; #1a1a1a" dur="4s" repeatCount="indefinite" />
-                      </stop>
-                      <stop offset="50%" stopColor="#ef4444">
-                        <animate attributeName="stop-color" values="#ef4444; #ffffff; #ec4899; #1a1a1a; #ef4444" dur="4s" repeatCount="indefinite" />
-                      </stop>
-                      <stop offset="100%" stopColor="#ec4899">
-                        <animate attributeName="stop-color" values="#ec4899; #1a1a1a; #ef4444; #ffffff; #ec4899" dur="4s" repeatCount="indefinite" />
-                      </stop>
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-              
-              {/* ByeBi Text - Esattamente come nell'immagine */}
-              <div className="relative">
-                <h1 className="text-7xl md:text-8xl font-bold relative italic leading-none" style={{ fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive" }}>
-                  <span className="text-white">Bye</span>
-                  <span className="text-red-500">Bi</span>
-                </h1>
-                {/* Doppia linea rossa sotto */}
-                <div className="mt-2 space-y-0.5">
-                  <div className="h-0.5 bg-gradient-to-r from-black via-red-500 via-white to-pink-500 rounded-full animate-gradient"></div>
-                  <div className="h-1 bg-gradient-to-r from-black via-red-500 via-white to-pink-500 rounded-full animate-gradient"></div>
-                </div>
-              </div>
-            </div>
+            <h1 className="text-7xl md:text-8xl font-bold mb-4 relative">
+              <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
+                Bye
+              </span>
+              <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                Bi
+              </span>
+            </h1>
+            <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
             Your Ultimate Party Planning Experience
