@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
-import byebiLogo from "@assets/WhatsApp Image 2025-11-11 at 20.55.38_1762935672584.jpeg";
 
 interface BrandSelectionProps {
   onSelectBrand: (brand: 'byebro' | 'byebride') => void;
@@ -13,22 +12,14 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <img 
-                src={byebiLogo} 
-                alt="ByeBi Logo Icon" 
-                className="h-24 md:h-28 w-auto"
-                style={{ mixBlendMode: 'screen' }}
-              />
-              <h1 className="text-7xl md:text-8xl font-bold relative">
-                <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
-                  Bye
-                </span>
-                <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
-                  Bi
-                </span>
-              </h1>
-            </div>
+            <h1 className="text-7xl md:text-8xl font-bold mb-4 relative">
+              <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
+                Bye
+              </span>
+              <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                Bi
+              </span>
+            </h1>
             <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
