@@ -13,12 +13,21 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <div className="mb-4 relative animate-gradient">
+            <div className="flex items-center justify-center gap-4 mb-4">
               <img 
                 src={byebiLogo} 
-                alt="ByeBi Logo" 
-                className="h-32 md:h-40 w-auto mx-auto drop-shadow-2xl"
+                alt="ByeBi Logo Icon" 
+                className="h-24 md:h-28 w-auto"
+                style={{ mixBlendMode: 'screen' }}
               />
+              <h1 className="text-7xl md:text-8xl font-bold relative">
+                <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
+                  Bye
+                </span>
+                <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                  Bi
+                </span>
+              </h1>
             </div>
             <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
           </div>
