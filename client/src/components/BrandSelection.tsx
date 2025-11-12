@@ -12,15 +12,70 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Elegant and Eye-catching */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            <h1 className="text-7xl md:text-8xl font-bold mb-4 relative">
-              <span className="bg-gradient-to-r from-red-500 via-pink-400 to-red-500 bg-clip-text text-transparent animate-gradient">
+            {/* Elegant BB Logo */}
+            <div className="mb-6 flex justify-center">
+              <svg width="120" height="120" viewBox="0 0 120 120" className="drop-shadow-2xl">
+                {/* First B (Red gradient) */}
+                <text 
+                  x="25" 
+                  y="80" 
+                  fontSize="80" 
+                  fontWeight="bold" 
+                  fontFamily="serif"
+                  className="bb-logo-first"
+                  style={{ 
+                    fill: 'url(#redGradient)',
+                    filter: 'drop-shadow(0 4px 12px rgba(239, 68, 68, 0.4))'
+                  }}
+                >
+                  B
+                </text>
+                {/* Second B (Pink gradient) */}
+                <text 
+                  x="50" 
+                  y="80" 
+                  fontSize="80" 
+                  fontWeight="bold" 
+                  fontFamily="serif"
+                  className="bb-logo-second"
+                  style={{ 
+                    fill: 'url(#pinkGradient)',
+                    filter: 'drop-shadow(0 4px 12px rgba(236, 72, 153, 0.4))'
+                  }}
+                >
+                  B
+                </text>
+                <defs>
+                  <linearGradient id="redGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{ stopColor: '#ef4444', stopOpacity: 1 }}>
+                      <animate attributeName="stop-color" values="#ef4444;#dc2626;#ef4444" dur="3s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="100%" style={{ stopColor: '#dc2626', stopOpacity: 1 }}>
+                      <animate attributeName="stop-color" values="#dc2626;#991b1b;#dc2626" dur="3s" repeatCount="indefinite"/>
+                    </stop>
+                  </linearGradient>
+                  <linearGradient id="pinkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{ stopColor: '#ec4899', stopOpacity: 1 }}>
+                      <animate attributeName="stop-color" values="#ec4899;#db2777;#ec4899" dur="3s" repeatCount="indefinite"/>
+                    </stop>
+                    <stop offset="100%" style={{ stopColor: '#db2777', stopOpacity: 1 }}>
+                      <animate attributeName="stop-color" values="#db2777;#be185d;#db2777" dur="3s" repeatCount="indefinite"/>
+                    </stop>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            {/* ByeBi Text with Custom Fonts */}
+            <h1 className="text-7xl md:text-8xl mb-4 relative leading-tight">
+              <span className="byebi-bye animate-gradient-flow">
                 Bye
               </span>
-              <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+              <span className="byebi-bi animate-gradient-flow-delayed">
                 Bi
               </span>
             </h1>
-            <div className="h-1 bg-gradient-to-r from-red-500 via-pink-400 to-purple-400 rounded-full animate-pulse"></div>
+            <div className="h-1 bg-gradient-to-r from-black via-red-500 via-white via-pink-500 to-black rounded-full animate-gradient-line bg-[length:300%_100%]"></div>
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
             Your Ultimate Party Planning Experience
@@ -93,13 +148,73 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
       </div>
 
       <style>{`
-        @keyframes gradient {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
+        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Lobster+Two:wght@700&display=swap');
+
+        /* Font Styles */
+        .byebi-bye {
+          font-family: 'Great Vibes', cursive;
+          background: linear-gradient(90deg, #000000, #ef4444, #ffffff, #ec4899, #000000);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          display: inline-block;
         }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 3s ease infinite;
+
+        .byebi-bi {
+          font-family: 'Lobster Two', cursive;
+          font-weight: 700;
+          background: linear-gradient(90deg, #000000, #ec4899, #ffffff, #ef4444, #000000);
+          background-size: 300% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          display: inline-block;
+        }
+
+        /* Gradient Flow Animations */
+        @keyframes gradientFlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        @keyframes gradientFlowDelayed {
+          0% { background-position: 100% 50%; }
+          50% { background-position: 0% 50%; }
+          100% { background-position: 100% 50%; }
+        }
+
+        @keyframes gradientLine {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        .animate-gradient-flow {
+          animation: gradientFlow 6s ease-in-out infinite;
+        }
+
+        .animate-gradient-flow-delayed {
+          animation: gradientFlowDelayed 6s ease-in-out infinite;
+        }
+
+        .animate-gradient-line {
+          animation: gradientLine 4s linear infinite;
+        }
+
+        /* BB Logo Animations */
+        .bb-logo-first {
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        .bb-logo-second {
+          animation: pulse 2s ease-in-out infinite 0.5s;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
         }
       `}</style>
     </div>
