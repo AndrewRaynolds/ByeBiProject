@@ -4,6 +4,8 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-16**: Applied mix-blend-mode: screen to logo for seamless background integration
+- **2025-11-16**: Logo background now perfectly blends with page gradient (no visible black edges)
 - **2025-11-16**: Updated ByeBi logo to final brand asset (Bb logo_1763309700150.png) with gradient red circular icon
 - **2025-11-16**: Logo features refined 'b' symbol design with BYEBI text below on dark background
 - **2025-11-16**: Replaced custom SVG logo with official ByeBi brand image asset
