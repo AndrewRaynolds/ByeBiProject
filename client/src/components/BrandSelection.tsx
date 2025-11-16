@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
+import byebiLogo from "@assets/bb_1763309242710.jpg";
 
 interface BrandSelectionProps {
   onSelectBrand: (brand: 'byebro' | 'byebride') => void;
@@ -9,53 +10,14 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
       <div className="max-w-4xl w-full">
-        {/* ByeBi Logo - Circular Red Logo with BYEBI Text */}
+        {/* ByeBi Logo */}
         <div className="text-center mb-16">
-          <div className="inline-block">
-            {/* Circular Red Logo with Stylized 'b' */}
-            <div className="flex justify-center mb-8">
-              <svg width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-2xl">
-                {/* Outer Red Circle */}
-                <circle cx="110" cy="110" r="105" fill="#FF4444" />
-                
-                {/* Stylized 'b' with circular organic shapes */}
-                {/* Upper circle of 'b' */}
-                <circle cx="115" cy="75" r="22" fill="#1a1a1a" />
-                
-                {/* Lower curved part of 'b' */}
-                <path 
-                  d="M 65 50 L 65 170 L 80 170 Q 80 120, 115 120 Q 145 120, 145 145 Q 145 170, 115 170 Q 85 170, 80 170" 
-                  fill="#1a1a1a" 
-                  stroke="#1a1a1a"
-                  strokeWidth="2"
-                />
-                
-                {/* Large outer curved stroke */}
-                <path 
-                  d="M 50 60 Q 50 180, 110 200 Q 170 180, 170 110 Q 170 40, 110 20" 
-                  fill="none" 
-                  stroke="#1a1a1a" 
-                  strokeWidth="18"
-                  strokeLinecap="round"
-                  opacity="0.9"
-                />
-              </svg>
-            </div>
-            
-            {/* BYEBI Text - White with Outline */}
-            <div className="relative">
-              <h1 className="text-7xl md:text-8xl font-black tracking-wider relative" style={{ 
-                color: '#ffffff',
-                textShadow: '-2px -2px 0 #1a1a1a, 2px -2px 0 #1a1a1a, -2px 2px 0 #1a1a1a, 2px 2px 0 #1a1a1a, 0 0 20px rgba(255, 255, 255, 0.5)',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                letterSpacing: '0.1em'
-              }}>
-                BYE<span style={{
-                  WebkitTextStroke: '3px #1a1a1a'
-                }}>BI</span>
-              </h1>
-              <div className="h-1 bg-white rounded-full mt-4 w-full shadow-lg"></div>
-            </div>
+          <div className="flex justify-center">
+            <img 
+              src={byebiLogo} 
+              alt="ByeBi Logo" 
+              className="w-auto h-64 md:h-80 object-contain drop-shadow-2xl"
+            />
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
             Your Ultimate Party Planning Experience
