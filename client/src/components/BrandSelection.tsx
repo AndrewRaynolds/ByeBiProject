@@ -12,20 +12,33 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* ByeBi Logo - Circular Red Logo with BYEBI Text */}
         <div className="text-center mb-16">
           <div className="inline-block">
-            {/* Circular Red Logo with 'b' */}
+            {/* Circular Red Logo with Stylized 'b' */}
             <div className="flex justify-center mb-8">
-              <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-2xl">
+              <svg width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-2xl">
                 {/* Outer Red Circle */}
-                <circle cx="100" cy="100" r="95" fill="#FF3333" />
+                <circle cx="110" cy="110" r="105" fill="#FF4444" />
                 
-                {/* Stylized 'b' in center */}
+                {/* Stylized 'b' with circular organic shapes */}
+                {/* Upper circle of 'b' */}
+                <circle cx="115" cy="75" r="22" fill="#1a1a1a" />
+                
+                {/* Lower curved part of 'b' */}
                 <path 
-                  d="M 75 60 L 75 140 L 90 140 L 90 105 Q 90 105, 105 105 Q 125 105, 125 85 Q 125 65, 105 65 Q 90 65, 90 65 L 90 60 Z M 90 75 L 105 75 Q 115 75, 115 85 Q 115 95, 105 95 L 90 95 Z" 
+                  d="M 65 50 L 65 170 L 80 170 Q 80 120, 115 120 Q 145 120, 145 145 Q 145 170, 115 170 Q 85 170, 80 170" 
                   fill="#1a1a1a" 
+                  stroke="#1a1a1a"
+                  strokeWidth="2"
                 />
                 
-                {/* Inner decorative curves for the 'b' */}
-                <circle cx="100" cy="100" r="80" fill="none" stroke="#1a1a1a" strokeWidth="12" opacity="0.3" />
+                {/* Large outer curved stroke */}
+                <path 
+                  d="M 50 60 Q 50 180, 110 200 Q 170 180, 170 110 Q 170 40, 110 20" 
+                  fill="none" 
+                  stroke="#1a1a1a" 
+                  strokeWidth="18"
+                  strokeLinecap="round"
+                  opacity="0.9"
+                />
               </svg>
             </div>
             
