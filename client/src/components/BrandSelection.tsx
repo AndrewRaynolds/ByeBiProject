@@ -17,6 +17,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
               src={byebiLogo} 
               alt="ByeBi Logo" 
               className="w-auto h-64 md:h-80 object-contain drop-shadow-2xl"
+              style={{ mixBlendMode: 'screen' }}
             />
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
