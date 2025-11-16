@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
-import byebiLogo from "@assets/bb_1763309242710.jpg";
+import byebiLogo from "@assets/Bb logo_1763309700150.png";
 
 interface BrandSelectionProps {
   onSelectBrand: (brand: 'byebro' | 'byebride') => void;
