@@ -16,8 +16,12 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
             <img 
               src={byebiLogo} 
               alt="ByeBi Logo" 
-              className="w-auto h-64 md:h-80 object-contain drop-shadow-2xl"
-              style={{ mixBlendMode: 'screen' }}
+              className="w-auto h-80 md:h-96 lg:h-[28rem] object-contain drop-shadow-2xl"
+              style={{ 
+                mixBlendMode: 'screen',
+                imageRendering: '-webkit-optimize-contrast',
+                filter: 'contrast(1.05) brightness(1.02)'
+              }}
             />
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
