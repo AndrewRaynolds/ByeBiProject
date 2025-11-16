@@ -38,8 +38,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
                 letterSpacing: '0.1em'
               }}>
                 BYE<span style={{
-                  WebkitTextStroke: '3px #1a1a1a',
-                  textStroke: '3px #1a1a1a'
+                  WebkitTextStroke: '3px #1a1a1a'
                 }}>BI</span>
               </h1>
               <div className="h-1 bg-white rounded-full mt-4 w-full shadow-lg"></div>
