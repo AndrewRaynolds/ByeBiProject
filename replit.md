@@ -4,6 +4,11 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
+- **2025-11-18**: Removed Booking.com and Kiwi.com API integrations (no longer used)
+- **2025-11-18**: Deleted booking-api.ts, kiwi-api.ts, travel-api.ts from server/services
+- **2025-11-18**: Removed ApiTestPage and KiwiTestPage from frontend
+- **2025-11-18**: Cleaned up all /api/travel and /api/kiwi routes from server
+- **2025-11-18**: Removed BOOKING_API_KEY and KIWI_API_KEY dependencies from code
 - **2025-11-16**: Updated to high-quality logo version (Bb logo_1763313858570.png) for superior visual clarity
 - **2025-11-16**: Increased logo size to h-80 md:h-96 lg:h-[28rem] for better visibility and visual impact
 - **2025-11-16**: Applied image quality optimizations: crisp rendering and enhanced contrast/brightness filters
@@ -133,3 +138,4 @@ AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning an
 - Authentication system supports user sessions and premium features
 - All destination data updated to match the 10 specified cities only
 - Environment variables: GROQ_API_KEY (primary), ZAPIER_WEBHOOK_URL, IMAGE_SEARCH_API_KEY, OPENAI_API_KEY (backup)
+- Removed APIs: BOOKING_API_KEY, KIWI_API_KEY (no longer needed)
