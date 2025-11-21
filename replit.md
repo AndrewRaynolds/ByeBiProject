@@ -4,13 +4,16 @@
 AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning and **ByeBride** for bachelorette party planning. Features OneClick Assistant powered by GROQ streaming for ultra-fast conversational itinerary generation, Activity Ideas Generator, and comprehensive expense management. Initial ByeBi landing page offers elegant brand selection leading to fully integrated experiences.
 
 ## Recent Changes
-- **2025-11-21**: Completely redesigned Chat Assistant behavior for ByeBro and ByeBride
+- **2025-11-21**: Completely redesigned Chat Assistant behavior with RIGOROUS RULES for ByeBro and ByeBride
 - **2025-11-21**: Implemented strict step-by-step flow: mandatory questions → destination confirmation → experience selection → itinerary generation
-- **2025-11-21**: Eliminated premature itinerary generation and destination assumptions (no more default Ibiza suggestions)
-- **2025-11-21**: Chat now always asks 5 mandatory questions before proceeding: destination, departure date, return date, number of people, event type
-- **2025-11-21**: After collecting all info, chat shows 3-4 clickable experience options based on selected destination
-- **2025-11-21**: Itinerary created ONLY after user selects experiences
-- **2025-11-21**: New tone: amichevole, preciso, chiaro - risposte brevi e operative (max 2-3 frasi)
+- **2025-11-21**: Eliminated premature itinerary generation and destination assumptions (NEVER defaults to Ibiza unless explicitly mentioned)
+- **2025-11-21**: Chat ALWAYS asks 5 mandatory questions before proceeding: destination, departure date, return date, number of people, event type
+- **2025-11-21**: After collecting all info, chat shows EXACTLY 4 clickable experience options (numbered list format) based on selected destination
+- **2025-11-21**: Itinerary created ONLY after user selects at least 1 experience
+- **2025-11-21**: If user asks for itinerary immediately, chat MUST ask for missing information first
+- **2025-11-21**: When user changes destination, chat resets all previous information and starts from scratch
+- **2025-11-21**: New tone: professionale, amichevole, chiaro - NO slang romano - risposte brevi (max 2-3 frasi)
+- **2025-11-21**: "Genera Itinerario" button appears ONLY when: all questions answered + at least 1 experience selected
 - **2025-11-18**: Removed Booking.com and Kiwi.com API integrations (no longer used)
 - **2025-11-18**: Deleted booking-api.ts, kiwi-api.ts, travel-api.ts from server/services
 - **2025-11-18**: Removed ApiTestPage and KiwiTestPage from frontend
@@ -118,7 +121,8 @@ AI-powered dual-brand travel platform: **ByeBro** for bachelor party planning an
 10. Palma de Mallorca - Beach club
 
 ## Technical Notes
-- **Chat Assistant Flow**: Mandatory questions (5 steps) → Experience selection (3-4 options) → Itinerary generation
+- **Chat Assistant Flow**: Mandatory questions (5 steps) → Experience selection (EXACTLY 4 options in numbered list) → Itinerary generation (only after at least 1 experience selected)
+- **Chat Rules**: NEVER default to Ibiza, NEVER generate premature itineraries, ALWAYS reset when destination changes, NO slang romano
 - **Booking Flow Mockup**: Chat → "Genera Itinerario" button → /itinerary → /checkout → purchase popup
 - **Itinerary Mockup**: Static Ibiza trip (2-5 July, 6 people) with selectable cards for flights, hotels, cars, activities
 - **Dynamic Pricing**: Real-time total calculation based on selected items (price × people)
