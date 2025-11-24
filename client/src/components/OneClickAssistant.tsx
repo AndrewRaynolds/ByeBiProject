@@ -47,6 +47,7 @@ interface PackageItem {
 }
 
 export default function OneClickAssistant() {
+  const [brand, setBrand] = useState<'byebro' | 'byebride'>('byebro');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -83,6 +84,14 @@ export default function OneClickAssistant() {
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Detect current brand from localStorage
+  useEffect(() => {
+    const savedBrand = localStorage.getItem('selectedBrand') as 'byebro' | 'byebride' | null;
+    if (savedBrand) {
+      setBrand(savedBrand);
+    }
+  }, []);
 
   const form = useForm<MessageFormValues>({
     resolver: zodResolver(messageSchema),
@@ -223,9 +232,12 @@ export default function OneClickAssistant() {
       
       const assistantResponse = generateResponse(data.message);
       
+      // Clean directives from fallback response too
+      const cleanedResponse = parseDirectives(assistantResponse);
+      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: assistantResponse,
+        content: cleanedResponse,
         sender: 'assistant',
         timestamp: new Date(),
       };
@@ -758,18 +770,27 @@ export default function OneClickAssistant() {
     });
   };
 
+  const brandColors = {
+    primary: brand === 'byebro' ? 'bg-red-600' : 'bg-pink-600',
+    primaryText: brand === 'byebro' ? 'text-red-600' : 'text-pink-600',
+    primaryHover: brand === 'byebro' ? 'hover:bg-red-700' : 'hover:bg-pink-700',
+  };
+  
+  const brandName = brand === 'byebro' ? 'ByeBro' : 'ByeBride';
+  const eventType = brand === 'byebro' ? 'addio al celibato' : 'addio al nubilato';
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="container mx-auto max-w-4xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+            <div className={`w-10 h-10 ${brandColors.primary} rounded-full flex items-center justify-center`}>
               <Send className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">One Click Assistant</h1>
-              <p className="text-sm text-gray-500">Il tuo assistente personale per l'addio al celibato perfetto</p>
+              <p className="text-sm text-gray-500">Il tuo assistente personale per l'{eventType} perfetto</p>
             </div>
           </div>
         </div>
@@ -781,7 +802,7 @@ export default function OneClickAssistant() {
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              ByeBro Chat Assistant
+              {brandName} Chat Assistant
             </CardTitle>
             <CardDescription className="text-sm">
               {selectedDestination === 'ibiza' 
@@ -803,16 +824,16 @@ export default function OneClickAssistant() {
                     <div className={`flex items-start gap-2 max-w-[85%] ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                       <Avatar className="w-8 h-8 flex-shrink-0">
                         <AvatarFallback className={`text-white text-xs ${
-                          message.sender === 'assistant' ? 'bg-red-600' : 'bg-gray-600'
+                          message.sender === 'assistant' ? brandColors.primary : 'bg-gray-600'
                         }`}>
-                          {message.sender === 'assistant' ? 'BB' : (user?.username?.[0]?.toUpperCase() || 'U')}
+                          {message.sender === 'assistant' ? (brand === 'byebro' ? 'BB' : 'BD') : (user?.username?.[0]?.toUpperCase() || 'U')}
                         </AvatarFallback>
                       </Avatar>
                       
                       <div
                         className={`rounded-lg px-4 py-2 break-words ${
                           message.sender === 'user'
-                            ? 'bg-red-600 text-white'
+                            ? `${brandColors.primary} text-white`
                             : 'bg-gray-100 text-gray-900'
                         }`}
                       >
@@ -832,8 +853,8 @@ export default function OneClickAssistant() {
                   <div className="flex justify-start">
                     <div className="flex items-start gap-2">
                       <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarFallback className="bg-red-600 text-white text-xs">
-                          BB
+                        <AvatarFallback className={`${brandColors.primary} text-white text-xs`}>
+                          {brand === 'byebro' ? 'BB' : 'BD'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="bg-gray-100 rounded-lg px-4 py-2">
