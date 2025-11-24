@@ -771,7 +771,7 @@ export default function OneClickAssistant() {
   };
 
   const handleGenerateItinerary = async () => {
-    if (!selectedDestination || !tripDetails.startDate || !tripDetails.endDate || !tripDetails.people || !tripDetails.eventType) {
+    if (!selectedDestination || !tripDetails.startDate || !tripDetails.endDate || !tripDetails.people || !tripDetails.adventureType) {
       toast({
         title: "Dati mancanti",
         description: "Completa tutte le informazioni richieste prima di generare l'itinerario.",
@@ -788,7 +788,7 @@ export default function OneClickAssistant() {
         startDate: tripDetails.startDate,
         endDate: tripDetails.endDate,
         participants: tripDetails.people,
-        eventType: tripDetails.eventType,
+        eventType: tripDetails.adventureType,
         selectedExperiences: tripDetails.interests
       });
 
@@ -882,7 +882,7 @@ export default function OneClickAssistant() {
                         className={`rounded-lg px-4 py-2 break-words ${
                           message.sender === 'user'
                             ? `${brandColors.primary} text-white`
-                            : 'bg-gray-100 text-gray-900'
+                            : `bg-gradient-to-br ${brand === 'byebro' ? 'from-red-50 to-red-100' : 'from-pink-50 to-pink-100'} text-gray-900 border ${brand === 'byebro' ? 'border-red-200' : 'border-pink-200'}`
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
