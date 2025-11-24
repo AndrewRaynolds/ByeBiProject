@@ -197,10 +197,13 @@ export default function OneClickAssistant() {
               if (jsonData.content) {
                 accumulatedContent += jsonData.content;
                 
-                // Update message in real-time
+                // Parse directives and update state
+                const cleanedContent = parseDirectives(accumulatedContent);
+                
+                // Update message in real-time with cleaned content (no directives)
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
-                    ? { ...msg, content: accumulatedContent }
+                    ? { ...msg, content: cleanedContent }
                     : msg
                 ));
               }
@@ -236,47 +239,81 @@ export default function OneClickAssistant() {
     }
   };
 
-  // Function to extract trip details from user messages
+  // Parse AI directives from response
+  const parseDirectives = (content: string) => {
+    const directiveRegex = /\[([A-Z_]+):([^\]]+)\]/g;
+    let match;
+    
+    while ((match = directiveRegex.exec(content)) !== null) {
+      const [, command, value] = match;
+      
+      switch (command) {
+        case 'SET_DESTINATION':
+          setSelectedDestination(value.trim().toLowerCase());
+          break;
+          
+        case 'SET_DATES':
+          const [startDate, endDate] = value.split(',').map(d => d.trim());
+          setTripDetails(prev => ({ ...prev, startDate, endDate }));
+          // Calculate days
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            setTripDetails(prev => ({ ...prev, days }));
+          }
+          break;
+          
+        case 'SET_PARTICIPANTS':
+          const participants = parseInt(value);
+          if (!isNaN(participants)) {
+            setTripDetails(prev => ({ ...prev, people: participants }));
+          }
+          break;
+          
+        case 'SET_EVENT_TYPE':
+          setTripDetails(prev => ({ ...prev, adventureType: value.trim() }));
+          break;
+          
+        case 'SHOW_EXPERIENCES':
+          // Store experiences for display
+          const experiences = value.split('|').map(exp => exp.trim());
+          setTripDetails(prev => ({ ...prev, interests: experiences }));
+          break;
+          
+        case 'UNLOCK_ITINERARY_BUTTON':
+          // Signal that itinerary can be generated
+          setConversationState(prev => ({ ...prev, currentStep: 'complete' }));
+          break;
+      }
+    }
+    
+    // Remove directives from visible content
+    return content.replace(directiveRegex, '').trim();
+  };
+
+  // Function to extract trip details from user messages (deprecated - now using AI directives)
   const extractTripDetails = (message: string) => {
+    // This function is now mainly for fallback when GROQ is not available
     const normalizedMessage = message.toLowerCase();
     let detailsUpdated = false;
     
-    // Extract number of people - improved regex patterns
-    const peopleMatch = normalizedMessage.match(/(\d+)\s*(person|amici|partecipanti|gente|ragazzi|siamo|persone)/i) || 
-                       normalizedMessage.match(/siamo\s*(\d+)/i) || 
-                       normalizedMessage.match(/(\d+)/);
-    if (peopleMatch && conversationState.currentStep === 'people') {
-      const peopleCount = parseInt(peopleMatch[1] || peopleMatch[0]);
+    // Extract number of people
+    const peopleMatch = normalizedMessage.match(/(\d+)\s*(person|amici|partecipanti|gente|ragazzi|siamo|persone)/i);
+    if (peopleMatch) {
+      const peopleCount = parseInt(peopleMatch[1]);
       if (peopleCount > 0 && peopleCount <= 50) {
         setTripDetails(prev => ({ ...prev, people: peopleCount }));
         detailsUpdated = true;
       }
     }
     
-    // Extract number of days - improved regex patterns
-    const daysMatch = normalizedMessage.match(/(\d+)\s*(giorni|day|giorno)/i) || 
-                     (conversationState.currentStep === 'days' && normalizedMessage.match(/(\d+)/));
-    if (daysMatch && conversationState.currentStep === 'days') {
-      const daysCount = parseInt(daysMatch[1] || daysMatch[0]);
+    // Extract number of days
+    const daysMatch = normalizedMessage.match(/(\d+)\s*(giorni|day|giorno)/i);
+    if (daysMatch) {
+      const daysCount = parseInt(daysMatch[1]);
       if (daysCount > 0 && daysCount <= 30) {
         setTripDetails(prev => ({ ...prev, days: daysCount }));
-        detailsUpdated = true;
-      }
-    }
-    
-    // Extract adventure type - improved matching
-    if (conversationState.currentStep === 'adventure') {
-      if (normalizedMessage.includes('relax') || normalizedMessage.includes('moderato') || normalizedMessage.includes('1')) {
-        setTripDetails(prev => ({ ...prev, adventureType: 'relax' }));
-        detailsUpdated = true;
-      } else if (normalizedMessage.includes('party') || normalizedMessage.includes('intenso') || normalizedMessage.includes('vita notturna') || normalizedMessage.includes('2')) {
-        setTripDetails(prev => ({ ...prev, adventureType: 'party' }));
-        detailsUpdated = true;
-      } else if (normalizedMessage.includes('mix') || normalizedMessage.includes('cultura') || normalizedMessage.includes('cibo') || normalizedMessage.includes('3')) {
-        setTripDetails(prev => ({ ...prev, adventureType: 'mix' }));
-        detailsUpdated = true;
-      } else if (normalizedMessage.includes('lusso') || normalizedMessage.includes('senza limiti') || normalizedMessage.includes('4')) {
-        setTripDetails(prev => ({ ...prev, adventureType: 'luxury' }));
         detailsUpdated = true;
       }
     }
@@ -284,84 +321,8 @@ export default function OneClickAssistant() {
     return detailsUpdated;
   };
 
-  // Generate personalized itinerary for Ibiza
-  const generateIbizaItinerary = (details: any) => {
-    const { people, days, adventureType } = details;
-    
-    const itinerary = {
-      title: `Itinerario Ibiza - ${days} giorni per ${people} persone`,
-      subtitle: `Addio al celibato ${adventureType === 'party' ? 'Party Intenso' : 
-                adventureType === 'luxury' ? 'Lusso Totale' : 
-                adventureType === 'mix' ? 'Mix Perfetto' : 'Relax & Fun'}`,
-      days: [] as any[]
-    };
-
-    for (let day = 1; day <= Math.min(days, 5); day++) {
-      let dayPlan: any = {
-        day: day,
-        title: `Giorno ${day}`,
-        activities: []
-      };
-
-      if (day === 1) {
-        dayPlan.title = "Arrivo e Prima Serata";
-        dayPlan.activities = [
-          { time: "15:00", type: "arrival", title: "Arrivo a Ibiza", description: "Check-in hotel e sistemazione" },
-          { time: "19:00", type: "restaurant", title: adventureType === 'luxury' ? "La Gaia" : "Amante Beach", 
-            description: adventureType === 'luxury' ? "Cena stellata con vista mare (€185/persona)" : "Aperitivo e cena vista mare (€65/persona)" },
-          { time: "23:30", type: "nightlife", title: "Pacha Ibiza", 
-            description: `Prima notte al club più iconico! Ingresso €65 + drink €15-20 caduno` }
-        ];
-      } else if (day === 2) {
-        dayPlan.title = "Beach Day & Club Night";
-        dayPlan.activities = [
-          { time: "11:00", type: "activity", title: "Boat Party", description: "Festa in barca con DJ e open bar (€90/persona)" },
-          { time: "18:00", type: "restaurant", title: adventureType === 'party' ? "Tapas locali" : "Es Mercat", 
-            description: adventureType === 'party' ? "Pre-drink e tapas (€25/persona)" : "Cena tradizionale ibicenca (€45/persona)" },
-          { time: "01:00", type: "nightlife", title: adventureType === 'luxury' ? "Hï Ibiza VIP" : "Amnesia", 
-            description: adventureType === 'luxury' ? "Tavolo VIP esperienza totale (€450/persona)" : "Notte al club leggendario (€65/persona)" }
-        ];
-      } else if (day === 3 && days >= 3) {
-        dayPlan.title = "Esplorazione & Sunset";
-        dayPlan.activities = [
-          { time: "14:00", type: "activity", title: "Tour dell'isola", description: "Visita Dalt Vila e spiagge nascoste" },
-          { time: "19:00", type: "restaurant", title: adventureType === 'luxury' ? "Es Tragón Michelin" : "Ca N'Alfredo", 
-            description: adventureType === 'luxury' ? "Esperienza stellata Michelin (€220/persona)" : "Autentica cucina locale (€55/persona)" },
-          { time: "22:00", type: "activity", title: "Sunset Strip", description: "Aperitivi vista tramonto a San Antonio" },
-          { time: "01:30", type: "nightlife", title: "DC10 Circoloco", description: "Underground techno experience (€75/persona)" }
-        ];
-      }
-
-      if (day <= days) {
-        (itinerary.days as any[]).push(dayPlan);
-      }
-    }
-
-    return itinerary;
-  };
-
-  // Check if we have enough details to generate itinerary
-  const checkAndGenerateItinerary = () => {
-    if (selectedDestination === 'ibiza' && tripDetails.people > 0 && tripDetails.days > 0 && tripDetails.adventureType) {
-      setTimeout(() => {
-        const itinerary = generateIbizaItinerary(tripDetails);
-        setItineraryData(itinerary);
-        setShowItineraryDialog(true);
-        
-        const confirmMessage: ChatMessage = {
-          id: (Date.now() + 3).toString(),
-          content: "Perfetto! Ho creato il vostro itinerario personalizzato per Ibiza. Controllate tutti i dettagli giorno per giorno!",
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, confirmMessage]);
-      }, 1500);
-      
-      return "Sto creando il vostro itinerario personalizzato per Ibiza... Un momento! 🔥";
-    }
-    return null;
-  };
+  // REMOVED: generateIbizaItinerary and checkAndGenerateItinerary
+  // Now using AI directives system - all logic handled by GROQ prompts
 
   // Varie risposte per evitare ripetizioni
   const getVariedResponses = (destinationName: string, destinationKey: string) => {
@@ -409,7 +370,12 @@ export default function OneClickAssistant() {
       cracovia: [
         "CRACOVIA! Prezzi imbattibili e centro storico da favola! 💰🏰 Il massimo risparmio, il massimo divertimento! Quanti? Date?",
         "Cracovia è GENIALE! Spendi poco, ti diverti tanto! Centro UNESCO e locali fantastici! Gruppo numeroso? Quando conquistate la Polonia?",
-        "ECCELLENTE! Cracovia = budget friendly + storia + vita notturna! L'addio al celibato intelligente! Quanti partecipanti? Periodo?"
+        "ECCELLENTE! Cracovia = budget friendly + storia + vita notturna! L'addio al celibato intelligente! Quanti partecipanti! Periodo?"
+      ],
+      ibiza: [
+        "Ibiza! Dimmi la destinazione esatta che hai scelto e ti aiuterò a organizzare il tuo addio. Quante persone partecipano e quando partite?",
+        "Perfetto! Ibiza è una grande scelta. Fammi sapere: quanti siete e in quali date pensate di partire?",
+        "Ibiza interessante! Per aiutarti al meglio, dimmi: quante persone e quali sono le date del viaggio?"
       ]
     };
     
@@ -453,130 +419,7 @@ export default function OneClickAssistant() {
       return getVariedResponses('Cracovia', 'cracovia');
     } else if (normalizedMessage.includes('ibiza')) {
       setSelectedDestination('ibiza');
-      setTripDetails({ people: 0, days: 0, startDate: '', endDate: '', adventureType: '', interests: [], budget: 'medio' });
-      setConversationState({
-        askedForPeople: false,
-        askedForDays: false,
-        askedForAdventure: false,
-        currentStep: 'people'
-      });
-      return "IBIZA! La destinazione PERFETTA per un addio al celibato! 🏖️\n\nPer crearvi un itinerario personalizzato perfetto, iniziamo con la prima domanda:\n\nQuante persone siete?";
-    } else if (
-      (normalizedMessage.includes('date') || 
-       normalizedMessage.includes('quando') || 
-       normalizedMessage.includes('giorno')) &&
-      selectedDestination !== 'ibiza'
-    ) {
-      const dateResponses = [
-        "Perfetto! E quante persone parteciperanno al viaggio? Così posso consigliarti le migliori opzioni per alloggi e attività.",
-        "Ottimo! Ora dimmi: quanti amici si uniscono all'avventura? In base al numero posso personalizzare tutto!",
-        "Grande! E il gruppo quanto è numeroso? Voglio creare qualcosa di perfetto per tutti voi!",
-        "Perfetto per quelle date! Quanti siete in totale? Così organizzo tutto nei dettagli!"
-      ];
-      return dateResponses[Math.floor(Math.random() * dateResponses.length)];
-    } else if (
-      (normalizedMessage.includes('person') || 
-       normalizedMessage.includes('amici') || 
-       normalizedMessage.includes('partecipanti') || 
-       normalizedMessage.includes('gruppo')) &&
-      selectedDestination !== 'ibiza'
-    ) {
-      const peopleResponses = [
-        "Ottimo! Ti interessano più attività rilassanti o preferisci un'esperienza più movimentata? Hai interessi particolari come sport, degustazioni, esperienze culturali?",
-        "Perfetto per quel numero! Ora dimmi: volete un'avventura tranquilla o totale follia? Club, ristoranti gourmet, attività adrenaliniche?",
-        "Grande gruppo! Che tipo di esperienza cercate? Relax e cultura, vita notturna sfrenata, mix di tutto, o qualcos'altro di specifico?",
-        "Fantastico! E ora: siete più tipi da serate pazze nei club o preferite esperienze esclusive? Attività particolari in mente?"
-      ];
-      return peopleResponses[Math.floor(Math.random() * peopleResponses.length)];
-    } else if (
-      normalizedMessage.includes('budget') && 
-      selectedDestination === 'ibiza'
-    ) {
-      return "Per Ibiza i budget tipici sono:\n\n💰 BUDGET ECONOMICO (€150-250/giorno):\n• Hotel base o ostello\n• Cene in tapas bar (€15-45)\n• Club standard (€50-80 ingresso)\n• Pre-drink per risparmiare\n\n💸 BUDGET MEDIO (€300-500/giorno):\n• Hotel 4 stelle\n• Ristoranti medi (€50-80)\n• Mix club + qualche VIP experience\n• Boat party incluso\n\n🏆 BUDGET ALTO (€600+/giorno):\n• Hotel luxury (Ushuaïa)\n• Ristoranti stellati\n• Tavoli VIP nei club top\n• Esperienze esclusive\n\nQuale si avvicina di più alle vostre possibilità?";
-    } else if (
-      normalizedMessage.includes('stagione') || 
-      normalizedMessage.includes('periodo') || 
-      (normalizedMessage.includes('quando') && selectedDestination === 'ibiza')
-    ) {
-      return "📅 STAGIONI A IBIZA:\n\n🔥 ALTA STAGIONE (Giugno-Settembre):\n• Prezzi massimi ma massima energia\n• Tutti i club aperti\n• Temperature perfette (25-30°C)\n• Mare caldo\n\n🌞 MEDIA STAGIONE (Maggio + Ottobre):\n• Prezzi più accessibili (-30%)\n• Molti eventi ancora attivi\n• Meno affollato\n• Clima ottimo\n\n❄️ BASSA STAGIONE (Nov-Aprile):\n• Prezzi minimi ma molti club chiusi\n• Principalmente per relax\n\nPer un addio al celibato consiglio Maggio-Settembre per avere tutto aperto!";
-    } else if (
-      normalizedMessage.includes('genera') || 
-      normalizedMessage.includes('crea') || 
-      normalizedMessage.includes('pacchetto') ||
-      normalizedMessage.includes('proposta') ||
-      normalizedMessage.includes('itinerario')
-    ) {
-      // Check if we can generate itinerary for Ibiza
-      const itineraryResponse = checkAndGenerateItinerary();
-      if (itineraryResponse) {
-        return itineraryResponse;
-      }
-      
-      // Otherwise generate package
-      setTimeout(() => {
-        generatePackage();
-      }, 1000);
-      return "Sto generando un pacchetto personalizzato in base alle tue preferenze. Dammi solo un momento...";
-    }
-    
-    // Check if we can auto-generate itinerary based on collected details
-    const autoItineraryResponse = checkAndGenerateItinerary();
-    if (autoItineraryResponse) {
-      return autoItineraryResponse;
-    }
-    
-    // Handle Ibiza conversation flow
-    if (selectedDestination === 'ibiza') {
-      // Check if details were just updated and advance the conversation
-      if (detailsUpdated) {
-        // Move to next step based on what was just collected
-        if (conversationState.currentStep === 'people' && tripDetails.people > 0) {
-          setTimeout(() => {
-            setConversationState(prev => ({ ...prev, askedForPeople: true, currentStep: 'days' }));
-          }, 100);
-          return `Perfetto! Siete ${tripDetails.people} persone. Per quanti giorni partite?`;
-        } else if (conversationState.currentStep === 'days' && tripDetails.days > 0) {
-          setTimeout(() => {
-            setConversationState(prev => ({ ...prev, askedForDays: true, currentStep: 'adventure' }));
-          }, 100);
-          return `Ottimo! ${tripDetails.days} giorni saranno fantastici! Che tipo di avventura cercate?\n\n1. Relax e divertimento moderato\n2. Party intenso e vita notturna\n3. Mix di cultura, cibo e festa\n4. Lusso totale senza limiti\n\nScrivete il numero o il tipo!`;
-        } else if (conversationState.currentStep === 'adventure' && tripDetails.adventureType) {
-          setTimeout(() => {
-            setConversationState(prev => ({ ...prev, askedForAdventure: true, currentStep: 'complete' }));
-          }, 100);
-          // Auto-generate itinerary when all details are collected
-          const itineraryResponse = checkAndGenerateItinerary();
-          if (itineraryResponse) {
-            return itineraryResponse;
-          }
-        }
-      }
-      
-      // Fallback responses for incomplete information with variety
-      if (conversationState.currentStep === 'people' && tripDetails.people === 0) {
-        const peoplePrompts = [
-          "Perfetto! Dimmi solo: quante persone siete? (scrivi solo il numero)",
-          "Fantastico! Ora dimmi il numero esatto di partecipanti:",
-          "Grande! Quanti amici partecipano all'avventura? (solo il numero)",
-          "Ottimo! Il gruppo quanto è numeroso? Dimmi il numero!"
-        ];
-        return peoplePrompts[Math.floor(Math.random() * peoplePrompts.length)];
-      } else if (conversationState.currentStep === 'days' && tripDetails.days === 0) {
-        const dayPrompts = [
-          "Dimmi per quanti giorni partite! (scrivi solo il numero)",
-          "Perfetto! Quanti giorni volete restare a Ibiza?",
-          "Fantastico! Durata del viaggio? Quanti giorni?",
-          "Grande! Per quanto tempo conquistate Ibiza?"
-        ];
-        return dayPrompts[Math.floor(Math.random() * dayPrompts.length)];
-      } else if (conversationState.currentStep === 'adventure' && !tripDetails.adventureType) {
-        const adventurePrompts = [
-          "Scegli il tipo di avventura:\n\n1. Relax e divertimento moderato\n2. Party intenso e vita notturna\n3. Mix di cultura, cibo e festa\n4. Lusso totale senza limiti\n\nScrivi il numero o il tipo!",
-          "Che esperienza volete vivere?\n\n1. Chill e divertimento tranquillo\n2. Follia totale e club\n3. Mix perfetto di tutto\n4. Lusso senza compromessi\n\nDimmi il numero!",
-          "Quale vibe cercate?\n\n1. Relax con un po' di festa\n2. Party hard senza fine\n3. Cultura, cibo e divertimento\n4. Esperienza VIP esclusiva\n\nScegli!"
-        ];
-        return adventurePrompts[Math.floor(Math.random() * adventurePrompts.length)];
-      }
+      return getVariedResponses('Ibiza', 'ibiza');
     }
     
     // Varied final responses
