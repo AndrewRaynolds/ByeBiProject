@@ -440,6 +440,125 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
+  // Generated Itinerary routes (OneClick Assistant)
+  const destinationToIATA: Record<string, string> = {
+    'roma': 'ROM',
+    'ibiza': 'IBZ',
+    'barcellona': 'BCN',
+    'praga': 'PRG',
+    'budapest': 'BUD',
+    'cracovia': 'KRK',
+    'amsterdam': 'AMS',
+    'berlino': 'BER',
+    'lisbona': 'LIS',
+    'palma de mallorca': 'PMI'
+  };
+
+  app.post("/api/generated-itineraries", async (req: Request, res: Response) => {
+    try {
+      const { destination, startDate, endDate, participants, eventType, selectedExperiences } = req.body;
+      
+      if (!destination || !startDate || !endDate || !participants || !eventType) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get user ID if authenticated
+      const userId = (req.user as any)?.id;
+
+      // Map destination to IATA code for flight search
+      const destIATA = destinationToIATA[destination.toLowerCase()];
+      
+      // Search for flights (assuming origin is always Rome for now)
+      let flights = null;
+      if (destIATA) {
+        try {
+          const { searchCheapestFlights } = await import("./services/aviasales");
+          const flightData = await searchCheapestFlights({
+            origin: 'ROM',
+            destination: destIATA,
+            departDate: startDate,
+            currency: 'EUR'
+          });
+          
+          // Parse flight data
+          const destCode = Object.keys(flightData.data)[0];
+          const offersObj = flightData.data[destCode] || {};
+          const offers = Object.values(offersObj as any)
+            .sort((a: any, b: any) => a.price - b.price)
+            .slice(0, 3)
+            .map((o: any) => ({
+              airline: o.airline,
+              price: o.price,
+              departureAt: o.departure_at,
+              returnAt: o.return_at,
+              flightNumber: o.flight_number
+            }));
+          
+          flights = offers.length > 0 ? offers[0] : null;
+        } catch (error) {
+          console.error("Flight search failed:", error);
+        }
+      }
+
+      // Generate hotel recommendation
+      const hotel = {
+        name: `Hotel Premium ${destination}`,
+        rating: 4.5,
+        pricePerNight: participants > 4 ? 150 : 100,
+        address: `Centro ${destination}`
+      };
+
+      // Generate daily activities based on selected experiences
+      const dailyActivities = Array.from({ length: Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) }, (_, i) => ({
+        day: i + 1,
+        activities: selectedExperiences?.slice(0, 2) || ['Esplorazione città', 'Vita notturna']
+      }));
+
+      // Calculate total price
+      const flightPrice = flights ? flights.price * participants : 200 * participants;
+      const hotelPrice = hotel.pricePerNight * dailyActivities.length;
+      const activitiesPrice = dailyActivities.length * 150 * participants;
+      const totalPrice = flightPrice + hotelPrice + activitiesPrice;
+
+      // Save itinerary
+      const itinerary = await storage.createGeneratedItinerary({
+        userId,
+        destination,
+        startDate,
+        endDate,
+        participants,
+        eventType,
+        selectedExperiences: selectedExperiences || [],
+        flights,
+        hotel,
+        dailyActivities,
+        totalPrice,
+        status: "draft"
+      });
+
+      res.json(itinerary);
+    } catch (error) {
+      console.error("Error creating itinerary:", error);
+      res.status(500).json({ error: "Failed to create itinerary" });
+    }
+  });
+
+  app.get("/api/generated-itineraries/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const itinerary = await storage.getGeneratedItinerary(id);
+      
+      if (!itinerary) {
+        return res.status(404).json({ error: "Itinerary not found" });
+      }
+
+      res.json(itinerary);
+    } catch (error) {
+      console.error("Error fetching itinerary:", error);
+      res.status(500).json({ error: "Failed to fetch itinerary" });
+    }
+  });
+
   // Register Zapier integration routes
   registerZapierRoutes(app);
 

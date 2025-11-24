@@ -360,6 +360,7 @@ export class MemStorage implements IStorage {
     const itinerary: GeneratedItinerary = { 
       id: this.generatedItineraryId++, 
       ...insertItinerary,
+      status: insertItinerary.status || "draft",
       createdAt: new Date()
     };
     this.generatedItineraries.set(itinerary.id, itinerary);
