@@ -770,6 +770,54 @@ export default function OneClickAssistant() {
     });
   };
 
+  const handleGenerateItinerary = async () => {
+    if (!selectedDestination || !tripDetails.startDate || !tripDetails.endDate || !tripDetails.people || !tripDetails.eventType) {
+      toast({
+        title: "Dati mancanti",
+        description: "Completa tutte le informazioni richieste prima di generare l'itinerario.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingPackage(true);
+
+    try {
+      const response = await apiRequest('POST', '/api/generated-itineraries', {
+        destination: selectedDestination,
+        startDate: tripDetails.startDate,
+        endDate: tripDetails.endDate,
+        participants: tripDetails.people,
+        eventType: tripDetails.eventType,
+        selectedExperiences: tripDetails.interests
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate itinerary');
+      }
+
+      const itinerary = await response.json();
+      
+      toast({
+        title: "Itinerario generato!",
+        description: "Il tuo itinerario personalizzato è pronto.",
+      });
+
+      // Navigate to itinerary page with the generated ID
+      window.location.href = `/itinerary/${itinerary.id}`;
+      
+    } catch (error) {
+      console.error('Error generating itinerary:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la generazione dell'itinerario. Riprova.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPackage(false);
+    }
+  };
+
   const brandColors = {
     primary: brand === 'byebro' ? 'bg-red-600' : 'bg-pink-600',
     primaryText: brand === 'byebro' ? 'text-red-600' : 'text-pink-600',
@@ -871,7 +919,29 @@ export default function OneClickAssistant() {
             </ScrollArea>
 
             {/* Input Form */}
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 space-y-2">
+              {/* Show "Genera Itinerario" button when conversation is complete */}
+              {conversationState.currentStep === 'complete' && tripDetails.interests.length > 0 && (
+                <Button 
+                  onClick={handleGenerateItinerary}
+                  className={`w-full ${brandColors.primary} ${brandColors.primaryHover} text-white`}
+                  disabled={isGeneratingPackage}
+                  data-testid="button-generate-itinerary"
+                >
+                  {isGeneratingPackage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generazione in corso...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Genera Itinerario Completo
+                    </>
+                  )}
+                </Button>
+              )}
+              
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
                 <Input
                   {...form.register('message')}
