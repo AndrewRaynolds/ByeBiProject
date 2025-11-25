@@ -13,7 +13,6 @@ import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
-import { searchCheapestFlights } from "./services/aviasales";
 import { searchCheapestFlights, cityToIata } from "./services/aviasales";
 
 
@@ -678,9 +677,19 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       const originIata = "ROM";  // TODO: in futuro leggilo dall’utente / UI
       const destinationIata = cityToIata(selectedDestination);
 
-      let flights: any[] | null = null;
+      let flights: any[] | undefined = undefined;
+
+      // 🔍 DEBUG: Log incoming request body
+      console.log("🔍 GROQ-STREAM BACKEND RECEIVED:", {
+        message: message?.substring(0, 50) + "...",
+        selectedDestination,
+        tripDetails,
+        partyType,
+        hasConversationHistory: !!conversationHistory
+      });
 
       if (destinationIata) {
+        console.log(`✈️ IATA mapping: "${selectedDestination}" → ${destinationIata}`);
         try {
           const raw = await searchCheapestFlights({
             origin: originIata,
@@ -695,9 +704,13 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
             .sort((a: any, b: any) => a.price - b.price)
             .slice(0, 3); // 3 voli più economici
 
+          console.log(`✅ Flights found: ${flights?.length || 0} cheapest options`, flights);
+
         } catch (err) {
-          console.error("Errore chiamata Aviasales in groq-stream:", err);
+          console.error("❌ Errore chiamata Aviasales in groq-stream:", err);
         }
+      } else {
+        console.log(`⚠️ No IATA code found for destination: "${selectedDestination}"`);
       }
 
       const { streamGroqChatCompletion } = await import('./services/groq');
@@ -706,8 +719,10 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         selectedDestination,
         tripDetails,
         partyType: partyType || 'bachelor',
-        flights, // 🔹 aggiunto
+        flights,
       };
+      
+      console.log("📦 Context passed to GROQ:", { ...context, flights: context.flights?.length || 0 });
 
       for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);

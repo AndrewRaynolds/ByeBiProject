@@ -147,18 +147,21 @@ export default function OneClickAssistant() {
 
     try {
       // Try GROQ streaming first (ultra-fast!)
+      const payload = {
+        message: data.message,
+        selectedDestination,
+        tripDetails,
+        conversationHistory,
+        partyType: brand === 'byebro' ? 'bachelor' : 'bachelorette'
+      };
+      console.log("🔍 GROQ STREAM PAYLOAD:", payload);
+      
       const response = await fetch('/api/chat/groq-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: data.message,
-          selectedDestination,
-          tripDetails,
-          conversationHistory,
-          partyType: brand === 'byebro' ? 'bachelor' : 'bachelorette'
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok || !response.body) {
