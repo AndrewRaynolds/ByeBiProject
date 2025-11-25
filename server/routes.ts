@@ -724,6 +724,12 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       
       console.log("📦 Context passed to GROQ:", { ...context, flights: context.flights?.length || 0 });
 
+      // Send flights data to frontend first (before streaming text)
+      if (flights && flights.length > 0) {
+        res.write(`data: ${JSON.stringify({ flights: flights })}\n\n`);
+        console.log("✈️ Sent flights to frontend:", flights.length, "options");
+      }
+
       for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
       }
