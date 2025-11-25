@@ -39,6 +39,14 @@ interface ConversationState {
   partyType: string;
 }
 
+interface FlightInfo {
+  airline: string;
+  price: number;
+  departure_at: string;
+  return_at: string;
+  flight_number: number;
+}
+
 interface ChatDialogCompactProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,6 +66,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
   const [isLoading, setIsLoading] = useState(false);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [flights, setFlights] = useState<FlightInfo[]>([]);
   
   const [conversationState, setConversationState] = useState<ConversationState>({
     selectedDestination: '',
@@ -80,12 +89,10 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
     },
   });
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle initial message
   useEffect(() => {
     if (initialMessage && open) {
       form.setValue('message', initialMessage);
@@ -94,6 +101,159 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       }, 300);
     }
   }, [initialMessage, open]);
+
+  useEffect(() => {
+    if (conversationState.selectedDestination && 
+        conversationState.tripDetails.people > 0 && 
+        conversationState.tripDetails.startDate) {
+      saveCurrentItinerary();
+    }
+  }, [conversationState, flights]);
+
+  const formatDateRange = (startDate: string, endDate: string): string => {
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const startDay = start.getDate();
+      const endDay = end.getDate();
+      const month = start.toLocaleDateString('it-IT', { month: 'long' });
+      const year = start.getFullYear();
+      return `${startDay}-${endDay} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+    } catch {
+      return `${startDate} - ${endDate}`;
+    }
+  };
+
+  const saveCurrentItinerary = () => {
+    const { selectedDestination, tripDetails } = conversationState;
+    
+    if (!selectedDestination || tripDetails.people <= 0) {
+      return;
+    }
+
+    const dateStr = tripDetails.startDate && tripDetails.endDate 
+      ? formatDateRange(tripDetails.startDate, tripDetails.endDate)
+      : 'Date da definire';
+
+    const flightItem = flights.length > 0 ? {
+      id: 'flight-dynamic-1',
+      type: 'flight' as const,
+      name: `${flights[0].airline} - Milano → ${selectedDestination}`,
+      description: 'Volo diretto',
+      price: flights[0].price,
+      details: [
+        `Partenza: ${new Date(flights[0].departure_at).toLocaleString('it-IT')}`,
+        `Ritorno: ${new Date(flights[0].return_at).toLocaleString('it-IT')}`,
+        `Volo: ${flights[0].flight_number}`,
+        'Bagaglio a mano incluso'
+      ]
+    } : {
+      id: 'flight-dynamic-1',
+      type: 'flight' as const,
+      name: `Volo Milano → ${selectedDestination}`,
+      description: 'Volo diretto economico',
+      price: 89,
+      details: [
+        `Partenza: ${tripDetails.startDate}`,
+        `Ritorno: ${tripDetails.endDate}`,
+        'Bagaglio a mano incluso'
+      ]
+    };
+
+    const hotelItems = [
+      {
+        id: 'hotel-dynamic-1',
+        type: 'hotel' as const,
+        name: `${selectedDestination} Central Hotel`,
+        description: `${selectedDestination} - Centro città`,
+        price: 150,
+        details: [
+          `${tripDetails.days || 3} notti`,
+          `Camere per ${tripDetails.people} persone`,
+          'Colazione inclusa',
+          'WiFi gratuito'
+        ]
+      },
+      {
+        id: 'hotel-dynamic-2',
+        type: 'hotel' as const,
+        name: `${selectedDestination} Party Hostel`,
+        description: `${selectedDestination} - Zona movida`,
+        price: 85,
+        details: [
+          `${tripDetails.days || 3} notti`,
+          'Dormitorio condiviso',
+          'Bar interno',
+          'Eventi serali'
+        ]
+      }
+    ];
+
+    const carItems = [
+      {
+        id: 'car-dynamic-1',
+        type: 'car' as const,
+        name: 'Fiat 500 o simile',
+        description: 'Auto compatta 4 posti',
+        price: 45,
+        details: [
+          `${tripDetails.days || 3} giorni`,
+          'Assicurazione base inclusa',
+          'Chilometraggio illimitato',
+          'Ritiro aeroporto'
+        ]
+      }
+    ];
+
+    const activityItems = tripDetails.interests.length > 0 
+      ? tripDetails.interests.slice(0, 4).map((interest, idx) => ({
+          id: `activity-dynamic-${idx + 1}`,
+          type: 'activity' as const,
+          name: interest,
+          description: `Esperienza a ${selectedDestination}`,
+          price: 45 + (idx * 10),
+          details: [
+            'Durata: 3-4 ore',
+            'Guida inclusa',
+            'Prenotazione garantita'
+          ]
+        }))
+      : [
+          {
+            id: 'activity-dynamic-1',
+            type: 'activity' as const,
+            name: 'Boat Party con DJ',
+            description: 'Festa in barca con open bar',
+            price: 65,
+            details: ['5 ore di party', 'Open bar premium', 'DJ internazionale']
+          },
+          {
+            id: 'activity-dynamic-2',
+            type: 'activity' as const,
+            name: 'Tour Serale',
+            description: 'Pub crawl guidato',
+            price: 35,
+            details: ['4 locali inclusi', '1 drink per locale', 'Guida locale']
+          }
+        ];
+
+    const currentItinerary = {
+      destination: selectedDestination,
+      dates: dateStr,
+      people: tripDetails.people,
+      startDate: tripDetails.startDate,
+      endDate: tripDetails.endDate,
+      days: tripDetails.days,
+      partyType: conversationState.partyType,
+      flights: [flightItem],
+      hotels: hotelItems,
+      cars: carItems,
+      activities: activityItems
+    };
+
+    localStorage.setItem('currentItinerary', JSON.stringify(currentItinerary));
+    console.log('💾 Saved currentItinerary to localStorage:', currentItinerary);
+  };
 
   const parseDirectives = (content: string): string => {
     const directiveRegex = /\[([A-Z_]+):([^\]]+)\]/g;
@@ -253,6 +413,11 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
                   throw new Error(jsonData.error);
                 }
                 
+                if (jsonData.flights && Array.isArray(jsonData.flights)) {
+                  console.log('✈️ Received flights from backend:', jsonData.flights);
+                  setFlights(jsonData.flights);
+                }
+                
                 if (jsonData.done) {
                   break;
                 }
@@ -302,6 +467,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
   };
 
   const handleGenerateItinerary = () => {
+    saveCurrentItinerary();
     onOpenChange(false);
     setLocation('/itinerary');
   };

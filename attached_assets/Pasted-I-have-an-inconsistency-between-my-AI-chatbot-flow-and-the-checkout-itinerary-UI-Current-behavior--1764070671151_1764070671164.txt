@@ -1,0 +1,172 @@
+I have an inconsistency between my AI chatbot flow and the checkout/itinerary UI.
+
+Current behavior:
+
+The chatbot (Groq + Aviasales) talks about a trip to a dynamic destination (e.g. Barcellona, 4 people, real flights).
+
+But the Itinerary and Checkout pages always show:
+
+destination = "Ibiza"
+
+people = 6
+
+fixed dates "2-5 Luglio 2025"
+
+This comes from the hardcoded mockupData object in:
+
+client/src/pages/Itinerary.tsx
+
+const mockupData = {
+  destination: 'Ibiza',
+  dates: '2-5 Luglio 2025',
+  people: 6,
+  flights: [...],
+  hotels: [...],
+  cars: [...],
+  activities: [...]
+};
+
+
+and from this block:
+
+const selected = [
+  ...mockupData.flights,
+  ...mockupData.hotels,
+  ...mockupData.cars,
+  ...mockupData.activities
+].filter(item => selectedItems.has(item.id));
+
+localStorage.setItem('checkoutItems', JSON.stringify({
+  items: selected,
+  people: mockupData.people,
+  destination: mockupData.destination,
+  dates: mockupData.dates,
+  total: calculateTotal()
+}));
+
+setLocation('/checkout');
+
+
+client/src/pages/Checkout.tsx then just reads checkoutItems from localStorage and shows that static Ibiza trip.
+
+What I want instead:
+
+The trip data used in Itinerary.tsx and Checkout.tsx must come from the chatbot conversation, not from mockupData.
+
+The chatbot backend already exists:
+
+/api/chat/groq-stream (Groq, with Aviasales integration)
+
+/api/generated-itineraries (in server/routes.ts) that can create a generated itinerary object including flights/hotel/activities/totalPrice.
+
+The flow I want:
+
+The user chats in client/src/components/ChatDialogCompact.tsx and provides:
+
+destination
+
+dates (start/end)
+
+participants
+
+Once enough data is available (e.g. after [SET_DESTINATION], [SET_DATES], [SET_PARTICIPANTS] and a flight has been selected), the frontend should:
+
+either call /api/generated-itineraries with these values and store the returned itinerary,
+
+or build a currentItinerary object on the client side.
+
+This currentItinerary should be saved (for example) in localStorage under a clear key (e.g. "currentItinerary" or directly "checkoutItems").
+
+Itinerary.tsx must:
+
+stop relying on mockupData as the truth,
+
+load the real itinerary data from localStorage (or from an API call by ID),
+
+fall back to mockupData ONLY if no real data exists (for demo purposes).
+
+Checkout.tsx must:
+
+read the same real itinerary data (destination, dates, people, total, items),
+
+show destination, people, and dates consistent with the chatbot conversation.
+
+Concretely, you must:
+
+In client/src/pages/Itinerary.tsx:
+
+Introduce support for a dynamic itinerary object loaded from localStorage (or a prop / API call).
+
+Replace usages of mockupData.destination, mockupData.dates, mockupData.people, and the static arrays with the dynamic itinerary when present.
+
+When saving checkoutItems to localStorage, use this dynamic itinerary instead of mockupData.
+
+In client/src/pages/Checkout.tsx:
+
+Ensure it reads the same shape of data (items, people, destination, dates, total) that Itinerary saves.
+
+Remove any hidden dependency on Ibiza / 6 people / fixed dates.
+
+In client/src/components/ChatDialogCompact.tsx:
+
+Identify where the chatbot state is updated from tags like [SET_DESTINATION:...], [SET_DATES:...], [SET_PARTICIPANTS:...], and (if present) the selected flight.
+
+After the bot has enough information (destination, dates, participants, selected flight), build a currentItinerary object and store it so that Itinerary.tsx can use it.
+
+Option A (preferred): call /api/generated-itineraries (already defined in server/routes.ts) passing:
+
+destination
+
+startDate
+
+endDate
+
+participants
+
+eventType
+
+selectedExperiences
+and then store the returned itinerary (or at least its essential fields) in localStorage.
+
+Option B: if you do not use the API, at least construct a client-side object with:
+
+destination
+
+dates (start/end)
+
+participants
+
+selected flight as a BookingItem of type flight
+
+some hotel/car/activities items (mock or derived) as BookingItems
+
+IMPORTANT: the final result must guarantee that:
+
+If I chat about “Barcellona, 4 persone, 5–8 Luglio 2026”,
+then:
+
+the Itinerary page shows:
+
+destination = Barcellona
+
+people = 4
+
+dates = 5–8 Luglio 2026
+
+the Checkout page shows the SAME values,
+
+Ibiza and 6 people are no longer hardcoded anywhere in the user-visible flow.
+
+After making all changes:
+
+show me a clear DIFF of:
+
+client/src/components/ChatDialogCompact.tsx
+
+client/src/pages/Itinerary.tsx
+
+client/src/pages/Checkout.tsx
+
+briefly summarize how the data now flows:
+
+from chatbot → to itinerary → to checkout.

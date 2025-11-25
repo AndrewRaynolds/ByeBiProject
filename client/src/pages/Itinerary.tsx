@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,17 @@ interface BookingItem {
   image?: string;
 }
 
-const mockupData = {
+interface ItineraryData {
+  destination: string;
+  dates: string;
+  people: number;
+  flights: BookingItem[];
+  hotels: BookingItem[];
+  cars: BookingItem[];
+  activities: BookingItem[];
+}
+
+const fallbackMockupData: ItineraryData = {
   destination: 'Ibiza',
   dates: '2-5 Luglio 2025',
   people: 6,
@@ -140,12 +150,51 @@ const mockupData = {
 
 export default function Itinerary() {
   const [, setLocation] = useLocation();
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set(['flight-1']));
+  const [itineraryData, setItineraryData] = useState<ItineraryData>(fallbackMockupData);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  useEffect(() => {
+    const savedItinerary = localStorage.getItem('currentItinerary');
+    
+    if (savedItinerary) {
+      try {
+        const parsed = JSON.parse(savedItinerary);
+        console.log('📦 Loaded itinerary from localStorage:', parsed);
+        
+        const loadedData: ItineraryData = {
+          destination: parsed.destination || fallbackMockupData.destination,
+          dates: parsed.dates || fallbackMockupData.dates,
+          people: parsed.people || fallbackMockupData.people,
+          flights: parsed.flights || fallbackMockupData.flights,
+          hotels: parsed.hotels || fallbackMockupData.hotels,
+          cars: parsed.cars || fallbackMockupData.cars,
+          activities: parsed.activities || fallbackMockupData.activities
+        };
+        
+        setItineraryData(loadedData);
+        
+        if (loadedData.flights.length > 0) {
+          setSelectedItems(new Set([loadedData.flights[0].id]));
+        }
+      } catch (error) {
+        console.error('Error parsing saved itinerary:', error);
+        setSelectedItems(new Set(['flight-1']));
+      }
+    } else {
+      console.log('📦 No saved itinerary found, using fallback mockup data');
+      setSelectedItems(new Set(['flight-1']));
+    }
+    
+    setIsLoaded(true);
+  }, []);
   
   const toggleItem = (itemId: string) => {
     const newSelected = new Set(selectedItems);
+    const firstFlightId = itineraryData.flights[0]?.id;
+    
     if (newSelected.has(itemId)) {
-      if (itemId !== 'flight-1') {
+      if (itemId !== firstFlightId) {
         newSelected.delete(itemId);
       }
     } else {
@@ -156,15 +205,15 @@ export default function Itinerary() {
   
   const calculateTotal = () => {
     const allItems = [
-      ...mockupData.flights,
-      ...mockupData.hotels,
-      ...mockupData.cars,
-      ...mockupData.activities
+      ...itineraryData.flights,
+      ...itineraryData.hotels,
+      ...itineraryData.cars,
+      ...itineraryData.activities
     ];
     
     return allItems
       .filter(item => selectedItems.has(item.id))
-      .reduce((sum, item) => sum + (item.price * mockupData.people), 0);
+      .reduce((sum, item) => sum + (item.price * itineraryData.people), 0);
   };
   
   const getIcon = (type: string) => {
@@ -233,49 +282,61 @@ export default function Itinerary() {
   );
   
   const handleCheckout = () => {
-    const selected = [
-      ...mockupData.flights,
-      ...mockupData.hotels,
-      ...mockupData.cars,
-      ...mockupData.activities
-    ].filter(item => selectedItems.has(item.id));
+    const allItems = [
+      ...itineraryData.flights,
+      ...itineraryData.hotels,
+      ...itineraryData.cars,
+      ...itineraryData.activities
+    ];
     
-    localStorage.setItem('checkoutItems', JSON.stringify({
+    const selected = allItems.filter(item => selectedItems.has(item.id));
+    
+    const checkoutData = {
       items: selected,
-      people: mockupData.people,
-      destination: mockupData.destination,
-      dates: mockupData.dates,
+      people: itineraryData.people,
+      destination: itineraryData.destination,
+      dates: itineraryData.dates,
       total: calculateTotal()
-    }));
+    };
+    
+    localStorage.setItem('checkoutItems', JSON.stringify(checkoutData));
+    console.log('🛒 Saved checkout data:', checkoutData);
     
     setLocation('/checkout');
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900 flex items-center justify-center">
+        <div className="text-white text-xl">Caricamento...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
       <Header />
       
-      {/* Hero Header */}
       <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center mb-6">
             <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
-              Il Tuo Viaggio a {mockupData.destination}
+              Il Tuo Viaggio a {itineraryData.destination}
             </h1>
             <p className="text-white/80 text-lg">Personalizza il tuo pacchetto perfetto</p>
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-white/90">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Calendar className="w-5 h-5 text-red-400" />
-              <span className="font-medium">{mockupData.dates}</span>
+              <span className="font-medium">{itineraryData.dates}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Users className="w-5 h-5 text-red-400" />
-              <span className="font-medium">{mockupData.people} persone</span>
+              <span className="font-medium">{itineraryData.people} persone</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <MapPin className="w-5 h-5 text-red-400" />
-              <span className="font-medium">Isole Baleari, Spagna</span>
+              <span className="font-medium">{itineraryData.destination}, Europa</span>
             </div>
           </div>
         </div>
@@ -292,8 +353,8 @@ export default function Itinerary() {
               Volo
             </h2>
             <div className="grid gap-4">
-              {mockupData.flights.map(flight => 
-                renderItemCard(flight, selectedItems.has(flight.id), true)
+              {itineraryData.flights.map((flight, index) => 
+                renderItemCard(flight, selectedItems.has(flight.id), index === 0)
               )}
             </div>
             <p className="text-sm text-white/60 mt-2 ml-1 bg-white/5 inline-block px-3 py-1 rounded-full">
@@ -309,7 +370,7 @@ export default function Itinerary() {
               Hotel & Alloggi
             </h2>
             <div className="grid gap-4">
-              {mockupData.hotels.map(hotel => 
+              {itineraryData.hotels.map(hotel => 
                 renderItemCard(hotel, selectedItems.has(hotel.id))
               )}
             </div>
@@ -323,7 +384,7 @@ export default function Itinerary() {
               Noleggio Auto
             </h2>
             <div className="grid gap-4">
-              {mockupData.cars.map(car => 
+              {itineraryData.cars.map(car => 
                 renderItemCard(car, selectedItems.has(car.id))
               )}
             </div>
@@ -337,7 +398,7 @@ export default function Itinerary() {
               Attività & Esperienze
             </h2>
             <div className="grid gap-4">
-              {mockupData.activities.map(activity => 
+              {itineraryData.activities.map(activity => 
                 renderItemCard(activity, selectedItems.has(activity.id))
               )}
             </div>
@@ -347,12 +408,12 @@ export default function Itinerary() {
         <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-r from-black/90 via-red-900/90 to-black/90 backdrop-blur-md border-t-2 border-red-500/50 shadow-2xl mt-12 p-6 rounded-t-3xl">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
-              <p className="text-sm text-white/70 mb-1">Totale per {mockupData.people} persone</p>
+              <p className="text-sm text-white/70 mb-1">Totale per {itineraryData.people} persone</p>
               <p className="text-5xl font-bold bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
                 €{calculateTotal().toLocaleString()}
               </p>
               <p className="text-sm text-white/60 mt-1">
-                €{Math.round(calculateTotal() / mockupData.people)} a persona
+                €{Math.round(calculateTotal() / itineraryData.people)} a persona
               </p>
             </div>
             <Button
