@@ -1,0 +1,179 @@
+I have a bug in my flight integration with Aviasales / Travelpayouts.
+
+Symptoms:
+
+For destinations like Barcellona the chatbot can generate real flights.
+
+For Praga the chatbot does NOT generate flights, even though I have “praga” as a destination in the app.
+
+Root cause (from my code):
+
+In server/services/aviasales.ts I have this mapping:
+
+const CITY_TO_IATA: Record<string, string> = {
+  // tutto lower case
+  "roma": "ROM",
+  "rome": "ROM",
+  "milano": "MIL",
+  "milan": "MIL",
+  "barcellona": "BCN",
+  "barcelona": "BCN",
+  "parigi": "PAR",
+  "paris": "PAR",
+  // aggiungi altre città che ti servono
+};
+
+
+and a helper:
+
+export function cityToIata(cityName: string | undefined | null): string | null {
+  if (!cityName) return null;
+  const normalized = cityName.toLowerCase().trim();
+  return CITY_TO_IATA[normalized] || null;
+}
+
+
+In server/routes.ts, in the /api/chat/groq-stream endpoint, I do:
+
+const originIata = "ROM";
+const destinationIata = cityToIata(selectedDestination);
+
+if (destinationIata) {
+  // call searchCheapestFlights(...)
+} else {
+  console.log(`⚠️ No IATA code found for destination: "${selectedDestination}"`);
+}
+
+
+So if the user selects “praga” as destination, cityToIata("praga") returns null → Aviasales is never called → no flights in the chatbot.
+
+At the same time, in server/routes.ts I also have another mapping:
+
+const destinationToIATA: Record<string, string> = {
+  'roma': 'ROM',
+  'ibiza': 'IBZ',
+  'barcellona': 'BCN',
+  'praga': 'PRG',
+  'budapest': 'BUD',
+  'cracovia': 'KRK',
+  'amsterdam': 'AMS',
+  'berlino': 'BER',
+  'lisbona': 'LIS',
+  'palma de mallorca': 'PMI'
+};
+
+
+and /api/generated-itineraries uses:
+
+const destIATA = destinationToIATA[destination.toLowerCase()];
+
+
+So I have TWO separate mappings:
+
+CITY_TO_IATA (used by the chatbot Groq streaming endpoint)
+
+destinationToIATA (used by /api/generated-itineraries)
+
+They are inconsistent and CITY_TO_IATA is missing entries like praga, budapest, etc.
+
+What I want you to do:
+
+Refactor the city → IATA mapping so there is a single source of truth.
+
+Suggested approach:
+
+Create a new module, for example:
+
+server/services/cityMapping.ts
+
+Move the full mapping there, with both Italian and English variants, for all app destinations. For example:
+
+export const CITY_TO_IATA: Record<string, string> = {
+  "roma": "ROM",
+  "rome": "ROM",
+
+  "milano": "MIL",
+  "milan": "MIL",
+
+  "barcellona": "BCN",
+  "barcelona": "BCN",
+
+  "parigi": "PAR",
+  "paris": "PAR",
+
+  "praga": "PRG",
+  "prague": "PRG",
+
+  "budapest": "BUD",
+
+  "cracovia": "KRK",
+  "krakow": "KRK",
+
+  "amsterdam": "AMS",
+
+  "berlino": "BER",
+  "berlin": "BER",
+
+  "lisbona": "LIS",
+  "lisbon": "LIS",
+
+  "palma de mallorca": "PMI"
+};
+
+export function cityToIata(cityName: string | undefined | null): string | null {
+  if (!cityName) return null;
+  const normalized = cityName.toLowerCase().trim();
+  return CITY_TO_IATA[normalized] || null;
+}
+
+
+Update:
+
+server/services/aviasales.ts to import cityToIata (and possibly CITY_TO_IATA) from this new shared module, instead of defining its own local mapping.
+
+server/routes.ts (destinationToIATA + /api/generated-itineraries) to ALSO use the same shared mapping, instead of having a second hardcoded destinationToIATA. You can either:
+
+replace destinationToIATA with CITY_TO_IATA, or
+
+derive destinationToIATA from CITY_TO_IATA if needed.
+
+Make sure that:
+
+when I pass "praga" or "Praga" or "prague" as destination (either via chatbot selectedDestination or via /api/generated-itineraries), the system correctly maps it to "PRG" and calls searchCheapestFlights.
+
+Add a small debug log in /api/chat/groq-stream:
+
+console.log("✈️ GROQ-STREAM destination:", {
+  selectedDestination,
+  destinationIata
+});
+
+
+So that I can see, in Replit logs, that:
+
+for Barcellona → BCN
+
+for Praga → PRG
+
+etc.
+
+After making the refactor:
+
+Run a test where selectedDestination = "praga" in /api/chat/groq-stream and confirm:
+
+cityToIata("praga") returns "PRG",
+
+Aviasales is called,
+
+some flights are found and passed into context.flights for Groq.
+
+Show me a clear DIFF of all modified files:
+
+the new shared mapping file,
+
+changes in server/services/aviasales.ts,
+
+changes in server/routes.ts.
+
+Goal:
+When I ask the chatbot for an itinerary to “Praga” or “Prague”, it should behave exactly like with Barcellona: it must generate and use real flights via Aviasales, not silently skip them.
