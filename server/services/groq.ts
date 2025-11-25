@@ -20,6 +20,14 @@ interface ChatContext {
     currentStep: string;
   };
   partyType?: 'bachelor' | 'bachelorette';
+  
+  flights?: {
+    airline: string;
+    price: number;
+    departure_at: string;
+    return_at: string;
+    flight_number: number;
+  }[];
 }
 
 const BYEBRO_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBro, parte dell'app BYEBI. Il tuo compito è creare itinerari personalizzati per addii al celibato SOLO dopo aver raccolto tutte le informazioni obbligatorie.
@@ -210,6 +218,14 @@ export async function* streamGroqChatCompletion(
       
       if (context.tripDetails) {
         contextualPrompt += `\nDETTAGLI VIAGGIO:`;
+      if (context.flights && context.flights.length > 0) {
+          contextualPrompt += `\nHere are REAL flight options for this trip (do not invent flights):\n`;
+          context.flights.forEach((f, idx) => {
+            contextualPrompt += `${idx + 1}) Airline ${f.airline}, price ${f.price} EUR, departure ${f.departure_at}, return ${f.return_at}, flight number ${f.flight_number}.\n`;
+          });
+          contextualPrompt += `\nAsk the user to choose flight 1, 2, or 3. When they choose, confirm their selection and use ONLY that flight's data in the itinerary.\n`;
+        }
+
         if (context.tripDetails.people > 0) contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
         if (context.tripDetails.days > 0) contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
         if (context.tripDetails.adventureType) contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;

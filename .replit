@@ -49,12 +49,12 @@ localPort = 36599
 externalPort = 3002
 
 [[ports]]
-localPort = 37461
-externalPort = 3003
-
-[[ports]]
 localPort = 41183
 externalPort = 3000
+
+[[ports]]
+localPort = 46255
+externalPort = 3003
 
 [agent]
 integrations = ["javascript_openai==1.0.0", "javascript_stripe==1.0.0"]

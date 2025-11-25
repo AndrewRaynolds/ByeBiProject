@@ -13,6 +13,9 @@ import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
+import { searchCheapestFlights } from "./services/aviasales";
+import { searchCheapestFlights, cityToIata } from "./services/aviasales";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -658,7 +661,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   app.post("/api/chat/groq-stream", async (req: Request, res: Response) => {
     try {
       const { message, selectedDestination, tripDetails, conversationHistory, partyType } = req.body;
-      
+
       if (!process.env.GROQ_API_KEY) {
         return res.status(400).json({ 
           success: false, 
@@ -666,26 +669,50 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         });
       }
 
-      // Setup Server-Sent Events (SSE) for streaming
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // Import GROQ service
+      // 🔹 1) Determina codici IATA da usare
+      // Per ora: origine fissa ROM, destination dalla città selezionata
+      const originIata = "ROM";  // TODO: in futuro leggilo dall’utente / UI
+      const destinationIata = cityToIata(selectedDestination);
+
+      let flights: any[] | null = null;
+
+      if (destinationIata) {
+        try {
+          const raw = await searchCheapestFlights({
+            origin: originIata,
+            destination: destinationIata,
+            currency: "EUR",
+          });
+
+          const destCode = Object.keys(raw.data)[0];
+          const offersObj = raw.data[destCode] || {};
+
+          flights = Object.values(offersObj as any)
+            .sort((a: any, b: any) => a.price - b.price)
+            .slice(0, 3); // 3 voli più economici
+
+        } catch (err) {
+          console.error("Errore chiamata Aviasales in groq-stream:", err);
+        }
+      }
+
       const { streamGroqChatCompletion } = await import('./services/groq');
-      
+
       const context = {
         selectedDestination,
         tripDetails,
         partyType: partyType || 'bachelor',
+        flights, // 🔹 aggiunto
       };
 
-      // Stream response chunks
       for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
       }
 
-      // Send completion signal
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
 
