@@ -443,18 +443,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   });
 
   // Generated Itinerary routes (OneClick Assistant)
-  const destinationToIATA: Record<string, string> = {
-    'roma': 'ROM',
-    'ibiza': 'IBZ',
-    'barcellona': 'BCN',
-    'praga': 'PRG',
-    'budapest': 'BUD',
-    'cracovia': 'KRK',
-    'amsterdam': 'AMS',
-    'berlino': 'BER',
-    'lisbona': 'LIS',
-    'palma de mallorca': 'PMI'
-  };
+  // Usa la mappatura centralizzata da cityMapping.ts (importata via aviasales.ts)
 
   app.post("/api/generated-itineraries", async (req: Request, res: Response) => {
     try {
@@ -467,8 +456,9 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       // Get user ID if authenticated
       const userId = (req.user as any)?.id;
 
-      // Map destination to IATA code for flight search
-      const destIATA = destinationToIATA[destination.toLowerCase()];
+      // Map destination to IATA code for flight search (using centralized mapping)
+      const destIATA = cityToIata(destination);
+      console.log("✈️ GENERATED-ITINERARIES destination:", { destination, destIATA });
       
       // Search for flights (assuming origin is always Rome for now)
       let flights = null;
