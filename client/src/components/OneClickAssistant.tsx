@@ -156,7 +156,8 @@ export default function OneClickAssistant() {
           message: data.message,
           selectedDestination,
           tripDetails,
-          conversationHistory
+          conversationHistory,
+          partyType: brand === 'byebro' ? 'bachelor' : 'bachelorette'
         }),
       });
 

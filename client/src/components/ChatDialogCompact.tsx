@@ -93,7 +93,8 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           message: data.message,
           selectedDestination: '',
           tripDetails: {},
-          conversationHistory
+          conversationHistory,
+          partyType: 'bachelor'
         }),
       });
 
