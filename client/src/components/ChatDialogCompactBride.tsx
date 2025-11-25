@@ -23,6 +23,22 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface TripDetails {
+  people: number;
+  days: number;
+  startDate: string;
+  endDate: string;
+  adventureType: string;
+  interests: string[];
+  budget: string;
+}
+
+interface ConversationState {
+  selectedDestination: string;
+  tripDetails: TripDetails;
+  partyType: string;
+}
+
 interface ChatDialogCompactBrideProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +58,20 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   const [isLoading, setIsLoading] = useState(false);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const [conversationState, setConversationState] = useState<ConversationState>({
+    selectedDestination: '',
+    tripDetails: {
+      people: 0,
+      days: 0,
+      startDate: '',
+      endDate: '',
+      adventureType: '',
+      interests: [],
+      budget: 'medio'
+    },
+    partyType: 'bachelorette'
+  });
 
   const form = useForm<MessageFormValues>({
     resolver: zodResolver(messageSchema),
@@ -63,6 +93,94 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     }
   }, [initialMessage, open]);
 
+  const parseDirectives = (content: string): string => {
+    const directiveRegex = /\[([A-Z_]+):([^\]]+)\]/g;
+    let match;
+    
+    while ((match = directiveRegex.exec(content)) !== null) {
+      const [, command, value] = match;
+      
+      switch (command) {
+        case 'SET_DESTINATION':
+          const destination = value.trim();
+          console.log(`📍 Parsed destination: ${destination}`);
+          setConversationState(prev => ({ 
+            ...prev, 
+            selectedDestination: destination 
+          }));
+          break;
+          
+        case 'SET_DATES':
+          const [startDate, endDate] = value.split(',').map(d => d.trim());
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            console.log(`📅 Parsed dates: ${startDate} - ${endDate} (${days} days)`);
+            setConversationState(prev => ({ 
+              ...prev, 
+              tripDetails: { 
+                ...prev.tripDetails, 
+                startDate, 
+                endDate, 
+                days 
+              } 
+            }));
+          }
+          break;
+          
+        case 'SET_PARTICIPANTS':
+          const participants = parseInt(value);
+          if (!isNaN(participants)) {
+            console.log(`👥 Parsed participants: ${participants}`);
+            setConversationState(prev => ({ 
+              ...prev, 
+              tripDetails: { 
+                ...prev.tripDetails, 
+                people: participants 
+              } 
+            }));
+          }
+          break;
+          
+        case 'SET_EVENT_TYPE':
+          const eventType = value.trim().toLowerCase();
+          const partyType = eventType.includes('nubilato') || eventType.includes('bachelorette') 
+            ? 'bachelorette' 
+            : 'bachelor';
+          console.log(`🎉 Parsed event type: ${eventType} → partyType: ${partyType}`);
+          setConversationState(prev => ({ 
+            ...prev, 
+            partyType,
+            tripDetails: {
+              ...prev.tripDetails,
+              adventureType: eventType
+            }
+          }));
+          break;
+          
+        case 'SHOW_EXPERIENCES':
+          const experiences = value.split('|').map(exp => exp.trim());
+          console.log(`🎯 Parsed experiences: ${experiences.join(', ')}`);
+          setConversationState(prev => ({ 
+            ...prev, 
+            tripDetails: { 
+              ...prev.tripDetails, 
+              interests: experiences 
+            } 
+          }));
+          break;
+          
+        case 'UNLOCK_ITINERARY_BUTTON':
+          console.log('🔓 Itinerary button unlocked');
+          setShowGenerateButton(true);
+          break;
+      }
+    }
+    
+    return content.replace(directiveRegex, '').trim();
+  };
+
   const onSubmit = async (data: MessageFormValues) => {
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -83,10 +201,10 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
       const payload = {
         message: data.message,
-        selectedDestination: '',
-        tripDetails: {},
+        selectedDestination: conversationState.selectedDestination,
+        tripDetails: conversationState.tripDetails,
         conversationHistory,
-        partyType: 'bachelorette'
+        partyType: conversationState.partyType
       };
       console.log("🔍 GROQ STREAM PAYLOAD:", payload);
       
@@ -127,22 +245,25 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const jsonData = JSON.parse(line.slice(6));
                 
-                if (data.error) {
-                  throw new Error(data.error);
+                if (jsonData.error) {
+                  throw new Error(jsonData.error);
                 }
                 
-                if (data.done) {
+                if (jsonData.done) {
                   break;
                 }
                 
-                if (data.content) {
-                  accumulatedContent += data.content;
+                if (jsonData.content) {
+                  accumulatedContent += jsonData.content;
+                  
+                  const cleanedContent = parseDirectives(accumulatedContent);
+                  
                   setMessages(prev => 
                     prev.map(msg => 
                       msg.id === assistantMessageId 
-                        ? { ...msg, content: accumulatedContent }
+                        ? { ...msg, content: cleanedContent }
                         : msg
                     )
                   );
@@ -157,7 +278,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
       setIsLoading(false);
       
-      // Show generate button after 2 messages
       if (messages.length >= 3) {
         setShowGenerateButton(true);
       }
@@ -191,6 +311,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           <DialogTitle className="flex items-center gap-2">
             <Heart className="w-6 h-6 text-pink-600" />
             ByeBride Chat Assistant
+            {conversationState.selectedDestination && (
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                → {conversationState.selectedDestination}
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -212,7 +337,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
                   className={`max-w-[75%] rounded-lg px-4 py-2 ${
                     message.sender === 'user'
                       ? 'bg-purple-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                      : 'bg-gradient-to-br from-pink-50 to-pink-100 text-gray-900 border border-pink-200'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
