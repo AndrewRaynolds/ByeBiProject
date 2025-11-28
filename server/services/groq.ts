@@ -21,14 +21,17 @@ interface ChatContext {
   };
   partyType?: 'bachelor' | 'bachelorette';
   origin?: string; // IATA code for flight origin (e.g., "ROM")
+  originCityName?: string; // City name for display (e.g., "Roma", "Napoli")
   
   flights?: {
+    id?: number;
     airline: string;
     price: number;
     departure_at: string;
     return_at: string;
     flight_number: number;
     origin?: string; // IATA code injected from backend
+    destination?: string; // IATA code
   }[];
 }
 
@@ -37,6 +40,7 @@ const BYEBRO_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBro, parte del
 REGOLE PRINCIPALI (RIGIDE):
 1. Non generare mai un itinerario finché non hai TUTTE queste informazioni:
    - destinazione esatta
+   - CITTÀ DI PARTENZA (aeroporto di origine in Italia)
    - data di partenza
    - data di ritorno
    - numero di partecipanti
@@ -57,24 +61,35 @@ REGOLE PRINCIPALI (RIGIDE):
 5. Non mostrare il bottone "Genera Itinerario" fino a quando:
    - le domande obbligatorie sono state risposte
    - l'utente ha selezionato almeno 1 esperienza
+   - l'utente ha scelto un volo
 
 6. Se l'utente chiede subito "fammi un itinerario", tu NON lo fai. Prima chiedi le informazioni mancanti.
 
 FLUSSO OBBLIGATORIO DELLA CONVERSAZIONE:
 1. L'utente dice una meta.
-   → Tu rispondi chiedendo date, persone e tipo di viaggio (una domanda alla volta).
+   → Chiedi: "Da quale città italiana vuoi partire?" (Roma, Milano, Napoli, Torino, Venezia, Bologna, Firenze, Bari, Catania, Palermo, ecc.)
 
-2. L'utente dà tutte le informazioni.
-   → Tu confermi e proponi 4 esperienze cliccabili (elenco numerato).
+2. L'utente dice la città di partenza.
+   → Emetti [SET_ORIGIN:NomeCittà] e chiedi le date del viaggio.
 
-3. L'utente seleziona 1+ esperienze.
-   → SOLO ORA puoi generare l'itinerario quando richiesto.
+3. L'utente dà le date.
+   → Chiedi il numero di partecipanti.
 
-4. Quando l'utente chiede l'itinerario
-   → Generi un itinerario preciso, coerente con meta, date, persone e attività selezionate.
+4. L'utente dà il numero persone.
+   → A questo punto riceverai i voli reali. Presentali all'utente con i prezzi reali.
+   → Chiedi: "Quale volo preferisci? Scegli 1, 2 o 3."
+
+5. L'utente sceglie un volo (es. "il 2", "prendo il primo", "volo 3").
+   → Emetti [SELECT_FLIGHT:numero] e proponi le 4 esperienze.
+
+6. L'utente seleziona esperienze.
+   → SOLO ORA sblocca il bottone itinerario.
 
 DESTINAZIONI DISPONIBILI (SOLO QUESTE 10):
 Roma, Ibiza, Barcellona, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca
+
+AEROPORTI ITALIANI SUPPORTATI:
+Roma, Milano, Napoli, Torino, Venezia, Bologna, Firenze, Bari, Catania, Palermo, Verona, Pisa, Genova, Brindisi, Olbia, Cagliari, Alghero
 
 COMPORTAMENTO LINGUISTICO:
 - Risposte chiare, brevi, operative
@@ -86,9 +101,11 @@ FORMATO DIRETTIVE (COMANDI NASCOSTI NEL TESTO):
 Quando raccogli informazioni, inserisci direttive nascoste nel formato [COMANDO:valore] che il sistema userà per tracciare lo stato.
 Esempi:
 - Quando l'utente dice la destinazione: includi [SET_DESTINATION:Barcellona]
+- Quando l'utente dice la città di partenza: includi [SET_ORIGIN:Milano] o [SET_ORIGIN:Napoli]
 - Quando l'utente dà le date: includi [SET_DATES:2024-06-15,2024-06-18]
 - Quando l'utente dà il numero persone: includi [SET_PARTICIPANTS:6]
 - Quando l'utente dice il tipo evento: includi [SET_EVENT_TYPE:bachelor]
+- Quando l'utente sceglie un volo (1, 2 o 3): includi [SELECT_FLIGHT:1] o [SELECT_FLIGHT:2] o [SELECT_FLIGHT:3]
 - Quando hai tutte le info, mostra le 4 esperienze: [SHOW_EXPERIENCES:Boat Party|Pub Crawl|Karting|Sunset Cruise]
 - Quando l'utente seleziona esperienze: [UNLOCK_ITINERARY_BUTTON]
 
@@ -102,6 +119,7 @@ const BYEBRIDE_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBride, parte
 REGOLE PRINCIPALI (RIGIDE):
 1. Non generare mai un itinerario finché non hai TUTTE queste informazioni:
    - destinazione esatta
+   - CITTÀ DI PARTENZA (aeroporto di origine in Italia)
    - data di partenza
    - data di ritorno
    - numero di partecipanti
@@ -122,24 +140,35 @@ REGOLE PRINCIPALI (RIGIDE):
 5. Non mostrare il bottone "Genera Itinerario" fino a quando:
    - le domande obbligatorie sono state risposte
    - l'utente ha selezionato almeno 1 esperienza
+   - l'utente ha scelto un volo
 
 6. Se l'utente chiede subito "fammi un itinerario", tu NON lo fai. Prima chiedi le informazioni mancanti.
 
 FLUSSO OBBLIGATORIO DELLA CONVERSAZIONE:
 1. L'utente dice una meta.
-   → Tu rispondi chiedendo date, persone e tipo di viaggio (una domanda alla volta).
+   → Chiedi: "Da quale città italiana vuoi partire?" (Roma, Milano, Napoli, Torino, Venezia, Bologna, Firenze, Bari, Catania, Palermo, ecc.)
 
-2. L'utente dà tutte le informazioni.
-   → Tu confermi e proponi 4 esperienze cliccabili (elenco numerato).
+2. L'utente dice la città di partenza.
+   → Emetti [SET_ORIGIN:NomeCittà] e chiedi le date del viaggio.
 
-3. L'utente seleziona 1+ esperienze.
-   → SOLO ORA puoi generare l'itinerario quando richiesto.
+3. L'utente dà le date.
+   → Chiedi il numero di partecipanti.
 
-4. Quando l'utente chiede l'itinerario
-   → Generi un itinerario preciso, coerente con meta, date, persone e attività selezionate.
+4. L'utente dà il numero persone.
+   → A questo punto riceverai i voli reali. Presentali all'utente con i prezzi reali.
+   → Chiedi: "Quale volo preferisci? Scegli 1, 2 o 3."
+
+5. L'utente sceglie un volo (es. "il 2", "prendo il primo", "volo 3").
+   → Emetti [SELECT_FLIGHT:numero] e proponi le 4 esperienze.
+
+6. L'utente seleziona esperienze.
+   → SOLO ORA sblocca il bottone itinerario.
 
 DESTINAZIONI DISPONIBILI (SOLO QUESTE 10):
 Roma, Ibiza, Barcellona, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca
+
+AEROPORTI ITALIANI SUPPORTATI:
+Roma, Milano, Napoli, Torino, Venezia, Bologna, Firenze, Bari, Catania, Palermo, Verona, Pisa, Genova, Brindisi, Olbia, Cagliari, Alghero
 
 COMPORTAMENTO LINGUISTICO:
 - Risposte chiare, brevi, operative
@@ -151,9 +180,11 @@ FORMATO DIRETTIVE (COMANDI NASCOSTI NEL TESTO):
 Quando raccogli informazioni, inserisci direttive nascoste nel formato [COMANDO:valore] che il sistema userà per tracciare lo stato.
 Esempi:
 - Quando l'utente dice la destinazione: includi [SET_DESTINATION:Barcellona]
+- Quando l'utente dice la città di partenza: includi [SET_ORIGIN:Milano] o [SET_ORIGIN:Napoli]
 - Quando l'utente dà le date: includi [SET_DATES:2024-06-15,2024-06-18]
 - Quando l'utente dà il numero persone: includi [SET_PARTICIPANTS:6]
 - Quando l'utente dice il tipo evento: includi [SET_EVENT_TYPE:bachelorette]
+- Quando l'utente sceglie un volo (1, 2 o 3): includi [SELECT_FLIGHT:1] o [SELECT_FLIGHT:2] o [SELECT_FLIGHT:3]
 - Quando hai tutte le info, mostra le 4 esperienze: [SHOW_EXPERIENCES:Spa Day|Beach Club|Brunch|Wine Tasting]
 - Quando l'utente seleziona esperienze: [UNLOCK_ITINERARY_BUTTON]
 
@@ -215,26 +246,38 @@ export async function* streamGroqChatCompletion(
     const basePrompt = context.partyType === 'bachelorette' ? BYEBRIDE_SYSTEM_PROMPT : BYEBRO_SYSTEM_PROMPT;
     let contextualPrompt = basePrompt;
     
+    // Add origin city info if available
+    if (context.origin && context.originCityName) {
+      contextualPrompt += `\n\nCITTÀ DI PARTENZA: ${context.originCityName} (codice aeroporto: ${context.origin})`;
+    }
+    
     if (context.selectedDestination) {
       contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
       
       if (context.tripDetails) {
         contextualPrompt += `\nDETTAGLI VIAGGIO:`;
-      if (context.flights && context.flights.length > 0) {
-          const originCity = context.origin === 'ROM' ? 'Roma' : context.origin || 'Roma';
-          contextualPrompt += `\n\nIMPORTANT: The origin airport for ALL flights is: ${context.origin} (${originCity}).`;
-          contextualPrompt += `\nNever use "Milano" or "MIL" as origin. The correct origin is ALWAYS ${originCity}.`;
-          contextualPrompt += `\n\nHere are REAL flight options for this trip (do not invent flights):\n`;
-          context.flights.forEach((f, idx) => {
-            contextualPrompt += `${idx + 1}) From ${originCity} (${context.origin}) - Airline ${f.airline}, price ${f.price} EUR, departure ${f.departure_at}, return ${f.return_at}, flight number ${f.flight_number}.\n`;
-          });
-          contextualPrompt += `\nAsk the user to choose flight 1, 2, or 3. When they choose, confirm their selection and use ONLY that flight's data in the itinerary.\n`;
-        }
-
         if (context.tripDetails.people > 0) contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
         if (context.tripDetails.days > 0) contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
         if (context.tripDetails.adventureType) contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
       }
+    }
+    
+    // Add real flight options if available
+    if (context.flights && context.flights.length > 0) {
+      const originCity = context.originCityName || 'Roma';
+      contextualPrompt += `\n\n🛫 VOLI REALI DISPONIBILI (da ${originCity} verso ${context.selectedDestination}):`;
+      contextualPrompt += `\nQuesti sono voli REALI con prezzi aggiornati. Presentali all'utente e chiedi quale preferisce.\n`;
+      context.flights.forEach((f, idx) => {
+        const depDate = new Date(f.departure_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+        const depTime = new Date(f.departure_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        const retDate = new Date(f.return_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+        const retTime = new Date(f.return_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        contextualPrompt += `${idx + 1}) ${f.airline} - €${f.price} a persona\n`;
+        contextualPrompt += `   Partenza: ${depDate} ore ${depTime}\n`;
+        contextualPrompt += `   Ritorno: ${retDate} ore ${retTime}\n`;
+        contextualPrompt += `   Volo n. ${f.flight_number}\n\n`;
+      });
+      contextualPrompt += `\nQuando l'utente sceglie un volo (es. "il 2", "prendo il primo", "volo 3"), devi emettere la direttiva [SELECT_FLIGHT:numero] alla fine del messaggio.\n`;
     }
 
     // Prepare messages array
