@@ -13,7 +13,8 @@ import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
-import { searchCheapestFlights, cityToIata } from "./services/aviasales";
+import { searchCheapestFlights } from "./services/aviasales";
+import { cityToIata, iataToCity } from "./services/cityMapping";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -649,7 +650,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // GROQ Streaming Chat endpoint (NEW - Ultra-fast LLM streaming)
   app.post("/api/chat/groq-stream", async (req: Request, res: Response) => {
     try {
-      const { message, selectedDestination, tripDetails, conversationHistory, partyType } = req.body;
+      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity } = req.body;
 
       if (!process.env.GROQ_API_KEY) {
         return res.status(400).json({ 
@@ -664,7 +665,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // 🔹 1) Determina codici IATA da usare
       // Per ora: origine fissa ROM, destination dalla città selezionata
-      const originIata = "ROM";  // TODO: in futuro leggilo dall’utente / UI
+      const originIata = cityToIata(originCity) || "ROM";
+      const originCityName = iataToCity(originIata);
       const destinationIata = cityToIata(selectedDestination);
 
       let flights: any[] | undefined = undefined;
@@ -675,6 +677,9 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         selectedDestination,
         tripDetails,
         partyType,
+        originCity,
+        originIata,
+        originCityName,
         hasConversationHistory: !!conversationHistory
       });
 
@@ -711,7 +716,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         tripDetails,
         partyType: partyType || 'bachelor',
         flights,
-        origin: originIata, // Add origin to context for GROQ
+        origin: originIata,
+        originCityName,
       };
       
       console.log("📦 Context passed to GROQ:", { ...context, flights: context.flights?.length || 0 });

@@ -1,58 +1,148 @@
 // Mappatura centralizzata città → codice IATA
-// Unica fonte di verità per tutte le 10 destinazioni dell'app
+// Unica fonte di verità per origini italiane e destinazioni europee
 
 export const CITY_TO_IATA: Record<string, string> = {
-  // 1. Roma
+  // ===== ORIGINI ITALIANE =====
+  // Roma
   "roma": "ROM",
   "rome": "ROM",
+  
+  // Milano
+  "milano": "MIL",
+  "milan": "MIL",
+  
+  // Napoli
+  "napoli": "NAP",
+  "naples": "NAP",
+  
+  // Torino
+  "torino": "TRN",
+  "turin": "TRN",
+  
+  // Venezia
+  "venezia": "VCE",
+  "venice": "VCE",
+  
+  // Bologna
+  "bologna": "BLQ",
+  
+  // Firenze
+  "firenze": "FLR",
+  "florence": "FLR",
+  
+  // Bari
+  "bari": "BRI",
+  
+  // Catania
+  "catania": "CTA",
+  
+  // Palermo
+  "palermo": "PMO",
+  
+  // Verona
+  "verona": "VRN",
+  
+  // Pisa
+  "pisa": "PSA",
+  
+  // Genova
+  "genova": "GOA",
+  "genoa": "GOA",
+  
+  // Brindisi
+  "brindisi": "BDS",
+  
+  // Olbia
+  "olbia": "OLB",
+  
+  // Cagliari
+  "cagliari": "CAG",
+  
+  // Alghero
+  "alghero": "AHO",
 
-  // 2. Ibiza
+  // ===== DESTINAZIONI EUROPEE (10 destinazioni app) =====
+  // 1. Ibiza
   "ibiza": "IBZ",
 
-  // 3. Barcellona
+  // 2. Barcellona
   "barcellona": "BCN",
   "barcelona": "BCN",
 
-  // 4. Praga
+  // 3. Praga
   "praga": "PRG",
   "prague": "PRG",
 
-  // 5. Budapest
+  // 4. Budapest
   "budapest": "BUD",
 
-  // 6. Cracovia
+  // 5. Cracovia
   "cracovia": "KRK",
   "krakow": "KRK",
   "cracow": "KRK",
 
-  // 7. Amsterdam
+  // 6. Amsterdam
   "amsterdam": "AMS",
 
-  // 8. Berlino
+  // 7. Berlino
   "berlino": "BER",
   "berlin": "BER",
 
-  // 9. Lisbona
+  // 8. Lisbona
   "lisbona": "LIS",
   "lisbon": "LIS",
   "lisboa": "LIS",
 
-  // 10. Palma de Mallorca
+  // 9. Palma de Mallorca
   "palma de mallorca": "PMI",
   "palma": "PMI",
   "mallorca": "PMI",
-
-  // Extra: Milano (per origine voli)
-  "milano": "MIL",
-  "milan": "MIL",
 
   // Extra: Parigi
   "parigi": "PAR",
   "paris": "PAR"
 };
 
+// Mappatura IATA → nome città (per display)
+export const IATA_TO_CITY: Record<string, string> = {
+  // Origini italiane
+  "ROM": "Roma",
+  "MIL": "Milano",
+  "NAP": "Napoli",
+  "TRN": "Torino",
+  "VCE": "Venezia",
+  "BLQ": "Bologna",
+  "FLR": "Firenze",
+  "BRI": "Bari",
+  "CTA": "Catania",
+  "PMO": "Palermo",
+  "VRN": "Verona",
+  "PSA": "Pisa",
+  "GOA": "Genova",
+  "BDS": "Brindisi",
+  "OLB": "Olbia",
+  "CAG": "Cagliari",
+  "AHO": "Alghero",
+  // Destinazioni
+  "IBZ": "Ibiza",
+  "BCN": "Barcellona",
+  "PRG": "Praga",
+  "BUD": "Budapest",
+  "KRK": "Cracovia",
+  "AMS": "Amsterdam",
+  "BER": "Berlino",
+  "LIS": "Lisbona",
+  "PMI": "Palma de Mallorca",
+  "PAR": "Parigi"
+};
+
 export function cityToIata(cityName: string | undefined | null): string | null {
   if (!cityName) return null;
   const normalized = cityName.toLowerCase().trim();
   return CITY_TO_IATA[normalized] || null;
+}
+
+export function iataToCity(iataCode: string | undefined | null): string {
+  if (!iataCode) return "Roma";
+  return IATA_TO_CITY[iataCode.toUpperCase()] || iataCode;
 }

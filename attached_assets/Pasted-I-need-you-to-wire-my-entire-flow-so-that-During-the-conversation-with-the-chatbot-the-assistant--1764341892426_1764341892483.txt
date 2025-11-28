@@ -1,0 +1,326 @@
+I need you to wire my entire flow so that:
+
+During the conversation with the chatbot, the assistant explicitly asks the user for the flight origin city (departure airport).
+
+The backend uses this origin to call Aviasales and fetch real flights.
+
+The user can select one of those real flights inside the chat.
+
+The selected flight, with its real origin airport, is saved and propagated all the way to the checkout page, where it’s displayed as part of the trip summary.
+
+Right now parts of this exist (Groq, Aviasales, itinerary, checkout), but they are not wired correctly end-to-end.
+
+1. Chatbot must collect ORIGIN from the user
+
+In client/src/components/ChatDialogCompact.tsx (or the main chat component):
+
+Extend the conversation state (if not already done) with an originCity and selectedFlight field, for example:
+
+const [conversationState, setConversationState] = useState({
+  selectedDestination: '',
+  tripDetails: {
+    people: null,
+    days: null,
+    startDate: null,
+    endDate: null
+  },
+  originCity: '',         // NEW: departure city
+  selectedFlight: null    // NEW: chosen flight object
+});
+
+
+Make sure the assistant logic (the Groq prompt) can emit a tag like:
+
+[SET_ORIGIN:Milano]
+
+[SET_ORIGIN:Roma]
+
+[SET_ORIGIN:Napoli]
+
+You likely already parse tags like [SET_DESTINATION:...], [SET_DATES:...], [SET_PARTICIPANTS:...].
+Extend that same parser to detect [SET_ORIGIN:...] and update conversationState.originCity accordingly.
+
+If originCity is missing when the user is planning a trip, the assistant should ask something like:
+
+"Da quale città/aeroporto in Italia vuoi partire?"
+
+and then, when the user answers, emit [SET_ORIGIN:<city>].
+
+When sending the payload to /api/chat/groq-stream, include the origin:
+
+const payload = {
+  message: data.message,
+  selectedDestination: conversationState.selectedDestination,
+  tripDetails: conversationState.tripDetails,
+  partyType: 'bachelor',
+  originCity: conversationState.originCity,       // NEW
+  selectedFlight: conversationState.selectedFlight // optional, for later steps
+};
+
+2. Backend: map origin city → IATA + call Aviasales
+
+In the backend, in server/services/city-mapping.ts (or create it if it doesn’t exist), I want a single shared mapping for both origins and destinations, e.g.:
+
+export const CITY_TO_IATA: Record<string, string> = {
+  // Main Italian origins
+  "roma": "ROM",
+  "rome": "ROM",
+  "milano": "MIL",
+  "milan": "MIL",
+  "napoli": "NAP",
+  "naples": "NAP",
+  "torino": "TRN",
+  "turin": "TRN",
+  "venezia": "VCE",
+  "venice": "VCE",
+  "bologna": "BLQ",
+  "firenze": "FLR",
+  "florence": "FLR",
+  "bari": "BRI",
+  "catania": "CTA",
+  "palermo": "PMO",
+  "verona": "VRN",
+  "pisa": "PSA",
+  "genova": "GOA",
+  "brindisi": "BDS",
+  "olbia": "OLB",
+  "cagliari": "CAG",
+  "alghero": "AHO",
+
+  // Destinations already in app
+  "ibiza": "IBZ",
+  "barcellona": "BCN",
+  "barcelona": "BCN",
+  "parigi": "PAR",
+  "paris": "PAR",
+  "praga": "PRG",
+  "prague": "PRG",
+  "budapest": "BUD",
+  "cracovia": "KRK",
+  "krakow": "KRK",
+  "amsterdam": "AMS",
+  "berlino": "BER",
+  "berlin": "BER",
+  "lisbona": "LIS",
+  "lisbon": "LIS",
+  "palma de mallorca": "PMI"
+};
+
+export function cityToIata(cityName: string | undefined | null): string | null {
+  if (!cityName) return null;
+  const normalized = cityName.toLowerCase().trim();
+  return CITY_TO_IATA[normalized] || null;
+}
+
+
+Make sure all server code uses this module instead of duplicating mappings.
+
+In server/routes.ts, in /api/chat/groq-stream:
+
+Read originCity from req.body:
+
+const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity } = req.body;
+
+
+Compute origin and destination IATA:
+
+const originIata = cityToIata(originCity) || "ROM"; // fallback Rome if not set
+const destinationIata = cityToIata(selectedDestination);
+
+
+When destinationIata is present, call Aviasales using the originIata:
+
+if (destinationIata) {
+  const raw = await searchCheapestFlights({
+    origin: originIata,
+    destination: destinationIata,
+    currency: "EUR"
+  });
+
+  const destCode = Object.keys(raw.data)[0];
+  const offersObj = raw.data[destCode] || {};
+
+  const offers = Object.values(offersObj as any)
+    .sort((a: any, b: any) => a.price - b.price)
+    .slice(0, 3)
+    .map((o: any, idx: number) => ({
+      id: idx + 1, // 1, 2, 3 for user choice
+      airline: o.airline,
+      price: o.price,
+      departureAt: o.departure_at,
+      returnAt: o.return_at,
+      flightNumber: o.flight_number,
+      origin: originIata,
+      destination: destinationIata
+    }));
+
+  flights = offers;
+}
+
+
+Pass originIata and flights into the Groq context:
+
+const context = {
+  selectedDestination,
+  tripDetails,
+  partyType: partyType || 'bachelor',
+  origin: originIata,
+  flights
+};
+
+
+Also add a debug log:
+
+console.log("✈️ GROQ-STREAM FLIGHTS:", { originIata, destinationIata, flightsCount: flights?.length });
+
+3. Groq prompt: ask user to choose 1/2/3 and emit a SELECT tag
+
+In server/services/groq.ts, inside streamGroqChatCompletion, update the contextual prompt:
+
+If context.origin exists, say:
+
+contextualPrompt += `\nThe DEPARTURE airport (origin) is the one represented by IATA code: ${context.origin}. Do NOT invent a different origin.`;
+
+
+If context.flights exists, list REAL options:
+
+if (context.flights && context.flights.length > 0) {
+  contextualPrompt += `\nHere are REAL flight options from this origin to the selected destination:\n`;
+  context.flights.forEach((f, idx) => {
+    contextualPrompt += `${idx + 1}) Origin ${f.origin}, airline ${f.airline}, price ${f.price} EUR, departure ${f.departureAt}, return ${f.returnAt}, flight number ${f.flightNumber}.\n`;
+  });
+  contextualPrompt += `\nAsk the user to choose a flight by replying with 1, 2, or 3 and then emit a tag like [SELECT_FLIGHT:1] or [SELECT_FLIGHT:2] accordingly. Never invent flights beyond those provided.`;
+}
+
+
+This ensures:
+
+Groq uses REAL flight data,
+
+asks the user to choose,
+
+emits [SELECT_FLIGHT:X].
+
+4. Frontend: parse [SELECT_FLIGHT:X], save selected flight, send it to checkout
+
+Back in client/src/components/ChatDialogCompact.tsx:
+
+Extend the tag parser to handle [SELECT_FLIGHT:X]:
+
+When you detect [SELECT_FLIGHT:2], you must:
+
+know the latest flights array received from the backend (store it in state when you get a response from /api/chat/groq-stream),
+
+pick flights[X - 1],
+
+set conversationState.selectedFlight to that object.
+
+For example:
+
+const [availableFlights, setAvailableFlights] = useState<any[]>([]);
+
+// When you receive a chunk or a final response from groq-stream that includes flights in some metadata, store them:
+setAvailableFlights(response.flights || []);
+
+// When parsing tags:
+if (tag.startsWith("[SELECT_FLIGHT:")) {
+  const index = parseInt(tag.match(/\[SELECT_FLIGHT:(\d+)\]/)?.[1] || "0", 10);
+  const chosen = availableFlights[index - 1];
+  if (chosen) {
+    setConversationState(prev => ({
+      ...prev,
+      selectedFlight: chosen
+    }));
+  }
+}
+
+
+When the user confirms they’re ready to proceed to checkout (or when the itinerary is generated), build a checkoutItems / currentItinerary object that includes the selected flight:
+
+const checkoutData = {
+  destination: conversationState.selectedDestination,
+  origin: conversationState.originCity,
+  dates: {
+    startDate: tripDetails.startDate,
+    endDate: tripDetails.endDate
+  },
+  people: tripDetails.people,
+  items: [
+    {
+      type: "flight",
+      ...conversationState.selectedFlight
+    }
+    // later you can push hotel/activities
+  ],
+  total: conversationState.selectedFlight
+    ? conversationState.selectedFlight.price * (tripDetails.people || 1)
+    : 0
+};
+
+localStorage.setItem("checkoutItems", JSON.stringify(checkoutData));
+
+
+In client/src/pages/Checkout.tsx, ensure you only read from this structure:
+
+useEffect(() => {
+  const stored = localStorage.getItem("checkoutItems");
+  if (stored) {
+    const data = JSON.parse(stored);
+    setCheckoutData(data);
+  } else {
+    setLocation("/");
+  }
+}, []);
+
+
+And display:
+
+origin: checkoutData.origin or checkoutData.items[0].origin
+
+destination: checkoutData.destination
+
+dates: checkoutData.dates
+
+people: checkoutData.people
+
+flight details: from checkoutData.items where type === "flight"
+
+total: checkoutData.total
+
+Add a debug log:
+
+console.log("🧾 CHECKOUT DATA:", checkoutData);
+
+5. Validation
+
+After implementing all of this, test the following conversation:
+
+“Voglio organizzare un viaggio a Barcellona dal 5 all’8 luglio 2026, siamo 4, partiamo da Napoli.”
+
+Expected:
+
+Chatbot asks origin if missing, then understands “Napoli”.
+
+Backend maps “Napoli” → NAP, destination “Barcellona” → BCN.
+
+Aviasales returns real NAP → BCN flights.
+
+Chatbot shows 3 real options and asks: “Scegli 1, 2 o 3”.
+
+You answer “2” → bot emits [SELECT_FLIGHT:2].
+
+Frontend saves the second flight in conversationState.selectedFlight.
+
+When going to checkout, it shows:
+
+origin = Napoli (NAP),
+
+destination = Barcellona (BCN),
+
+dates = 5–8 luglio 2026,
+
+people = 4,
+
+total price coherent with the selected real flight.
+
+Please implement all of the above, then show me a clear DIFF of the modified files and a short explanation of the new end-to-end flow.
