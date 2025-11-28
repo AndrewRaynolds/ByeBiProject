@@ -14,7 +14,17 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 
 Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.
 
-The OneClick Assistant implements a strict, step-by-step conversational flow: 5 mandatory questions (destination, dates, participants, event type) are asked before proceeding. Itinerary generation occurs only after the user selects at least one experience from a list of exactly four options provided by the AI. The AI chat behavior is governed by strict rules, preventing premature itinerary generation, destination assumptions (never defaults to Ibiza), and resetting information when the destination changes. AI responses are parsed for structured commands (e.g., [SET_DESTINATION:]) to automatically update the frontend state.
+The OneClick Assistant implements a strict, step-by-step conversational flow with origin city selection and real flight integration:
+1. User specifies destination → AI asks for origin city (Italian airports)
+2. User provides origin city → [SET_ORIGIN:CityName] directive emitted
+3. User provides dates and participants
+4. Backend fetches real flights via Aviasales API from origin to destination
+5. AI presents 3 flight options with real prices
+6. User selects flight (1, 2, or 3) → [SELECT_FLIGHT:X] directive emitted
+7. User selects experiences from 4 options
+8. Itinerary generated with selected flight details propagated to checkout
+
+AI responses are parsed for structured commands (SET_DESTINATION, SET_ORIGIN, SET_DATES, SET_PARTICIPANTS, SELECT_FLIGHT, SHOW_EXPERIENCES, UNLOCK_ITINERARY_BUTTON) to automatically update frontend state. The city-to-IATA mapping covers 17 Italian airports and 10 European destinations.
 
 An Activity Ideas Generator allows users to get personalized activity suggestions based on destination and month, displayed in a modal with visual cards. The booking flow follows Chat → Itinerary → Checkout → Purchase simulation, with a static mockup for itinerary and checkout pages, including dynamic pricing calculation based on user selections. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
 
