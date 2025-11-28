@@ -40,12 +40,25 @@ interface ConversationState {
 }
 
 interface FlightInfo {
+  id?: number;
   airline: string;
   price: number;
   departure_at: string;
   return_at: string;
   flight_number: number;
-  origin?: string; // IATA code injected from backend (e.g., "ROM")
+  origin?: string;
+  destination?: string;
+}
+
+interface SelectedFlightData {
+  flightIndex: number;
+  airline: string;
+  price: number;
+  departure_at: string;
+  return_at: string;
+  flight_number: number;
+  originCity: string;
+  destinationCity: string;
 }
 
 interface ChatDialogCompactProps {
@@ -68,6 +81,8 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [flights, setFlights] = useState<FlightInfo[]>([]);
+  const [originCity, setOriginCity] = useState<string>('');
+  const [selectedFlight, setSelectedFlight] = useState<SelectedFlightData | null>(null);
   
   const [conversationState, setConversationState] = useState<ConversationState>({
     selectedDestination: '',
@@ -109,7 +124,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
         conversationState.tripDetails.startDate) {
       saveCurrentItinerary();
     }
-  }, [conversationState, flights]);
+  }, [conversationState, flights, originCity, selectedFlight]);
 
   const formatDateRange = (startDate: string, endDate: string): string => {
     try {
@@ -136,43 +151,60 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       ? formatDateRange(tripDetails.startDate, tripDetails.endDate)
       : 'Date da definire';
 
-    // IATA to city name mapping
-    const iataToCity: Record<string, string> = {
-      'ROM': 'Roma', 'MIL': 'Milano', 'FCO': 'Roma', 'MXP': 'Milano',
-      'BCN': 'Barcellona', 'PRG': 'Praga', 'BUD': 'Budapest', 'KRK': 'Cracovia',
-      'AMS': 'Amsterdam', 'BER': 'Berlino', 'LIS': 'Lisbona', 'PMI': 'Palma', 'IBZ': 'Ibiza'
-    };
+    // Use user-selected origin city, fallback to stored origin or default
+    const userOriginCity = originCity || 'Roma';
     
-    // Get origin city from flight data (default to Roma if not available)
-    const originIata = flights.length > 0 && flights[0].origin ? flights[0].origin : 'ROM';
-    const originCity = iataToCity[originIata] || 'Roma';
-    
-    console.log("✈️ FLIGHT DATA RECEIVED:", { flights: flights[0], originIata, originCity });
+    console.log("✈️ FLIGHT DATA:", { 
+      selectedFlight, 
+      originCity: userOriginCity, 
+      flightsAvailable: flights.length 
+    });
 
-    const flightItem = flights.length > 0 ? {
-      id: 'flight-dynamic-1',
-      type: 'flight' as const,
-      name: `${flights[0].airline} - ${originCity} → ${selectedDestination}`,
-      description: `Volo da ${originCity}`,
-      price: flights[0].price,
-      details: [
-        `Partenza: ${new Date(flights[0].departure_at).toLocaleString('it-IT')}`,
-        `Ritorno: ${new Date(flights[0].return_at).toLocaleString('it-IT')}`,
-        `Volo: ${flights[0].flight_number}`,
-        'Bagaglio a mano incluso'
-      ]
-    } : {
-      id: 'flight-dynamic-1',
-      type: 'flight' as const,
-      name: `Volo ${originCity} → ${selectedDestination}`,
-      description: `Volo diretto da ${originCity}`,
-      price: 89,
-      details: [
-        `Partenza: ${tripDetails.startDate}`,
-        `Ritorno: ${tripDetails.endDate}`,
-        'Bagaglio a mano incluso'
-      ]
-    };
+    // Use selected flight if available, otherwise first flight, otherwise fallback
+    let flightItem;
+    if (selectedFlight) {
+      flightItem = {
+        id: 'flight-selected',
+        type: 'flight' as const,
+        name: `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}`,
+        description: `Volo da ${selectedFlight.originCity}`,
+        price: selectedFlight.price,
+        details: [
+          `Partenza: ${new Date(selectedFlight.departure_at).toLocaleString('it-IT')}`,
+          `Ritorno: ${new Date(selectedFlight.return_at).toLocaleString('it-IT')}`,
+          `Volo: ${selectedFlight.flight_number}`,
+          'Bagaglio a mano incluso'
+        ]
+      };
+    } else if (flights.length > 0) {
+      const firstFlight = flights[0];
+      flightItem = {
+        id: 'flight-dynamic-1',
+        type: 'flight' as const,
+        name: `${firstFlight.airline} - ${userOriginCity} → ${selectedDestination}`,
+        description: `Volo da ${userOriginCity}`,
+        price: firstFlight.price,
+        details: [
+          `Partenza: ${new Date(firstFlight.departure_at).toLocaleString('it-IT')}`,
+          `Ritorno: ${new Date(firstFlight.return_at).toLocaleString('it-IT')}`,
+          `Volo: ${firstFlight.flight_number}`,
+          'Bagaglio a mano incluso'
+        ]
+      };
+    } else {
+      flightItem = {
+        id: 'flight-fallback',
+        type: 'flight' as const,
+        name: `Volo ${userOriginCity} → ${selectedDestination}`,
+        description: `Volo diretto da ${userOriginCity}`,
+        price: 89,
+        details: [
+          `Partenza: ${tripDetails.startDate}`,
+          `Ritorno: ${tripDetails.endDate}`,
+          'Bagaglio a mano incluso'
+        ]
+      };
+    }
 
     const hotelItems = [
       {
@@ -259,6 +291,8 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       endDate: tripDetails.endDate,
       days: tripDetails.days,
       partyType: conversationState.partyType,
+      originCity: userOriginCity,
+      selectedFlight: selectedFlight,
       flights: [flightItem],
       hotels: hotelItems,
       cars: carItems,
@@ -266,6 +300,9 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
     };
 
     localStorage.setItem('currentItinerary', JSON.stringify(currentItinerary));
+    if (selectedFlight) {
+      localStorage.setItem('selectedFlight', JSON.stringify(selectedFlight));
+    }
     console.log('💾 Saved currentItinerary to localStorage:', currentItinerary);
   };
 
@@ -351,6 +388,35 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           console.log('🔓 Itinerary button unlocked');
           setShowGenerateButton(true);
           break;
+          
+        case 'SET_ORIGIN':
+          const origin = value.trim();
+          console.log(`🛫 Parsed origin city: ${origin}`);
+          setOriginCity(origin);
+          break;
+          
+        case 'SELECT_FLIGHT':
+          const flightNum = parseInt(value.trim());
+          if (!isNaN(flightNum) && flightNum >= 1 && flightNum <= flights.length) {
+            const selectedFlightIdx = flightNum - 1;
+            const flight = flights[selectedFlightIdx];
+            if (flight) {
+              const flightData: SelectedFlightData = {
+                flightIndex: flightNum,
+                airline: flight.airline,
+                price: flight.price,
+                departure_at: flight.departure_at,
+                return_at: flight.return_at,
+                flight_number: flight.flight_number,
+                originCity: originCity || 'Roma',
+                destinationCity: conversationState.selectedDestination
+              };
+              console.log(`✈️ User selected flight ${flightNum}:`, flightData);
+              setSelectedFlight(flightData);
+              localStorage.setItem('selectedFlight', JSON.stringify(flightData));
+            }
+          }
+          break;
       }
     }
     
@@ -380,7 +446,8 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
         selectedDestination: conversationState.selectedDestination,
         tripDetails: conversationState.tripDetails,
         conversationHistory,
-        partyType: conversationState.partyType
+        partyType: conversationState.partyType,
+        originCity: originCity
       };
       console.log("🔍 GROQ STREAM PAYLOAD:", payload);
       
