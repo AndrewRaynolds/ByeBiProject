@@ -45,6 +45,7 @@ interface FlightInfo {
   departure_at: string;
   return_at: string;
   flight_number: number;
+  origin?: string; // IATA code injected from backend (e.g., "ROM")
 }
 
 interface ChatDialogCompactBrideProps {
@@ -135,11 +136,24 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       ? formatDateRange(tripDetails.startDate, tripDetails.endDate)
       : 'Date da definire';
 
+    // IATA to city name mapping
+    const iataToCity: Record<string, string> = {
+      'ROM': 'Roma', 'MIL': 'Milano', 'FCO': 'Roma', 'MXP': 'Milano',
+      'BCN': 'Barcellona', 'PRG': 'Praga', 'BUD': 'Budapest', 'KRK': 'Cracovia',
+      'AMS': 'Amsterdam', 'BER': 'Berlino', 'LIS': 'Lisbona', 'PMI': 'Palma', 'IBZ': 'Ibiza'
+    };
+    
+    // Get origin city from flight data (default to Roma if not available)
+    const originIata = flights.length > 0 && flights[0].origin ? flights[0].origin : 'ROM';
+    const originCity = iataToCity[originIata] || 'Roma';
+    
+    console.log("✈️ FLIGHT DATA RECEIVED:", { flights: flights[0], originIata, originCity });
+
     const flightItem = flights.length > 0 ? {
       id: 'flight-dynamic-1',
       type: 'flight' as const,
-      name: `${flights[0].airline} - Milano → ${selectedDestination}`,
-      description: 'Volo diretto',
+      name: `${flights[0].airline} - ${originCity} → ${selectedDestination}`,
+      description: `Volo da ${originCity}`,
       price: flights[0].price,
       details: [
         `Partenza: ${new Date(flights[0].departure_at).toLocaleString('it-IT')}`,
@@ -150,8 +164,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     } : {
       id: 'flight-dynamic-1',
       type: 'flight' as const,
-      name: `Volo Milano → ${selectedDestination}`,
-      description: 'Volo diretto economico',
+      name: `Volo ${originCity} → ${selectedDestination}`,
+      description: `Volo diretto da ${originCity}`,
       price: 89,
       details: [
         `Partenza: ${tripDetails.startDate}`,

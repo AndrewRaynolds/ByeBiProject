@@ -692,7 +692,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
           flights = Object.values(offersObj as any)
             .sort((a: any, b: any) => a.price - b.price)
-            .slice(0, 3); // 3 voli più economici
+            .slice(0, 3)
+            .map((o: any) => ({ ...o, origin: originIata })); // Inject origin into each flight
 
           console.log(`✅ Flights found: ${flights?.length || 0} cheapest options`, flights);
 
@@ -710,9 +711,11 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         tripDetails,
         partyType: partyType || 'bachelor',
         flights,
+        origin: originIata, // Add origin to context for GROQ
       };
       
       console.log("📦 Context passed to GROQ:", { ...context, flights: context.flights?.length || 0 });
+      console.log("✈️ FLIGHT ORIGIN SENT TO GROQ:", context.origin);
 
       // Send flights data to frontend first (before streaming text)
       if (flights && flights.length > 0) {

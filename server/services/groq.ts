@@ -20,6 +20,7 @@ interface ChatContext {
     currentStep: string;
   };
   partyType?: 'bachelor' | 'bachelorette';
+  origin?: string; // IATA code for flight origin (e.g., "ROM")
   
   flights?: {
     airline: string;
@@ -27,6 +28,7 @@ interface ChatContext {
     departure_at: string;
     return_at: string;
     flight_number: number;
+    origin?: string; // IATA code injected from backend
   }[];
 }
 
@@ -219,9 +221,12 @@ export async function* streamGroqChatCompletion(
       if (context.tripDetails) {
         contextualPrompt += `\nDETTAGLI VIAGGIO:`;
       if (context.flights && context.flights.length > 0) {
-          contextualPrompt += `\nHere are REAL flight options for this trip (do not invent flights):\n`;
+          const originCity = context.origin === 'ROM' ? 'Roma' : context.origin || 'Roma';
+          contextualPrompt += `\n\nIMPORTANT: The origin airport for ALL flights is: ${context.origin} (${originCity}).`;
+          contextualPrompt += `\nNever use "Milano" or "MIL" as origin. The correct origin is ALWAYS ${originCity}.`;
+          contextualPrompt += `\n\nHere are REAL flight options for this trip (do not invent flights):\n`;
           context.flights.forEach((f, idx) => {
-            contextualPrompt += `${idx + 1}) Airline ${f.airline}, price ${f.price} EUR, departure ${f.departure_at}, return ${f.return_at}, flight number ${f.flight_number}.\n`;
+            contextualPrompt += `${idx + 1}) From ${originCity} (${context.origin}) - Airline ${f.airline}, price ${f.price} EUR, departure ${f.departure_at}, return ${f.return_at}, flight number ${f.flight_number}.\n`;
           });
           contextualPrompt += `\nAsk the user to choose flight 1, 2, or 3. When they choose, confirm their selection and use ONLY that flight's data in the itinerary.\n`;
         }
