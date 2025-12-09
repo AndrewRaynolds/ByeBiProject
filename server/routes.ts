@@ -15,7 +15,7 @@ import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
 import { searchCheapestFlights } from "./services/aviasales";
 import { cityToIata, iataToCity } from "./services/cityMapping";
-
+import { searchHotels } from "./services/amadeus-hotels";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -51,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
     }
-  });
+ });
 
   // Trip routes
   app.post("/api/trips", isAuthenticated, async (req: Request, res: Response) => {
@@ -493,21 +493,22 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         }
       }
 
-      // Generate hotel recommendation
+      // Generate hotel recommendation (Mock hotel data)
       const hotel = {
         name: `Hotel Premium ${destination}`,
         rating: 4.5,
         pricePerNight: participants > 4 ? 150 : 100,
-        address: `Centro ${destination}`
+        address: `Centro ${destination}` 
       };
 
-      // Generate daily activities based on selected experiences
+      // Generate daily activities based on selected experiences (Mock)
+  
       const dailyActivities = Array.from({ length: Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) }, (_, i) => ({
         day: i + 1,
         activities: selectedExperiences?.slice(0, 2) || ['Esplorazione città', 'Vita notturna']
       }));
 
-      // Calculate total price
+      // Calculate total price (using mock prices)
       const flightPrice = flights ? flights.price * participants : 200 * participants;
       const hotelPrice = hotel.pricePerNight * dailyActivities.length;
       const activitiesPrice = dailyActivities.length * 150 * participants;
@@ -778,6 +779,47 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.json({ 
         success: false, 
         error: error.message 
+      });
+    }
+  });
+
+  // Amadeus Hotels - test ping endpoint
+  app.get("/api/hotels/test-ping", (req: Request, res: Response) => {
+    res.json({ ok: true, message: "Hotels route is alive" });
+  });
+
+  // Amadeus Hotels - search endpoint
+  app.get("/api/hotels/search", async (req: Request, res: Response) => {
+    try {
+      const { cityCode, checkInDate, checkOutDate, adults, currency } = req.query;
+
+      if (!cityCode || !checkInDate || !checkOutDate || !adults) {
+        return res.status(400).json({
+          error: "cityCode, checkInDate, checkOutDate and adults are required",
+        });
+      }
+
+      const hotels = await searchHotels({
+        cityCode: String(cityCode),
+        checkInDate: String(checkInDate),
+        checkOutDate: String(checkOutDate),
+        adults: Number(adults),
+        currency: currency ? String(currency) : "EUR",
+      });
+
+      return res.json({
+        cityCode,
+        checkInDate,
+        checkOutDate,
+        adults,
+        currency: currency || "EUR",
+        hotels,
+      });
+    } catch (err: any) {
+      console.error("Amadeus hotel search error:", err.response?.data || err.message);
+      return res.status(500).json({
+        error: "Hotel search failed",
+        details: err.response?.data || err.message,
       });
     }
   });

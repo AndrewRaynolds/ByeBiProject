@@ -1,0 +1,186 @@
+I tried to add an Amadeus Hotels integration to my Node/Express backend, but when I call:
+
+GET /api/hotels/search?cityCode=BCN&checkInDate=2026-07-05&checkOutDate=2026-07-08&adults=4&currency=EUR
+
+from the public Replit URL, I always get 404 Page Not Found.
+
+I need you to:
+
+1. VERIFY AND FIX THE HOTEL SERVICE FILE
+
+Locate or create the file:
+
+server/services/amadeus-hotels.ts
+
+Inside that file, there must be an exported function:
+
+export async function searchHotels(params: {
+  cityCode: string;
+  checkInDate: string;
+  checkOutDate: string;
+  adults: number;
+  currency?: string;
+}): Promise<any[]>;
+
+
+This function should:
+
+Read process.env.AMADEUS_API_KEY and process.env.AMADEUS_API_SECRET.
+
+Request a token from:
+
+https://test.api.amadeus.com/v1/security/oauth2/token
+
+using grant_type=client_credentials, client_id, client_secret.
+
+Then call:
+
+https://test.api.amadeus.com/v2/shopping/hotel-offers
+
+with query params: cityCode, checkInDate, checkOutDate, adults, currency.
+
+Normalize the response and return at least the first 3 hotel offers as a simple array with properties like:
+
+[
+  {
+    name: string;
+    stars?: string;
+    priceTotal: number;
+    currency: string;
+  },
+  ...
+]
+
+
+Make sure this file compiles (no TypeScript errors).
+
+2. FIX THE IMPORT IN server/routes.ts
+
+Open server/routes.ts.
+
+At the top of the file (with other imports), make sure you have:
+
+import { searchHotels } from "./services/amadeus-hotels";
+
+
+Use the correct relative path (./services/..., NOT ../services/... if routes.ts is in server/).
+
+Make sure the import style ({ searchHotels }) matches the export in amadeus-hotels.ts.
+
+3. REGISTER THE /api/hotels/search ROUTE INSIDE registerRoutes
+
+Inside server/routes.ts there is a function:
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // ...
+  const httpServer = createServer(app);
+  return httpServer;
+}
+
+
+You must ensure that the hotels route is inside this function and before const httpServer = createServer(app);.
+
+Add or fix this block:
+
+app.get("/api/hotels/search", async (req: Request, res: Response) => {
+  try {
+    const { cityCode, checkInDate, checkOutDate, adults, currency } = req.query;
+
+    if (!cityCode || !checkInDate || !checkOutDate || !adults) {
+      return res.status(400).json({
+        error: "cityCode, checkInDate, checkOutDate and adults are required",
+      });
+    }
+
+    const hotels = await searchHotels({
+      cityCode: String(cityCode),
+      checkInDate: String(checkInDate),
+      checkOutDate: String(checkOutDate),
+      adults: Number(adults),
+      currency: currency ? String(currency) : "EUR",
+    });
+
+    return res.json({
+      cityCode,
+      checkInDate,
+      checkOutDate,
+      adults,
+      currency: currency || "EUR",
+      hotels,
+    });
+  } catch (err: any) {
+    console.error("Amadeus hotel search error:", err.response?.data || err.message);
+    return res.status(500).json({
+      error: "Hotel search failed",
+      details: err.response?.data || err.message,
+    });
+  }
+});
+
+
+Check carefully that:
+
+It is NOT outside of registerRoutes.
+
+It is NOT after the return httpServer;.
+
+It uses the imported searchHotels function.
+
+4. ADD A SIMPLE TEST ROUTE TO CONFIRM ROUTING
+
+Still inside registerRoutes(app) (before createServer), add this simple test route:
+
+app.get("/api/hotels/test-ping", (req: Request, res: Response) => {
+  res.json({ ok: true, message: "Hotels route is alive" });
+});
+
+
+This is to confirm that routing works even without calling Amadeus.
+
+5. ENSURE THE SERVER STARTS CLEANLY
+
+Run the project.
+
+Fix any TypeScript or runtime errors coming from:
+
+amadeus-hotels.ts
+
+routes.ts
+
+Make sure the Express server actually starts (no crash loop).
+
+6. VALIDATE FROM THE PUBLIC REPLIT URL
+
+Using the public Replit URL (the same base you use for /api/aviasales/search), test:
+
+Ping route:
+
+GET https://<my-repl-url>.replit.dev/api/hotels/test-ping
+
+
+Expected: JSON { ok: true, message: "Hotels route is alive" }.
+If this still returns 404, it means the route is not being registered correctly – fix the wiring.
+
+Real hotel route:
+
+GET https://<my-repl-url>.replit.dev/api/hotels/search?cityCode=BCN&checkInDate=2026-07-05&checkOutDate=2026-07-08&adults=4&currency=EUR
+
+
+Expected: NOT 404.
+It should return a JSON object with hotels: [...] or a 500 with a clear error from Amadeus if credentials or params are wrong.
+
+7. FINAL OUTPUT
+
+When you are done, show me:
+
+The diff of:
+
+server/services/amadeus-hotels.ts
+
+server/routes.ts
+
+A sample successful JSON response from:
+
+/api/hotels/test-ping
+
+/api/hotels/search?cityCode=BCN&checkInDate=2026-07-05&checkOutDate=2026-07-08&adults=4&currency=EUR
