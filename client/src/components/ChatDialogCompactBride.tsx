@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
-import { normalizeTripDate, calculateTripDays, isValidDateRange } from '@shared/dateUtils';
+import { normalizeTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -164,17 +164,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   }, [conversationState, flights, originCity, selectedFlight]);
 
   const formatDateRange = (startDate: string, endDate: string): string => {
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const startDay = start.getDate();
-      const endDay = end.getDate();
-      const month = start.toLocaleDateString('it-IT', { month: 'long' });
-      const year = start.getFullYear();
-      return `${startDay}-${endDay} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
-    } catch {
-      return `${startDate} - ${endDate}`;
-    }
+    return formatDateRangeIT(startDate, endDate) || `${startDate} - ${endDate}`;
   };
 
   const saveCurrentItinerary = () => {
@@ -207,8 +197,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         description: `Volo da ${selectedFlight.originCity}`,
         price: selectedFlight.price,
         details: [
-          `Partenza: ${new Date(selectedFlight.departure_at).toLocaleString('it-IT')}`,
-          `Ritorno: ${new Date(selectedFlight.return_at).toLocaleString('it-IT')}`,
+          `Partenza: ${formatFlightDateTime(selectedFlight.departure_at)}`,
+          `Ritorno: ${formatFlightDateTime(selectedFlight.return_at)}`,
           `Volo: ${selectedFlight.flight_number}`,
           'Bagaglio a mano incluso'
         ]
@@ -222,8 +212,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         description: `Volo da ${userOriginCity}`,
         price: firstFlight.price,
         details: [
-          `Partenza: ${new Date(firstFlight.departure_at).toLocaleString('it-IT')}`,
-          `Ritorno: ${new Date(firstFlight.return_at).toLocaleString('it-IT')}`,
+          `Partenza: ${formatFlightDateTime(firstFlight.departure_at)}`,
+          `Ritorno: ${formatFlightDateTime(firstFlight.return_at)}`,
           `Volo: ${firstFlight.flight_number}`,
           'Bagaglio a mano incluso'
         ]

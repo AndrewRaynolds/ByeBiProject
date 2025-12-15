@@ -1,0 +1,80 @@
+Agisci come un senior full-stack engineer. Devi fixare un bug UX/logic critico: nel flow voli del chatbot, la UI interna (“checkout screen”/riepilogo) mostra date diverse da quelle inserite dall’utente e prezzi non veritieri, mentre il link Aviasales porta alle date corrette.
+
+OBIETTIVO (ACCEPTANCE CRITERIA)
+1) Se l’utente inserisce: “Roma → Barcellona dal 10 al 15 gennaio per 5 persone”
+   - il riepilogo interno deve mostrare ESATTAMENTE 2026-01-10 e 2026-01-15 (o lo stesso formato utente coerente, ma senza shift).
+   - il checkoutUrl deve contenere depart_date=2026-01-10 e return_date=2026-01-15 e adults=5.
+2) Nessun +1/-1 giorno dovuto a timezone.
+3) La UI non deve mostrare “prezzi veritieri” se non provengono da Aviasales nello stesso istante e stessi parametri:
+   - o rimuovi il prezzo dalla schermata checkout interna
+   - oppure etichettalo come “stimato / da …” e aggiungi disclaimer: “prezzo finale nel checkout del partner”.
+4) NON cambiare stack, non aggiungere librerie pesanti, non aggiungere pagamenti.
+
+TASK 1 — TROVA ESATTAMENTE DOVE SI ROMPONO LE DATE
+- Cerca nel repo tutte le occorrenze dove le date volo vengono:
+  a) parseate (dal chatbot o form)
+  b) salvate in stato/session (trip state)
+  c) renderizzate nella UI interna
+- Individua uso di:
+  - new Date("YYYY-MM-DD")
+  - Date.parse
+  - toISOString()
+  - toLocaleDateString()
+  - conversioni UTC/locali
+- Root cause tipica: “date-only” trattate come DateTime (UTC) e poi convertite.
+
+TASK 2 — IMPLEMENTA “DATE-ONLY” COME STRINGHE (REGOLA NON NEGOZIABILE)
+- Le date di viaggio devono essere gestite come stringhe “YYYY-MM-DD” end-to-end.
+- Non usare oggetti Date per memorizzare o formattare le date di viaggio.
+- Crea una funzione unica in shared util (server o common):
+  normalizeTripDate(input: string) => "YYYY-MM-DD"
+  - accetta input:
+    - "YYYY-MM-DD"
+    - "DD/MM/YYYY"
+    - testi tipo “10 gennaio 2026” se già gestito dal chatbot (se no, non introdurre NLP, limitati ai formati attuali)
+  - valida la data
+  - ritorna la stringa senza timezone e senza conversioni.
+
+TASK 3 — FIX UI “CHECKOUT” / RIEPILOGO
+- Nella schermata interna dove mostri:
+  - partenza/ritorno
+  - passeggeri
+  - tratta
+  devi renderizzare direttamente le stringhe normalizeTripDate(...) e non date convertite.
+- Vietato: new Date(departDate).toLocaleDateString() o simili.
+- Aggiungi test manuale: inserisci date e verifica che la UI mostri identiche.
+
+TASK 4 — FIX AVIASALES LINK (COERENZA PARAMETRI)
+- Trova dove costruisci il checkoutUrl Aviasales.
+- Assicurati che usi ESATTAMENTE:
+  depart_date = normalizedDepartDate
+  return_date = normalizedReturnDate
+  adults = passengers
+  origin_iata / destination_iata coerenti
+- Aggiungi un log DEV-ONLY (NODE_ENV !== "production") che stampa:
+  - departDate usata nel link
+  - returnDate usata nel link
+  - adults
+  - checkoutUrl finale
+Non loggare secrets.
+
+TASK 5 — PREZZI: ELIMINA O CORREGGI (NO FAKE)
+- Identifica da dove arriva il “prezzo” mostrato nella tua UI interna.
+- Se quel prezzo non è garantito come quote live Aviasales con stessi parametri:
+  - rimuovilo dalla schermata checkout
+  - oppure rendilo “da €X (stimato)” e aggiungi testo: “Prezzo finale e disponibilità nel checkout del partner”.
+- La UI deve smettere di comunicare che il prezzo interno è definitivo se non lo è.
+
+TASK 6 — TEST DI ACCETTAZIONE
+- Caso: Roma → Barcellona, 2026-01-10 / 2026-01-15, adults=5
+  - UI interna mostra le stesse date e adults=5
+  - checkoutUrl contiene quelle date e adults=5
+- Caso: input DD/MM/YYYY
+  - normalizza correttamente senza shift
+- Nessun prezzo “definitivo” mostrato internamente se non live.
+
+OUTPUT RICHIESTO
+- Patch pronta da committare.
+- Elenco file modificati.
+- Spiegazione root cause (perché le date shiftavano).
+- Screenshot/log di verifica (solo dev) o istruzioni per riprodurre.

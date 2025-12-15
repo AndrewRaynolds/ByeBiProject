@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
+import { formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 
 interface FlightData {
   flightIndex: number;
@@ -169,7 +170,7 @@ export default function Checkout() {
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Calendar className="w-5 h-5 text-red-400" />
-              <span className="font-medium">{itinerary.dates}</span>
+              <span className="font-medium">{formatDateRangeIT(itinerary.startDate, itinerary.endDate)}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Users className="w-5 h-5 text-red-400" />
@@ -198,18 +199,21 @@ export default function Checkout() {
                     {itinerary.selectedFlight.airline} - {itinerary.originCity} → {itinerary.destination}
                   </p>
                   <p className="text-sm text-white/70 mt-1">
-                    Partenza: {new Date(itinerary.selectedFlight.departure_at).toLocaleString('it-IT')}
+                    Viaggio: {formatDateRangeIT(itinerary.startDate, itinerary.endDate)}
                   </p>
                   <p className="text-sm text-white/70">
-                    Ritorno: {new Date(itinerary.selectedFlight.return_at).toLocaleString('it-IT')}
+                    Volo partenza: {formatFlightDateTime(itinerary.selectedFlight.departure_at)}
                   </p>
                   <p className="text-sm text-white/70">Volo n. {itinerary.selectedFlight.flight_number}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-green-400 text-2xl">€{flightTotal}</p>
-                  <p className="text-xs text-white/60">€{itinerary.selectedFlight.price} x {itinerary.people} persone</p>
+                  <p className="font-bold text-green-400 text-2xl">da €{flightTotal}</p>
+                  <p className="text-xs text-white/60">~€{itinerary.selectedFlight.price} x {itinerary.people} (stimato)</p>
                 </div>
               </div>
+              <p className="text-xs text-white/50 mb-3 italic">
+                * Prezzo indicativo. Il prezzo finale e la disponibilità saranno confermati nel checkout del partner.
+              </p>
               <Button 
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                 onClick={() => window.open(getFlightCheckoutUrl(), '_blank')}

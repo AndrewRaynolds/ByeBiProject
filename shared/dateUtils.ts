@@ -155,3 +155,45 @@ export function extractDateOnly(isoString: string): string {
   if (!isoString) return '';
   return isoString.slice(0, 10);
 }
+
+/**
+ * Formats ISO datetime string for display without timezone shift
+ * Extracts date and time parts directly from string
+ * Input: "2026-01-20T10:30:00+01:00" -> "20/01/2026 10:30"
+ */
+export function formatFlightDateTime(isoString: string): string {
+  if (!isoString) return '';
+  
+  // Extract date part (YYYY-MM-DD)
+  const datePart = isoString.slice(0, 10);
+  const timePart = isoString.slice(11, 16); // HH:MM
+  
+  // Parse date without Date object
+  const year = datePart.slice(0, 4);
+  const month = datePart.slice(5, 7);
+  const day = datePart.slice(8, 10);
+  
+  return `${day}/${month}/${year} ${timePart}`;
+}
+
+/**
+ * Formats date range for display
+ * Input: "2026-01-10", "2026-01-15" -> "10-15 Gennaio 2026"
+ */
+export function formatDateRangeIT(startDate: string, endDate: string): string {
+  if (!startDate || !endDate) return '';
+  
+  const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+  
+  const startDay = parseInt(startDate.slice(8, 10));
+  const startMonth = parseInt(startDate.slice(5, 7)) - 1;
+  const endDay = parseInt(endDate.slice(8, 10));
+  const endMonth = parseInt(endDate.slice(5, 7)) - 1;
+  const year = startDate.slice(0, 4);
+  
+  if (startMonth === endMonth) {
+    return `${startDay}-${endDay} ${months[startMonth]} ${year}`;
+  }
+  return `${startDay} ${months[startMonth]} - ${endDay} ${months[endMonth]} ${year}`;
+}
