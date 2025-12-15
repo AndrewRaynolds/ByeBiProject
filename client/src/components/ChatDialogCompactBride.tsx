@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,7 +6,6 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
 
@@ -80,9 +79,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   const [isLoading, setIsLoading] = useState(false);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [flights, setFlights] = useState<FlightInfo[]>([]);
   const [originCity, setOriginCity] = useState<string>('');
   const [selectedFlight, setSelectedFlight] = useState<SelectedFlightData | null>(null);
+  const [pendingFlightSelection, setPendingFlightSelection] = useState<number | null>(null);
   
   const [conversationState, setConversationState] = useState<ConversationState>({
     selectedDestination: '',
@@ -105,9 +106,44 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     },
   });
 
+  const scrollToBottom = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (pendingFlightSelection !== null && flights.length > 0) {
+      const flightNum = pendingFlightSelection;
+      if (flightNum >= 1 && flightNum <= flights.length) {
+        const flight = flights[flightNum - 1];
+        if (flight) {
+          const flightData: SelectedFlightData = {
+            flightIndex: flightNum,
+            airline: flight.airline,
+            price: flight.price,
+            departure_at: flight.departure_at,
+            return_at: flight.return_at,
+            flight_number: flight.flight_number,
+            originCity: originCity || 'Roma',
+            destinationCity: conversationState.selectedDestination
+          };
+          console.log(`✈️ Processing pending flight selection ${flightNum}:`, flightData);
+          setSelectedFlight(flightData);
+          localStorage.setItem('selectedFlight', JSON.stringify(flightData));
+          setShowGenerateButton(true);
+        }
+      }
+      setPendingFlightSelection(null);
+    }
+  }, [flights, pendingFlightSelection, originCity, conversationState.selectedDestination]);
 
   useEffect(() => {
     if (initialMessage && open) {
@@ -367,24 +403,28 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           
         case 'SELECT_FLIGHT':
           const flightNum = parseInt(value.trim());
-          if (!isNaN(flightNum) && flightNum >= 1 && flightNum <= flights.length) {
-            const selectedFlightIdx = flightNum - 1;
-            const flight = flights[selectedFlightIdx];
-            if (flight) {
-              const flightData: SelectedFlightData = {
-                flightIndex: flightNum,
-                airline: flight.airline,
-                price: flight.price,
-                departure_at: flight.departure_at,
-                return_at: flight.return_at,
-                flight_number: flight.flight_number,
-                originCity: originCity || 'Roma',
-                destinationCity: conversationState.selectedDestination
-              };
-              console.log(`✈️ User selected flight ${flightNum}:`, flightData);
-              setSelectedFlight(flightData);
-              localStorage.setItem('selectedFlight', JSON.stringify(flightData));
-              setShowGenerateButton(true);
+          if (!isNaN(flightNum) && flightNum >= 1) {
+            if (flights.length > 0 && flightNum <= flights.length) {
+              const flight = flights[flightNum - 1];
+              if (flight) {
+                const flightData: SelectedFlightData = {
+                  flightIndex: flightNum,
+                  airline: flight.airline,
+                  price: flight.price,
+                  departure_at: flight.departure_at,
+                  return_at: flight.return_at,
+                  flight_number: flight.flight_number,
+                  originCity: originCity || 'Roma',
+                  destinationCity: conversationState.selectedDestination
+                };
+                console.log(`✈️ User selected flight ${flightNum}:`, flightData);
+                setSelectedFlight(flightData);
+                localStorage.setItem('selectedFlight', JSON.stringify(flightData));
+                setShowGenerateButton(true);
+              }
+            } else {
+              console.log(`✈️ Storing pending flight selection: ${flightNum}`);
+              setPendingFlightSelection(flightNum);
             }
           }
           break;
@@ -535,7 +575,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-4">
+        <div ref={scrollContainerRef} className="flex-1 px-6 py-4 overflow-y-auto">
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -574,7 +614,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             )}
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="px-6 py-4 border-t space-y-3">
           {showGenerateButton && (
