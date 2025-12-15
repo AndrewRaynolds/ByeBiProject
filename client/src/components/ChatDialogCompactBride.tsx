@@ -206,35 +206,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       };
     }
 
-    const hotelItems = [
-      {
-        id: 'hotel-dynamic-1',
-        type: 'hotel' as const,
-        name: `${selectedDestination} Boutique Hotel`,
-        description: `${selectedDestination} - Centro città`,
-        price: 165,
-        details: [
-          `${tripDetails.days || 3} notti`,
-          `Camere per ${tripDetails.people} persone`,
-          'Colazione inclusa',
-          'Spa & Wellness'
-        ]
-      },
-      {
-        id: 'hotel-dynamic-2',
-        type: 'hotel' as const,
-        name: `${selectedDestination} Design Hostel`,
-        description: `${selectedDestination} - Zona trendy`,
-        price: 75,
-        details: [
-          `${tripDetails.days || 3} notti`,
-          'Camere femminili',
-          'Rooftop bar',
-          'Atmosfera chic'
-        ]
-      }
-    ];
-
     const carItems = [
       {
         id: 'car-dynamic-1',
@@ -294,7 +265,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       originCity: userOriginCity,
       selectedFlight: selectedFlight,
       flights: [flightItem],
-      hotels: hotelItems,
       cars: carItems,
       activities: activityItems
     };
@@ -414,6 +384,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
               console.log(`✈️ User selected flight ${flightNum}:`, flightData);
               setSelectedFlight(flightData);
               localStorage.setItem('selectedFlight', JSON.stringify(flightData));
+              setShowGenerateButton(true);
             }
           }
           break;
@@ -525,10 +496,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       }
 
       setIsLoading(false);
-      
-      if (messages.length >= 3) {
-        setShowGenerateButton(true);
-      }
 
     } catch (error) {
       console.error('Chat error:', error);

@@ -206,35 +206,6 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       };
     }
 
-    const hotelItems = [
-      {
-        id: 'hotel-dynamic-1',
-        type: 'hotel' as const,
-        name: `${selectedDestination} Central Hotel`,
-        description: `${selectedDestination} - Centro città`,
-        price: 150,
-        details: [
-          `${tripDetails.days || 3} notti`,
-          `Camere per ${tripDetails.people} persone`,
-          'Colazione inclusa',
-          'WiFi gratuito'
-        ]
-      },
-      {
-        id: 'hotel-dynamic-2',
-        type: 'hotel' as const,
-        name: `${selectedDestination} Party Hostel`,
-        description: `${selectedDestination} - Zona movida`,
-        price: 85,
-        details: [
-          `${tripDetails.days || 3} notti`,
-          'Dormitorio condiviso',
-          'Bar interno',
-          'Eventi serali'
-        ]
-      }
-    ];
-
     const carItems = [
       {
         id: 'car-dynamic-1',
@@ -294,7 +265,6 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       originCity: userOriginCity,
       selectedFlight: selectedFlight,
       flights: [flightItem],
-      hotels: hotelItems,
       cars: carItems,
       activities: activityItems
     };
@@ -414,6 +384,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
               console.log(`✈️ User selected flight ${flightNum}:`, flightData);
               setSelectedFlight(flightData);
               localStorage.setItem('selectedFlight', JSON.stringify(flightData));
+              setShowGenerateButton(true);
             }
           }
           break;
@@ -525,10 +496,6 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       }
 
       setIsLoading(false);
-      
-      if (messages.length >= 3) {
-        setShowGenerateButton(true);
-      }
 
     } catch (error) {
       console.error('Chat error:', error);
