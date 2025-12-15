@@ -1,0 +1,71 @@
+Agisci come un senior full-stack engineer. Devi FIXARE un bug preciso: quando l’utente inserisce data andata/ritorno nel chatbot, ByeBi deve (1) riepilogare esattamente le stesse date inserite dall’utente e (2) costruire il link Aviasales/Travelpayouts usando ESATTAMENTE quelle date. Oggi c’è uno scarto: le date mostrate o passate al checkout non corrispondono.
+
+OBIETTIVO (ACCEPTANCE CRITERIA)
+1) Se l’utente scrive:
+   - andata: 2026-01-20
+   - ritorno: 2026-01-22
+   allora:
+   - il chatbot deve mostrare riepilogo con 2026-01-20 e 2026-01-22 (uguali, senza shift).
+   - il checkoutUrl deve contenere depart_date=2026-01-20 e return_date=2026-01-22 (uguali, senza shift).
+2) Nessun cambio di giorno per timezone/Date parsing (no +1/-1).
+3) Stessa cosa con input in formato italiano (es. “20/01/2026”): deve essere convertito correttamente a YYYY-MM-DD e poi usato identico.
+
+TASK 1 — TROVA LA CAUSA (OBBLIGATORIO)
+- Cerca nel progetto dove vengono:
+  a) parseate le date utente (chatbot o backend)
+  b) salvate in stato/sessione
+  c) usate per costruire il checkoutUrl Aviasales
+- Individua se lo shift deriva da:
+  - uso di new Date("YYYY-MM-DD") (parsing UTC che può shiftare)
+  - conversioni toISOString() / locale
+  - librerie date che interpretano timezone
+  - mix tra “DD/MM/YYYY” e “YYYY-MM-DD”
+  - normalizzazione errata (es. aggiunta di 1 giorno)
+
+TASK 2 — FIX DI PARSING DATE (REGOLA NON NEGOZIABILE)
+- Tratta le date di viaggio come “date-only” (senza orario e senza timezone).
+- NON usare oggetti Date per rappresentare le date di input.
+- Usa stringhe nel formato "YYYY-MM-DD" come source of truth.
+- Implementa una funzione unica, usata ovunque (chatbot + backend), ad esempio:
+  normalizeTripDate(input: string) -> "YYYY-MM-DD"
+  che accetta:
+    - "YYYY-MM-DD"
+    - "DD/MM/YYYY"
+  e ritorna sempre "YYYY-MM-DD" validato.
+- Aggiungi validazioni:
+  - returnDate > departDate
+  - date valide (no 2026-13-40)
+  - nessuna conversione UTC.
+
+TASK 3 — FIX DI CHECKOUT URL AVIASALES
+- Trova la funzione che costruisce il checkoutUrl.
+- Assicurati che usi ESATTAMENTE le stringhe "YYYY-MM-DD" normalizzate, senza passare da Date().
+- Se usi query params, deve risultare:
+  ...depart_date=YYYY-MM-DD&return_date=YYYY-MM-DD&adults=N&origin_iata=XXX&destination_iata=YYY
+- Aggiungi un log (solo in dev) che stampa:
+  - departDate utilizzata nel link
+  - returnDate utilizzata nel link
+  - link finale
+  (Non loggare token/secrets.)
+
+TASK 4 — FIX DI RIEPILOGO NEL CHATBOT
+- Dopo che l’utente inserisce le date, il chatbot deve:
+  - ripetere le date normalizzate (YYYY-MM-DD) o nello stesso formato utente (ma coerente)
+  - usare quelle stesse variabili per la ricerca e per il link checkout.
+- Assicurati che lo stato conversazionale non venga sovrascritto da default o da timezone.
+
+TASK 5 — TEST AUTOMATICI / MANUALI (OBBLIGATORIO)
+Aggiungi almeno 4 test (o uno script di verifica) per:
+1) input: "2026-01-20" / "2026-01-22" -> output identico
+2) input: "20/01/2026" / "22/01/2026" -> output "2026-01-20" / "2026-01-22"
+3) verifica che il checkoutUrl contiene esattamente quelle date (string match)
+4) edge: 31/03/2026 -> 02/04/2026 (nessuno shift)
+
+OUTPUT RICHIESTO
+- Patch completa con:
+  - funzione unica di normalizzazione date
+  - aggiornamento di tutte le parti che usano Date() per input viaggio
+  - checkoutUrl Aviasales corretto
+  - riepilogo chatbot coerente
+- Elenco file modificati e spiegazione breve del bug root-cause.
+- Conferma con esempi che il bug è risolto.

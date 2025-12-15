@@ -114,14 +114,26 @@ export default function Checkout() {
     const originIata = CITY_TO_IATA[itinerary.originCity.toLowerCase()] || 'ROM';
     const destIata = CITY_TO_IATA[itinerary.destination.toLowerCase()] || 'BCN';
     
-    const depDate = itinerary.selectedFlight.departure_at.slice(0, 10);
-    const retDate = itinerary.selectedFlight.return_at.slice(0, 10);
+    // Use itinerary dates directly (already normalized to YYYY-MM-DD)
+    const depDate = itinerary.startDate || itinerary.selectedFlight.departure_at.slice(0, 10);
+    const retDate = itinerary.endDate || itinerary.selectedFlight.return_at.slice(0, 10);
     const depDay = depDate.slice(8, 10);
     const depMonth = depDate.slice(5, 7);
     const retDay = retDate.slice(8, 10);
     const retMonth = retDate.slice(5, 7);
     
-    return `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${itinerary.people}?marker=byebi`;
+    const url = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${itinerary.people}?marker=byebi`;
+    
+    // Dev logging for date verification
+    if (process.env.NODE_ENV === 'development' || import.meta.env.DEV) {
+      console.log('✈️ Flight checkout URL debug:', {
+        departDate: depDate,
+        returnDate: retDate,
+        url
+      });
+    }
+    
+    return url;
   };
 
   const getHotelBookingUrl = (hotel: HotelData): string => {

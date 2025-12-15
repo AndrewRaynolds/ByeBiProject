@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Bot, User, Sparkles } from 'lucide-react';
+import { normalizeTripDate, calculateTripDays, isValidDateRange } from '@shared/dateUtils';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -330,21 +331,24 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           break;
           
         case 'SET_DATES':
-          const [startDate, endDate] = value.split(',').map(d => d.trim());
-          if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-            console.log(`📅 Parsed dates: ${startDate} - ${endDate} (${days} days)`);
+          const [rawStart, rawEnd] = value.split(',').map(d => d.trim());
+          const normalizedStart = normalizeTripDate(rawStart);
+          const normalizedEnd = normalizeTripDate(rawEnd);
+          
+          if (normalizedStart && normalizedEnd && isValidDateRange(normalizedStart, normalizedEnd)) {
+            const days = calculateTripDays(normalizedStart, normalizedEnd);
+            console.log(`📅 Parsed dates: ${rawStart} -> ${normalizedStart}, ${rawEnd} -> ${normalizedEnd} (${days} days)`);
             setConversationState(prev => ({ 
               ...prev, 
               tripDetails: { 
                 ...prev.tripDetails, 
-                startDate, 
-                endDate, 
+                startDate: normalizedStart, 
+                endDate: normalizedEnd, 
                 days 
               } 
             }));
+          } else {
+            console.warn(`⚠️ Invalid dates: ${rawStart}, ${rawEnd}`);
           }
           break;
           
