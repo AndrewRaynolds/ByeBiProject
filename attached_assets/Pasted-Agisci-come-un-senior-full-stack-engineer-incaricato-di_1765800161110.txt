@@ -1,0 +1,136 @@
+Agisci come un senior full-stack engineer incaricato di rendere ByeBi un sistema di prenotazione REALISTICO, COERENTE e ORIENTATO ALLA CONVERSIONE, gestito interamente dal chatbot fino al checkout, con dati REALI e zero mock in produzione.
+
+DECISIONI DI PRODOTTO (VINCOLANTI)
+- VOLI: solo redirect checkout esterno (Aviasales / Travelpayouts).
+- HOTEL: modalità mista:
+  - IN_APP solo se pay-at-hotel e SENZA carta/garanzia.
+  - REDIRECT se prepay, deposit o richiesta carta.
+- EXPERIENCE: vengono proposte SOLO DOPO che:
+  1) l’utente ha scelto il volo
+  2) l’utente ha prenotato o almeno selezionato l’hotel
+- ByeBi NON incassa, NON gestisce carte, NON inventa conferme.
+- Amadeus LIVE solo quando AMADEUS_ENV=production.
+- In produzione: NO mock, NO fallback inventati, NO debug pubblico, NO logging PII.
+
+────────────────────────────────
+TASK 1 — AMBIENTI E PRODUZIONE
+────────────────────────────────
+1) Assumi che in produzione DEVONO esistere:
+   - NODE_ENV=production
+   - AMADEUS_ENV=production
+2) Aggiorna il codice affinché:
+   - Tutti i controlli di mock/debug usino NODE_ENV.
+   - Se NODE_ENV === "production":
+     - mock e fallback sono DISABILITATI
+     - endpoint di debug sono DISABILITATI
+     - logging è minimale e senza PII
+3) Se NODE_ENV non è definito:
+   - logga warning chiaro in startup.
+
+────────────────────────────────
+TASK 2 — RIMOZIONE MOCK E FALLBACK
+────────────────────────────────
+1) Cerca ed elimina:
+   - hotel mock
+   - itinerari mock
+   - fallback finti (“Test Hotel”, “Party Hostel”, ecc.)
+2) In produzione:
+   - se non ci sono risultati reali → array vuoto o errore user-friendly
+   - MAI dati inventati
+
+────────────────────────────────
+TASK 3 — VOLI (PRIMO STEP DEL CHATBOT)
+────────────────────────────────
+1) I voli sono SEMPRE il primo step della conversazione.
+2) GET /api/flights/search deve restituire:
+   - massimo 5 risultati
+   - bookingFlow = "REDIRECT"
+   - checkoutUrl valido e completo (Aviasales search URL)
+3) Se manca checkoutUrl → non mostrare il volo.
+4) Il chatbot:
+   - NON dice mai “prenotazione volo completata”
+   - dice sempre: “ti porto al checkout del partner”
+
+────────────────────────────────
+TASK 4 — HOTEL (SECONDO STEP, OBBLIGATORIO)
+────────────────────────────────
+FIX DI CONVERSAZIONE (CRITICO):
+- Dopo che l’utente ha scelto il volo (o aperto il checkout),
+  il chatbot DEVE automaticamente proporre la ricerca hotel.
+- Le EXPERIENCE NON devono MAI essere proposte prima degli hotel.
+
+Flusso corretto del chatbot:
+1) Voli → scelta → redirect checkout
+2) Hotel → search → IN_APP o REDIRECT
+3) SOLO DOPO → experiences / itinerari / extra
+
+────────────────────────────────
+TASK 5 — HOTEL SEARCH “BOOKABLE”
+────────────────────────────────
+1) GET /api/hotels/search deve restituire per ogni risultato:
+   - hotelId
+   - name
+   - priceTotal
+   - currency
+   - offerId
+   - bookingFlow ("IN_APP" | "REDIRECT")
+   - paymentPolicy sintetica
+2) Classificazione backend:
+   - IN_APP solo se pay-at-hotel e SENZA carta/garanzia
+   - altrimenti REDIRECT
+3) Input validation:
+   - adults number
+   - date ISO yyyy-mm-dd
+   - cityCode uppercase
+
+────────────────────────────────
+TASK 6 — HOTEL BOOKING IN-APP
+────────────────────────────────
+1) POST /api/hotels/book:
+   - accetta solo offerId IN_APP
+   - accetta guest (nome, cognome, email)
+2) Se offerId NON è IN_APP → 400
+3) Elimina qualsiasi gestione carta:
+   - niente carte hardcoded
+   - niente input carta dal client
+4) Chiama correttamente Hotel Booking API e ritorna confirmationId.
+
+────────────────────────────────
+TASK 7 — HOTEL REDIRECT
+────────────────────────────────
+1) Per offerte REDIRECT:
+   - fornire redirectUrl reale se esiste partner
+   - altrimenti NON fingere prenotazione
+2) Il chatbot deve dire chiaramente:
+   - “Pagamento e prenotazione avvengono fuori ByeBi”
+
+────────────────────────────────
+TASK 8 — EXPERIENCE (ULTIMO STEP)
+────────────────────────────────
+1) Le experience possono essere proposte SOLO:
+   - dopo hotel selezionato/prenotato
+2) Se l’utente non ha ancora hotel:
+   - NON proporre experience
+3) Le experience NON devono bloccare o confondere il checkout.
+
+────────────────────────────────
+TASK 9 — CHATBOT RULES
+────────────────────────────────
+1) Il chatbot usa SOLO dati del backend.
+2) Mai inventare conferme, prezzi o disponibilità.
+3) CTA distinte:
+   - Voli → “Vai al checkout volo”
+   - Hotel IN_APP → “Prenota hotel (paghi in hotel)”
+   - Hotel REDIRECT → “Vai al checkout hotel”
+4) Max 5 opzioni per step.
+
+────────────────────────────────
+TASK 10 — VERIFICA FINALE
+────────────────────────────────
+- NODE_ENV=production e AMADEUS_ENV=production loggati in startup
+- Nessun mock visibile
+- Chatbot end-to-end:
+  - voli → hotel → experience
+  - voli sempre redirect
+  - hotel IN_APP solo se consentito
+- Codice pronto per produzione, senza scorciatoie.
