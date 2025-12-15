@@ -40,21 +40,10 @@ waitForPort = 5000
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 35833
-externalPort = 3001
-
-[[ports]]
-localPort = 36599
-externalPort = 3002
-
-[[ports]]
-localPort = 41183
-externalPort = 3000
-
-[[ports]]
-localPort = 43243
-externalPort = 3003
-
 [agent]
 integrations = ["javascript_openai:1.0.0", "javascript_stripe:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+AMADEUS_ENV = "production"

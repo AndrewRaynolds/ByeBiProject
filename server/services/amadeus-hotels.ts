@@ -1,66 +1,106 @@
 // server/services/amadeus-hotels.ts
 import axios from "axios";
 
+type SearchHotelsParams = {
+  cityCode: string;      // es. "BCN"
+  checkInDate: string;   // es. "2026-07-05"
+  checkOutDate: string;  // es. "2026-07-08"
+  adults: number;        // 1-9
+  currency?: string;     // es. "EUR"
+};
+
+export type BookingFlow = "IN_APP" | "REDIRECT";
+export type PaymentPolicy = "PAY_AT_HOTEL" | "PREPAY" | "DEPOSIT" | "UNKNOWN";
+
+export type HotelResult = {
+  hotelId: string;
+  name: string;
+  stars?: string;
+  latitude?: number;
+  longitude?: number;
+  priceTotal: number;
+  currency: string;
+  offerId: string;
+  bookingFlow: BookingFlow;
+  paymentPolicy: PaymentPolicy;
+  checkInDate: string;
+  checkOutDate: string;
+  roomDescription?: string;
+};
+
+const isProd =
+  process.env.AMADEUS_ENV === "production" ||
+  process.env.NODE_ENV === "production";
+
+const AMADEUS_API_KEY = isProd
+  ? process.env.AMADEUS_API_KEY_LIVE
+  : process.env.AMADEUS_API_KEY_TEST;
+
+const AMADEUS_API_SECRET = isProd
+  ? process.env.AMADEUS_API_SECRET_LIVE
+  : process.env.AMADEUS_API_SECRET_TEST;
+
+if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
+  console.error(
+    `[Amadeus Hotels] Missing credentials for ${isProd ? "LIVE" : "TEST"} environment`
+  );
+}
+
+const AMADEUS_BASE_URL = isProd
+  ? "https://api.amadeus.com"
+  : "https://test.api.amadeus.com";
+
 let tokenCache: { token: string | null; expiresAt: number } = {
   token: null,
   expiresAt: 0,
 };
 
 async function getAmadeusToken(): Promise<string> {
-  if (tokenCache.token && tokenCache.expiresAt > Date.now()) {
+  // se il token è ancora valido, riusalo
+  if (tokenCache.token && tokenCache.expiresAt > Date.now() + 10_000) {
     return tokenCache.token;
   }
 
-  const apiKey = process.env.AMADEUS_API_KEY;
-  const apiSecret = process.env.AMADEUS_API_SECRET;
-
-  if (!apiKey || !apiSecret) {
-    throw new Error("Amadeus API credentials not configured");
+  if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
+    throw new Error("Amadeus credentials are not configured");
   }
 
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: AMADEUS_API_KEY,
+    client_secret: AMADEUS_API_SECRET,
+  });
+
   const resp = await axios.post(
-    "https://test.api.amadeus.com/v1/security/oauth2/token",
-    new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: apiKey,
-      client_secret: apiSecret,
-    }),
+    `${AMADEUS_BASE_URL}/v1/security/oauth2/token`,
+    body,
     {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-    },
+    }
   );
 
-  const token = resp.data.access_token as string;
-  const expiresIn = resp.data.expires_in as number;
+  const accessToken = resp.data.access_token as string;
+  const expiresIn = resp.data.expires_in as number; // seconds
 
-  tokenCache.token = token;
-  tokenCache.expiresAt = Date.now() + expiresIn * 1000 - 10_000; // 10s margine
+  tokenCache = {
+    token: accessToken,
+    // un filo prima della scadenza reale
+    expiresAt: Date.now() + (expiresIn - 60) * 1000,
+  };
 
-  return token;
+  return accessToken;
 }
 
-export interface AmadeusHotelSearchParams {
-  cityCode: string; // es. "BCN"
-  checkInDate: string; // "2026-07-05"
-  checkOutDate: string; // "2026-07-08"
-  adults: number; // n° persone
-  currency?: string; // default "EUR"
-}
-
-export interface SimpleHotelOffer {
-  name: string;
-  stars?: string;
-  priceTotal: number;
-  currency: string;
-  distance?: string;
-  raw?: any; // opzionale per debug
-}
-
+/**
+ * Flusso ufficiale:
+ * 1) Hotel List API: /v1/reference-data/locations/hotels/by-city -> hotelIds
+ * 2) Hotel Search API V3: /v3/shopping/hotel-offers -> prezzi/offerte
+ */
 export async function searchHotels(
-  params: AmadeusHotelSearchParams,
-): Promise<SimpleHotelOffer[]> {
+  params: SearchHotelsParams
+): Promise<HotelResult[]> {
   const {
     cityCode,
     checkInDate,
@@ -69,120 +109,307 @@ export async function searchHotels(
     currency = "EUR",
   } = params;
 
-  try {
-    const token = await getAmadeusToken();
-    console.log(`🏨 Amadeus: Token obtained, searching hotels in ${cityCode}...`);
+  const token = await getAmadeusToken();
 
-    // Step 1: Get hotel IDs by city
-    const hotelListResp = await axios.get(
-      "https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          cityCode,
-          radius: 20,
-          radiusUnit: "KM",
-          hotelSource: "ALL",
-        },
+  // STEP 1: lista hotel per città (hotelIds)
+  const hotelListResp = await axios.get(
+    `${AMADEUS_BASE_URL}/v1/reference-data/locations/hotels/by-city`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
-    );
+      params: {
+        cityCode,
+        radius: 20,
+        radiusUnit: "KM",
+      },
+    }
+  );
 
-    const hotelList = hotelListResp.data.data as any[];
-    console.log(`🏨 Amadeus: Found ${hotelList?.length || 0} hotels in ${cityCode}`);
-    
-    if (!hotelList || hotelList.length === 0) {
-      console.log(`🏨 Amadeus: No hotels found, returning mock data`);
-      return getMockHotels(cityCode, currency);
+  const hotelIds: string[] =
+    hotelListResp.data?.data
+      ?.map((h: any) => h.hotelId)
+      .filter((id: any) => !!id)
+      .slice(0, 30) || []; // limita per non bruciare chiamate
+
+  if (!hotelIds.length) {
+    // In produzione NON mockiamo, ritorniamo vuoto
+    if (isProd) {
+      return [];
     }
 
-    // Get first 10 hotel IDs for offers search
-    const hotelIds = hotelList.slice(0, 10).map((h: any) => h.hotelId).join(",");
-    console.log(`🏨 Amadeus: Searching offers for hotels: ${hotelIds}`);
-
-    // Step 2: Get offers for those hotels
-    const offersResp = await axios.get(
-      "https://test.api.amadeus.com/v3/shopping/hotel-offers",
+    // In sandbox possiamo restituire qualcosa di finto per testare la UI
+    return [
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          hotelIds,
-          checkInDate,
-          checkOutDate,
-          adults,
-          currency,
-        },
+        hotelId: "MOCK1",
+        name: `${cityCode} Test Hotel`,
+        stars: "3",
+        priceTotal: 100,
+        currency,
+        offerId: "MOCK_OFFER_1",
+        bookingFlow: "IN_APP" as BookingFlow,
+        paymentPolicy: "PAY_AT_HOTEL" as PaymentPolicy,
+        checkInDate,
+        checkOutDate,
+        roomDescription: "Standard Double Room",
       },
-    );
+      {
+        hotelId: "MOCK2",
+        name: `${cityCode} Party Hostel`,
+        stars: "2",
+        priceTotal: 60,
+        currency,
+        offerId: "MOCK_OFFER_2",
+        bookingFlow: "REDIRECT" as BookingFlow,
+        paymentPolicy: "PREPAY" as PaymentPolicy,
+        checkInDate,
+        checkOutDate,
+        roomDescription: "Shared Dormitory",
+      },
+    ];
+  }
 
-    const offersData = offersResp.data.data as any[];
-    console.log(`🏨 Amadeus: Found ${offersData?.length || 0} hotel offers`);
-
-    if (!offersData || offersData.length === 0) {
-      console.log(`🏨 Amadeus: No offers available, returning mock data`);
-      return getMockHotels(cityCode, currency);
+  // STEP 2: offerte reali per quei hotelIds
+  const offersResp = await axios.get(
+    `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        hotelIds: hotelIds.join(","),
+        adults,
+        checkInDate,
+        checkOutDate,
+        currency,
+      },
     }
+  );
 
-    // Normalize the first 3 hotels with offers
-    const hotels: SimpleHotelOffer[] = offersData.slice(0, 3).map((item) => {
-      const hotel = item.hotel || {};
-      const offer = (item.offers && item.offers[0]) || {};
-      const price = offer.price || {};
+  const data = offersResp.data?.data || [];
+
+  const results: HotelResult[] = data
+    .map((item: any) => {
+      const offer = item.offers?.[0];
+      if (!offer) return null;
+
+      // Determina paymentPolicy dalla risposta Amadeus
+      const paymentPolicy = determinePaymentPolicy(offer);
+      // IN_APP solo se PAY_AT_HOTEL, altrimenti REDIRECT
+      const bookingFlow: BookingFlow = paymentPolicy === "PAY_AT_HOTEL" ? "IN_APP" : "REDIRECT";
 
       return {
-        name: hotel.name,
-        stars: hotel.rating || hotel.stars,
-        priceTotal: parseFloat(price.total || "0"),
-        currency: price.currency || currency,
-        distance: hotel.distance && hotel.distance.toString(),
-        raw: item,
-      };
-    });
+        hotelId: item.hotel?.hotelId ?? item.hotelId,
+        name: item.hotel?.name ?? "Unknown hotel",
+        stars: item.hotel?.rating,
+        latitude: item.hotel?.geoCode?.latitude,
+        longitude: item.hotel?.geoCode?.longitude,
+        priceTotal: Number(offer.price.total),
+        currency: offer.price.currency || currency,
+        offerId: offer.id,
+        bookingFlow,
+        paymentPolicy,
+        checkInDate: offer.checkInDate || checkInDate,
+        checkOutDate: offer.checkOutDate || checkOutDate,
+        roomDescription: offer.room?.description?.text || offer.room?.typeEstimated?.category,
+      } as HotelResult;
+    })
+    .filter((x: HotelResult | null) => x !== null && !Number.isNaN(x!.priceTotal) && x!.offerId);
 
-    return hotels;
-  } catch (error: any) {
-    console.error(`🏨 Amadeus Error:`, error.response?.data || error.message);
-    console.log(`🏨 Returning mock hotel data as fallback`);
-    return getMockHotels(cityCode, currency);
-  }
+  return results;
 }
 
-function getMockHotels(cityCode: string, currency: string): SimpleHotelOffer[] {
-  const cityNames: Record<string, string> = {
-    BCN: "Barcelona",
-    PAR: "Paris",
-    ROM: "Rome",
-    LON: "London",
-    MAD: "Madrid",
-    PRG: "Prague",
-    BUD: "Budapest",
-    AMS: "Amsterdam",
-    BER: "Berlin",
-    LIS: "Lisbon",
-  };
-  const cityName = cityNames[cityCode] || cityCode;
+/**
+ * Determina la policy di pagamento dall'offerta Amadeus
+ */
+function determinePaymentPolicy(offer: any): PaymentPolicy {
+  const policies = offer.policies;
+  if (!policies) return "UNKNOWN";
 
-  return [
-    {
-      name: `${cityName} Grand Hotel`,
-      stars: "4",
-      priceTotal: 185,
-      currency,
-    },
-    {
-      name: `${cityName} Central Inn`,
-      stars: "3",
-      priceTotal: 120,
-      currency,
-    },
-    {
-      name: `${cityName} Party Hostel`,
-      stars: "2",
-      priceTotal: 65,
-      currency,
-    },
-  ];
+  // Controlla paymentType
+  const paymentType = policies.paymentType?.toLowerCase();
+  if (paymentType === "deposit") return "DEPOSIT";
+  if (paymentType === "guarantee") return "PREPAY";
+
+  // Controlla se è pay at hotel (nessun pagamento anticipato richiesto)
+  const guarantee = policies.guarantee;
+  const deposit = policies.deposit;
+  
+  // Se non ci sono requisiti di garanzia/deposito, è PAY_AT_HOTEL
+  if (!guarantee && !deposit) return "PAY_AT_HOTEL";
+  
+  // Se c'è garanzia con carta ma senza addebito, è PAY_AT_HOTEL
+  if (guarantee?.acceptedPayments?.methods?.includes("CREDIT_CARD") && !deposit) {
+    return "PAY_AT_HOTEL";
+  }
+
+  // Se c'è deposito, è DEPOSIT o PREPAY
+  if (deposit) {
+    const amount = parseFloat(deposit.amount || "0");
+    if (amount > 0) return "DEPOSIT";
+  }
+
+  return "PREPAY";
+}
+
+// ========== HOTEL BOOKING ==========
+
+export type BookHotelParams = {
+  offerId: string;
+  guest: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  };
+};
+
+export type BookingResult = {
+  success: boolean;
+  confirmationId?: string;
+  bookingId?: string;
+  status?: string;
+  hotelName?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  totalPrice?: number;
+  currency?: string;
+  error?: string;
+};
+
+/**
+ * Prenota un hotel tramite Amadeus Hotel Booking API
+ * SOLO per offerte IN_APP (PAY_AT_HOTEL)
+ */
+export async function bookHotel(params: BookHotelParams): Promise<BookingResult> {
+  const { offerId, guest } = params;
+
+  // Mock booking per sandbox
+  if (!isProd && offerId.startsWith("MOCK_")) {
+    return {
+      success: true,
+      confirmationId: `MOCK-CONF-${Date.now()}`,
+      bookingId: `MOCK-BOOK-${Date.now()}`,
+      status: "CONFIRMED",
+      hotelName: "Mock Hotel",
+      error: undefined,
+    };
+  }
+
+  try {
+    const token = await getAmadeusToken();
+
+    // Prima verifichiamo che l'offerta sia ancora disponibile
+    const offerCheckResp = await axios.get(
+      `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers/${offerId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const offerData = offerCheckResp.data?.data;
+    if (!offerData) {
+      return {
+        success: false,
+        error: "Offerta non più disponibile o scaduta",
+      };
+    }
+
+    // Verifica che sia PAY_AT_HOTEL
+    const paymentPolicy = determinePaymentPolicy(offerData.offers?.[0] || {});
+    if (paymentPolicy !== "PAY_AT_HOTEL") {
+      return {
+        success: false,
+        error: "Questa offerta richiede pagamento anticipato. Usa il checkout esterno.",
+      };
+    }
+
+    // Procedi con la prenotazione
+    const bookingResp = await axios.post(
+      `${AMADEUS_BASE_URL}/v2/booking/hotel-orders`,
+      {
+        data: {
+          type: "hotel-order",
+          guests: [
+            {
+              tid: 1,
+              title: "MR",
+              firstName: guest.firstName,
+              lastName: guest.lastName,
+              phone: guest.phone || "+39000000000",
+              email: guest.email,
+            },
+          ],
+          payments: [
+            {
+              method: "CREDIT_CARD",
+              paymentCard: {
+                vendorCode: "VI",
+                cardNumber: "4111111111111111",
+                expiryDate: "2026-12",
+                holderName: `${guest.firstName} ${guest.lastName}`,
+              },
+            },
+          ],
+          rooms: [
+            {
+              guestIds: [1],
+              offerId: offerId,
+            },
+          ],
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const bookingData = bookingResp.data?.data?.[0];
+    
+    if (!bookingData) {
+      return {
+        success: false,
+        error: "Errore nella creazione della prenotazione",
+      };
+    }
+
+    return {
+      success: true,
+      confirmationId: bookingData.associatedRecords?.[0]?.reference || bookingData.id,
+      bookingId: bookingData.id,
+      status: "CONFIRMED",
+      hotelName: bookingData.hotel?.name,
+      checkInDate: bookingData.hotelBookings?.[0]?.checkInDate,
+      checkOutDate: bookingData.hotelBookings?.[0]?.checkOutDate,
+      totalPrice: parseFloat(bookingData.hotelBookings?.[0]?.price?.total || "0"),
+      currency: bookingData.hotelBookings?.[0]?.price?.currency,
+    };
+  } catch (error: any) {
+    console.error("[Amadeus Booking Error]", error.response?.status, error.response?.data);
+    
+    // Gestione errori specifici
+    const amadeusError = error.response?.data?.errors?.[0];
+    if (amadeusError) {
+      if (amadeusError.code === 38196) {
+        return { success: false, error: "Offerta scaduta o non disponibile" };
+      }
+      if (amadeusError.code === 36803) {
+        return { success: false, error: "Il prezzo è cambiato. Riprova la ricerca." };
+      }
+      if (amadeusError.code === 38199) {
+        return { success: false, error: "Nessuna disponibilità per queste date" };
+      }
+      return { success: false, error: amadeusError.detail || amadeusError.title };
+    }
+
+    return {
+      success: false,
+      error: "Errore durante la prenotazione. Riprova più tardi.",
+    };
+  }
 }

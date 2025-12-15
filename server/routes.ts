@@ -15,7 +15,8 @@ import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
 import { searchCheapestFlights } from "./services/aviasales";
 import { cityToIata, iataToCity } from "./services/cityMapping";
-import { searchHotels } from "./services/amadeus-hotels";
+import { searchHotels, bookHotel, HotelResult } from "./services/amadeus-hotels";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -820,6 +821,93 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       return res.status(500).json({
         error: "Hotel search failed",
         details: err.response?.data || err.message,
+      });
+    }
+  });
+
+  // Amadeus Hotels - booking endpoint (solo IN_APP)
+  app.post("/api/hotels/book", async (req: Request, res: Response) => {
+    try {
+      const { offerId, guest } = req.body;
+
+      if (!offerId || !guest?.firstName || !guest?.lastName || !guest?.email) {
+        return res.status(400).json({
+          error: "offerId, guest.firstName, guest.lastName, guest.email sono obbligatori",
+        });
+      }
+
+      const result = await bookHotel({ offerId, guest });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      return res.json(result);
+    } catch (err: any) {
+      console.error("Hotel booking error:", err.response?.data || err.message);
+      return res.status(500).json({
+        error: "Booking failed",
+        details: err.message,
+      });
+    }
+  });
+
+  // Flights search endpoint con checkoutUrl reali
+  app.get("/api/flights/search", async (req: Request, res: Response) => {
+    try {
+      const { origin, destination, departDate, returnDate, passengers, currency } = req.query;
+
+      if (!origin || !destination) {
+        return res.status(400).json({
+          error: "origin e destination sono obbligatori",
+        });
+      }
+
+      const originIata = cityToIata(String(origin)) || String(origin).toUpperCase();
+      const destIata = cityToIata(String(destination)) || String(destination).toUpperCase();
+
+      const flightData = await searchCheapestFlights({
+        origin: originIata,
+        destination: destIata,
+        departDate: departDate ? String(departDate) : undefined,
+        currency: currency ? String(currency) : "EUR",
+      });
+
+      const destCode = Object.keys(flightData.data || {})[0];
+      const offersObj = flightData.data?.[destCode] || {};
+
+      const flights = Object.values(offersObj as any)
+        .sort((a: any, b: any) => a.price - b.price)
+        .slice(0, 5)
+        .map((o: any, idx: number) => {
+          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${o.departure_at?.slice(5,7)}${o.departure_at?.slice(8,10)}${destIata}1?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+          
+          return {
+            flightId: `flight-${idx + 1}`,
+            airline: o.airline,
+            price: o.price,
+            currency: currency || "EUR",
+            departureAt: o.departure_at,
+            returnAt: o.return_at,
+            flightNumber: o.flight_number,
+            direct: !o.transfers || o.transfers === 0,
+            bookingFlow: "REDIRECT" as const,
+            checkoutUrl,
+          };
+        })
+        .filter((f: any) => f.checkoutUrl);
+
+      return res.json({
+        origin: originIata,
+        destination: destIata,
+        departDate,
+        flights,
+      });
+    } catch (err: any) {
+      console.error("Flight search error:", err.response?.data || err.message);
+      return res.status(500).json({
+        error: "Flight search failed",
+        details: err.message,
       });
     }
   });

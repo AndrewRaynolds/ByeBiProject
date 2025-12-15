@@ -1,0 +1,105 @@
+Sei un senior full-stack engineer incaricato di portare ByeBi a un flusso di prenotazione REALISTICO e coerente (voli + hotel) gestito interamente dal chatbot fino al checkout, usando dati reali e rimuovendo tutto ciò che è mock o fuorviante.
+
+Obiettivo prodotto (non negoziabile):
+- VOLI: solo REDIRECT checkout esterno (Aviasales/Travelpayouts). Nel chatbot l’utente sceglie un volo e ByeBi restituisce un checkoutUrl reale. ByeBi NON crea prenotazioni voli e NON dichiara “prenotazione confermata”.
+- HOTEL: ricerca reale Amadeus LIVE. Prenotazione IN-APP solo per offerte pay-at-hotel (se disponibili e dichiarate tali). Per offerte prepay/deposit: REDIRECT checkout esterno (no incasso ByeBi).
+- Chatbot: deve orchestrare tutto: raccolta parametri, ricerca, scelta, e poi “book in app” o “redirect”. Nessuna risposta inventata.
+
+Vincoli di sicurezza e verità:
+- Mai mostrare dati mock in produzione.
+- Mai generare “conferme” se non restituite dall’API di booking (hotel).
+- Mai esporre API keys sul frontend.
+- Token Amadeus deve essere cachato lato server (riuso fino a scadenza).
+
+TASK 1 — Ripulire i mock e separare ambienti
+1) Cerca nel repository (server e client) qualsiasi funzione che ritorna hotel/voli mockati o fallback inventati:
+   - rimuovi mock in produzione.
+   - consenti mock SOLO in test/sandbox e solo se AMADEUS_ENV != "production".
+2) Implementa una gestione ambiente chiara:
+   - AMADEUS_ENV=production => baseUrl "https://api.amadeus.com" e credenziali LIVE
+   - altrimenti => baseUrl "https://test.api.amadeus.com" e credenziali TEST
+3) Variabili Replit Secrets attese:
+   - AMADEUS_ENV
+   - AMADEUS_API_KEY_LIVE, AMADEUS_API_SECRET_LIVE
+   - AMADEUS_API_KEY_TEST, AMADEUS_API_SECRET_TEST
+   - (Voli) TRAVELPAYOUTS/AVIASALES token/marker se usati
+   NON loggare mai questi valori.
+
+TASK 2 — Hotel: rendere l’output “bookable”
+1) Modifica l’endpoint hotel search (es. GET /api/hotels/search):
+   - Normalizza input: adults deve essere number, date ISO yyyy-mm-dd validate.
+   - Risposta deve includere per ogni risultato:
+     - hotelId, name, priceTotal, currency
+     - offerId (o l’identificatore dell’offerta necessario per booking)
+     - bookingFlow: "IN_APP" o "REDIRECT"
+     - paymentPolicy sintetica (es. "PAY_AT_HOTEL" / "PREPAY" / "DEPOSIT" se disponibile)
+2) Classificazione:
+   - Se l’offerta è PAY_AT_HOTEL => bookingFlow=IN_APP
+   - Altrimenti bookingFlow=REDIRECT
+   La decisione la prende il backend, non il frontend.
+
+TASK 3 — Hotel booking in-app (solo IN_APP)
+1) Implementa POST /api/hotels/book
+   - input: offerId + guest (firstName,lastName,email) + eventuali campi obbligatori
+   - server: rifiuta con 400 se offerId non è IN_APP (protezione anti-errore)
+   - chiama Amadeus Hotel Booking API e ritorna:
+     - confirmationId/bookingId
+     - status
+     - riepilogo
+2) Gestisci errori reali:
+   - offerta scaduta, prezzo cambiato, no availability -> messaggio chiaro al chatbot
+   - rate limit -> retry limitato + messaggio
+
+TASK 4 — Voli: redirect checkout reale via chatbot
+1) Identifica dove avviene la ricerca voli Aviasales e assicurati che ogni opzione abbia un checkoutUrl reale (deeplink).
+2) Implementa/aggiusta GET /api/flights/search (o equivalente) per ritornare massimo 5 risultati “chatbot-ready”:
+   - flightId interno (uuid)
+   - summary (compagnia, diretto/scali, orari)
+   - price, currency
+   - bookingFlow sempre "REDIRECT"
+   - checkoutUrl OBBLIGATORIO (se manca, quel volo non viene mostrato)
+3) Rank e riduci rumore:
+   - massimo 5 opzioni, ordinate per best value (direct+cheap, ecc.)
+
+TASK 5 — Chatbot: tool/function calling robusto (voli + hotel)
+1) Integra nel chatbot 3 tools:
+   - search_flights(origin,destination,date,passengers)
+   - search_hotels(cityCode,checkInDate,checkOutDate,adults)
+   - book_hotel_in_app(offerId, guest)
+2) Prompt del chatbot:
+   - Chiede solo dati mancanti (origine/destinazione/date/pax, poi hotel).
+   - Presenta max 5 opzioni.
+   - Volo: dopo scelta, restituisce checkoutUrl e spiega che il pagamento è esterno.
+   - Hotel: se IN_APP, raccoglie dati ospite e prenota; se REDIRECT, restituisce redirectUrl e spiega checkout esterno.
+   - Mai dire “prenotato volo”; dire “ti porto al checkout partner”.
+3) UX testuale chiara:
+   - CTA diverse: “Vai al checkout volo”, “Prenota hotel (paghi in hotel)”, “Vai al checkout hotel”.
+
+TASK 6 — Eliminare “strade sbagliate” nel codice (errori comuni)
+1) Assicurati che:
+   - nessuna chiamata Amadeus viene fatta dal frontend
+   - nessun endpoint usa ancora test.api.amadeus.com quando AMADEUS_ENV=production
+   - token caching presente (non richiedere token a ogni richiesta)
+   - logging: logga status code e err.response.data ma mai secrets
+2) Rimuovi o proteggi endpoint di debug (/api/amadeus/debug):
+   - deve essere accessibile solo in dev oppure protetto (non pubblico in produzione)
+
+TASK 7 — Test e Acceptance Criteria
+Crea una checklist automatica/manuale:
+1) GET /api/amadeus/debug => environment LIVE e token ok (solo in dev)
+2) GET /api/hotels/search?cityCode=ROM&checkInDate=2026-01-20&checkOutDate=2026-01-22&adults=2
+   - ritorna hotels[] con offerId e bookingFlow
+3) Se esiste almeno una offerta IN_APP:
+   - POST /api/hotels/book con offerId IN_APP => ritorna confirmationId/bookingId
+4) GET /api/flights/search?... => ritorna 5 risultati max, ciascuno con checkoutUrl
+5) Chatbot end-to-end:
+   - selezione volo => link checkout
+   - selezione hotel IN_APP => conferma prenotazione
+   - selezione hotel REDIRECT => link checkout esterno
+Se qualcosa fallisce, correggi codice e ripeti.
+
+Output richiesto:
+- Modifiche codice completate e committabili.
+- Spiegazione breve di cosa hai cambiato e dove (file + funzioni).
+- Nessun mock in produzione.
+- Flusso chatbot completo e coerente.

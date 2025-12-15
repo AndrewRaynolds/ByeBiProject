@@ -1,12 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import amadeusDebugRoute from "./routes/amadeus-debug";
 
 const app = express();
 import aviasalesRouter from "./routes/aviasales";
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use("/api/aviasales", aviasalesRouter);
+app.use("/api/amadeus", amadeusDebugRoute);
 
 app.use((req, res, next) => {
   const start = Date.now();
