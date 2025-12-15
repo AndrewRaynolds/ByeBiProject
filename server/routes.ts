@@ -464,7 +464,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // Map destination to IATA code for flight search (using centralized mapping)
       const destIATA = cityToIata(destination);
-      console.log("✈️ GENERATED-ITINERARIES destination:", { destination, destIATA });
       
       // Search for flights (assuming origin is always Rome for now)
       let flights = null;
@@ -678,20 +677,12 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       let flights: any[] | undefined = undefined;
       let hotels: HotelResult[] | undefined = undefined;
 
-      // 🔍 DEBUG: Log incoming request body
-      console.log("🔍 GROQ-STREAM BACKEND RECEIVED:", {
-        message: message?.substring(0, 50) + "...",
-        selectedDestination,
-        tripDetails,
-        partyType,
-        originCity,
-        originIata,
-        originCityName,
-        hasConversationHistory: !!conversationHistory
-      });
+      // Debug log solo in development
+      if (process.env.NODE_ENV !== "production") {
+        console.log("🔍 GROQ-STREAM:", { selectedDestination, partyType, originCity });
+      }
 
       if (destinationIata) {
-        console.log(`✈️ IATA mapping: "${selectedDestination}" → ${destinationIata}`);
         try {
           const raw = await searchCheapestFlights({
             origin: originIata,
@@ -705,18 +696,16 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
           flights = Object.values(offersObj as any)
             .sort((a: any, b: any) => a.price - b.price)
             .slice(0, 3)
-            .map((o: any) => ({ ...o, origin: originIata })); // Inject origin into each flight
-
-          console.log(`✅ Flights found: ${flights?.length || 0} cheapest options`, flights);
+            .map((o: any) => ({ ...o, origin: originIata }));
 
         } catch (err) {
-          console.error("❌ Errore chiamata Aviasales in groq-stream:", err);
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Flight search error in groq-stream:", err);
+          }
         }
 
-        // 🏨 Cerca hotel se abbiamo date dal tripDetails
         if (tripDetails?.startDate && tripDetails?.endDate) {
           try {
-            console.log(`🏨 Searching hotels for ${destinationIata}...`);
             const hotelResults = await searchHotels({
               cityCode: destinationIata,
               checkInDate: tripDetails.startDate,
@@ -726,15 +715,14 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
             });
             
             if (hotelResults && hotelResults.length > 0) {
-              hotels = hotelResults.slice(0, 5); // Max 5 hotel
-              console.log(`✅ Hotels found: ${hotels.length} options`);
+              hotels = hotelResults.slice(0, 5);
             }
           } catch (hotelErr) {
-            console.error("❌ Hotel search error:", hotelErr);
+            if (process.env.NODE_ENV !== "production") {
+              console.error("Hotel search error:", hotelErr);
+            }
           }
         }
-      } else {
-        console.log(`⚠️ No IATA code found for destination: "${selectedDestination}"`);
       }
 
       const { streamGroqChatCompletion } = await import('./services/groq');
@@ -749,23 +737,14 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         originCityName,
       };
       
-      console.log("📦 Context passed to GROQ:", { 
-        ...context, 
-        flights: context.flights?.length || 0,
-        hotels: context.hotels?.length || 0 
-      });
-      console.log("✈️ FLIGHT ORIGIN SENT TO GROQ:", context.origin);
-
       // Send flights data to frontend first (before streaming text)
       if (flights && flights.length > 0) {
         res.write(`data: ${JSON.stringify({ flights: flights })}\n\n`);
-        console.log("✈️ Sent flights to frontend:", flights.length, "options");
       }
 
       // Send hotels data to frontend (if available)
       if (hotels && hotels.length > 0) {
         res.write(`data: ${JSON.stringify({ hotels: hotels })}\n\n`);
-        console.log("🏨 Sent hotels to frontend:", hotels.length, "options");
       }
 
       for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
@@ -916,11 +895,20 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       const destCode = Object.keys(flightData.data || {})[0];
       const offersObj = flightData.data?.[destCode] || {};
 
+      const numAdults = passengers ? parseInt(String(passengers), 10) : 1;
+
       const flights = Object.values(offersObj as any)
         .sort((a: any, b: any) => a.price - b.price)
         .slice(0, 5)
         .map((o: any, idx: number) => {
-          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${o.departure_at?.slice(5,7)}${o.departure_at?.slice(8,10)}${destIata}1?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+          const depDate = o.departure_at?.slice(0, 10) || "";
+          const retDate = o.return_at?.slice(0, 10) || "";
+          const depDay = depDate.slice(8, 10);
+          const depMonth = depDate.slice(5, 7);
+          const retDay = retDate.slice(8, 10);
+          const retMonth = retDate.slice(5, 7);
+          
+          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numAdults}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
           
           return {
             flightId: `flight-${idx + 1}`,
