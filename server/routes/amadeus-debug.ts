@@ -12,6 +12,11 @@ const BASE_URL = isProd
   : "https://test.api.amadeus.com";
 
 router.get("/api/amadeus/debug", async (req, res) => {
+  // Block access in production for security
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "Debug endpoint disabled in production" });
+  }
+  
   try {
     const key = isProd
       ? process.env.AMADEUS_API_KEY_LIVE

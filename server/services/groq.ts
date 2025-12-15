@@ -15,6 +15,8 @@ interface ChatContext {
     people: number;
     days: number;
     adventureType: string;
+    startDate?: string;
+    endDate?: string;
   };
   conversationState?: {
     currentStep: string;
@@ -32,6 +34,18 @@ interface ChatContext {
     flight_number: number;
     origin?: string; // IATA code injected from backend
     destination?: string; // IATA code
+  }[];
+  
+  hotels?: {
+    hotelId: string;
+    name: string;
+    stars?: string;
+    priceTotal: number;
+    currency: string;
+    offerId: string;
+    bookingFlow: 'IN_APP' | 'REDIRECT';
+    paymentPolicy: string;
+    roomDescription?: string;
   }[];
 }
 
@@ -106,6 +120,7 @@ Esempi:
 - Quando l'utente dà il numero persone: includi [SET_PARTICIPANTS:6]
 - Quando l'utente dice il tipo evento: includi [SET_EVENT_TYPE:bachelor]
 - Quando l'utente sceglie un volo (1, 2 o 3): includi [SELECT_FLIGHT:1] o [SELECT_FLIGHT:2] o [SELECT_FLIGHT:3]
+- Quando l'utente sceglie un hotel (1-5): includi [SELECT_HOTEL:1], [SELECT_HOTEL:2], ecc.
 - Quando hai tutte le info, mostra le 4 esperienze: [SHOW_EXPERIENCES:Boat Party|Pub Crawl|Karting|Sunset Cruise]
 - Quando l'utente seleziona esperienze: [UNLOCK_ITINERARY_BUTTON]
 
@@ -185,6 +200,7 @@ Esempi:
 - Quando l'utente dà il numero persone: includi [SET_PARTICIPANTS:6]
 - Quando l'utente dice il tipo evento: includi [SET_EVENT_TYPE:bachelorette]
 - Quando l'utente sceglie un volo (1, 2 o 3): includi [SELECT_FLIGHT:1] o [SELECT_FLIGHT:2] o [SELECT_FLIGHT:3]
+- Quando l'utente sceglie un hotel (1-5): includi [SELECT_HOTEL:1], [SELECT_HOTEL:2], ecc.
 - Quando hai tutte le info, mostra le 4 esperienze: [SHOW_EXPERIENCES:Spa Day|Beach Club|Brunch|Wine Tasting]
 - Quando l'utente seleziona esperienze: [UNLOCK_ITINERARY_BUTTON]
 
@@ -278,6 +294,20 @@ export async function* streamGroqChatCompletion(
         contextualPrompt += `   Volo n. ${f.flight_number}\n\n`;
       });
       contextualPrompt += `\nQuando l'utente sceglie un volo (es. "il 2", "prendo il primo", "volo 3"), devi emettere la direttiva [SELECT_FLIGHT:numero] alla fine del messaggio.\n`;
+    }
+
+    // Add real hotel options if available
+    if (context.hotels && context.hotels.length > 0) {
+      contextualPrompt += `\n\n🏨 HOTEL REALI DISPONIBILI a ${context.selectedDestination}:`;
+      contextualPrompt += `\nQuesti sono hotel REALI con prezzi aggiornati. Dopo che l'utente ha scelto il volo, presenta questi hotel.\n`;
+      context.hotels.forEach((h, idx) => {
+        const stars = h.stars ? `${h.stars}⭐` : '';
+        const bookingType = h.bookingFlow === 'IN_APP' ? '✅ Prenota qui' : '🔗 Redirect';
+        contextualPrompt += `${idx + 1}) ${h.name} ${stars} - €${h.priceTotal} totale\n`;
+        contextualPrompt += `   ${h.roomDescription || 'Camera standard'}\n`;
+        contextualPrompt += `   Pagamento: ${h.paymentPolicy} | ${bookingType}\n\n`;
+      });
+      contextualPrompt += `\nQuando l'utente sceglie un hotel (es. "hotel 1", "il secondo"), emetti [SELECT_HOTEL:numero].\n`;
     }
 
     // Prepare messages array

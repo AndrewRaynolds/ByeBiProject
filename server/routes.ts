@@ -672,6 +672,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       const destinationIata = cityToIata(selectedDestination);
 
       let flights: any[] | undefined = undefined;
+      let hotels: HotelResult[] | undefined = undefined;
 
       // 🔍 DEBUG: Log incoming request body
       console.log("🔍 GROQ-STREAM BACKEND RECEIVED:", {
@@ -707,6 +708,27 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         } catch (err) {
           console.error("❌ Errore chiamata Aviasales in groq-stream:", err);
         }
+
+        // 🏨 Cerca hotel se abbiamo date dal tripDetails
+        if (tripDetails?.startDate && tripDetails?.endDate) {
+          try {
+            console.log(`🏨 Searching hotels for ${destinationIata}...`);
+            const hotelResults = await searchHotels({
+              cityCode: destinationIata,
+              checkInDate: tripDetails.startDate,
+              checkOutDate: tripDetails.endDate,
+              adults: tripDetails.people || 2,
+              currency: "EUR",
+            });
+            
+            if (hotelResults && hotelResults.length > 0) {
+              hotels = hotelResults.slice(0, 5); // Max 5 hotel
+              console.log(`✅ Hotels found: ${hotels.length} options`);
+            }
+          } catch (hotelErr) {
+            console.error("❌ Hotel search error:", hotelErr);
+          }
+        }
       } else {
         console.log(`⚠️ No IATA code found for destination: "${selectedDestination}"`);
       }
@@ -718,17 +740,28 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         tripDetails,
         partyType: partyType || 'bachelor',
         flights,
+        hotels,
         origin: originIata,
         originCityName,
       };
       
-      console.log("📦 Context passed to GROQ:", { ...context, flights: context.flights?.length || 0 });
+      console.log("📦 Context passed to GROQ:", { 
+        ...context, 
+        flights: context.flights?.length || 0,
+        hotels: context.hotels?.length || 0 
+      });
       console.log("✈️ FLIGHT ORIGIN SENT TO GROQ:", context.origin);
 
       // Send flights data to frontend first (before streaming text)
       if (flights && flights.length > 0) {
         res.write(`data: ${JSON.stringify({ flights: flights })}\n\n`);
         console.log("✈️ Sent flights to frontend:", flights.length, "options");
+      }
+
+      // Send hotels data to frontend (if available)
+      if (hotels && hotels.length > 0) {
+        res.write(`data: ${JSON.stringify({ hotels: hotels })}\n\n`);
+        console.log("🏨 Sent hotels to frontend:", hotels.length, "options");
       }
 
       for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
@@ -784,8 +817,11 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
-  // Amadeus Hotels - test ping endpoint
+  // Amadeus Hotels - test ping endpoint (development only)
   app.get("/api/hotels/test-ping", (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({ error: "Test endpoint disabled in production" });
+    }
     res.json({ ok: true, message: "Hotels route is alive" });
   });
 
