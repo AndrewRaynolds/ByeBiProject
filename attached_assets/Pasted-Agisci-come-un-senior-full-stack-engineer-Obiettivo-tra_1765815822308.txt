@@ -1,0 +1,123 @@
+Agisci come un senior full-stack engineer. Obiettivo: trasformare ByeBi in un chatbot “solo roba reale” che raccoglie TUTTE le info del gruppo viaggio, trova un volo reale prenotabile via Aviasales/Travelpayouts e SOLO DOPO porta l’utente al checkout esterno; quindi mostra hotel reali via Amadeus LIVE per la destinazione scelta. Nessun pagamento dentro ByeBi. Niente experiences per ora (rimuoverle/disabilitarle).
+
+VINCOLI DI PRODOTTO (NON NEGOZIABILI)
+1) Conversazione guidata e deterministica:
+   - Prima raccogli SEMPRE: numero persone, origine (città o aeroporto), destinazione, data partenza, data ritorno.
+   - Solo quando questi 5 dati sono validi: fai la ricerca voli reale.
+   - Solo dopo scelta volo e ottenuto link checkout esterno: procedi con ricerca hotel reale.
+2) Voli:
+   - Dati reali da Aviasales/Travelpayouts.
+   - Prenotazione/pagamento SEMPRE fuori: ByeBi deve solo fornire checkoutUrl (redirect).
+   - Se non esistono voli reali per quell’aeroporto/data: dichiararlo esplicitamente e proporre alternative REALI (date +/- 1-3 giorni, aeroporti vicini o stessa città con aeroporti alternativi).
+   - Mai mostrare voli senza checkoutUrl valido.
+3) Hotel:
+   - Dati reali da Amadeus LIVE (AMADEUS_ENV=production).
+   - Nessun pagamento in app. Niente carta. Niente booking in-app per ora: SOLO browsing e redirect/“vai su sito partner” se hai partner; altrimenti mostra hotel/offerte e istruisci l’utente che la prenotazione avviene esternamente (non fingere link).
+   - L’hotel search deve avvenire SOLO dopo che il volo è stato scelto (o almeno dopo che l’utente ha deciso di aprire checkout del volo).
+4) Niente experiences:
+   - Elimina o disabilita completamente logiche/route/UI esperienze o itinerari mock collegati a experiences.
+5) Zero mock in produzione:
+   - Se NODE_ENV=production: nessun dato inventato, nessun fallback finto, nessun “Party Hostel”, nessun itinerario mock.
+   - Se non trovi risultati: ritorna vuoto + motivazione e alternative reali.
+
+CONFIG / AMBIENTI
+- Richiedi e documenta env:
+  - NODE_ENV=production (da impostare nei Secrets Replit manualmente)
+  - AMADEUS_ENV=production
+  - AMADEUS_API_KEY_LIVE / AMADEUS_API_SECRET_LIVE (+ test opzionale)
+  - Aviasales/Travelpayouts key/marker se usati
+- Il codice deve loggare in startup (senza secrets): NODE_ENV e AMADEUS_ENV.
+- Disabilita endpoint debug in produzione (es. /api/amadeus/debug → 404/403 se NODE_ENV=production).
+- Logging: in produzione niente body completi, niente PII.
+
+TASK 0 — ANALISI PROGETTO (OBBLIGATORIA PRIMA DI MODIFICARE)
+- Apri il progetto e identifica:
+  - dove vive il server Express e dove sono montate le route
+  - dove è implementato il chatbot (prompt/agent/tool calling)
+  - dove sono implementati voli (Aviasales)
+  - dove sono implementati hotel (Amadeus)
+  - dove sono experiences/itinerari mock e rimuovili/disabilitali
+- Elenca in un breve report (commento o note) gli endpoint esistenti e cosa fanno.
+
+TASK 1 — CHATBOT: STATE MACHINE (NON “CHAT LIBERO”)
+Implementa/aggiorna il chatbot come macchina a stati:
+- Stato COLLECT_TRIP_INFO: raccogli (people, origin, destination, departDate, returnDate).
+  - valida: date in futuro, returnDate > departDate, people >= 1
+  - origin/destination: accetta città o aeroporto; converti a IATA dove possibile
+- Stato SEARCH_FLIGHTS: chiama tool search_flights solo quando i dati sono completi.
+- Stato PICK_FLIGHT: mostra max 5 opzioni; l’utente sceglie una.
+- Stato FLIGHT_CHECKOUT: restituisci checkoutUrl esterno; non dire “prenotato”.
+- Stato SEARCH_HOTELS: appena il volo è scelto (o appena l’utente apre checkout), chiama search_hotels con città destinazione e stesse date (checkIn=arrivo, checkOut=ritorno) e adults=people.
+- Stato PICK_HOTEL: mostra max 10 hotel/offerte reali; nessun booking in-app.
+- Stato HOTEL_CHECKOUT: se hai un redirectUrl reale (partner/affiliate) lo fornisci; se non lo hai, dici chiaramente che la prenotazione avviene su siti esterni (senza inventare link).
+- Stato SUMMARY: riepilogo (gruppo, volo scelto + link, hotel scelto + info e dove prenotare).
+
+TASK 2 — TOOL / ENDPOINTS OBBLIGATORI
+Definisci tools chiari e con output “chatbot-ready”:
+1) search_flights(origin, destination, departDate, returnDate, people)
+   - output: massimo 5 risultati ordinati per best value
+   - ogni risultato: id, carrier, times, stops, price, currency, checkoutUrl
+   - se 0 risultati: ritorna reason + alternatives reali:
+     - alternativeDates: lista di date reali con almeno 1 volo
+     - alternativeOrigins: aeroporti vicini con voli reali
+     - alternativeDestinations: aeroporti vicini (se sensato)
+2) search_hotels(cityCode, checkInDate, checkOutDate, adults)
+   - output: massimo 10 risultati
+   - ogni risultato: hotelId, name, priceTotal, currency, (se possibile) rating/geo
+   - niente mock in prod
+3) (opzionale) resolve_location_to_iata(query)
+   - se l’utente scrive “Milano” scegli MXP/LIN/BGY e chiedi conferma se necessario
+   - se l’utente scrive “Roma” scegli FCO/CIA
+
+TASK 3 — AVIASALES: “VOLO REALE PRENOTABILE”
+- Assicurati che la ricerca voli non sia “finta”:
+  - o usi endpoint Aviasales/Travelpayouts che forniscono link di acquisto
+  - o generi un search URL Aviasales completo e tracciabile (origin_iata, destination_iata, depart_date, return_date, adults, marker)
+- Regola: se non hai checkoutUrl valido, non mostrare quel volo.
+- Implementa gestione “no flights”:
+  - mostra messaggio chiaro (“non ci sono voli reali per X in data Y”)
+  - proponi alternative reali (date/aeroporti) e permetti all’utente di selezionarle per rilanciare la search.
+
+TASK 4 — AMADEUS: HOTEL REALI LIVE
+- Usa AMADEUS_ENV per decidere baseUrl (api.amadeus.com vs test).
+- Token caching obbligatorio.
+- Search hotel: by-city → hotelIds → hotel-offers.
+- Se 0 risultati reali:
+  - spiega che non ci sono offerte per quelle date
+  - proponi alternative reali (cambia date +/- 1-3 giorni, aumenta raggio, ecc.)
+- Disabilita booking in-app e qualsiasi gestione carta:
+  - rimuovi eventuali payload con carte hardcoded
+  - non accettare dati carta dal client
+  - niente POST booking per ora
+
+TASK 5 — RIMOZIONE COMPLETA EXPERIENCE
+- Rimuovi dal chatbot ogni step che propone experiences.
+- Disabilita route/UI che generano “itinerari mock” o esperienze fittizie.
+- Se serve un itinerario, per ora fai solo un “piano testuale” basato su informazioni reali disponibili (ma senza inventare prenotazioni). Nessun GetYourGuide adesso.
+
+TASK 6 — PRODUZIONE PULITA
+- NODE_ENV=production:
+  - blocca debug endpoint
+  - blocca mock/fallback
+  - log minimale, senza PII
+- Aggiungi una guardia in startup che segnali se NODE_ENV manca.
+
+TASK 7 — ACCEPTANCE TEST (OBBLIGATORIO)
+Devi dimostrare con chiamate reali:
+1) Conversazione:
+   - bot raccoglie 5 dati del gruppo
+   - fa search voli
+   - se trova voli: mostra 5 opzioni e fornisce checkoutUrl dopo scelta
+   - poi fa search hotel e mostra 10 opzioni reali
+   - nessuna experience proposta
+2) Caso “no flights”:
+   - bot dichiara esplicitamente assenza voli e propone alternative reali selezionabili
+3) Caso “no hotels”:
+   - bot dichiara esplicitamente assenza hotel e propone alternative reali
+
+OUTPUT RICHIESTO
+- Modifiche completate nel codice.
+- Nessun comportamento mock in produzione.
+- Flusso chatbot: Trip info → Flight search → Flight checkout (redirect) → Hotel search → Hotel selection → (eventuale) hotel checkout esterno/istruzioni.
+- Spiegazione breve delle modifiche con elenco file toccati e motivazione.
+- Se manca un vero redirect partner per hotel, NON simulare: rendilo esplicito nella UX (“prenota su sito esterno”) senza inventare link.
