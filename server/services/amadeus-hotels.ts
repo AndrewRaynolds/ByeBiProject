@@ -28,25 +28,26 @@ export type HotelResult = {
   roomDescription?: string;
 };
 
-const isProd =
-  process.env.AMADEUS_ENV === "production" ||
-  process.env.NODE_ENV === "production";
+// In produzione: NODE_ENV è l'unica fonte di verità per mock/debug
+// AMADEUS_ENV serve solo per selezionare le credenziali API
+const isProd = process.env.NODE_ENV === "production";
+const useAmadeusLive = process.env.AMADEUS_ENV === "production";
 
-const AMADEUS_API_KEY = isProd
+const AMADEUS_API_KEY = useAmadeusLive
   ? process.env.AMADEUS_API_KEY_LIVE
   : process.env.AMADEUS_API_KEY_TEST;
 
-const AMADEUS_API_SECRET = isProd
+const AMADEUS_API_SECRET = useAmadeusLive
   ? process.env.AMADEUS_API_SECRET_LIVE
   : process.env.AMADEUS_API_SECRET_TEST;
 
 if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
   console.error(
-    `[Amadeus Hotels] Missing credentials for ${isProd ? "LIVE" : "TEST"} environment`
+    `[Amadeus Hotels] Missing credentials for ${useAmadeusLive ? "LIVE" : "TEST"} environment`
   );
 }
 
-const AMADEUS_BASE_URL = isProd
+const AMADEUS_BASE_URL = useAmadeusLive
   ? "https://api.amadeus.com"
   : "https://test.api.amadeus.com";
 
@@ -238,9 +239,10 @@ function determinePaymentPolicy(offer: any): PaymentPolicy {
   // Se non ci sono requisiti di garanzia/deposito, è PAY_AT_HOTEL
   if (!guarantee && !deposit) return "PAY_AT_HOTEL";
   
-  // Se c'è garanzia con carta ma senza addebito, è PAY_AT_HOTEL
-  if (guarantee?.acceptedPayments?.methods?.includes("CREDIT_CARD") && !deposit) {
-    return "PAY_AT_HOTEL";
+  // CORREZIONE: Se richiede carta di credito come garanzia, NON è IN_APP
+  // L'utente deve inserire la carta, quindi è REDIRECT
+  if (guarantee?.acceptedPayments?.methods?.includes("CREDIT_CARD")) {
+    return "PREPAY"; // Richiede carta = REDIRECT
   }
 
   // Se c'è deposito, è DEPOSIT o PREPAY
@@ -326,7 +328,7 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
       };
     }
 
-    // Procedi con la prenotazione
+    // Procedi con la prenotazione PAY_AT_HOTEL (NO carta richiesta)
     const bookingResp = await axios.post(
       `${AMADEUS_BASE_URL}/v2/booking/hotel-orders`,
       {
@@ -340,17 +342,6 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
               lastName: guest.lastName,
               phone: guest.phone || "+39000000000",
               email: guest.email,
-            },
-          ],
-          payments: [
-            {
-              method: "CREDIT_CARD",
-              paymentCard: {
-                vendorCode: "VI",
-                cardNumber: "4111111111111111",
-                expiryDate: "2026-12",
-                holderName: `${guest.firstName} ${guest.lastName}`,
-              },
             },
           ],
           rooms: [

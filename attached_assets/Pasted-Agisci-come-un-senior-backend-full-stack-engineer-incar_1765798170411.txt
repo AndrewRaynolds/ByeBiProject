@@ -1,0 +1,114 @@
+Agisci come un senior backend/full-stack engineer incaricato di rendere ByeBi un sistema di prenotazione REALISTICO e COERENTE, eliminando ogni comportamento fuorviante, mock in produzione e configurazione ambigua.
+
+OBIETTIVO NON NEGOZIABILE
+- L’app deve funzionare in PRODUZIONE con:
+  - HOTEL reali (Amadeus LIVE)
+  - VOLI reali con checkout via redirect (Aviasales / Travelpayouts)
+- Nessun mock, fallback finto o comportamento “da demo” deve essere attivo in produzione.
+- Il chatbot deve orchestrare flussi reali fino al checkout, senza mai promettere prenotazioni inesistenti.
+
+STATO ATTUALE DA CORREGGERE
+- Esiste AMADEUS_ENV=production ma NODE_ENV non è impostato → comportamento ibrido pericoloso.
+- Esistono mock / fallback / itinerari finti nel codice.
+- Hotel booking usa logiche ambigue (pay-at-hotel ma con garanzia carta).
+- Booking hotel contiene payload errati e carta hardcoded.
+- Voli usano checkoutUrl costruiti in modo incompleto.
+- Logging troppo verboso (rischio PII).
+- Endpoint debug accessibili anche quando non dovrebbero.
+
+TASK 1 — NORMALIZZAZIONE AMBIENTI
+1. Assumi che in produzione DEVONO essere veri:
+   - NODE_ENV=production
+   - AMADEUS_ENV=production
+2. Aggiorna il codice affinché:
+   - Tutti i controlli di mock/debug usino NODE_ENV, non AMADEUS_ENV.
+   - Se NODE_ENV === "production":
+     - nessun mock è consentito
+     - nessun fallback inventato è consentito
+     - nessun endpoint di debug pubblico è consentito
+
+TASK 2 — RIMOZIONE MOCK E FALLBACK
+1. Cerca in tutto il repository:
+   - hotel mock
+   - itinerari mock
+   - fallback finti (“Hotel Test”, “Party Hostel”, ecc.)
+2. Eliminali oppure proteggili con:
+   - if (NODE_ENV !== "production")
+3. In produzione:
+   - se un’API reale non ritorna risultati → ritorna array vuoto o errore chiaro, MAI dati inventati.
+
+TASK 3 — HOTEL: LOGICA IN_APP vs REDIRECT (CORRETTA)
+1. Correggi la classificazione delle offerte hotel:
+   - IN_APP solo se:
+     - payment policy = PAY_AT_HOTEL
+     - E NON è richiesta alcuna carta di credito come garanzia
+   - REDIRECT in TUTTI gli altri casi (prepay, deposit, card guarantee).
+2. Il backend deve decidere il bookingFlow, NON il frontend.
+3. Ogni hotel restituito deve includere:
+   - offerId
+   - bookingFlow ("IN_APP" | "REDIRECT")
+   - paymentPolicy sintetica
+
+TASK 4 — HOTEL BOOKING API (SICURO)
+1. Elimina qualsiasi carta hardcoded o fittizia dal codice.
+2. Non tentare booking IN_APP se l’offerta richiede carta.
+3. Correggi il payload della Hotel Booking API secondo lo schema ufficiale:
+   - usa roomAssociations
+   - usa payment solo se strettamente necessario (ma in questo progetto NO).
+4. Se l’offerta non è IN_APP:
+   - POST /api/hotels/book deve rispondere 400 con messaggio chiaro.
+
+TASK 5 — VOLI: CHECKOUT REDIRECT CORRETTO
+1. I voli NON devono mai essere “prenotati” da ByeBi.
+2. Ogni volo deve avere:
+   - bookingFlow = "REDIRECT"
+   - checkoutUrl reale e completo
+3. Costruisci checkoutUrl usando il formato corretto Aviasales:
+   - origin_iata
+   - destination_iata
+   - depart_date (YYYY-MM-DD)
+   - return_date se presente
+   - adults
+4. Se checkoutUrl manca o è incompleto → quel volo NON va mostrato.
+
+TASK 6 — LOGGING E SICUREZZA
+1. In produzione:
+   - NON loggare body completi di request/response
+   - NON loggare email, nomi, dati booking
+2. Log consentiti:
+   - endpoint
+   - status code
+   - tempo risposta
+   - conteggi (es. numero hotel)
+3. Proteggi o rimuovi endpoint di debug (/api/amadeus/debug):
+   - consentito solo se NODE_ENV !== "production"
+
+TASK 7 — CHATBOT (COERENZA ASSOLUTA)
+1. Il chatbot NON deve:
+   - inventare conferme
+   - dire “prenotazione volo completata”
+2. Regole testuali:
+   - Voli → “ti porto al checkout del partner”
+   - Hotel IN_APP → “prenotazione confermata, paghi in hotel”
+   - Hotel REDIRECT → “checkout esterno, pagamento fuori ByeBi”
+3. Il chatbot deve usare solo i dati forniti dal backend (offerId, bookingFlow, checkoutUrl).
+
+TASK 8 — VERIFICA FINALE (OBBLIGATORIA)
+Dopo le modifiche, verifica:
+1. console.log iniziale stampa:
+   - NODE_ENV=production
+   - AMADEUS_ENV=production
+2. In produzione:
+   - nessun mock visibile
+   - hotel reali
+   - voli con redirect funzionante
+3. Chatbot end-to-end:
+   - selezione volo → redirect
+   - selezione hotel IN_APP → booking reale
+   - selezione hotel REDIRECT → redirect
+
+OUTPUT ATTESO
+- Codice corretto e pronto per produzione.
+- Eliminazione di ogni ambiguità su mock / test / live.
+- Spiegazione sintetica delle modifiche (file + motivo).
+- Nessun comportamento che possa far credere all’utente di aver prenotato quando non è vero.

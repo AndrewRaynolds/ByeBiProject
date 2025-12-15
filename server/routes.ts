@@ -87,7 +87,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Trip not found" });
       }
       
-      // Generate mock itineraries
+      // Mock itineraries - SOLO in development
+      if (process.env.NODE_ENV === "production") {
+        return res.status(501).json({ message: "Real itinerary generation not implemented yet" });
+      }
+      
       const mockItinerary1 = {
         tripId,
         name: "Amsterdam Adventure",
