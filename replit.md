@@ -26,7 +26,31 @@ The OneClick Assistant implements a strict, step-by-step conversational flow wit
 
 AI responses are parsed for structured commands (SET_DESTINATION, SET_ORIGIN, SET_DATES, SET_PARTICIPANTS, SELECT_FLIGHT, SHOW_EXPERIENCES, UNLOCK_ITINERARY_BUTTON) to automatically update frontend state. The city-to-IATA mapping covers 17 Italian airports and 10 European destinations.
 
-An Activity Ideas Generator allows users to get personalized activity suggestions based on destination and month, displayed in a modal with visual cards. The booking flow follows Chat → Itinerary → Checkout → Purchase simulation, with a static mockup for itinerary and checkout pages, including dynamic pricing calculation based on user selections. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
+**Real Flow Architecture (December 2024 refactor):**
+The booking flow uses a unified TripContext data contract stored in localStorage under 'currentItinerary':
+```typescript
+interface TripContext {
+  origin: string;           // IATA code or city name
+  destination: string;      // City name
+  startDate: string;        // YYYY-MM-DD (user's trip dates)
+  endDate: string;          // YYYY-MM-DD
+  people: number;           // Number of travelers
+  aviasalesCheckoutUrl: string;  // Pre-built Aviasales deep link
+  flightLabel?: string;     // Display label for flight section
+}
+```
+- **Chatbot** → writes TripContext to localStorage
+- **Itinerary.tsx** (/itinerary) → reads TripContext, shows trip summary, Aviasales link, continue to checkout
+- **Checkout.tsx** (/checkout) → reads TripContext, shows Aviasales button + real Amadeus hotel search
+
+**Flight prices are NEVER shown** - users book flights directly via Aviasales partner links.
+**Date handling**: All dates use string-only formatters (formatDateRangeIT, normalizeFutureTripDate) - NO Date() constructor to avoid timezone issues.
+
+**Legacy pages** (NOT part of real flow):
+- ItineraryPage.tsx (/itinerary/:id) - old authenticated dashboard flow
+- ItineraryPreviewPage.tsx (/itinerary/preview) - old AI-generated preview
+
+An Activity Ideas Generator allows users to get personalized activity suggestions based on destination and month, displayed in a modal with visual cards. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
 
 ## External Dependencies
 - **GROQ API**: Primary AI engine (llama-3.3-70b-versatile) for ultra-fast streaming chat responses (Server-Sent Events) and structured JSON generation for activity ideas.
