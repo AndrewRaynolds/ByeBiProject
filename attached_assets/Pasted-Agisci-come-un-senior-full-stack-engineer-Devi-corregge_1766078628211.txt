@@ -1,0 +1,105 @@
+Agisci come un senior full-stack engineer. Devi correggere 3 bug/violazioni NON NEGOZIABILI nel flusso voli→checkout. I vincoli sono: niente prezzi voli in nessun punto, e le date mostrate nel checkout devono coincidere ESATTAMENTE con quelle inserite dall’utente nel chatbot (trip dates), senza confonderle con gli orari del volo.
+
+PROBLEMI ATTUALI (DA SCREENSHOT)
+1) Prezzi ancora visibili:
+   - nel chatbot: “€50 a persona”
+   - nel checkout: “€200 totale / €50 a persona”
+   -> Devono sparire ovunque.
+2) Date incoerenti:
+   - header checkout mostra “10–15 Gennaio 2024”
+   - dettagli volo mostrano “23/01/2026 …”
+   -> L’header deve mostrare SOLO trip dates inserite dall’utente (es. 10–15 Febbraio 2026), e devono coincidere con i parametri usati per il link Aviasales.
+3) Itinerario/percorso/checkout state: sta usando dati sbagliati/derivati.
+   -> Il checkout deve leggere SOLO un “TripContext” persistito dal chatbot, non calcolare date da flight segments.
+
+ACCEPTANCE CRITERIA (NON NEGOZIABILI)
+A) Nessun prezzo voli appare:
+   - nessun simbolo “€” o “a persona” o “totale” per voli
+   - né nel backend payload né nel frontend rendering né nei testi del bot.
+B) Trip dates = Source of Truth:
+   - quando l’utente inserisce (esempio) 10–15 febbraio 2026
+   - il checkout header DEVE mostrare 10–15 febbraio 2026
+   - il link Aviasales DEVE contenere depart_date=2026-02-10 e return_date=2026-02-15
+   - nessun shift di giorno e nessun anno sbagliato (niente 2024 se l’utente non l’ha scritto).
+C) Separazione netta:
+   - “Trip dates” (YYYY-MM-DD) sono quelle del viaggio
+   - “Flight datetimes” (con orario) NON devono mai sovrascrivere le trip dates in UI.
+D) Niente inventare: se mancano dati coerenti, mostra errore chiaro e non proseguire.
+
+TASK 1 — INTRODUCI/USA UN TripContext UNICO (backend+frontend)
+Definisci un oggetto unico che rappresenta la verità del viaggio:
+TripContext = {
+  origin: string,
+  destination: string,
+  departDate: "YYYY-MM-DD",
+  returnDate: "YYYY-MM-DD",
+  adults: number,
+  aviasalesCheckoutUrl: string,
+  selectedFlightLabel?: string  // opzionale, senza prezzo
+}
+Questo TripContext deve essere:
+- creato/aggiornato solo dal flusso chatbot quando l’utente conferma le date
+- salvato in uno store affidabile (state globale, localStorage, o backend session)
+- letto dal checkout per mostrare date/persone/destinazione.
+
+TASK 2 — FIX DATE: ELIMINA QUALSIASI USO DI Date() PER TRIP DATES
+- Cerca in tutto il repo:
+  new Date(departDate), toISOString(), toLocaleDateString(), Date.parse
+  applicati a trip dates.
+- Vietato per trip dates: non usare oggetti Date.
+- Implementa un formatter “safe” che usa solo stringhe:
+  - split YYYY-MM-DD -> [Y,M,D]
+  - mappa mese -> nome italiano
+- L’header checkout deve usare TripContext.departDate/returnDate, non i datetimes del volo.
+
+TASK 3 — FIX ANNO SBAGLIATO (2024)
+- Trova dove viene assegnato l’anno alle date (default anno corrente? hardcoded 2024?).
+- Regola:
+  - se l’utente non specifica anno, usa un algoritmo coerente:
+    - se la data (giorno/mese) è già passata nell’anno corrente, usa anno+1
+    - altrimenti anno corrente
+  - MA una volta normalizzata, salva sempre come YYYY-MM-DD e non cambiarla più.
+- Verifica che l’anno nel checkout header non venga mai “reset” a 2024.
+
+TASK 4 — RIMUOVI PREZZI VOLI OVUNQUE (backend + frontend + chatbot)
+- Backend: /api/flights/search (o tool equivalente) NON deve includere price/currency nel payload usato dal bot/checkout.
+  Se esistono campi price, rimuovili o non passarli oltre.
+- Frontend: elimina render di:
+  - “€X a persona”
+  - “Totale per N persone”
+  - qualsiasi “€” in card volo/checkout.
+- Chatbot copy:
+  - elimina qualsiasi testo che citi prezzi.
+  - presenta solo: compagnia (se disponibile), tratta, e CTA “Vai su Aviasales”.
+
+TASK 5 — CHECKOUT: MOSTRA SOLO CTA REDIRECT E DATI TRIP
+- Nella pagina “Il tuo viaggio a …”:
+  - mostra solo: date trip, numero persone, destinazione
+  - card volo: mostra solo label (es. “FR Roma → Barcellona” + eventuale numero volo se lo hai), nessun prezzo.
+  - bottone unico: “Vai su Aviasales” che apre TripContext.aviasalesCheckoutUrl
+
+TASK 6 — FIX “PERCORSO ITINERARIO” / NAVIGAZIONE
+- Identifica dove costruisci la route verso il checkout/itinerario (es. /itinerary, /checkout).
+- Assicurati che passi SOLO TripContext (o un tripId che recupera TripContext).
+- Vietato ricostruire date dal flight object o da stringhe locali.
+- Se il checkout riceve parametri query, devono essere esattamente:
+  origin, destination, departDate, returnDate, adults, checkoutUrl
+  e vanno validati. Se invalidi -> errore e stop.
+
+TASK 7 — TEST MANUALE OBBLIGATORIO (con log DEV-only)
+Caso test:
+- input chatbot: Roma → Barcellona, 10–15 febbraio, 4 persone
+Verifica:
+1) nel bot non appare nessun prezzo
+2) in checkout header: “10–15 Febbraio 2026” (anno coerente) e 4 persone
+3) nessun prezzo in checkout
+4) bottone Aviasales apre link con depart_date=2026-02-10&return_date=2026-02-15&adults=4
+5) nessuna data diversa nei dettagli volo (se mostri datetimes, devono essere separati e NON sostituire le trip dates)
+
+OUTPUT RICHIESTO
+- Patch committabile
+- Elenco file modificati
+- Spiegazione del root cause:
+  - perché compariva 2024
+  - perché la UI mostrava 23/01/2026 invece delle trip dates
+  - dove sono stati rimossi i prezzi

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
-import { formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
+import { formatDateRangeIT } from '@shared/dateUtils';
 
 interface FlightData {
   flightIndex: number;
@@ -198,12 +198,12 @@ export default function Checkout() {
                 <p className="text-sm text-white/70 mt-1">
                   Viaggio: {formatDateRangeIT(itinerary.startDate, itinerary.endDate)}
                 </p>
-                <p className="text-sm text-white/70">
-                  Volo partenza: {formatFlightDateTime(itinerary.selectedFlight.departure_at)}
-                </p>
                 <p className="text-sm text-white/70">Volo n. {itinerary.selectedFlight.flight_number}</p>
                 <p className="text-sm text-white/70">{itinerary.people} passeggeri</p>
               </div>
+              <p className="text-xs text-white/50 mb-3 italic">
+                Cerca voli per le date del tuo viaggio su Aviasales
+              </p>
               <Button 
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                 onClick={() => window.open(getFlightCheckoutUrl(), '_blank')}

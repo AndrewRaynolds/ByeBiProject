@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Bot, User, Sparkles } from 'lucide-react';
-import { normalizeTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
+import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -42,7 +42,6 @@ interface ConversationState {
 interface FlightInfo {
   id?: number;
   airline: string;
-  price: number;
   departure_at: string;
   return_at: string;
   flight_number: number;
@@ -53,7 +52,6 @@ interface FlightInfo {
 interface SelectedFlightData {
   flightIndex: number;
   airline: string;
-  price: number;
   departure_at: string;
   return_at: string;
   flight_number: number;
@@ -129,7 +127,6 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           const flightData: SelectedFlightData = {
             flightIndex: flightNum,
             airline: flight.airline,
-            price: flight.price,
             departure_at: flight.departure_at,
             return_at: flight.return_at,
             flight_number: flight.flight_number,
@@ -195,10 +192,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
         type: 'flight' as const,
         name: `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}`,
         description: `Volo da ${selectedFlight.originCity}`,
-        price: selectedFlight.price,
         details: [
-          `Partenza: ${formatFlightDateTime(selectedFlight.departure_at)}`,
-          `Ritorno: ${formatFlightDateTime(selectedFlight.return_at)}`,
           `Volo: ${selectedFlight.flight_number}`,
           'Bagaglio a mano incluso'
         ]
@@ -210,10 +204,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
         type: 'flight' as const,
         name: `${firstFlight.airline} - ${userOriginCity} → ${selectedDestination}`,
         description: `Volo da ${userOriginCity}`,
-        price: firstFlight.price,
         details: [
-          `Partenza: ${formatFlightDateTime(firstFlight.departure_at)}`,
-          `Ritorno: ${formatFlightDateTime(firstFlight.return_at)}`,
           `Volo: ${firstFlight.flight_number}`,
           'Bagaglio a mano incluso'
         ]
@@ -224,10 +215,7 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
         type: 'flight' as const,
         name: `Volo ${userOriginCity} → ${selectedDestination}`,
         description: `Volo diretto da ${userOriginCity}`,
-        price: 89,
         details: [
-          `Partenza: ${tripDetails.startDate}`,
-          `Ritorno: ${tripDetails.endDate}`,
           'Bagaglio a mano incluso'
         ]
       };
@@ -322,8 +310,8 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           
         case 'SET_DATES':
           const [rawStart, rawEnd] = value.split(',').map(d => d.trim());
-          const normalizedStart = normalizeTripDate(rawStart);
-          const normalizedEnd = normalizeTripDate(rawEnd);
+          const normalizedStart = normalizeFutureTripDate(rawStart);
+          const normalizedEnd = normalizeFutureTripDate(rawEnd);
           
           if (normalizedStart && normalizedEnd && isValidDateRange(normalizedStart, normalizedEnd)) {
             const days = calculateTripDays(normalizedStart, normalizedEnd);
@@ -404,7 +392,6 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
                 const flightData: SelectedFlightData = {
                   flightIndex: flightNum,
                   airline: flight.airline,
-                  price: flight.price,
                   departure_at: flight.departure_at,
                   return_at: flight.return_at,
                   flight_number: flight.flight_number,
