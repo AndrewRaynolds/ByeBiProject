@@ -427,9 +427,14 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   };
 
   const onSubmit = async (data: MessageFormValues) => {
+    if (isLoading) return;
+    
+    const trimmedMessage = data.message.trim();
+    if (!trimmedMessage) return;
+    
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: data.message,
+      content: trimmedMessage,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -569,7 +574,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
         <div ref={scrollContainerRef} className="flex-1 px-6 py-4 overflow-y-auto">
           <div className="space-y-4">
-            {messages.map((message) => (
+            {messages.filter(msg => msg.content && msg.content.trim()).map((message) => (
               <div
                 key={message.id}
                 className={`flex gap-3 ${

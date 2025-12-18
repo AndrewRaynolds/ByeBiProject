@@ -1,0 +1,75 @@
+Agisci come un senior full-stack engineer e fixa un bug UI/logic del chatbot: oggi, quando l’utente scrive, l’interfaccia mostra più “bolle” vuote del bot (messaggi senza testo) e spesso compaiono duplicati/echo (“ciao” ripetuto). L’obiettivo è che ogni invio dell’utente produca AL MASSIMO 1 messaggio del bot (più eventualmente 1 indicatore di “typing” non persistente), e MAI messaggi vuoti.
+
+ACCEPTANCE CRITERIA (non negoziabili)
+1) Nessuna bolla del bot deve essere renderizzata se content/testo è vuoto o solo whitespace.
+2) Per ogni submit dell’utente:
+   - viene aggiunto 1 solo messaggio user
+   - viene aggiunto 1 solo messaggio assistant finale (non duplicato)
+   - eventuale “typing/loading” deve essere un indicatore UI separato, NON un messaggio salvato nello storico.
+3) Il primo messaggio “benvenuto” del bot deve apparire una sola volta (non ad ogni render/reload).
+4) Se l’API fallisce, mostra 1 solo messaggio errore (testo visibile), non 3 bolle vuote.
+5) Stop a duplicazioni causate da:
+   - doppio handler submit (onKeyDown + onSubmit)
+   - useEffect che reinserisce messaggi
+   - streaming che appende chunk creando messaggi separati
+   - race condition: setMessages chiamato due volte con stesso id
+
+TASK 1 — REPRO E ROOT CAUSE
+- Riproduci il bug: invia “ciao” e “barcellona”.
+- Individua la causa esatta controllando:
+  a) dove viene pushato il messaggio user
+  b) dove viene creato il placeholder del bot
+  c) dove arriva la risposta fetch e come viene aggiornata
+  d) se ci sono useEffect che aggiungono messaggi all’avvio o ad ogni render
+  e) se esiste streaming: controlla se stai creando nuovi messaggi per ogni chunk
+- Aggiungi log temporanei (DEV ONLY) per stampare:
+  - numero di messaggi prima/dopo submit
+  - id messaggi creati
+  - contenuto ricevuto dall’API
+
+TASK 2 — FIX: MODELLO MESSAGGI CON ID UNICO
+- Ogni messaggio deve avere id unico (uuid) e role (“user” | “assistant”).
+- Quando l’utente invia:
+  1) appendi message user
+  2) mostra typing indicator separato (state boolean isTyping) OPPURE crea un placeholder assistant con id fisso “pending” MA NON deve essere vuoto visibile.
+- Alla risposta:
+  - aggiorna lo stesso placeholder (stesso id) con content finale, oppure rimuovi typing e appendi 1 solo assistant.
+- Se response content è vuoto/null:
+  - NON renderizzare bolla vuota
+  - mostra un messaggio fallback tipo: “Non ho ricevuto una risposta valida, riprova.”
+
+TASK 3 — FIX: RENDER GUARD (mai bolle vuote)
+- Nel componente che renderizza le bubble:
+  - prima di renderizzare, fai:
+    - if (!message.content || !message.content.trim()) return null;
+- Se vuoi un “typing”, crea un componente separato (es. <TypingIndicator />) che non usa messages[].
+
+TASK 4 — FIX: DOPPIO SUBMIT / DUPLICATI
+- Controlla se il submit viene triggerato due volte (Enter + click, o onKeyDown e onSubmit insieme).
+- Assicurati che:
+  - l’handler submit faccia e.preventDefault()
+  - mentre isSending/isTyping è true, blocca ulteriori submit (debounce/lock).
+- Se stai usando React StrictMode in dev, attenzione: alcuni effetti possono girare due volte. Evita useEffect che “pushano messaggi” senza guardie.
+
+TASK 5 — FIX: MESSAGGIO DI BENVENUTO UNA SOLA VOLTA
+- Se il welcome message viene aggiunto con useEffect:
+  - aggiungi guardia: inseriscilo solo se messages è vuoto E se un flag “welcomeShown” (persistito in localStorage o state) è false.
+  - non reinserirlo ad ogni mount.
+
+TASK 6 — ERRORE API: 1 MESSAGGIO CHIARO
+- Se fetch fallisce o ritorna JSON malformato:
+  - rimuovi typing indicator
+  - appendi 1 solo assistant message con testo errore user-friendly.
+
+TASK 7 — TEST MANUALE (OBBLIGATORIO)
+- Avvia app e verifica:
+  1) appare 1 solo welcome
+  2) invia “ciao”: 1 user bubble + 1 assistant bubble (nessuna vuota)
+  3) invia “barcellona”: idem
+  4) simula API error: 1 solo messaggio errore, nessuna vuota
+  5) ricarica pagina: welcome non si duplica
+
+OUTPUT RICHIESTO
+- Patch pronta da committare.
+- Elenco file modificati.
+- Spiegazione della root cause (perché comparivano bolle vuote/duplicati) e come l’hai evitata.
