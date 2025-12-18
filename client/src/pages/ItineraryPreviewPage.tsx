@@ -1,3 +1,15 @@
+/**
+ * LEGACY PAGE - NOT PART OF REAL FLOW
+ * 
+ * This page was for previewing AI-generated itineraries from the old planner flow.
+ * It reads from 'lastGeneratedItinerary' localStorage, NOT 'currentItinerary'.
+ * 
+ * For the real flow, use:
+ * - /itinerary (Itinerary.tsx) - reads from currentItinerary localStorage
+ * - /checkout (Checkout.tsx) - books hotels and shows Aviasales link
+ * 
+ * Route: /itinerary/preview
+ */
 import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

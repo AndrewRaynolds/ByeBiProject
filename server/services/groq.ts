@@ -28,7 +28,6 @@ interface ChatContext {
   flights?: {
     id?: number;
     airline: string;
-    price: number;
     departure_at: string;
     return_at: string;
     flight_number: number;
@@ -74,8 +73,8 @@ FLUSSO OBBLIGATORIO:
    → Chiedi il numero di partecipanti.
 
 4. L'utente dà il numero persone.
-   → Riceverai i voli reali. Presentali con i prezzi.
-   → Chiedi: "Quale volo preferisci? Scegli 1, 2 o 3."
+   → Riceverai i voli reali. Presentane solo uno e chiedi un ok di conferma per poi andare al checkout per ulteriori informazioni.
+   → Chiedi: "Dammi un ok di conferma per procedere al checkout."
 
 5. L'utente sceglie un volo.
    → Emetti [SELECT_FLIGHT:numero]
@@ -129,8 +128,8 @@ FLUSSO OBBLIGATORIO:
    → Chiedi il numero di partecipanti.
 
 4. L'utente dà il numero persone.
-   → Riceverai i voli reali. Presentali con i prezzi.
-   → Chiedi: "Quale volo preferisci? Scegli 1, 2 o 3."
+   → Riceverai i voli reali. Presentane solo uno e chiedi un ok di       conferma per poi andare al checkout per ulteriori informazioni.
+  → Chiedi: "Dammi un ok di conferma per procedere al checkout."
 
 5. L'utente sceglie un volo.
    → Emetti [SELECT_FLIGHT:numero]
@@ -237,8 +236,9 @@ export async function* streamGroqChatCompletion(
         const depDate = new Date(f.departure_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
         const depTime = new Date(f.departure_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
         const retDate = new Date(f.return_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-        const retTime = new Date(f.return_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-        contextualPrompt += `${idx + 1}) ${f.airline} - €${f.price} a persona\n`;
+        const retTime = new Date(f.return_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); 
+        //contextualPrompt += `\n${idx + 1}. ${f.airline} - ${f.price} €`;
+        
         contextualPrompt += `   Partenza: ${depDate} ore ${depTime}\n`;
         contextualPrompt += `   Ritorno: ${retDate} ore ${retTime}\n`;
         contextualPrompt += `   Volo n. ${f.flight_number}\n\n`;

@@ -1,3 +1,15 @@
+/**
+ * LEGACY PAGE - NOT PART OF REAL FLOW
+ * 
+ * This page belongs to the old authenticated dashboard/trip management flow.
+ * It is NOT used by the chatbot → Itinerary → Checkout real flow.
+ * 
+ * For the real flow, use:
+ * - /itinerary (Itinerary.tsx) - reads from currentItinerary localStorage
+ * - /checkout (Checkout.tsx) - books hotels and shows Aviasales link
+ * 
+ * Route: /itinerary/:id (requires authentication)
+ */
 import { useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";

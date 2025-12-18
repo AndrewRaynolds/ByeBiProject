@@ -1,0 +1,118 @@
+Agisci come un senior full-stack engineer incaricato di normalizzare e semplificare il flusso “itinerary” del progetto.
+
+CONTESTO
+Attualmente esistono tre pagine:
+- Itinerary.tsx
+- ItineraryPage.tsx
+- ItineraryPreviewPage.tsx
+
+Queste pagine appartengono a flussi diversi (vecchio planner AI vs nuovo flusso reale) e oggi causano:
+- date incoerenti
+- prezzi non voluti
+- reintroduzione di mock
+- confusione di routing e localStorage
+
+OBIETTIVO FINALE (VINCOLI)
+1) Deve esistere UNA SOLA pagina itinerary per il flusso reale.
+2) Il flusso reale deve:
+   - raccogliere i dati dal chatbot
+   - mostrare solo info reali (no mock)
+   - NON mostrare prezzi dei voli
+   - usare SOLO redirect Aviasales per i voli
+   - portare poi alla pagina Checkout per gli hotel
+3) Le date mostrate in UI devono essere ESATTAMENTE quelle inserite dall’utente (date-only).
+4) Tutto ciò che appartiene al vecchio flusso “AI itinerary / bachelor planner” deve essere escluso dal flusso reale.
+
+────────────────────────────
+TASK A — DECISIONE ARCHITETTURALE
+────────────────────────────
+- Usa **Itinerary.tsx** come UNICA pagina itinerary del flusso reale.
+- ItineraryPage.tsx e ItineraryPreviewPage.tsx:
+  - NON devono più essere raggiungibili dal flusso reale
+  - NON devono leggere/scrivere currentItinerary o checkout data
+  - se necessario, lasciale solo come legacy (commento chiaro o route separata)
+
+────────────────────────────
+TASK B — PULIZIA TOTALE DI Itinerary.tsx
+────────────────────────────
+In Itinerary.tsx:
+
+1) Rimuovi COMPLETAMENTE:
+   - fallbackMockupData
+   - attività / experiences
+   - prezzi voli
+   - totale / €/persona / calculateTotal
+   - qualsiasi logica di “package” o “bundle”
+
+2) Itinerary.tsx deve usare SOLO un oggetto TripContext:
+   {
+     origin: string,            // es. ROM
+     destination: string,       // es. BCN
+     startDate: "YYYY-MM-DD",
+     endDate: "YYYY-MM-DD",
+     people: number,
+     aviasalesCheckoutUrl: string,
+     flightLabel?: string
+   }
+
+3) Se TripContext NON esiste in localStorage:
+   - mostra errore chiaro
+   - CTA: “Torna al chatbot”
+   - NESSUN fallback mock
+
+4) UI di Itinerary.tsx deve mostrare SOLO:
+   - destinazione
+   - date viaggio (startDate/endDate)
+   - numero persone
+   - sezione “Volo” con:
+     - label descrittiva
+     - bottone “Vai su Aviasales”
+   - bottone “Continua” → Checkout
+
+────────────────────────────
+TASK C — DATE: FIX DEFINITIVO
+────────────────────────────
+- Individua formatDateRangeIT in @shared/dateUtils.
+- Riscrivila in modo SAFE:
+  - input: "YYYY-MM-DD"
+  - output: stringa italiana
+  - implementazione SOLO string-based
+  - VIETATO usare new Date(), timezone, locale
+
+- Tutte le pagine del flusso reale devono usare SOLO questa funzione.
+
+────────────────────────────
+TASK D — CHECKOUT PAGE
+────────────────────────────
+- Checkout.tsx deve leggere SOLO TripContext.
+- Deve mostrare:
+  - destinazione
+  - date viaggio (safe formatter)
+  - persone
+- Sezione volo:
+  - NESSUN prezzo
+  - solo bottone “Vai su Aviasales”
+- Sezione hotel:
+  - ok usare Amadeus
+  - prezzi hotel ammessi
+- Se TripContext manca → redirect home o chatbot.
+
+────────────────────────────
+TASK E — ROUTING E ISOLAMENTO
+────────────────────────────
+- Verifica routing:
+  - il flusso chatbot → Itinerary.tsx → Checkout.tsx
+  - nessun passaggio per ItineraryPage / ItineraryPreviewPage
+- Commenta o documenta chiaramente che le pagine legacy NON fanno parte del flusso reale.
+
+────────────────────────────
+OUTPUT ATTESO
+────────────────────────────
+- Patch committabile
+- Elenco file modificati
+- Conferma manual test:
+  - input chatbot: “Roma → Barcellona 10–15 Febbraio 4 persone”
+  - Itinerary UI mostra 10–15 Febbraio
+  - Nessun prezzo voli
+  - Bottone Aviasales apre con quelle date
+  - Checkout mostra le stesse date identiche
