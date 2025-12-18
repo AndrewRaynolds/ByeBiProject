@@ -147,9 +147,7 @@ export default function Checkout() {
     return null;
   }
 
-  const flightTotal = itinerary.selectedFlight ? itinerary.selectedFlight.price * itinerary.people : 0;
   const hotelTotal = selectedHotel ? selectedHotel.priceTotal : 0;
-  const grandTotal = flightTotal + hotelTotal;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
@@ -193,34 +191,26 @@ export default function Checkout() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-start pb-4">
-                <div className="flex-1">
-                  <p className="font-semibold text-white text-lg">
-                    {itinerary.selectedFlight.airline} - {itinerary.originCity} → {itinerary.destination}
-                  </p>
-                  <p className="text-sm text-white/70 mt-1">
-                    Viaggio: {formatDateRangeIT(itinerary.startDate, itinerary.endDate)}
-                  </p>
-                  <p className="text-sm text-white/70">
-                    Volo partenza: {formatFlightDateTime(itinerary.selectedFlight.departure_at)}
-                  </p>
-                  <p className="text-sm text-white/70">Volo n. {itinerary.selectedFlight.flight_number}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-green-400 text-2xl">da €{flightTotal}</p>
-                  <p className="text-xs text-white/60">~€{itinerary.selectedFlight.price} x {itinerary.people} (stimato)</p>
-                </div>
+              <div className="pb-4">
+                <p className="font-semibold text-white text-lg">
+                  {itinerary.selectedFlight.airline} - {itinerary.originCity} → {itinerary.destination}
+                </p>
+                <p className="text-sm text-white/70 mt-1">
+                  Viaggio: {formatDateRangeIT(itinerary.startDate, itinerary.endDate)}
+                </p>
+                <p className="text-sm text-white/70">
+                  Volo partenza: {formatFlightDateTime(itinerary.selectedFlight.departure_at)}
+                </p>
+                <p className="text-sm text-white/70">Volo n. {itinerary.selectedFlight.flight_number}</p>
+                <p className="text-sm text-white/70">{itinerary.people} passeggeri</p>
               </div>
-              <p className="text-xs text-white/50 mb-3 italic">
-                * Prezzo indicativo. Il prezzo finale e la disponibilità saranno confermati nel checkout del partner.
-              </p>
               <Button 
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                 onClick={() => window.open(getFlightCheckoutUrl(), '_blank')}
                 data-testid="button-book-flight"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Prenota Volo su Aviasales
+                Vai su Aviasales
               </Button>
             </CardContent>
           </Card>
@@ -300,33 +290,21 @@ export default function Checkout() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-red-500 shadow-2xl shadow-red-500/20">
-          <CardContent className="pt-6">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-white/80">
-                <span>Volo ({itinerary.people} persone)</span>
-                <span className="font-semibold text-white">€{flightTotal}</span>
-              </div>
-              {selectedHotel && (
+        {selectedHotel && (
+          <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-red-500 shadow-2xl shadow-red-500/20">
+            <CardContent className="pt-6">
+              <div className="space-y-3">
                 <div className="flex justify-between items-center text-white/80">
                   <span>Hotel ({itinerary.days} notti)</span>
                   <span className="font-semibold text-white">€{hotelTotal}</span>
                 </div>
-              )}
-              <div className="border-t border-white/20 pt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-semibold text-white">Totale Stimato</span>
-                  <span className="text-4xl font-bold bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
-                    €{grandTotal.toLocaleString()}
-                  </span>
-                </div>
               </div>
-            </div>
-            <p className="text-center text-white/50 text-xs mt-4">
-              I prezzi sono indicativi. Completa le prenotazioni sui siti partner per confermare.
-            </p>
-          </CardContent>
-        </Card>
+              <p className="text-center text-white/50 text-xs mt-4">
+                I prezzi hotel sono indicativi. Conferma sul sito partner.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex flex-col md:flex-row gap-4">
           <Button

@@ -1,0 +1,62 @@
+Agisci come un senior full-stack engineer. Devi applicare due fix:
+
+FIX A — RIMUOVERE PREZZI VOLI OVUNQUE
+- Nel chatbot: non mostrare mai prezzi voli.
+- Nella UI di “checkout” interna: non mostrare mai prezzi voli.
+- L’unica azione dopo la scelta del volo deve essere: fornire/mostrare un bottone/link “Vai su Aviasales” con checkoutUrl reale.
+- Se oggi i prezzi vengono mostrati perché arrivano da una response o da un componente, rimuovili/ignorali completamente.
+
+FIX B — DATE: UI INTERNA MOSTRA DATE SBAGLIATE, MA LINK AVIASALES È GIUSTO
+- Bug attuale: se l’utente inserisce “dal 10 al 15 febbraio”, nel riepilogo/checkout interno appare un’altra data, ma il redirect Aviasales è corretto.
+- Quindi: il problema è SOLO nel parsing/formatting interno, non nel link.
+
+ACCEPTANCE CRITERIA (non negoziabili)
+1) Input utente: “10–15 febbraio” => la UI interna deve mostrare ESATTAMENTE 10 febbraio e 15 febbraio (stesso anno coerente).
+2) Nessun shift +/-1 giorno, nessun mese sbagliato.
+3) Il checkoutUrl deve continuare a contenere le date corrette (già ok).
+4) Nessun prezzo visibile nel bot o nella UI.
+
+TASK 1 — IDENTIFICA DOVE LA UI CALCOLA/MOSTRA LE DATE
+- Trova il componente “checkout” o riepilogo dove oggi stampi le date.
+- Cerca uso di:
+  - new Date(...)
+  - toISOString()
+  - toLocaleDateString()
+  - Date.parse
+  - conversioni timezone
+- Root cause tipica: date-only salvate come DateTime e riformattate.
+
+TASK 2 — REGOLA FONDAMENTALE: DATE-ONLY COME STRINGHE
+- Le date di viaggio devono essere salvate e passate end-to-end come stringhe "YYYY-MM-DD".
+- Vietato usare oggetti Date per memorizzare o visualizzare la data di viaggio.
+- Crea una funzione unica: normalizeTripDate(input) -> "YYYY-MM-DD"
+  - gestisce input "YYYY-MM-DD", "DD/MM/YYYY", e frasi tipo "10 febbraio" / "15 febbraio" se già parseate dal chatbot.
+  - assegna l’anno coerente (es. se manca anno, usa anno corrente o prossimo coerente con “in futuro”).
+- La UI deve renderizzare direttamente la stringa oppure un formatter “safe” che NON usa Date().
+
+TASK 3 — FORMAT VISIVO SENZA Date()
+- Se vuoi mostrare “10 febbraio 2026” in UI:
+  - NON usare new Date("YYYY-MM-DD")
+  - usa una mappa mesi + split string:
+    - [YYYY,MM,DD] = dateStr.split("-")
+    - converti MM -> nome mese
+- In alternativa mostra direttamente "YYYY-MM-DD" (ok).
+
+TASK 4 — ELIMINA OGNI PREZZO VOLI
+- Trova dove vengono renderizzati price/currency nel bot e nel checkout.
+- Rimuovi quei campi dal payload o ignorali nel rendering.
+- Assicurati che nessun componente voli abbia “€”.
+
+TASK 5 — TEST
+- Caso: “Roma -> Barcellona 10-15 febbraio 3 persone”
+  - UI interna mostra: 10 febbraio / 15 febbraio
+  - nessun prezzo
+  - bottone “Vai su Aviasales” funziona
+- Caso: input DD/MM/YYYY e input “10 febbraio”:
+  - nessun mese sbagliato
+  - nessuno shift
+
+OUTPUT
+- Patch committabile
+- Elenco file modificati
+- Spiegazione root cause (perché la UI mostrava date diverse anche se il link era corretto)

@@ -252,12 +252,14 @@ export default function Itinerary() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className={`text-2xl font-bold ${isSelected ? 'text-red-400' : 'text-white'}`}>
-                €{item.price}
-              </p>
-              <p className="text-xs text-gray-400">a persona</p>
-            </div>
+            {item.type !== 'flight' && (
+              <div className="text-right">
+                <p className={`text-2xl font-bold ${isSelected ? 'text-red-400' : 'text-white'}`}>
+                  €{item.price}
+                </p>
+                <p className="text-xs text-gray-400">a persona</p>
+              </div>
+            )}
             <Switch
               checked={isSelected}
               onCheckedChange={() => toggleItem(item.id)}
