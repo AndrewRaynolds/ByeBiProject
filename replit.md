@@ -46,9 +46,9 @@ interface TripContext {
 **Flight prices are NEVER shown** - users book flights directly via Aviasales partner links.
 **Date handling**: All dates use string-only formatters (formatDateRangeIT, normalizeFutureTripDate) - NO Date() constructor to avoid timezone issues.
 
-**Legacy pages** (NOT part of real flow):
-- ItineraryPage.tsx (/itinerary/:id) - old authenticated dashboard flow
-- ItineraryPreviewPage.tsx (/itinerary/preview) - old AI-generated preview
+**Entry points** (all unified, December 2024):
+- TripPlanningForm.tsx → saves currentItinerary → navigates to /itinerary
+- ChatDialogCompact.tsx / ChatDialogCompactBride.tsx → saves currentItinerary → navigates to /itinerary
 
 An Activity Ideas Generator allows users to get personalized activity suggestions based on destination and month, displayed in a modal with visual cards. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
 
