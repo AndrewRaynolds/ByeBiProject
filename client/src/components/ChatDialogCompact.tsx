@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Bot, User, Sparkles } from 'lucide-react';
 import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
+import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -272,6 +273,31 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           }
         ];
 
+    // Build Aviasales URL using user's dates (not flight API dates)
+    const originIata = getCityIata(userOriginCity) || 'FCO';
+    const destIata = getCityIata(selectedDestination);
+    
+    // Build URL with user dates, fallback to existing flight checkoutUrl if helper fails
+    let aviasalesUrl = buildAviasalesUrl({
+      originIata,
+      destinationIata: destIata || selectedDestination.substring(0, 3).toUpperCase(),
+      departDate: tripDetails.startDate,
+      returnDate: tripDetails.endDate,
+      adults: tripDetails.people || 2
+    });
+    
+    // Fallback to flight's checkoutUrl if helper returned null
+    if (!aviasalesUrl && selectedFlight?.checkoutUrl) {
+      console.log('⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback');
+      aviasalesUrl = selectedFlight.checkoutUrl;
+    }
+    
+    console.log('🔗 Aviasales URL built with user dates:', {
+      startDate: tripDetails.startDate,
+      endDate: tripDetails.endDate,
+      url: aviasalesUrl
+    });
+
     const currentItinerary = {
       destination: selectedDestination,
       origin: userOriginCity,
@@ -283,8 +309,10 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
       partyType: conversationState.partyType,
       originCity: userOriginCity,
       selectedFlight: selectedFlight,
-      aviasalesCheckoutUrl: selectedFlight?.checkoutUrl || '',
-      flightLabel: selectedFlight ? `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}` : '',
+      aviasalesCheckoutUrl: aviasalesUrl || selectedFlight?.checkoutUrl || '',
+      flightLabel: selectedFlight 
+        ? `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}` 
+        : `${userOriginCity} → ${selectedDestination}`,
       flights: [flightItem],
       cars: carItems,
       activities: activityItems
@@ -379,8 +407,22 @@ export default function ChatDialogCompact({ open, onOpenChange, initialMessage }
           break;
           
         case 'UNLOCK_ITINERARY_BUTTON':
-          console.log('🔓 Itinerary button unlocked');
-          setShowGenerateButton(true);
+          console.log('🔓 Itinerary button unlocked - saving and navigating to checkout');
+          // Save itinerary with checkoutApproved flag
+          saveCurrentItinerary();
+          try {
+            const savedData = localStorage.getItem('currentItinerary');
+            if (savedData) {
+              const itinerary = JSON.parse(savedData);
+              itinerary.checkoutApproved = true;
+              localStorage.setItem('currentItinerary', JSON.stringify(itinerary));
+              console.log('✅ checkoutApproved flag saved, navigating to /checkout');
+            }
+          } catch (e) {
+            console.warn('Failed to update checkoutApproved flag:', e);
+          }
+          onOpenChange(false);
+          setLocation('/checkout');
           break;
           
         case 'SET_ORIGIN':

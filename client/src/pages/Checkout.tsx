@@ -74,6 +74,13 @@ export default function Checkout() {
         originCity: parsed.originCity
       };
       
+      // Debug log for Aviasales URL (temporary - remove after verification)
+      console.log('🔍 DEBUG Checkout - TripContext dates:', {
+        startDate: context.startDate,
+        endDate: context.endDate,
+        aviasalesCheckoutUrl: context.aviasalesCheckoutUrl
+      });
+      
       setTripContext(context);
       
       if (context.destination && context.startDate && context.endDate && context.people) {

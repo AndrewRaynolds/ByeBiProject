@@ -58,6 +58,13 @@ export default function Itinerary() {
         flightLabel: parsed.flightLabel || parsed.selectedFlight?.label || `${parsed.origin || 'Italia'} → ${parsed.destination}`
       };
 
+      // Debug log for Aviasales URL (temporary - remove after verification)
+      console.log('🔍 DEBUG Itinerary - TripContext dates:', {
+        startDate: context.startDate,
+        endDate: context.endDate,
+        aviasalesCheckoutUrl: context.aviasalesCheckoutUrl
+      });
+      
       setTripContext(context);
     } catch (err) {
       console.error('Error parsing TripContext:', err);

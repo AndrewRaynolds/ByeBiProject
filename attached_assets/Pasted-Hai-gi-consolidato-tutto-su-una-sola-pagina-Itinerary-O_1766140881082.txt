@@ -1,0 +1,160 @@
+Hai già consolidato tutto su una sola pagina Itinerary. Ora devi fixare 2 bug:
+
+BUG A
+
+Il bottone “Vai al checkout” non appare quando l’utente dà l’OK al chatbot.
+
+BUG B
+
+Nella pagina Itinerary e nella pagina Checkout il link Aviasales non usa le date scelte dall’utente e finisce su date di marzo (fallback/hardcode o parsing/formatting rotto).
+
+Obiettivo tecnico
+
+Il flusso “utente dice OK al chatbot” deve:
+
+salvare un flag univoco in localStorage.currentItinerary
+
+(preferito) navigare immediatamente a /checkout
+
+in alternativa, far comparire il bottone checkout senza refresh (quindi serve re-render)
+
+Il link Aviasales deve essere generato sempre da un’unica funzione condivisa che prende le date dall’itinerary canonico e le formatta correttamente (YYYY-MM-DD), senza hardcode e senza bug di month index.
+
+Step 1 — Trova i punti esatti (no supposizioni)
+
+Cerca dove viene gestito l’“OK/conferma” del chatbot (es: Chatbot, Assistant, OneClickAssistant, handler messaggi).
+
+Cerca dove vengono creati i link Aviasales in:
+
+client/src/pages/Itinerary.tsx
+
+la pagina/route di Checkout (es: client/src/pages/Checkout.tsx o simile)
+
+Cerca dove viene scritto localStorage.currentItinerary e con che shape.
+
+Step 2 — Fix BUG A (Checkout button)
+A1: Standardizza il flag
+
+Definisci un solo flag nel modello itinerary: checkoutApproved: boolean.
+
+Quando l’utente dà OK al chatbot:
+
+leggi localStorage.currentItinerary
+
+setta checkoutApproved = true
+
+risalva
+
+naviga a /checkout (preferito, così non dipendi dal re-render)
+
+Esempio logica richiesta:
+
+se raw è nullo → non crashare, logga warning
+
+parsing protetto con try/catch
+
+A2: UI Itinerary coerente
+
+In Itinerary.tsx il bottone deve dipendere solo da:
+itinerary?.checkoutApproved === true
+
+Se il progetto non naviga subito a /checkout, allora assicurati che la UI si aggiorni:
+
+usa useState con itinerary come stato
+
+dopo update di localStorage aggiorna anche lo stato
+
+opzionale: aggiungi un listener window.addEventListener("storage") e/o un event custom window.dispatchEvent(new Event("itineraryUpdated")) per forzare re-render quando il chatbot aggiorna.
+
+Preferenza: navigazione immediata su OK + bottone sempre disponibile se checkoutApproved.
+
+Step 3 — Fix BUG B (date Aviasales)
+B1: Rimuovi hardcode e fallback “marzo”
+
+Elimina qualunque:
+
+03 hardcoded
+
+new Date("...") su stringhe in formato italiano dd/mm/yyyy
+
+uso di getMonth() senza +1
+
+B2: Canonical dates
+
+Assicurati che dentro currentItinerary le date siano salvate in formato ISO:
+
+departDate: "YYYY-MM-DD"
+
+returnDate: "YYYY-MM-DD" (se roundtrip)
+
+Se arrivano in altri formati, normalizzale una volta sola quando salvi itinerary.
+
+B3: Funzione unica per URL Aviasales
+
+Crea un helper unico, ad es:
+
+client/src/lib/aviasales.ts (o simile)
+
+Con firma tipo:
+
+buildAviasalesUrl({
+  originIata,
+  destinationIata,
+  departDate,   // "YYYY-MM-DD"
+  returnDate,   // "YYYY-MM-DD" optional
+  adults,
+  currency,
+  locale
+})
+
+
+La funzione deve:
+
+validare che le date siano YYYY-MM-DD (regex + fallback controllato)
+
+costruire l’URL con URLSearchParams
+
+NON usare getMonth() / Date se non necessario
+
+Poi sostituisci in Itinerary e Checkout ogni generazione URL con questa funzione.
+
+B4: Debug obbligatorio (temporaneo)
+
+Aggiungi console.log (da rimuovere dopo verifica) in Itinerary e Checkout:
+
+stampa departDate e returnDate letti dall’itinerary
+
+stampa l’URL Aviasales finale
+Così verifichiamo se l’errore era nello storage o nel builder.
+
+Step 4 — Test manuale minimo (obbligatorio)
+
+Avvia app.
+
+Genera itinerario con date non a marzo (es: 2025-12-19 → 2025-12-22).
+
+Nel chatbot scrivi “ok/confermo”.
+
+Verifica:
+
+viene salvato checkoutApproved: true
+
+vai a checkout automaticamente oppure il bottone appare subito senza refresh
+
+link Aviasales in Itinerary e Checkout contiene le date scelte (non marzo)
+
+Output richiesto
+
+Commit unico con:
+
+flag checkoutApproved standardizzato
+
+gestione OK del chatbot che salva flag e naviga a checkout
+
+helper unico buildAviasalesUrl usato sia in Itinerary che in Checkout
+
+rimozione hardcode/marzo e fix date formatting
+
+parsing localStorage robusto (no crash)
+
+Non introdurre nuove pagine itinerary. Non duplicare logica Aviasales in più file: una sola funzione condivisa.
