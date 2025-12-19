@@ -47,6 +47,7 @@ interface FlightInfo {
   flight_number: number;
   origin?: string;
   destination?: string;
+  checkoutUrl?: string;
 }
 
 interface SelectedFlightData {
@@ -57,6 +58,7 @@ interface SelectedFlightData {
   flight_number: number;
   originCity: string;
   destinationCity: string;
+  checkoutUrl?: string;
 }
 
 interface ChatDialogCompactBrideProps {
@@ -131,7 +133,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             return_at: flight.return_at,
             flight_number: flight.flight_number,
             originCity: originCity || 'Roma',
-            destinationCity: conversationState.selectedDestination
+            destinationCity: conversationState.selectedDestination,
+            checkoutUrl: flight.checkoutUrl
           };
           console.log(`✈️ Processing pending flight selection ${flightNum}:`, flightData);
           setSelectedFlight(flightData);
@@ -271,6 +274,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
     const currentItinerary = {
       destination: selectedDestination,
+      origin: userOriginCity,
       dates: dateStr,
       people: tripDetails.people,
       startDate: tripDetails.startDate,
@@ -279,6 +283,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       partyType: conversationState.partyType,
       originCity: userOriginCity,
       selectedFlight: selectedFlight,
+      aviasalesCheckoutUrl: selectedFlight?.checkoutUrl || '',
+      flightLabel: selectedFlight ? `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}` : '',
       flights: [flightItem],
       cars: carItems,
       activities: activityItems
@@ -394,7 +400,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
                   return_at: flight.return_at,
                   flight_number: flight.flight_number,
                   originCity: originCity || 'Roma',
-                  destinationCity: conversationState.selectedDestination
+                  destinationCity: conversationState.selectedDestination,
+                  checkoutUrl: flight.checkoutUrl
                 };
                 console.log(`✈️ User selected flight ${flightNum}:`, flightData);
                 setSelectedFlight(flightData);

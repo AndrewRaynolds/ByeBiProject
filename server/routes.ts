@@ -693,10 +693,23 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
           const destCode = Object.keys(raw.data)[0];
           const offersObj = raw.data[destCode] || {};
 
+          const numAdults = tripDetails?.people || 2;
+          
           flights = Object.values(offersObj as any)
             .sort((a: any, b: any) => a.price - b.price)
             .slice(0, 3)
-            .map((o: any) => ({ ...o, origin: originIata }));
+            .map((o: any) => {
+              const depDate = o.departure_at?.slice(0, 10) || "";
+              const retDate = o.return_at?.slice(0, 10) || "";
+              const depDay = depDate.slice(8, 10);
+              const depMonth = depDate.slice(5, 7);
+              const retDay = retDate.slice(8, 10);
+              const retMonth = retDate.slice(5, 7);
+              
+              const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destinationIata}${retDay}${retMonth}${numAdults}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+              
+              return { ...o, origin: originIata, checkoutUrl };
+            });
 
         } catch (err) {
           if (process.env.NODE_ENV !== "production") {
