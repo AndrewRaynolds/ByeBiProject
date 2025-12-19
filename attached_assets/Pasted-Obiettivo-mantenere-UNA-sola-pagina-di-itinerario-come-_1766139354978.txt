@@ -1,0 +1,101 @@
+Obiettivo: mantenere UNA sola pagina di itinerario come source of truth: client/src/pages/Itinerary.tsx.
+Eliminare (o dismettere) le pagine legacy:
+
+client/src/pages/ItineraryPage.tsx
+
+client/src/pages/ItineraryPreviewPage.tsx
+
+Step 1 — Mappa dove sono usate (niente ipotesi)
+
+Cerca nel repo tutti i riferimenti a questi componenti:
+
+ItineraryPage
+
+ItineraryPreviewPage
+
+Itinerary.tsx (import Itinerary)
+
+Identifica:
+
+In quali file di routing vengono montati (es: App.tsx, Routes.tsx, ecc.)
+
+Quali path/route puntano a ciascuno
+
+Quali componenti fanno navigate/setLocation/window.location verso quei path
+
+Step 2 — Decidi la pagina unica e standardizza l’input
+
+La pagina unica deve essere client/src/pages/Itinerary.tsx.
+
+Definisci un solo storage key: localStorage.currentItinerary.
+
+Tutti i flussi (form, chatbot, assistant) devono:
+
+scrivere su currentItinerary
+
+navigare verso la route che monta Itinerary.tsx (qualunque sia nel progetto; non inventare path nuovi, usa quello esistente per Itinerary)
+
+Step 3 — Router: lascia una sola entry “itinerary”
+
+Nel file di routing:
+
+Mantieni solo la route che renderizza Itinerary.tsx.
+
+Rimuovi le routes che renderizzano ItineraryPage e ItineraryPreviewPage.
+
+Se esistono link esterni/vecchi che puntano a quelle routes, aggiungi un redirect semplice (se il router lo consente) verso la route di Itinerary.tsx.
+Se non puoi redirectare, lascia 404: meglio 404 che comportamento incoerente.
+
+Step 4 — Aggiorna i chiamanti (dove nasce il casino)
+
+In qualunque file che oggi fa navigate verso la route di ItineraryPage o ItineraryPreviewPage:
+
+rimuovi lastGeneratedItinerary o altre chiavi legacy
+
+salva in currentItinerary
+
+naviga alla route di Itinerary.tsx
+
+Se qualche flusso passava un id (tipo /something/:id):
+
+STOP: non usare più quello finché non hai un backend coerente.
+
+Convertilo in salvataggio in currentItinerary e vai alla pagina unica.
+
+Step 5 — Robustezza: Itinerary.tsx non deve crashare
+
+In client/src/pages/Itinerary.tsx:
+
+parsing sicuro di localStorage.currentItinerary
+
+se manca o è invalido: UI con messaggio + CTA “Torna indietro” (home/chat/form)
+
+Step 6 — Rimozione file e pulizia import
+
+Elimina:
+
+client/src/pages/ItineraryPage.tsx
+
+client/src/pages/ItineraryPreviewPage.tsx
+
+Rimuovi tutti gli import residui e aggiusta build/TS.
+
+Se trovi un AuthContext vecchio usato solo lì, rimuovilo (non lasciare doppia auth).
+
+Test minimo (obbligatorio)
+
+Genera un itinerario da ogni entry point (form/chat/assistant) e verifica che tutti finiscano sulla stessa pagina (Itinerary.tsx) e mostrino dati coerenti.
+
+Refresh sulla pagina unica: deve mantenere i dati (da currentItinerary).
+
+Console pulita (niente import rotti / route non trovate).
+
+Deliverable: commit unico con:
+
+routing ripulito
+
+chiamanti aggiornati
+
+pagine legacy eliminate
+
+Itinerary.tsx hardenizzato

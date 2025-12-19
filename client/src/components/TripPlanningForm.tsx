@@ -283,26 +283,33 @@ export default function TripPlanningForm() {
         const response = await apiRequest("POST", "/api/generate-itinerary", itineraryRequest);
         const result = await response.json();
         
+        // Save TripContext to localStorage (same for authenticated and guest)
+        localStorage.setItem('currentItinerary', JSON.stringify({
+          destination: result.destination || primaryDestination,
+          origin: data.departureCity || 'Italia',
+          startDate: data.startDate,
+          endDate: data.endDate,
+          people: data.participants,
+          aviasalesCheckoutUrl: '',
+          flightLabel: `${data.departureCity || 'Italia'} → ${primaryDestination}`,
+          itineraryData: result
+        }));
+        
         if (isAuthenticated && tripId > 0) {
           // Invalida la cache per i nuovi itinerari solo se l'utente è autenticato
           queryClient.invalidateQueries({ queryKey: [`/api/trips/${tripId}/itineraries`] });
-          
-          // Redirect to the itinerary page if user is authenticated
-          setLocation(`/itinerary/${tripId}`);
-        } else {
-          // Se l'utente non è autenticato, mostra il risultato in un modal o in una nuova pagina
+        }
+        
+        if (!isAuthenticated) {
           toast({
             title: "Itinerary Generated Successfully!",
             description: "Create an account to save this itinerary for future reference!",
             variant: "default",
           });
-          
-          // Salviamo i dati dell'itinerario localmente
-          localStorage.setItem('lastGeneratedItinerary', JSON.stringify(result));
-          
-          // Redirigiamo alla pagina di visualizzazione itinerario non-autenticata
-          setLocation(`/itinerary/preview`);
         }
+        
+        // Navigate to unified itinerary page
+        setLocation(`/itinerary`);
       } catch (err) {
         console.error("Error generating AI itinerary:", err);
         
@@ -328,18 +335,26 @@ export default function TripPlanningForm() {
           variant: "destructive",
         });
         
-        // Redirect alla pagina di visualizzazione itinerario non-autenticata comunque
-        // (il server dovrebbe aver generato un itinerario di fallback)
-        localStorage.setItem('lastGeneratedItinerary', JSON.stringify({
-          title: "Bachelor Party in " + primaryDestination,
-          destination: primaryDestination + ", " + (country || "Spain"),
-          summary: "A customized experience that matches your preferences.",
-          days: [],
-          tips: ["Stay hydrated", "Plan transportation in advance", "Keep your group together"],
-          estimatedTotalCost: "$500-$1000 per person"
+        // Salva fallback in currentItinerary e naviga alla pagina unica
+        localStorage.setItem('currentItinerary', JSON.stringify({
+          destination: primaryDestination,
+          origin: data.departureCity || 'Italia',
+          startDate: data.startDate,
+          endDate: data.endDate,
+          people: data.participants,
+          aviasalesCheckoutUrl: '',
+          flightLabel: `${data.departureCity || 'Italia'} → ${primaryDestination}`,
+          itineraryData: {
+            title: "Bachelor Party in " + primaryDestination,
+            destination: primaryDestination + ", " + (country || "Spain"),
+            summary: "A customized experience that matches your preferences.",
+            days: [],
+            tips: ["Stay hydrated", "Plan transportation in advance", "Keep your group together"],
+            estimatedTotalCost: "$500-$1000 per person"
+          }
         }));
         
-        setLocation(`/itinerary/preview`);
+        setLocation(`/itinerary`);
       }
     } catch (error) {
       toast({
