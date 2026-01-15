@@ -64,7 +64,7 @@ REGOLE PRINCIPALI:
 
 FLUSSO OBBLIGATORIO (sempre nella lingua scelta dall'utente):
 1. L'utente dice una meta.
-   → Chiedi: "Da quale città italiana vuoi partire?"
+   → Chiedi: "Da quale città vuoi partire?"
 
 2. L'utente dice la città di partenza.
    → Emetti [SET_ORIGIN:NomeCittà] e chiedi le date del viaggio. Non chiedere all'utente per un format preciso, lo cambierai tu dopo.
@@ -120,7 +120,7 @@ REGOLE PRINCIPALI:
 
 FLUSSO OBBLIGATORIO:
 1. L'utente dice una meta.
-   → Chiedi: "Da quale città italiana vuoi partire?"
+   → Chiedi: "Da quale città vuoi partire?"
 
 2. L'utente dice la città di partenza.
    → Emetti [SET_ORIGIN:NomeCittà] e chiedi le date del viaggio.
