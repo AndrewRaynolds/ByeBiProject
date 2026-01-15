@@ -359,25 +359,38 @@ export default function ChatDialogCompact({
     console.log("💾 Saved currentItinerary to localStorage:", currentItinerary);
   };
 
-  const parseDirectives = (content: string): string => {
-    const directiveRegex = /\[([A-Z_]+):([^\]]+)\]/g;
-    let match;
+  interface ToolCallData {
+    name: string;
+    arguments: Record<string, any>;
+  }
 
-    while ((match = directiveRegex.exec(content)) !== null) {
-      const [, command, value] = match;
+  const handleToolCall = (toolCall: ToolCallData) => {
+    console.log(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
 
-      switch (command) {
-        case "SET_DESTINATION":
-          const destination = value.trim();
-          console.log(`📍 Parsed destination: ${destination}`);
+    switch (toolCall.name) {
+      case "set_destination":
+        const destination = toolCall.arguments.city?.trim();
+        if (destination) {
+          console.log(`📍 Setting destination: ${destination}`);
           setConversationState((prev) => ({
             ...prev,
             selectedDestination: destination,
           }));
-          break;
+        }
+        break;
 
-        case "SET_DATES":
-          const [rawStart, rawEnd] = value.split(",").map((d) => d.trim());
+      case "set_origin":
+        const origin = toolCall.arguments.city?.trim();
+        if (origin) {
+          console.log(`🛫 Setting origin city: ${origin}`);
+          setOriginCity(origin);
+        }
+        break;
+
+      case "set_dates":
+        const rawStart = toolCall.arguments.departure_date;
+        const rawEnd = toolCall.arguments.return_date;
+        if (rawStart && rawEnd) {
           const normalizedStart = normalizeFutureTripDate(rawStart);
           const normalizedEnd = normalizeFutureTripDate(rawEnd);
 
@@ -388,7 +401,7 @@ export default function ChatDialogCompact({
           ) {
             const days = calculateTripDays(normalizedStart, normalizedEnd);
             console.log(
-              `📅 Parsed dates: ${rawStart} -> ${normalizedStart}, ${rawEnd} -> ${normalizedEnd} (${days} days)`,
+              `📅 Setting dates: ${rawStart} -> ${normalizedStart}, ${rawEnd} -> ${normalizedEnd} (${days} days)`,
             );
             setConversationState((prev) => ({
               ...prev,
@@ -402,122 +415,71 @@ export default function ChatDialogCompact({
           } else {
             console.warn(`⚠️ Invalid dates: ${rawStart}, ${rawEnd}`);
           }
-          break;
+        }
+        break;
 
-        case "SET_PARTICIPANTS":
-          const participants = parseInt(value);
-          if (!isNaN(participants)) {
-            console.log(`👥 Parsed participants: ${participants}`);
-            setConversationState((prev) => ({
-              ...prev,
-              tripDetails: {
-                ...prev.tripDetails,
-                people: participants,
-              },
-            }));
-          }
-          break;
-
-        case "SET_EVENT_TYPE":
-          const eventType = value.trim().toLowerCase();
-          const partyType =
-            eventType.includes("celibato") || eventType.includes("bachelor")
-              ? "bachelor"
-              : "bachelorette";
-          console.log(
-            `🎉 Parsed event type: ${eventType} → partyType: ${partyType}`,
-          );
-          setConversationState((prev) => ({
-            ...prev,
-            partyType,
-            tripDetails: {
-              ...prev.tripDetails,
-              adventureType: eventType,
-            },
-          }));
-          break;
-
-        case "SHOW_EXPERIENCES":
-          const experiences = value.split("|").map((exp) => exp.trim());
-          console.log(`🎯 Parsed experiences: ${experiences.join(", ")}`);
+      case "set_participants":
+        const participants = toolCall.arguments.count;
+        if (typeof participants === "number" && participants > 0) {
+          console.log(`👥 Setting participants: ${participants}`);
           setConversationState((prev) => ({
             ...prev,
             tripDetails: {
               ...prev.tripDetails,
-              interests: experiences,
+              people: participants,
             },
           }));
-          break;
+        }
+        break;
 
-        case "UNLOCK_ITINERARY_BUTTON":
-          console.log(
-            "🔓 Itinerary button unlocked - saving and navigating to checkout",
-          );
-          // Save itinerary with checkoutApproved flag
-          saveCurrentItinerary();
-          try {
-            const savedData = localStorage.getItem("currentItinerary");
-            if (savedData) {
-              const itinerary = JSON.parse(savedData);
-              itinerary.checkoutApproved = true;
-              localStorage.setItem(
-                "currentItinerary",
-                JSON.stringify(itinerary),
-              );
-              console.log(
-                "✅ checkoutApproved flag saved, navigating to /checkout",
-              );
+      case "select_flight":
+        const flightNum = toolCall.arguments.flight_number;
+        if (typeof flightNum === "number" && flightNum >= 1) {
+          if (flights.length > 0 && flightNum <= flights.length) {
+            const flight = flights[flightNum - 1];
+            if (flight) {
+              const flightData: SelectedFlightData = {
+                flightIndex: flightNum,
+                airline: flight.airline,
+                departure_at: flight.departure_at,
+                return_at: flight.return_at,
+                flight_number: flight.flight_number,
+                originCity: originCity || "Roma",
+                destinationCity: conversationState.selectedDestination,
+                checkoutUrl: flight.checkoutUrl,
+              };
+              console.log(`✈️ User selected flight ${flightNum}:`, flightData);
+              setSelectedFlight(flightData);
+              localStorage.setItem("selectedFlight", JSON.stringify(flightData));
+              setShowGenerateButton(true);
             }
-          } catch (e) {
-            console.warn("Failed to update checkoutApproved flag:", e);
+          } else {
+            console.log(`✈️ Storing pending flight selection: ${flightNum}`);
+            setPendingFlightSelection(flightNum);
           }
-          onOpenChange(false);
-          setLocation("/checkout");
-          break;
+        }
+        break;
 
-        case "SET_ORIGIN":
-          const origin = value.trim();
-          console.log(`🛫 Parsed origin city: ${origin}`);
-          setOriginCity(origin);
-          break;
-
-        case "SELECT_FLIGHT":
-          const flightNum = parseInt(value.trim());
-          if (!isNaN(flightNum) && flightNum >= 1) {
-            if (flights.length > 0 && flightNum <= flights.length) {
-              const flight = flights[flightNum - 1];
-              if (flight) {
-                const flightData: SelectedFlightData = {
-                  flightIndex: flightNum,
-                  airline: flight.airline,
-                  departure_at: flight.departure_at,
-                  return_at: flight.return_at,
-                  flight_number: flight.flight_number,
-                  originCity: originCity || "Roma",
-                  destinationCity: conversationState.selectedDestination,
-                  checkoutUrl: flight.checkoutUrl,
-                };
-                console.log(
-                  `✈️ User selected flight ${flightNum}:`,
-                  flightData,
-                );
-                setSelectedFlight(flightData);
-                localStorage.setItem(
-                  "selectedFlight",
-                  JSON.stringify(flightData),
-                );
-                setShowGenerateButton(true);
-              }
-            } else {
-              console.log(`✈️ Storing pending flight selection: ${flightNum}`);
-              setPendingFlightSelection(flightNum);
-            }
+      case "unlock_checkout":
+        console.log(
+          "🔓 Checkout unlocked - saving and navigating to checkout",
+        );
+        saveCurrentItinerary();
+        try {
+          const savedData = localStorage.getItem("currentItinerary");
+          if (savedData) {
+            const itinerary = JSON.parse(savedData);
+            itinerary.checkoutApproved = true;
+            localStorage.setItem("currentItinerary", JSON.stringify(itinerary));
+            console.log("✅ checkoutApproved flag saved, navigating to /checkout");
           }
-          break;
-      }
+        } catch (e) {
+          console.warn("Failed to update checkoutApproved flag:", e);
+        }
+        onOpenChange(false);
+        setLocation("/checkout");
+        break;
     }
-
-    return content.replace(directiveRegex, "").trim();
   };
 
   const onSubmit = async (data: MessageFormValues) => {
@@ -604,6 +566,10 @@ export default function ChatDialogCompact({
                   setFlights(jsonData.flights);
                 }
 
+                if (jsonData.tool_call) {
+                  handleToolCall(jsonData.tool_call);
+                }
+
                 if (jsonData.done) {
                   break;
                 }
@@ -611,12 +577,10 @@ export default function ChatDialogCompact({
                 if (jsonData.content) {
                   accumulatedContent += jsonData.content;
 
-                  const cleanedContent = parseDirectives(accumulatedContent);
-
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMessageId
-                        ? { ...msg, content: cleanedContent }
+                        ? { ...msg, content: accumulatedContent }
                         : msg,
                     ),
                   );

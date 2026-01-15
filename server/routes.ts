@@ -761,7 +761,11 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       }
 
       for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
-        res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        if (chunk.type === "content") {
+          res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
+        } else if (chunk.type === "tool_call") {
+          res.write(`data: ${JSON.stringify({ tool_call: chunk.toolCall })}\n\n`);
+        }
       }
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

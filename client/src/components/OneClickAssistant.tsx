@@ -230,6 +230,10 @@ export default function OneClickAssistant() {
                 throw new Error(jsonData.error);
               }
 
+              if (jsonData.tool_call) {
+                handleToolCall(jsonData.tool_call);
+              }
+
               if (jsonData.done) {
                 // Streaming complete
                 break;
@@ -238,14 +242,11 @@ export default function OneClickAssistant() {
               if (jsonData.content) {
                 accumulatedContent += jsonData.content;
 
-                // Parse directives and update state
-                const cleanedContent = parseDirectives(accumulatedContent);
-
-                // Update message in real-time with cleaned content (no directives)
+                // Update message in real-time
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMessageId
-                      ? { ...msg, content: cleanedContent }
+                      ? { ...msg, content: accumulatedContent }
                       : msg,
                   ),
                 );
@@ -265,12 +266,9 @@ export default function OneClickAssistant() {
 
       const assistantResponse = generateResponse(data.message);
 
-      // Clean directives from fallback response too
-      const cleanedResponse = parseDirectives(assistantResponse);
-
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: cleanedResponse,
+        content: assistantResponse,
         sender: "assistant",
         timestamp: new Date(),
       };
@@ -284,62 +282,65 @@ export default function OneClickAssistant() {
     }
   };
 
-  // Parse AI directives from response
-  const parseDirectives = (content: string) => {
-    const directiveRegex = /\[([A-Z_]+):([^\]]+)\]/g;
-    let match;
+  interface ToolCallData {
+    name: string;
+    arguments: Record<string, any>;
+  }
 
-    while ((match = directiveRegex.exec(content)) !== null) {
-      const [, command, value] = match;
+  const handleToolCall = (toolCall: ToolCallData) => {
+    console.log(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
 
-      switch (command) {
-        case "SET_DESTINATION":
-          setSelectedDestination(value.trim().toLowerCase());
-          break;
+    switch (toolCall.name) {
+      case "set_destination":
+        const destination = toolCall.arguments.city?.trim()?.toLowerCase();
+        if (destination) {
+          console.log(`📍 Setting destination: ${destination}`);
+          setSelectedDestination(destination);
+        }
+        break;
 
-        case "SET_DATES":
-          const [startDate, endDate] = value.split(",").map((d) => d.trim());
+      case "set_origin":
+        const origin = toolCall.arguments.city?.trim();
+        if (origin) {
+          console.log(`🛫 Setting origin city: ${origin}`);
+        }
+        break;
+
+      case "set_dates":
+        const startDate = toolCall.arguments.departure_date;
+        const endDate = toolCall.arguments.return_date;
+        if (startDate && endDate) {
+          console.log(`📅 Setting dates: ${startDate} to ${endDate}`);
           setTripDetails((prev) => ({ ...prev, startDate, endDate }));
-          // Calculate days
-          if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const days = Math.ceil(
-              (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-            );
-            setTripDetails((prev) => ({ ...prev, days }));
-          }
-          break;
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          const days = Math.ceil(
+            (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          setTripDetails((prev) => ({ ...prev, days }));
+        }
+        break;
 
-        case "SET_PARTICIPANTS":
-          const participants = parseInt(value);
-          if (!isNaN(participants)) {
-            setTripDetails((prev) => ({ ...prev, people: participants }));
-          }
-          break;
+      case "set_participants":
+        const participants = toolCall.arguments.count;
+        if (typeof participants === "number" && participants > 0) {
+          console.log(`👥 Setting participants: ${participants}`);
+          setTripDetails((prev) => ({ ...prev, people: participants }));
+        }
+        break;
 
-        case "SET_EVENT_TYPE":
-          setTripDetails((prev) => ({ ...prev, adventureType: value.trim() }));
-          break;
+      case "select_flight":
+        console.log(`✈️ Flight selected: ${toolCall.arguments.flight_number}`);
+        break;
 
-        case "SHOW_EXPERIENCES":
-          // Store experiences for display
-          const experiences = value.split("|").map((exp) => exp.trim());
-          setTripDetails((prev) => ({ ...prev, interests: experiences }));
-          break;
-
-        case "UNLOCK_ITINERARY_BUTTON":
-          // Signal that itinerary can be generated
-          setConversationState((prev) => ({
-            ...prev,
-            currentStep: "complete",
-          }));
-          break;
-      }
+      case "unlock_checkout":
+        console.log("🔓 Checkout unlocked");
+        setConversationState((prev) => ({
+          ...prev,
+          currentStep: "complete",
+        }));
+        break;
     }
-
-    // Remove directives from visible content
-    return content.replace(directiveRegex, "").trim();
   };
 
   // Function to extract trip details from user messages (deprecated - now using AI directives)

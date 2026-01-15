@@ -22,8 +22,8 @@ interface ChatContext {
     currentStep: string;
   };
   partyType?: "bachelor" | "bachelorette";
-  origin?: string; // IATA code for flight origin (e.g., "ROM")
-  originCityName?: string; // City name for display (e.g., "Roma", "Napoli")
+  origin?: string;
+  originCityName?: string;
 
   flights?: {
     id?: number;
@@ -31,8 +31,8 @@ interface ChatContext {
     departure_at: string;
     return_at: string;
     flight_number: number;
-    origin?: string; // IATA code injected from backend
-    destination?: string; // IATA code
+    origin?: string;
+    destination?: string;
   }[];
 
   hotels?: {
@@ -48,6 +48,101 @@ interface ChatContext {
   }[];
 }
 
+export interface ToolCall {
+  name: string;
+  arguments: Record<string, any>;
+}
+
+export type StreamChunk = 
+  | { type: "content"; content: string }
+  | { type: "tool_call"; toolCall: ToolCall };
+
+const TRIP_TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "set_destination",
+      description: "Set the travel destination when the user chooses where they want to go",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: "The destination city name" }
+        },
+        required: ["city"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_origin",
+      description: "Set the departure city when the user specifies where they want to fly from",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: "The origin/departure city name" }
+        },
+        required: ["city"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_dates",
+      description: "Set the travel dates when the user provides departure and return dates",
+      parameters: {
+        type: "object",
+        properties: {
+          departure_date: { type: "string", description: "Departure date in YYYY-MM-DD format" },
+          return_date: { type: "string", description: "Return date in YYYY-MM-DD format" }
+        },
+        required: ["departure_date", "return_date"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_participants",
+      description: "Set the number of participants when the user specifies how many people are traveling",
+      parameters: {
+        type: "object",
+        properties: {
+          count: { type: "integer", description: "Number of participants/travelers" }
+        },
+        required: ["count"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "select_flight",
+      description: "Select a specific flight when the user chooses from the available options",
+      parameters: {
+        type: "object",
+        properties: {
+          flight_number: { type: "integer", description: "The flight option number (1, 2, or 3)" }
+        },
+        required: ["flight_number"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "unlock_checkout",
+      description: "Unlock the checkout button when the user confirms they want to proceed with booking",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
+  }
+];
+
 const SHARED_SYSTEM_PROMPT = `MAIN RULES:
 1. ALWAYS collect these 5 pieces of information BEFORE searching for flights:
    - destination
@@ -62,20 +157,20 @@ const SHARED_SYSTEM_PROMPT = `MAIN RULES:
 
 MANDATORY FLOW (always in the language chosen by the user):
 1. The user mentions a destination.
-   → Ask: "Which city would you like to depart from?"
+   → Call set_destination with the city, then ask: "Which city would you like to depart from?"
 
 2. The user provides the departure city.
-   → Emit [SET_ORIGIN:CityName] and ask for travel dates. Don't ask the user for a specific format, you will convert it later.
+   → Call set_origin with the city, then ask for travel dates. Don't ask for a specific format.
 
 3. The user provides the dates.
-   → Ask for the number of participants.
+   → Call set_dates with the dates (convert to YYYY-MM-DD format), then ask for the number of participants.
 
 4. The user provides the number of people.
-   → You will receive real flights. Present only one and ask for confirmation.
+   → Call set_participants with the count. You will receive real flights. Present only one and ask for confirmation.
    → Ask: "Do you confirm to proceed to checkout?"
 
 5. The user confirms (ok, yes, sure, confirm, proceed, etc.)
-   → ALWAYS EMIT [UNLOCK_ITINERARY_BUTTON:true] at the end of the message to show the checkout button.
+   → ALWAYS call unlock_checkout to show the checkout button.
 
 DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
@@ -85,16 +180,9 @@ BEHAVIOR:
 - Short responses (2-3 sentences max)
 - Professional and friendly tone
 - NO experiences, NO activities, NO hotels in the chat
+- Use the provided tools to update trip state - do not embed directives in text
 
-DIRECTIVES (emit at the end of the message when appropriate):
-- [SET_DESTINATION:city] - when the user chooses a destination
-- [SET_ORIGIN:city] - when the user provides the departure city
-- [SET_DATES:yyyy-mm-dd,yyyy-mm-dd] - when the user provides the dates
-- [SET_PARTICIPANTS:number] - when the user provides the number of participants
-- [SELECT_FLIGHT:number] - when the user chooses a flight (1, 2, or 3)
-- [UNLOCK_ITINERARY_BUTTON:true] - MANDATORY when the user confirms (ok, yes, confirm, sure, proceed)
-
-CRITICAL RULE: When the user responds with any form of confirmation after seeing the flight (ok, yes, sure, confirm, proceed, perfect, etc.), you MUST ALWAYS emit [UNLOCK_ITINERARY_BUTTON:true] at the end of the message. This is MANDATORY.
+CRITICAL RULE: When the user responds with any form of confirmation after seeing the flight (ok, yes, sure, confirm, proceed, perfect, etc.), you MUST ALWAYS call unlock_checkout. This is MANDATORY.
 
 BOOKING RULES:
 - FLIGHTS: Always external checkout via affiliate link.
@@ -110,34 +198,73 @@ const BYEBRIDE_SYSTEM_PROMPT = `You are the official assistant of ByeBride, part
 
 ${SHARED_SYSTEM_PROMPT}`;
 
+function buildContextualPrompt(context: ChatContext): string {
+  const basePrompt =
+    context.partyType === "bachelorette"
+      ? BYEBRIDE_SYSTEM_PROMPT
+      : BYEBRO_SYSTEM_PROMPT;
+  let contextualPrompt = basePrompt;
+
+  if (context.origin && context.originCityName) {
+    contextualPrompt += `\n\nDEPARTURE CITY: ${context.originCityName} (airport code: ${context.origin})`;
+  }
+
+  if (context.selectedDestination) {
+    contextualPrompt += `\n\nSELECTED DESTINATION: ${context.selectedDestination.toUpperCase()}`;
+
+    if (context.tripDetails) {
+      contextualPrompt += `\nTRIP DETAILS:`;
+      if (context.tripDetails.people > 0)
+        contextualPrompt += `\n- People: ${context.tripDetails.people}`;
+      if (context.tripDetails.days > 0)
+        contextualPrompt += `\n- Days: ${context.tripDetails.days}`;
+      if (context.tripDetails.adventureType)
+        contextualPrompt += `\n- Type: ${context.tripDetails.adventureType}`;
+    }
+  }
+
+  if (context.flights && context.flights.length > 0) {
+    const originCity = context.originCityName || "Rome";
+    contextualPrompt += `\n\nAVAILABLE REAL FLIGHTS (from ${originCity} to ${context.selectedDestination}):`;
+    contextualPrompt += `\nThese are REAL flights with updated prices. Present them to the user and ask which one they prefer.\n`;
+    context.flights.forEach((f, idx) => {
+      const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      contextualPrompt += `${idx + 1}. Departure: ${depDate} at ${depTime}\n`;
+      contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
+      contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
+    });
+    contextualPrompt += `\nWhen the user chooses a flight (e.g., "the 2nd one", "I'll take the first", "flight 3"), call select_flight with the flight number.\n`;
+  }
+
+  return contextualPrompt;
+}
+
 export async function createGroqChatCompletion(
   userMessage: string,
   context: ChatContext,
   conversationHistory: ChatMessage[] = [],
-): Promise<string> {
+): Promise<{ content: string; toolCalls: ToolCall[] }> {
   try {
-    // Build context-aware system prompt based on party type
-    const basePrompt =
-      context.partyType === "bachelorette"
-        ? BYEBRIDE_SYSTEM_PROMPT
-        : BYEBRO_SYSTEM_PROMPT;
-    let contextualPrompt = basePrompt;
+    const contextualPrompt = buildContextualPrompt(context);
 
-    if (context.selectedDestination) {
-      contextualPrompt += `\n\nSELECTED DESTINATION: ${context.selectedDestination.toUpperCase()}`;
-
-      if (context.tripDetails) {
-        contextualPrompt += `\nTRIP DETAILS:`;
-        if (context.tripDetails.people > 0)
-          contextualPrompt += `\n- People: ${context.tripDetails.people}`;
-        if (context.tripDetails.days > 0)
-          contextualPrompt += `\n- Days: ${context.tripDetails.days}`;
-        if (context.tripDetails.adventureType)
-          contextualPrompt += `\n- Type: ${context.tripDetails.adventureType}`;
-      }
-    }
-
-    // Prepare messages array
     const messages: ChatMessage[] = [
       { role: "system", content: contextualPrompt },
       ...conversationHistory,
@@ -148,12 +275,28 @@ export async function createGroqChatCompletion(
       messages,
       model: "openai/gpt-oss-120b",
       temperature: 0.5,
+      tools: TRIP_TOOLS,
+      tool_choice: "auto",
     });
 
-    return (
-      chatCompletion.choices[0]?.message?.content ||
-      "Sorry, there was a problem. Please try again!"
-    );
+    const message = chatCompletion.choices[0]?.message;
+    const content = message?.content || "";
+    const toolCalls: ToolCall[] = [];
+
+    if (message?.tool_calls) {
+      for (const tc of message.tool_calls) {
+        try {
+          toolCalls.push({
+            name: tc.function.name,
+            arguments: JSON.parse(tc.function.arguments || "{}"),
+          });
+        } catch (e) {
+          console.error("Error parsing tool call arguments:", e);
+        }
+      }
+    }
+
+    return { content, toolCalls };
   } catch (error) {
     console.error("Groq API error:", error);
     throw new Error("Error communicating with GROQ");
@@ -164,68 +307,10 @@ export async function* streamGroqChatCompletion(
   userMessage: string,
   context: ChatContext,
   conversationHistory: ChatMessage[] = [],
-): AsyncGenerator<string, void, unknown> {
+): AsyncGenerator<StreamChunk, void, unknown> {
   try {
-    // Build context-aware system prompt based on party type
-    const basePrompt =
-      context.partyType === "bachelorette"
-        ? BYEBRIDE_SYSTEM_PROMPT
-        : BYEBRO_SYSTEM_PROMPT;
-    let contextualPrompt = basePrompt;
+    const contextualPrompt = buildContextualPrompt(context);
 
-    // Add origin city info if available
-    if (context.origin && context.originCityName) {
-      contextualPrompt += `\n\nDEPARTURE CITY: ${context.originCityName} (airport code: ${context.origin})`;
-    }
-
-    if (context.selectedDestination) {
-      contextualPrompt += `\n\nSELECTED DESTINATION: ${context.selectedDestination.toUpperCase()}`;
-
-      if (context.tripDetails) {
-        contextualPrompt += `\nTRIP DETAILS:`;
-        if (context.tripDetails.people > 0)
-          contextualPrompt += `\n- People: ${context.tripDetails.people}`;
-        if (context.tripDetails.days > 0)
-          contextualPrompt += `\n- Days: ${context.tripDetails.days}`;
-        if (context.tripDetails.adventureType)
-          contextualPrompt += `\n- Type: ${context.tripDetails.adventureType}`;
-      }
-    }
-
-    // Add real flight options if available
-    if (context.flights && context.flights.length > 0) {
-      const originCity = context.originCityName || "Rome";
-      contextualPrompt += `\n\n🛫 AVAILABLE REAL FLIGHTS (from ${originCity} to ${context.selectedDestination}):`;
-      contextualPrompt += `\nThese are REAL flights with updated prices. Present them to the user and ask which one they prefer.\n`;
-      context.flights.forEach((f, idx) => {
-        const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        //contextualPrompt += `\n${idx + 1}. ${f.airline} - ${f.price} €`;
-
-        contextualPrompt += `   Departure: ${depDate} at ${depTime}\n`;
-        contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
-        contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
-      });
-      contextualPrompt += `\nWhen the user chooses a flight (e.g., "the 2nd one", "I'll take the first", "flight 3"), you must emit the directive [SELECT_FLIGHT:number] at the end of the message.\n`;
-    }
-
-    // Prepare messages array
     const messages: ChatMessage[] = [
       { role: "system", content: contextualPrompt },
       ...conversationHistory,
@@ -237,17 +322,53 @@ export async function* streamGroqChatCompletion(
       model: "openai/gpt-oss-120b",
       temperature: 0.6,
       stream: true,
+      tools: TRIP_TOOLS,
+      tool_choice: "auto",
     });
 
+    const toolCallsBuffer: Map<number, { name: string; arguments: string }> = new Map();
+
     for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        yield content;
+      const delta = chunk.choices[0]?.delta;
+
+      if (delta?.content) {
+        yield { type: "content", content: delta.content };
+      }
+
+      if (delta?.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index;
+          if (!toolCallsBuffer.has(idx)) {
+            toolCallsBuffer.set(idx, { name: "", arguments: "" });
+          }
+          const buffer = toolCallsBuffer.get(idx)!;
+          if (tc.function?.name) {
+            buffer.name = tc.function.name;
+          }
+          if (tc.function?.arguments) {
+            buffer.arguments += tc.function.arguments;
+          }
+        }
+      }
+
+      if (chunk.choices[0]?.finish_reason === "tool_calls" || chunk.choices[0]?.finish_reason === "stop") {
+        const entries = Array.from(toolCallsBuffer.entries());
+        for (const [, buffer] of entries) {
+          if (buffer.name) {
+            try {
+              const args = buffer.arguments ? JSON.parse(buffer.arguments) : {};
+              yield { type: "tool_call", toolCall: { name: buffer.name, arguments: args } };
+            } catch (e) {
+              console.error("Error parsing streamed tool call:", e);
+            }
+          }
+        }
+        toolCallsBuffer.clear();
       }
     }
   } catch (error) {
     console.error("Groq streaming error:", error);
-    yield "Sorry, there was a problem with the streaming. Please try again!";
+    yield { type: "content", content: "Sorry, there was a problem with the streaming. Please try again!" };
   }
 }
 
