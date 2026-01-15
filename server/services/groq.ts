@@ -5,7 +5,7 @@ const groq = new Groq({
 });
 
 interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
@@ -21,10 +21,10 @@ interface ChatContext {
   conversationState?: {
     currentStep: string;
   };
-  partyType?: 'bachelor' | 'bachelorette';
+  partyType?: "bachelor" | "bachelorette";
   origin?: string; // IATA code for flight origin (e.g., "ROM")
   originCityName?: string; // City name for display (e.g., "Roma", "Napoli")
-  
+
   flights?: {
     id?: number;
     airline: string;
@@ -34,7 +34,7 @@ interface ChatContext {
     origin?: string; // IATA code injected from backend
     destination?: string; // IATA code
   }[];
-  
+
   hotels?: {
     hotelId: string;
     name: string;
@@ -42,13 +42,13 @@ interface ChatContext {
     priceTotal: number;
     currency: string;
     offerId: string;
-    bookingFlow: 'IN_APP' | 'REDIRECT';
+    bookingFlow: "IN_APP" | "REDIRECT";
     paymentPolicy: string;
     roomDescription?: string;
   }[];
 }
 
-const BYEBRO_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBro, parte dell'app BYEBI. Il tuo compito è aiutare a pianificare viaggi per addii al celibato trovando VOLI REALI.
+const BYEBRO_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBro, parte dell'app BYEBI. Il tuo compito è aiutare a pianificare viaggi per addii al celibato trovando VOLI REALI. Rispondi SEMPRE nella lingua in cui l'utente ha scritto, non sempre in italiano.
 
 REGOLE PRINCIPALI:
 1. Raccogli SEMPRE queste 5 informazioni PRIMA di cercare voli:
@@ -104,7 +104,7 @@ REGOLE BOOKING:
 - NON confermare MAI prenotazioni come se fossero già fatte.
 - NON proporre MAI esperienze o attività.`;
 
-const BYEBRIDE_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBride, parte dell'app BYEBI. Il tuo compito è aiutare a pianificare viaggi per addii al nubilato trovando VOLI REALI.
+const BYEBRIDE_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBride, parte dell'app BYEBI. Il tuo compito è aiutare a pianificare viaggi per addii al nubilato trovando VOLI REALI. Rispondi SEMPRE nella lingua in cui l'utente ha scritto, non sempre in italiano.
 
 REGOLE PRINCIPALI:
 1. Raccogli SEMPRE queste 5 informazioni PRIMA di cercare voli:
@@ -163,40 +163,47 @@ REGOLE BOOKING:
 export async function createGroqChatCompletion(
   userMessage: string,
   context: ChatContext,
-  conversationHistory: ChatMessage[] = []
+  conversationHistory: ChatMessage[] = [],
 ): Promise<string> {
   try {
     // Build context-aware system prompt based on party type
-    const basePrompt = context.partyType === 'bachelorette' ? BYEBRIDE_SYSTEM_PROMPT : BYEBRO_SYSTEM_PROMPT;
+    const basePrompt =
+      context.partyType === "bachelorette"
+        ? BYEBRIDE_SYSTEM_PROMPT
+        : BYEBRO_SYSTEM_PROMPT;
     let contextualPrompt = basePrompt;
-    
+
     if (context.selectedDestination) {
       contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
-      
+
       if (context.tripDetails) {
         contextualPrompt += `\nDETTAGLI VIAGGIO:`;
-        if (context.tripDetails.people > 0) contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
-        if (context.tripDetails.days > 0) contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
-        if (context.tripDetails.adventureType) contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
+        if (context.tripDetails.people > 0)
+          contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
+        if (context.tripDetails.days > 0)
+          contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
+        if (context.tripDetails.adventureType)
+          contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
       }
     }
 
     // Prepare messages array
     const messages: ChatMessage[] = [
-      { role: 'system', content: contextualPrompt },
+      { role: "system", content: contextualPrompt },
       ...conversationHistory.slice(-6), // Keep last 6 messages for context
-      { role: 'user', content: userMessage }
+      { role: "user", content: userMessage },
     ];
 
     const chatCompletion = await groq.chat.completions.create({
       messages,
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.8,
-      max_tokens: 500,
-      top_p: 0.9,
+      model: "openai/gpt-oss-120b",
+      temperature: 0.5,
     });
 
-    return chatCompletion.choices[0]?.message?.content || "Mi dispiace, c'è stato un problema. Riprova!";
+    return (
+      chatCompletion.choices[0]?.message?.content ||
+      "Mi dispiace, c'è stato un problema. Riprova!"
+    );
   } catch (error) {
     console.error("Groq API error:", error);
     throw new Error("Errore nella comunicazione con GROQ");
@@ -206,41 +213,61 @@ export async function createGroqChatCompletion(
 export async function* streamGroqChatCompletion(
   userMessage: string,
   context: ChatContext,
-  conversationHistory: ChatMessage[] = []
+  conversationHistory: ChatMessage[] = [],
 ): AsyncGenerator<string, void, unknown> {
   try {
     // Build context-aware system prompt based on party type
-    const basePrompt = context.partyType === 'bachelorette' ? BYEBRIDE_SYSTEM_PROMPT : BYEBRO_SYSTEM_PROMPT;
+    const basePrompt =
+      context.partyType === "bachelorette"
+        ? BYEBRIDE_SYSTEM_PROMPT
+        : BYEBRO_SYSTEM_PROMPT;
     let contextualPrompt = basePrompt;
-    
+
     // Add origin city info if available
     if (context.origin && context.originCityName) {
       contextualPrompt += `\n\nCITTÀ DI PARTENZA: ${context.originCityName} (codice aeroporto: ${context.origin})`;
     }
-    
+
     if (context.selectedDestination) {
       contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
-      
+
       if (context.tripDetails) {
         contextualPrompt += `\nDETTAGLI VIAGGIO:`;
-        if (context.tripDetails.people > 0) contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
-        if (context.tripDetails.days > 0) contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
-        if (context.tripDetails.adventureType) contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
+        if (context.tripDetails.people > 0)
+          contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
+        if (context.tripDetails.days > 0)
+          contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
+        if (context.tripDetails.adventureType)
+          contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
       }
     }
-    
+
     // Add real flight options if available
     if (context.flights && context.flights.length > 0) {
-      const originCity = context.originCityName || 'Roma';
+      const originCity = context.originCityName || "Roma";
       contextualPrompt += `\n\n🛫 VOLI REALI DISPONIBILI (da ${originCity} verso ${context.selectedDestination}):`;
       contextualPrompt += `\nQuesti sono voli REALI con prezzi aggiornati. Presentali all'utente e chiedi quale preferisce.\n`;
       context.flights.forEach((f, idx) => {
-        const depDate = new Date(f.departure_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-        const depTime = new Date(f.departure_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-        const retDate = new Date(f.return_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-        const retTime = new Date(f.return_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); 
+        const depDate = new Date(f.departure_at).toLocaleDateString("it-IT", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const depTime = new Date(f.departure_at).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const retDate = new Date(f.return_at).toLocaleDateString("it-IT", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const retTime = new Date(f.return_at).toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
         //contextualPrompt += `\n${idx + 1}. ${f.airline} - ${f.price} €`;
-        
+
         contextualPrompt += `   Partenza: ${depDate} ore ${depTime}\n`;
         contextualPrompt += `   Ritorno: ${retDate} ore ${retTime}\n`;
         contextualPrompt += `   Volo n. ${f.flight_number}\n\n`;
@@ -250,17 +277,15 @@ export async function* streamGroqChatCompletion(
 
     // Prepare messages array
     const messages: ChatMessage[] = [
-      { role: 'system', content: contextualPrompt },
+      { role: "system", content: contextualPrompt },
       ...conversationHistory.slice(-6),
-      { role: 'user', content: userMessage }
+      { role: "user", content: userMessage },
     ];
 
     const stream = await groq.chat.completions.create({
       messages,
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.8,
-      max_tokens: 500,
-      top_p: 0.9,
+      model: "openai/gpt-oss-120b",
+      temperature: 0.6,
       stream: true,
     });
 
@@ -286,13 +311,14 @@ interface ActivitySuggestion {
 export async function generateActivitySuggestions(
   destination: string,
   timeReference: string,
-  partyType: 'bachelor' | 'bachelorette' = 'bachelor'
+  partyType: "bachelor" | "bachelorette" = "bachelor",
 ): Promise<ActivitySuggestion[]> {
   try {
-    const partyContext = partyType === 'bachelorette' 
-      ? 'bachelorette parties with focus on spa, beach clubs, brunch, shopping, cocktail bars, wellness experiences'
-      : 'bachelor parties with focus on nightclubs, boat parties, karting, paintball, breweries, VIP experiences';
-    
+    const partyContext =
+      partyType === "bachelorette"
+        ? "bachelorette parties with focus on spa, beach clubs, brunch, shopping, cocktail bars, wellness experiences"
+        : "bachelor parties with focus on nightclubs, boat parties, karting, paintball, breweries, VIP experiences";
+
     const systemPrompt = `You are an expert travel activity planner for ${partyContext} in Europe.
 
 Generate 6 creative and exciting activity suggestions for ${destination} for a party happening in ${timeReference}.
@@ -303,26 +329,28 @@ Return ONLY a valid JSON array with exactly 6 activities. Each activity must hav
 - icon: One of these exactly: "music", "ship", "utensils", "party", "car", "waves", "flame", "beer", "mappin"
 - venues: Array of 2-3 specific venue/location names in ${destination}
 
-${partyType === 'bachelorette' 
-  ? 'Focus on: spa experiences, beach clubs, brunch spots, rooftop bars, wellness centers, shopping districts, sunset cruises, wine tasting, cooking classes.'
-  : 'Focus on: nightclubs, boat parties, karting, paintball, beach clubs, breweries, escape rooms, VIP experiences, restaurants, bars.'
+${
+  partyType === "bachelorette"
+    ? "Focus on: spa experiences, beach clubs, brunch spots, rooftop bars, wellness centers, shopping districts, sunset cruises, wine tasting, cooking classes."
+    : "Focus on: nightclubs, boat parties, karting, paintball, beach clubs, breweries, escape rooms, VIP experiences, restaurants, bars."
 }
 
 Return ONLY the JSON array, no other text.`;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Generate 6 activity suggestions for ${destination}` }
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Generate 6 activity suggestions for ${destination}`,
+        },
       ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.9,
-      max_tokens: 1000,
-      top_p: 0.95,
+      model: "openai/gpt-oss-120b",
+      temperature: 0.65,
     });
 
     const responseText = chatCompletion.choices[0]?.message?.content || "[]";
-    
+
     // Try to parse JSON from response
     let jsonMatch = responseText.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
@@ -331,19 +359,18 @@ Return ONLY the JSON array, no other text.`;
     }
 
     const suggestions: ActivitySuggestion[] = JSON.parse(jsonMatch[0]);
-    
+
     // Validate and clean suggestions
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
       return getFallbackActivities(destination);
     }
 
-    return suggestions.slice(0, 6).map(s => ({
+    return suggestions.slice(0, 6).map((s) => ({
       name: s.name || "Party Activity",
       description: s.description || "Fun activity for your group",
       icon: s.icon || "party",
-      venues: Array.isArray(s.venues) ? s.venues.slice(0, 3) : []
+      venues: Array.isArray(s.venues) ? s.venues.slice(0, 3) : [],
     }));
-
   } catch (error) {
     console.error("Error generating activity suggestions:", error);
     return getFallbackActivities(destination);
@@ -356,37 +383,37 @@ function getFallbackActivities(destination: string): ActivitySuggestion[] {
       name: "Club Night",
       description: "Experience the best nightlife in the city",
       icon: "music",
-      venues: ["Local Club 1", "Local Club 2", "Local Club 3"]
+      venues: ["Local Club 1", "Local Club 2", "Local Club 3"],
     },
     {
       name: "Boat Party",
       description: "Private boat with drinks and music",
       icon: "ship",
-      venues: ["Marina Charter", "Party Boats Co", "Sunset Cruises"]
+      venues: ["Marina Charter", "Party Boats Co", "Sunset Cruises"],
     },
     {
       name: "Group Dinner",
       description: "Exclusive dining experience with great food",
       icon: "utensils",
-      venues: ["Restaurant 1", "Restaurant 2", "Restaurant 3"]
+      venues: ["Restaurant 1", "Restaurant 2", "Restaurant 3"],
     },
     {
       name: "Beach Club",
       description: "Relax and party at a premium beach club",
       icon: "waves",
-      venues: ["Beach Club 1", "Beach Club 2", "Beach Club 3"]
+      venues: ["Beach Club 1", "Beach Club 2", "Beach Club 3"],
     },
     {
       name: "Karting Race",
       description: "Competitive go-kart racing for the group",
       icon: "car",
-      venues: ["Racing Track", "Karting Center", "Speed Zone"]
+      venues: ["Racing Track", "Karting Center", "Speed Zone"],
     },
     {
       name: "Bar Crawl",
       description: "Tour the best bars with a guide",
       icon: "beer",
-      venues: ["Bar District", "Pub Street", "Nightlife Area"]
-    }
+      venues: ["Bar District", "Pub Street", "Nightlife Area"],
+    },
   ];
 }
