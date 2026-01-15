@@ -538,7 +538,7 @@ export default function ChatDialogCompact({
     setIsLoading(true);
 
     try {
-      const conversationHistory = messages.slice(-6).map((msg) => ({
+      const conversationHistory = messages.map((msg) => ({
         role: msg.sender === "user" ? "user" : "assistant",
         content: msg.content,
       }));

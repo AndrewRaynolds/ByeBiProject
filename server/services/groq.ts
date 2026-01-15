@@ -62,7 +62,7 @@ REGOLE PRINCIPALI:
 
 3. Quando l'utente nomina una destinazione nuova, riparti da zero.
 
-FLUSSO OBBLIGATORIO:
+FLUSSO OBBLIGATORIO (sempre nella lingua scelta dall'utente):
 1. L'utente dice una meta.
    → Chiedi: "Da quale città italiana vuoi partire?"
 
@@ -190,7 +190,7 @@ export async function createGroqChatCompletion(
     // Prepare messages array
     const messages: ChatMessage[] = [
       { role: "system", content: contextualPrompt },
-      ...conversationHistory.slice(-6), // Keep last 6 messages for context
+      ...conversationHistory,
       { role: "user", content: userMessage },
     ];
 
@@ -278,7 +278,7 @@ export async function* streamGroqChatCompletion(
     // Prepare messages array
     const messages: ChatMessage[] = [
       { role: "system", content: contextualPrompt },
-      ...conversationHistory.slice(-6),
+      ...conversationHistory,
       { role: "user", content: userMessage },
     ];
 
