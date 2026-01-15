@@ -270,7 +270,7 @@ export async function createGroqChatCompletion(
 
     const chatCompletion = await groq.chat.completions.create({
       messages,
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.5,
       tools: TRIP_TOOLS,
       tool_choice: "auto",
@@ -316,7 +316,7 @@ export async function* streamGroqChatCompletion(
 
     const stream = await groq.chat.completions.create({
       messages,
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.6,
       stream: true,
       tools: TRIP_TOOLS,
@@ -413,7 +413,7 @@ Return ONLY the JSON array, no other text.`;
           content: `Generate 6 activity suggestions for ${destination}`,
         },
       ],
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.65,
     });
 
