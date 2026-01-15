@@ -48,65 +48,65 @@ interface ChatContext {
   }[];
 }
 
-const SHARED_SYSTEM_PROMPT = `REGOLE PRINCIPALI:
-1. Raccogli SEMPRE queste 5 informazioni PRIMA di cercare voli:
-   - destinazione
-   - città di partenza (aeroporto origine)
-   - data partenza
-   - data ritorno
-   - numero partecipanti
+const SHARED_SYSTEM_PROMPT = `MAIN RULES:
+1. ALWAYS collect these 5 pieces of information BEFORE searching for flights:
+   - destination
+   - departure city (origin airport)
+   - departure date
+   - return date
+   - number of participants
 
-2. NON proporre MAI esperienze, attività o hotel. Il flusso è SOLO: Info viaggio → Voli → Checkout.
+2. NEVER suggest experiences, activities, or hotels. The flow is ONLY: Trip info → Flights → Checkout.
 
-3. Quando l'utente nomina una destinazione nuova, riparti da zero.
+3. When the user mentions a new destination, start from scratch.
 
-FLUSSO OBBLIGATORIO (sempre nella lingua scelta dall'utente):
-1. L'utente dice una meta.
-   → Chiedi: "Da quale città vuoi partire?"
+MANDATORY FLOW (always in the language chosen by the user):
+1. The user mentions a destination.
+   → Ask: "Which city would you like to depart from?"
 
-2. L'utente dice la città di partenza.
-   → Emetti [SET_ORIGIN:NomeCittà] e chiedi le date del viaggio. Non chiedere all'utente per un format preciso, lo cambierai tu dopo.
+2. The user provides the departure city.
+   → Emit [SET_ORIGIN:CityName] and ask for travel dates. Don't ask the user for a specific format, you will convert it later.
 
-3. L'utente dà le date.
-   → Chiedi il numero di partecipanti.
+3. The user provides the dates.
+   → Ask for the number of participants.
 
-4. L'utente dà il numero persone.
-   → Riceverai i voli reali. Presentane solo uno e chiedi conferma.
-   → Chiedi: "Confermi per procedere al checkout?"
+4. The user provides the number of people.
+   → You will receive real flights. Present only one and ask for confirmation.
+   → Ask: "Do you confirm to proceed to checkout?"
 
-5. L'utente conferma (ok, sì, va bene, confermo, procedi, ecc.)
-   → EMETTI SEMPRE [UNLOCK_ITINERARY_BUTTON:true] alla fine del messaggio per mostrare il bottone checkout.
+5. The user confirms (ok, yes, sure, confirm, proceed, etc.)
+   → ALWAYS EMIT [UNLOCK_ITINERARY_BUTTON:true] at the end of the message to show the checkout button.
 
-DESTINAZIONI: Roma, Ibiza, Barcellona, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca
+DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
-AEROPORTI ITALIANI: Roma, Milano, Napoli, Torino, Venezia, Bologna, Firenze, Bari, Catania, Palermo, Verona, Pisa, Genova, Brindisi, Olbia, Cagliari, Alghero
+ITALIAN AIRPORTS: Rome, Milan, Naples, Turin, Venice, Bologna, Florence, Bari, Catania, Palermo, Verona, Pisa, Genoa, Brindisi, Olbia, Cagliari, Alghero
 
-COMPORTAMENTO:
-- Risposte brevi (2-3 frasi max)
-- Tono professionale e amichevole
-- NO esperienze, NO attività, NO hotel nella chat
+BEHAVIOR:
+- Short responses (2-3 sentences max)
+- Professional and friendly tone
+- NO experiences, NO activities, NO hotels in the chat
 
-DIRETTIVE (emetti alla fine del messaggio quando appropriato):
-- [SET_DESTINATION:città] - quando l'utente sceglie una destinazione
-- [SET_ORIGIN:città] - quando l'utente dice la città di partenza
-- [SET_DATES:yyyy-mm-dd,yyyy-mm-dd] - quando l'utente fornisce le date
-- [SET_PARTICIPANTS:numero] - quando l'utente dice quanti partecipanti
-- [SELECT_FLIGHT:numero] - quando l'utente sceglie un volo (1, 2 o 3)
-- [UNLOCK_ITINERARY_BUTTON:true] - OBBLIGATORIO quando l'utente conferma (ok, sì, confermo, va bene, procedi)
+DIRECTIVES (emit at the end of the message when appropriate):
+- [SET_DESTINATION:city] - when the user chooses a destination
+- [SET_ORIGIN:city] - when the user provides the departure city
+- [SET_DATES:yyyy-mm-dd,yyyy-mm-dd] - when the user provides the dates
+- [SET_PARTICIPANTS:number] - when the user provides the number of participants
+- [SELECT_FLIGHT:number] - when the user chooses a flight (1, 2, or 3)
+- [UNLOCK_ITINERARY_BUTTON:true] - MANDATORY when the user confirms (ok, yes, confirm, sure, proceed)
 
-REGOLA CRITICA: Quando l'utente risponde con qualsiasi forma di conferma dopo aver visto il volo (ok, sì, va bene, confermo, procedi, perfetto, ecc.), DEVI SEMPRE emettere [UNLOCK_ITINERARY_BUTTON:true] alla fine del messaggio. Questo è OBBLIGATORIO.
+CRITICAL RULE: When the user responds with any form of confirmation after seeing the flight (ok, yes, sure, confirm, proceed, perfect, etc.), you MUST ALWAYS emit [UNLOCK_ITINERARY_BUTTON:true] at the end of the message. This is MANDATORY.
 
-REGOLE BOOKING:
-- VOLI: Sempre checkout esterno tramite link affiliato.
-- HOTEL: NON proporre hotel nella chat. L'utente li vedrà nel checkout.
-- NON confermare MAI prenotazioni come se fossero già fatte.
-- NON proporre MAI esperienze o attività.`;
+BOOKING RULES:
+- FLIGHTS: Always external checkout via affiliate link.
+- HOTELS: DO NOT suggest hotels in the chat. The user will see them at checkout.
+- NEVER confirm bookings as if they were already made.
+- NEVER suggest experiences or activities.`;
 
-const BYEBRO_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBro, parte dell'app BYEBI. Il tuo compito è aiutare a pianificare viaggi per addii al celibato trovando VOLI REALI. Rispondi SEMPRE nella lingua in cui l'utente ha scritto, non sempre in italiano.
+const BYEBRO_SYSTEM_PROMPT = `You are the official assistant of ByeBro, part of the BYEBI app. Your task is to help plan bachelor party trips by finding REAL FLIGHTS. ALWAYS respond in the language the user writes in.
 
 ${SHARED_SYSTEM_PROMPT}`;
 
-const BYEBRIDE_SYSTEM_PROMPT = `Tu sei l'assistente ufficiale di ByeBride, parte dell'app BYEBI. Il tuo compito è aiutare a pianificare viaggi per addii al nubilato trovando VOLI REALI. Rispondi SEMPRE nella lingua in cui l'utente ha scritto, non sempre in italiano.
+const BYEBRIDE_SYSTEM_PROMPT = `You are the official assistant of ByeBride, part of the BYEBI app. Your task is to help plan bachelorette party trips by finding REAL FLIGHTS. ALWAYS respond in the language the user writes in.
 
 ${SHARED_SYSTEM_PROMPT}`;
 
@@ -124,16 +124,16 @@ export async function createGroqChatCompletion(
     let contextualPrompt = basePrompt;
 
     if (context.selectedDestination) {
-      contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
+      contextualPrompt += `\n\nSELECTED DESTINATION: ${context.selectedDestination.toUpperCase()}`;
 
       if (context.tripDetails) {
-        contextualPrompt += `\nDETTAGLI VIAGGIO:`;
+        contextualPrompt += `\nTRIP DETAILS:`;
         if (context.tripDetails.people > 0)
-          contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
+          contextualPrompt += `\n- People: ${context.tripDetails.people}`;
         if (context.tripDetails.days > 0)
-          contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
+          contextualPrompt += `\n- Days: ${context.tripDetails.days}`;
         if (context.tripDetails.adventureType)
-          contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
+          contextualPrompt += `\n- Type: ${context.tripDetails.adventureType}`;
       }
     }
 
@@ -152,11 +152,11 @@ export async function createGroqChatCompletion(
 
     return (
       chatCompletion.choices[0]?.message?.content ||
-      "Mi dispiace, c'è stato un problema. Riprova!"
+      "Sorry, there was a problem. Please try again!"
     );
   } catch (error) {
     console.error("Groq API error:", error);
-    throw new Error("Errore nella comunicazione con GROQ");
+    throw new Error("Error communicating with GROQ");
   }
 }
 
@@ -175,54 +175,54 @@ export async function* streamGroqChatCompletion(
 
     // Add origin city info if available
     if (context.origin && context.originCityName) {
-      contextualPrompt += `\n\nCITTÀ DI PARTENZA: ${context.originCityName} (codice aeroporto: ${context.origin})`;
+      contextualPrompt += `\n\nDEPARTURE CITY: ${context.originCityName} (airport code: ${context.origin})`;
     }
 
     if (context.selectedDestination) {
-      contextualPrompt += `\n\nDESTINAZIONE SELEZIONATA: ${context.selectedDestination.toUpperCase()}`;
+      contextualPrompt += `\n\nSELECTED DESTINATION: ${context.selectedDestination.toUpperCase()}`;
 
       if (context.tripDetails) {
-        contextualPrompt += `\nDETTAGLI VIAGGIO:`;
+        contextualPrompt += `\nTRIP DETAILS:`;
         if (context.tripDetails.people > 0)
-          contextualPrompt += `\n- Persone: ${context.tripDetails.people}`;
+          contextualPrompt += `\n- People: ${context.tripDetails.people}`;
         if (context.tripDetails.days > 0)
-          contextualPrompt += `\n- Giorni: ${context.tripDetails.days}`;
+          contextualPrompt += `\n- Days: ${context.tripDetails.days}`;
         if (context.tripDetails.adventureType)
-          contextualPrompt += `\n- Tipo: ${context.tripDetails.adventureType}`;
+          contextualPrompt += `\n- Type: ${context.tripDetails.adventureType}`;
       }
     }
 
     // Add real flight options if available
     if (context.flights && context.flights.length > 0) {
-      const originCity = context.originCityName || "Roma";
-      contextualPrompt += `\n\n🛫 VOLI REALI DISPONIBILI (da ${originCity} verso ${context.selectedDestination}):`;
-      contextualPrompt += `\nQuesti sono voli REALI con prezzi aggiornati. Presentali all'utente e chiedi quale preferisce.\n`;
+      const originCity = context.originCityName || "Rome";
+      contextualPrompt += `\n\n🛫 AVAILABLE REAL FLIGHTS (from ${originCity} to ${context.selectedDestination}):`;
+      contextualPrompt += `\nThese are REAL flights with updated prices. Present them to the user and ask which one they prefer.\n`;
       context.flights.forEach((f, idx) => {
-        const depDate = new Date(f.departure_at).toLocaleDateString("it-IT", {
+        const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
           day: "numeric",
           month: "long",
           year: "numeric",
         });
-        const depTime = new Date(f.departure_at).toLocaleTimeString("it-IT", {
+        const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
         });
-        const retDate = new Date(f.return_at).toLocaleDateString("it-IT", {
+        const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
           day: "numeric",
           month: "long",
           year: "numeric",
         });
-        const retTime = new Date(f.return_at).toLocaleTimeString("it-IT", {
+        const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
         });
         //contextualPrompt += `\n${idx + 1}. ${f.airline} - ${f.price} €`;
 
-        contextualPrompt += `   Partenza: ${depDate} ore ${depTime}\n`;
-        contextualPrompt += `   Ritorno: ${retDate} ore ${retTime}\n`;
-        contextualPrompt += `   Volo n. ${f.flight_number}\n\n`;
+        contextualPrompt += `   Departure: ${depDate} at ${depTime}\n`;
+        contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
+        contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
       });
-      contextualPrompt += `\nQuando l'utente sceglie un volo (es. "il 2", "prendo il primo", "volo 3"), devi emettere la direttiva [SELECT_FLIGHT:numero] alla fine del messaggio.\n`;
+      contextualPrompt += `\nWhen the user chooses a flight (e.g., "the 2nd one", "I'll take the first", "flight 3"), you must emit the directive [SELECT_FLIGHT:number] at the end of the message.\n`;
     }
 
     // Prepare messages array
@@ -247,7 +247,7 @@ export async function* streamGroqChatCompletion(
     }
   } catch (error) {
     console.error("Groq streaming error:", error);
-    yield "Mi dispiace, c'è stato un problema con lo streaming. Riprova!";
+    yield "Sorry, there was a problem with the streaming. Please try again!";
   }
 }
 
