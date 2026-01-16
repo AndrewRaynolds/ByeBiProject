@@ -182,7 +182,7 @@ export default function OneClickAssistant() {
         conversationHistory,
         partyType: brand === "byebro" ? "bachelor" : "bachelorette",
       };
-      console.log("🔍 GROQ STREAM PAYLOAD:", payload);
+      console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
 
       const response = await fetch("/api/chat/groq-stream", {
         method: "POST",

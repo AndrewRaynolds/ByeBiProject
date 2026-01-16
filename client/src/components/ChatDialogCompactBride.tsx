@@ -471,7 +471,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         partyType: conversationState.partyType,
         originCity: originCity
       };
-      console.log("🔍 GROQ STREAM PAYLOAD:", payload);
+      console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
       
       const response = await fetch('/api/chat/groq-stream', {
         method: 'POST',
