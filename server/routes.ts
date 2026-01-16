@@ -628,12 +628,12 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         });
       }
 
-      if (!process.env.GROQ_API_KEY) {
-        console.warn("GROQ API key not configured, using fallback activities");
+      if (!process.env.OPENAI_API_KEY) {
+        console.warn("OpenAI API key not configured, using fallback activities");
       }
 
-      // Import GROQ service
-      const { generateActivitySuggestions } = await import('./services/groq');
+      // Import OpenAI service
+      const { generateActivitySuggestions } = await import('./services/openai');
       
       const timeReference = month || (startDate && endDate ? `${startDate} to ${endDate}` : 'summer');
       const suggestions = await generateActivitySuggestions(destination, timeReference, partyType || 'bachelor');
@@ -652,15 +652,15 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
-  // GROQ Streaming Chat endpoint (NEW - Ultra-fast LLM streaming)
+  // OpenAI Streaming Chat endpoint (with tool calls support)
   app.post("/api/chat/groq-stream", async (req: Request, res: Response) => {
     try {
       const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity } = req.body;
 
-      if (!process.env.GROQ_API_KEY) {
+      if (!process.env.OPENAI_API_KEY) {
         return res.status(400).json({ 
           success: false, 
-          error: "GROQ API key not configured" 
+          error: "OpenAI API key not configured" 
         });
       }
 
@@ -679,7 +679,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // Debug log solo in development
       if (process.env.NODE_ENV !== "production") {
-        console.log("🔍 GROQ-STREAM:", { selectedDestination, partyType, originCity });
+        console.log("🔍 OPENAI-STREAM:", { selectedDestination, partyType, originCity });
       }
 
       if (destinationIata) {
@@ -738,7 +738,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         }
       }
 
-      const { streamGroqChatCompletion } = await import('./services/groq');
+      const { streamOpenAIChatCompletion } = await import('./services/openai');
 
       const context = {
         selectedDestination,
@@ -760,7 +760,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         res.write(`data: ${JSON.stringify({ hotels: hotels })}\n\n`);
       }
 
-      for await (const chunk of streamGroqChatCompletion(message, context, conversationHistory || [])) {
+      for await (const chunk of streamOpenAIChatCompletion(message, context, conversationHistory || [])) {
         if (chunk.type === "content") {
           res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
         } else if (chunk.type === "tool_call") {
@@ -772,7 +772,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.end();
 
     } catch (error: any) {
-      console.error('GROQ Streaming Error:', error);
+      console.error('OpenAI Streaming Error:', error);
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
       res.end();
     }
