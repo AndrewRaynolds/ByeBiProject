@@ -53,7 +53,7 @@ export interface ToolCall {
   arguments: Record<string, any>;
 }
 
-export type StreamChunk = 
+export type StreamChunk =
   | { type: "content"; content: string }
   | { type: "tool_call"; toolCall: ToolCall };
 
@@ -62,85 +62,106 @@ const TRIP_TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "set_destination",
-      description: "Set the travel destination when the user chooses where they want to go",
+      description:
+        "Set the travel destination when the user chooses where they want to go",
       parameters: {
         type: "object",
         properties: {
-          city: { type: "string", description: "The destination city name" }
+          city: { type: "string", description: "The destination city name" },
         },
-        required: ["city"]
-      }
-    }
+        required: ["city"],
+      },
+    },
   },
   {
     type: "function",
     function: {
       name: "set_origin",
-      description: "Set the departure city when the user specifies where they want to fly from",
+      description:
+        "Set the departure city when the user specifies where they want to fly from",
       parameters: {
         type: "object",
         properties: {
-          city: { type: "string", description: "The origin/departure city name" }
+          city: {
+            type: "string",
+            description: "The origin/departure city name",
+          },
         },
-        required: ["city"]
-      }
-    }
+        required: ["city"],
+      },
+    },
   },
   {
     type: "function",
     function: {
       name: "set_dates",
-      description: "Set the travel dates when the user provides departure and return dates",
+      description:
+        "Set the travel dates when the user provides departure and return dates",
       parameters: {
         type: "object",
         properties: {
-          departure_date: { type: "string", description: "Departure date in YYYY-MM-DD format" },
-          return_date: { type: "string", description: "Return date in YYYY-MM-DD format" }
+          departure_date: {
+            type: "string",
+            description: "Departure date in YYYY-MM-DD format",
+          },
+          return_date: {
+            type: "string",
+            description: "Return date in YYYY-MM-DD format",
+          },
         },
-        required: ["departure_date", "return_date"]
-      }
-    }
+        required: ["departure_date", "return_date"],
+      },
+    },
   },
   {
     type: "function",
     function: {
       name: "set_participants",
-      description: "Set the number of participants when the user specifies how many people are traveling",
+      description:
+        "Set the number of participants when the user specifies how many people are traveling",
       parameters: {
         type: "object",
         properties: {
-          count: { type: "integer", description: "Number of participants/travelers" }
+          count: {
+            type: "integer",
+            description: "Number of participants/travelers",
+          },
         },
-        required: ["count"]
-      }
-    }
+        required: ["count"],
+      },
+    },
   },
   {
     type: "function",
     function: {
       name: "select_flight",
-      description: "Select a specific flight when the user chooses from the available options",
+      description:
+        "Select a specific flight when the user chooses from the available options",
       parameters: {
         type: "object",
         properties: {
-          flight_number: { type: "integer", description: "The flight option number (1, 2, or 3)" }
+          flight_number: {
+            type: "integer",
+            description: "The flight option number (1, 2, or 3)",
+          },
         },
-        required: ["flight_number"]
-      }
-    }
+        required: ["flight_number"],
+      },
+    },
   },
   {
     type: "function",
     function: {
       name: "unlock_checkout",
-      description: "Unlock the checkout button when the user confirms they want to proceed with booking",
+      description:
+        "Unlock the checkout button when the user confirms they want to proceed with booking",
       parameters: {
         type: "object",
         properties: {},
-        required: []
-      }
-    }
-  }
+        required: [],
+      },
+    },
+  },
 ];
 
 const SHARED_SYSTEM_PROMPT = `CRITICAL RULE: You MUST ALWAYS provide a text response to the user, even when calling tools. Never respond with ONLY tool calls - always include a friendly message.
@@ -153,11 +174,9 @@ Before searching for flights, you MUST have ALL of the following:
 - return date
 - number of participants
 
-If the user provides multiple data points in one message, process ALL of them at once by calling the appropriate tools. You don't need to ask one question at a time.
+If the user provides multiple data points in one message, process ALL of them at once by calling the appropriate tools. You don't need to ask one question at a time. If some are still missing, ask for them naturally in your response. Once all information is collected, proceed to search and show flights immediately.
 
 AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
-
-ITALIAN AIRPORTS: Rome, Milan, Naples, Turin, Venice, Bologna, Florence, Bari, Catania, Palermo, Verona, Pisa, Genoa, Brindisi, Olbia, Cagliari, Alghero
 
 TOOL USAGE:
 - Call set_destination when you learn the destination
@@ -326,7 +345,8 @@ export async function* streamGroqChatCompletion(
       tool_choice: "auto",
     });
 
-    const toolCallsBuffer: Map<number, { name: string; arguments: string }> = new Map();
+    const toolCallsBuffer: Map<number, { name: string; arguments: string }> =
+      new Map();
     let hasContent = false;
     const collectedToolCalls: ToolCall[] = [];
 
@@ -354,7 +374,10 @@ export async function* streamGroqChatCompletion(
         }
       }
 
-      if (chunk.choices[0]?.finish_reason === "tool_calls" || chunk.choices[0]?.finish_reason === "stop") {
+      if (
+        chunk.choices[0]?.finish_reason === "tool_calls" ||
+        chunk.choices[0]?.finish_reason === "stop"
+      ) {
         const entries = Array.from(toolCallsBuffer.entries());
         for (const [, buffer] of entries) {
           if (buffer.name) {
@@ -374,49 +397,65 @@ export async function* streamGroqChatCompletion(
 
     // If we got tool calls but no content, generate a helpful follow-up message
     if (!hasContent && collectedToolCalls.length > 0) {
-      const followUpMessage = generateFollowUpMessage(collectedToolCalls, context);
+      const followUpMessage = generateFollowUpMessage(
+        collectedToolCalls,
+        context,
+      );
       yield { type: "content", content: followUpMessage };
     }
   } catch (error) {
     console.error("Groq streaming error:", error);
-    yield { type: "content", content: "Sorry, there was a problem with the streaming. Please try again!" };
+    yield {
+      type: "content",
+      content:
+        "Sorry, there was a problem with the streaming. Please try again!",
+    };
   }
 }
 
-function generateFollowUpMessage(toolCalls: ToolCall[], context: ChatContext): string {
-  const toolNames = toolCalls.map(tc => tc.name);
-  
+function generateFollowUpMessage(
+  toolCalls: ToolCall[],
+  context: ChatContext,
+): string {
+  const toolNames = toolCalls.map((tc) => tc.name);
+
   // Check what data we now have after tool calls
-  const hasDestination = toolNames.includes("set_destination") || context.selectedDestination;
+  const hasDestination =
+    toolNames.includes("set_destination") || context.selectedDestination;
   const hasOrigin = toolNames.includes("set_origin") || context.origin;
-  const hasDates = toolNames.includes("set_dates") || (context.tripDetails?.startDate && context.tripDetails?.endDate);
-  const hasParticipants = toolNames.includes("set_participants") || (context.tripDetails?.people && context.tripDetails.people > 0);
-  
+  const hasDates =
+    toolNames.includes("set_dates") ||
+    (context.tripDetails?.startDate && context.tripDetails?.endDate);
+  const hasParticipants =
+    toolNames.includes("set_participants") ||
+    (context.tripDetails?.people && context.tripDetails.people > 0);
+
   // Get destination from tool call if available
-  const destCall = toolCalls.find(tc => tc.name === "set_destination");
-  const destination = destCall?.arguments?.city || context.selectedDestination || "";
-  
+  const destCall = toolCalls.find((tc) => tc.name === "set_destination");
+  const destination =
+    destCall?.arguments?.city || context.selectedDestination || "";
+
   // Generate contextual follow-up
   if (hasDestination && hasDates && hasOrigin && hasParticipants) {
     return `Perfect! I've got all the details for your trip to ${destination}. Let me find the best flights for you!`;
   }
-  
+
   if (hasDestination && hasDates && hasOrigin) {
     return `Great choice! ${destination} is an amazing destination. How many people will be joining the trip?`;
   }
-  
+
   if (hasDestination && hasDates) {
     return `${destination} sounds perfect! Which city will you be flying from?`;
   }
-  
+
   if (hasDestination && hasOrigin) {
     return `Got it! When are you planning to travel to ${destination}? Let me know your departure and return dates.`;
   }
-  
+
   if (hasDestination) {
     return `${destination} is an excellent choice! When are you thinking of going, and where will you be flying from?`;
   }
-  
+
   return "Got it! What else can you tell me about your trip plans?";
 }
 
