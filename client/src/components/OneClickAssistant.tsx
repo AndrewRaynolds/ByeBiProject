@@ -174,7 +174,7 @@ export default function OneClickAssistant() {
     }));
 
     try {
-      // Try GROQ streaming first (ultra-fast!)
+      // Try OPENAI streaming first (ultra-fast!)
       const payload = {
         message: data.message,
         selectedDestination,
@@ -184,7 +184,7 @@ export default function OneClickAssistant() {
       };
       console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
 
-      const response = await fetch("/api/chat/groq-stream", {
+      const response = await fetch("/api/chat/openai-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -193,7 +193,7 @@ export default function OneClickAssistant() {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("GROQ streaming not available");
+        throw new Error("OPENAI streaming not available");
       }
 
       // Create a placeholder message for streaming
@@ -263,7 +263,7 @@ export default function OneClickAssistant() {
     } catch (error) {
       // Fallback to local response generation
       console.log("GROQ not available, using fallback:", error);
-
+      
       const assistantResponse = generateResponse(data.message);
 
       const assistantMessage: ChatMessage = {

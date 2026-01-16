@@ -653,7 +653,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   });
 
   // OpenAI Streaming Chat endpoint (with tool calls support)
-  app.post("/api/chat/groq-stream", async (req: Request, res: Response) => {
+  app.post("/api/chat/openai-stream", async (req: Request, res: Response) => {
     try {
       const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity } = req.body;
 
@@ -713,7 +713,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
         } catch (err) {
           if (process.env.NODE_ENV !== "production") {
-            console.error("Flight search error in groq-stream:", err);
+          console.error("Flight search error in openai-stream:", err);
           }
         }
 

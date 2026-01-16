@@ -90,13 +90,30 @@ export default function ChatDialogCompact({
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
   const [flights, setFlights] = useState<FlightInfo[]>([]);
+  const flightsRef = useRef<FlightInfo[]>([]);
   const [originCity, setOriginCity] = useState<string>("");
+  const originCityRef = useRef<string>("");
   const [selectedFlight, setSelectedFlight] =
     useState<SelectedFlightData | null>(null);
   const [pendingFlightSelection, setPendingFlightSelection] = useState<
     number | null
   >(null);
+  const conversationStateRef = useRef<ConversationState>({
+    selectedDestination: "",
+    tripDetails: {
+      people: 0,
+      days: 0,
+      startDate: "",
+      endDate: "",
+      adventureType: "",
+      interests: [],
+      budget: "medio",
+    },
+    partyType: "bachelor",
+  });
+  const lastFlightSearchKeyRef = useRef<string>("");
 
   const [conversationState, setConversationState] = useState<ConversationState>(
     {
@@ -133,6 +150,178 @@ export default function ChatDialogCompact({
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    flightsRef.current = flights;
+  }, [flights]);
+
+  useEffect(() => {
+    originCityRef.current = originCity;
+  }, [originCity]);
+
+  useEffect(() => {
+    conversationStateRef.current = conversationState;
+  }, [conversationState]);
+
+  const buildFlightSearchKey = (
+    state: ConversationState,
+    origin: string,
+  ): string => {
+    return [
+      state.selectedDestination || "",
+      origin || "",
+      state.tripDetails.startDate || "",
+      state.tripDetails.endDate || "",
+      state.tripDetails.people || 0,
+    ].join("|");
+  };
+
+  const hasFlightSearchData = (
+    state: ConversationState,
+    origin: string,
+  ): boolean => {
+    return Boolean(
+      state.selectedDestination &&
+        origin &&
+        state.tripDetails.startDate &&
+        state.tripDetails.endDate &&
+        state.tripDetails.people > 0,
+    );
+  };
+
+  const sendChatRequest = async (message: string, addUserMessage: boolean) => {
+    if (isLoading) return;
+    const trimmedMessage = message.trim();
+    if (addUserMessage && !trimmedMessage) return;
+
+    if (addUserMessage) {
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: trimmedMessage,
+        sender: "user",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+    }
+
+    setIsLoading(true);
+
+    try {
+      const conversationHistory = messagesRef.current.map((msg) => ({
+        role: msg.sender === "user" ? "user" : "assistant",
+        content: msg.content,
+      }));
+
+      const currentState = conversationStateRef.current;
+      const payload = {
+        message: trimmedMessage,
+        selectedDestination: currentState.selectedDestination,
+        tripDetails: currentState.tripDetails,
+        conversationHistory,
+        partyType: currentState.partyType,
+        originCity: originCityRef.current,
+      };
+      console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
+
+      const response = await fetch("/api/chat/openai-stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const assistantMessageId = (Date.now() + 1).toString();
+      const placeholderMessage: ChatMessage = {
+        id: assistantMessageId,
+        content: "",
+        sender: "assistant",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, placeholderMessage]);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const jsonData = JSON.parse(line.slice(6));
+
+                if (jsonData.error) {
+                  throw new Error(jsonData.error);
+                }
+
+                if (jsonData.flights && Array.isArray(jsonData.flights)) {
+                  console.log(
+                    "✈️ Received flights from backend:",
+                    jsonData.flights,
+                  );
+                  setFlights(jsonData.flights);
+                }
+
+                if (jsonData.tool_call) {
+                  handleToolCall(jsonData.tool_call);
+                }
+
+                if (jsonData.done) {
+                  break;
+                }
+
+                if (jsonData.content) {
+                  accumulatedContent += jsonData.content;
+
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: accumulatedContent }
+                        : msg,
+                    ),
+                  );
+                }
+              } catch (e) {
+                console.error("Error parsing SSE data:", e);
+              }
+            }
+          }
+        }
+      }
+
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Chat error:", error);
+
+      setMessages((prev) => prev.filter((msg) => msg.content !== ""));
+
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "Mi dispiace, c'è stato un problema. Riprova!",
+        sender: "assistant",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (pendingFlightSelection !== null && flights.length > 0) {
@@ -372,10 +561,11 @@ export default function ChatDialogCompact({
         const destination = toolCall.arguments.city?.trim();
         if (destination) {
           console.log(`📍 Setting destination: ${destination}`);
-          setConversationState((prev) => ({
-            ...prev,
-            selectedDestination: destination,
-          }));
+          setConversationState((prev) => {
+            const next = { ...prev, selectedDestination: destination };
+            conversationStateRef.current = next;
+            return next;
+          });
         }
         break;
 
@@ -384,6 +574,7 @@ export default function ChatDialogCompact({
         if (origin) {
           console.log(`🛫 Setting origin city: ${origin}`);
           setOriginCity(origin);
+          originCityRef.current = origin;
         }
         break;
 
@@ -403,15 +594,19 @@ export default function ChatDialogCompact({
             console.log(
               `📅 Setting dates: ${rawStart} -> ${normalizedStart}, ${rawEnd} -> ${normalizedEnd} (${days} days)`,
             );
-            setConversationState((prev) => ({
-              ...prev,
-              tripDetails: {
-                ...prev.tripDetails,
-                startDate: normalizedStart,
-                endDate: normalizedEnd,
-                days,
-              },
-            }));
+            setConversationState((prev) => {
+              const next = {
+                ...prev,
+                tripDetails: {
+                  ...prev.tripDetails,
+                  startDate: normalizedStart,
+                  endDate: normalizedEnd,
+                  days,
+                },
+              };
+              conversationStateRef.current = next;
+              return next;
+            });
           } else {
             console.warn(`⚠️ Invalid dates: ${rawStart}, ${rawEnd}`);
           }
@@ -422,15 +617,36 @@ export default function ChatDialogCompact({
         const participants = toolCall.arguments.count;
         if (typeof participants === "number" && participants > 0) {
           console.log(`👥 Setting participants: ${participants}`);
-          setConversationState((prev) => ({
-            ...prev,
-            tripDetails: {
-              ...prev.tripDetails,
-              people: participants,
-            },
-          }));
+          setConversationState((prev) => {
+            const next = {
+              ...prev,
+              tripDetails: {
+                ...prev.tripDetails,
+                people: participants,
+              },
+            };
+            conversationStateRef.current = next;
+            return next;
+          });
         }
         break;
+
+      case "search_flights": {
+        const currentState = conversationStateRef.current;
+        const currentOrigin = originCityRef.current;
+        const key = buildFlightSearchKey(currentState, currentOrigin);
+        if (
+          !isLoading &&
+          hasFlightSearchData(currentState, currentOrigin) &&
+          flightsRef.current.length === 0 &&
+          key &&
+          key !== lastFlightSearchKeyRef.current
+        ) {
+          lastFlightSearchKeyRef.current = key;
+          sendChatRequest("Show me the best flight options.", false);
+        }
+        break;
+      }
 
       case "select_flight":
         const flightNum = toolCall.arguments.flight_number;
@@ -484,131 +700,8 @@ export default function ChatDialogCompact({
 
   const onSubmit = async (data: MessageFormValues) => {
     if (isLoading) return;
-
-    const trimmedMessage = data.message.trim();
-    if (!trimmedMessage) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: trimmedMessage,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
     form.reset();
-    setIsLoading(true);
-
-    try {
-      const conversationHistory = messages.map((msg) => ({
-        role: msg.sender === "user" ? "user" : "assistant",
-        content: msg.content,
-      }));
-
-      const payload = {
-        message: data.message,
-        selectedDestination: conversationState.selectedDestination,
-        tripDetails: conversationState.tripDetails,
-        conversationHistory,
-        partyType: conversationState.partyType,
-        originCity: originCity,
-      };
-      console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
-
-      const response = await fetch("/api/chat/groq-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
-
-      const assistantMessageId = (Date.now() + 1).toString();
-      const placeholderMessage: ChatMessage = {
-        id: assistantMessageId,
-        content: "",
-        sender: "assistant",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, placeholderMessage]);
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedContent = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const jsonData = JSON.parse(line.slice(6));
-
-                if (jsonData.error) {
-                  throw new Error(jsonData.error);
-                }
-
-                if (jsonData.flights && Array.isArray(jsonData.flights)) {
-                  console.log(
-                    "✈️ Received flights from backend:",
-                    jsonData.flights,
-                  );
-                  setFlights(jsonData.flights);
-                }
-
-                if (jsonData.tool_call) {
-                  handleToolCall(jsonData.tool_call);
-                }
-
-                if (jsonData.done) {
-                  break;
-                }
-
-                if (jsonData.content) {
-                  accumulatedContent += jsonData.content;
-
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
-                        : msg,
-                    ),
-                  );
-                }
-              } catch (e) {
-                console.error("Error parsing SSE data:", e);
-              }
-            }
-          }
-        }
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Chat error:", error);
-
-      setMessages((prev) => prev.filter((msg) => msg.content !== ""));
-
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: "Mi dispiace, c'è stato un problema. Riprova!",
-        sender: "assistant",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
-      setIsLoading(false);
-    }
+    await sendChatRequest(data.message, true);
   };
 
   const handleGenerateItinerary = () => {

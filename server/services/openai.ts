@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// the newest OpenAI model is "gpt-5-mini" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 interface ItineraryRequest {
@@ -317,7 +317,7 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5-mini",
         messages: [
           {
             role: "system",
@@ -328,8 +328,7 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
             content: prompt
           }
         ],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
+        response_format: { type: "json_object" }
       });
   
       const itineraryText = response.choices[0].message.content;
@@ -408,7 +407,7 @@ Rispondi al messaggio dell'utente basandoti su questo contesto. Restituisci la r
 }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: "gpt-5-mini", // the newest OpenAI model is "gpt-5-mini" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
           role: "system",
@@ -466,6 +465,7 @@ interface ChatContext {
     flight_number: number;
     origin?: string;
     destination?: string;
+    checkoutUrl?: string;
   }[];
 
   hotels?: {
@@ -489,6 +489,96 @@ export interface ToolCall {
 export type StreamChunk =
   | { type: "content"; content: string }
   | { type: "tool_call"; toolCall: ToolCall };
+
+type ToolValidationResult = {
+  validToolCalls: ToolCall[];
+  clarification?: string;
+};
+
+function isValidISODate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime());
+}
+
+function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: string } {
+  const args = toolCall.arguments || {};
+
+  switch (toolCall.name) {
+    case "set_destination": {
+      const city = typeof args.city === "string" ? args.city.trim() : "";
+      if (!city) {
+        return { valid: false, message: "Which destination should I use?" };
+      }
+      return { valid: true };
+    }
+    case "set_origin": {
+      const city = typeof args.city === "string" ? args.city.trim() : "";
+      if (!city) {
+        return { valid: false, message: "Which city are you flying from?" };
+      }
+      return { valid: true };
+    }
+    case "set_dates": {
+      const departure = typeof args.departure_date === "string" ? args.departure_date.trim() : "";
+      const ret = typeof args.return_date === "string" ? args.return_date.trim() : "";
+      if (!departure || !ret || !isValidISODate(departure) || !isValidISODate(ret)) {
+        return {
+          valid: false,
+          message:
+            "What are your departure and return dates? Please use YYYY-MM-DD.",
+        };
+      }
+      return { valid: true };
+    }
+    case "set_participants": {
+      const count = Number(args.count);
+      if (!Number.isInteger(count) || count <= 0) {
+        return {
+          valid: false,
+          message: "How many people are traveling? Please give a number.",
+        };
+      }
+      return { valid: true };
+    }
+    case "search_flights":
+      return { valid: true };
+    case "select_flight": {
+      const flightNumber = Number(args.flight_number);
+      if (!Number.isInteger(flightNumber) || flightNumber <= 0) {
+        return {
+          valid: false,
+          message: "Which flight option would you like? You can say 1, 2, or 3.",
+        };
+      }
+      return { valid: true };
+    }
+    case "unlock_checkout":
+      return { valid: true };
+    default:
+      return { valid: false, message: "Can you clarify what you'd like to do?" };
+  }
+}
+
+function validateToolCalls(toolCalls: ToolCall[]): ToolValidationResult {
+  const validToolCalls: ToolCall[] = [];
+  let clarification: string | undefined;
+
+  for (const toolCall of toolCalls) {
+    const validation = validateToolCall(toolCall);
+    if (validation.valid) {
+      validToolCalls.push(toolCall);
+      continue;
+    }
+    if (!clarification && validation.message) {
+      clarification = validation.message;
+    }
+  }
+
+  return { validToolCalls, clarification };
+}
 
 const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
@@ -567,6 +657,19 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "search_flights",
+      description:
+        "Search for available flights once the user has provided enough details",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "select_flight",
       description:
         "Select a specific flight when the user chooses from the available options",
@@ -597,17 +700,7 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
-const SHARED_SYSTEM_PROMPT = `CRITICAL RULE: You MUST ALWAYS provide a text response to the user, even when calling tools. Never respond with ONLY tool calls - always include a friendly message.
-
-REQUIRED DATA POINTS:
-Before searching for flights, you MUST have ALL of the following:
-- destination (where they want to go)
-- origin (departure city/airport)
-- departure date
-- return date
-- number of participants
-
-If the user provides multiple data points in one message, process ALL of them at once by calling the appropriate tools. You don't need to ask one question at a time. If some are still missing, ask for them naturally in your response. Once all information is collected, proceed to search and show flights immediately.
+const SHARED_SYSTEM_PROMPT = `CRITICAL RULE: Always include a user-facing text response, even when calling tools. Never respond with ONLY tool calls.
 
 AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
@@ -616,26 +709,22 @@ TOOL USAGE:
 - Call set_origin when you learn the departure city
 - Call set_dates when you learn travel dates (convert to YYYY-MM-DD format)
 - Call set_participants when you learn the group size
+- Call search_flights when you have enough details to look up flights
 - Call select_flight when the user chooses a flight option
 - Call unlock_checkout when the user confirms they want to book
 
-You can call MULTIPLE tools in a single response if the user provides multiple pieces of information.
+You can call MULTIPLE tools in a single response if the user provides multiple pieces of information. You may ask any clarifying questions you need, in any order.
 
-PROACTIVE FOLLOW-UPS:
-After processing what the user provides, ALWAYS respond with text AND check which required data points are still missing. Ask about them naturally. Be conversational - don't just list what's missing. For example:
-- If you have destination and dates but no origin: "Great choice! Where will you be flying from?"
-- If you only have destination: "Sounds exciting! When are you thinking of going, and how many people will be joining?"
-- If everything is ready: Proceed to show flights immediately.
+When flights are available in the context, list the top options (1, 2, 3) with departure and return date/time and flight number, then ask which option the user prefers.
 
 BEHAVIOR:
-- ALWAYS include a text message in your response - never just tool calls alone
 - Keep responses concise (2-3 sentences max)
 - Professional and friendly tone
 - Focus ONLY on flights - do NOT suggest experiences, activities, or hotels
 - When the user mentions a new destination, start fresh
 
 CHECKOUT FLOW:
-- When flights are shown and the user confirms (yes, ok, sure, confirm, proceed, perfect, let's do it, etc.), ALWAYS call unlock_checkout immediately
+- When flights are shown and the user confirms (yes, ok, sure, confirm, proceed, perfect, let's do it, etc.), call unlock_checkout immediately
 - NEVER confirm bookings as if they were completed - flights go through external checkout
 
 BOOKING INFO:
@@ -702,6 +791,9 @@ function buildContextualPrompt(context: ChatContext): string {
       contextualPrompt += `${idx + 1}. Departure: ${depDate} at ${depTime}\n`;
       contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
       contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
+      if (f.checkoutUrl) {
+        contextualPrompt += `   Checkout link: ${f.checkoutUrl}\n\n`;
+      }
     });
     contextualPrompt += `\nWhen the user chooses a flight (e.g., "the 2nd one", "I'll take the first", "flight 3"), call select_flight with the flight number.\n`;
   }
@@ -728,8 +820,7 @@ export async function createOpenAIChatCompletion(
 
     const chatCompletion = await openai.chat.completions.create({
       messages,
-      model: "gpt-4o",
-      temperature: 0.5,
+      model: "gpt-5-mini",
       tools: TRIP_TOOLS,
       tool_choice: "auto",
     });
@@ -751,7 +842,40 @@ export async function createOpenAIChatCompletion(
       }
     }
 
-    return { content, toolCalls };
+    const { validToolCalls, clarification } = validateToolCalls(toolCalls);
+    let finalContent = content;
+    if (clarification) {
+      finalContent = finalContent.trim()
+        ? `${finalContent}\n\n${clarification}`
+        : clarification;
+    }
+
+    if (!finalContent.trim() && validToolCalls.length > 0 && !clarification) {
+      const toolSummary = validToolCalls
+        .map((tc) => `${tc.name}(${JSON.stringify(tc.arguments)})`)
+        .join(", ");
+      const followUp = await openai.chat.completions.create({
+        messages: [
+          { role: "system", content: contextualPrompt },
+          ...conversationHistory.map((msg) => ({
+            role: msg.role as "system" | "user" | "assistant",
+            content: msg.content,
+          })),
+          { role: "user", content: userMessage },
+          {
+            role: "system",
+            content:
+              `Tool calls already issued: ${toolSummary}. ` +
+              "Respond to the user now using the current context. Do not call tools.",
+          },
+        ],
+        model: "gpt-5-mini",
+      });
+      const followUpContent = followUp.choices[0]?.message?.content || "";
+      finalContent = followUpContent || finalContent;
+    }
+
+    return { content: finalContent, toolCalls: validToolCalls };
   } catch (error) {
     console.error("OpenAI API error:", error);
     throw new Error("Error communicating with OpenAI");
@@ -777,8 +901,7 @@ export async function* streamOpenAIChatCompletion(
 
     const stream = await openai.chat.completions.create({
       messages,
-      model: "gpt-4o",
-      temperature: 0.6,
+      model: "gpt-5-mini",
       stream: true,
       tools: TRIP_TOOLS,
       tool_choice: "auto",
@@ -788,6 +911,7 @@ export async function* streamOpenAIChatCompletion(
       new Map();
     let hasContent = false;
     const collectedToolCalls: ToolCall[] = [];
+    let pendingClarification: string | null = null;
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta;
@@ -823,8 +947,13 @@ export async function* streamOpenAIChatCompletion(
             try {
               const args = buffer.arguments ? JSON.parse(buffer.arguments) : {};
               const toolCall = { name: buffer.name, arguments: args };
-              collectedToolCalls.push(toolCall);
-              yield { type: "tool_call", toolCall };
+              const validation = validateToolCall(toolCall);
+              if (validation.valid) {
+                collectedToolCalls.push(toolCall);
+                yield { type: "tool_call", toolCall };
+              } else if (!pendingClarification && validation.message) {
+                pendingClarification = validation.message;
+              }
             } catch (e) {
               console.error("Error parsing streamed tool call:", e);
             }
@@ -834,12 +963,36 @@ export async function* streamOpenAIChatCompletion(
       }
     }
 
-    if (!hasContent && collectedToolCalls.length > 0) {
-      const followUpMessage = generateFollowUpMessage(
-        collectedToolCalls,
-        context,
-      );
-      yield { type: "content", content: followUpMessage };
+    if (!hasContent) {
+      if (pendingClarification) {
+        yield { type: "content", content: pendingClarification };
+      } else if (collectedToolCalls.length > 0) {
+        const toolSummary = collectedToolCalls
+          .map((tc) => `${tc.name}(${JSON.stringify(tc.arguments)})`)
+          .join(", ");
+        const followUp = await openai.chat.completions.create({
+          messages: [
+            { role: "system", content: contextualPrompt },
+            ...conversationHistory.map((msg) => ({
+              role: msg.role as "system" | "user" | "assistant",
+              content: msg.content,
+            })),
+            { role: "user", content: userMessage },
+            {
+              role: "system",
+              content:
+                `Tool calls already issued: ${toolSummary}. ` +
+                "Respond to the user now using the current context. Do not call tools.",
+            },
+          ],
+          model: "gpt-5-mini",
+        });
+        const followUpContent = followUp.choices[0]?.message?.content || "";
+        const fallbackContent =
+          followUpContent ||
+          generateFollowUpMessage(collectedToolCalls, context);
+        yield { type: "content", content: fallbackContent };
+      }
     }
   } catch (error) {
     console.error("OpenAI streaming error:", error);
@@ -855,43 +1008,54 @@ function generateFollowUpMessage(
   toolCalls: ToolCall[],
   context: ChatContext,
 ): string {
-  const toolNames = toolCalls.map((tc) => tc.name);
+  if (context.flights && context.flights.length > 0) {
+    const originCity = context.originCityName;
+    const flightOptions = context.flights
+      .slice(0, 3)
+      .map((f, idx) => {
+        const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const link = f.checkoutUrl ? `\n   Link: ${f.checkoutUrl}` : "";
 
-  const hasDestination =
-    toolNames.includes("set_destination") || context.selectedDestination;
-  const hasOrigin = toolNames.includes("set_origin") || context.origin;
-  const hasDates =
-    toolNames.includes("set_dates") ||
-    (context.tripDetails?.startDate && context.tripDetails?.endDate);
-  const hasParticipants =
-    toolNames.includes("set_participants") ||
-    (context.tripDetails?.people && context.tripDetails.people > 0);
+        return `${idx + 1}) ${originCity} → ${context.selectedDestination}: ${depDate} ${depTime} / Return ${retDate} ${retTime} (Flight ${f.flight_number})${link}`;
+      })
+      .join("\n");
 
-  const destCall = toolCalls.find((tc) => tc.name === "set_destination");
-  const destination =
-    destCall?.arguments?.city || context.selectedDestination || "";
-
-  if (hasDestination && hasDates && hasOrigin && hasParticipants) {
-    return `Perfect! I've got all the details for your trip to ${destination}. Let me find the best flights for you!`;
+    return `Here are the best flight options I found:\n${flightOptions}\n\nWhich one would you like?`;
   }
 
-  if (hasDestination && hasDates && hasOrigin) {
-    return `Great choice! ${destination} is an amazing destination. How many people will be joining the trip?`;
+  const toolNames = new Set(toolCalls.map((tc) => tc.name));
+  if (toolNames.has("search_flights")) {
+    return "Got it! Looking up flights now.";
   }
 
-  if (hasDestination && hasDates) {
-    return `${destination} sounds perfect! Which city will you be flying from?`;
+  const updated: string[] = [];
+  if (toolNames.has("set_destination")) updated.push("destination");
+  if (toolNames.has("set_origin")) updated.push("origin");
+  if (toolNames.has("set_dates")) updated.push("dates");
+  if (toolNames.has("set_participants")) updated.push("group size");
+
+  if (updated.length > 0) {
+    return `Updated ${updated.join(", ")}. Anything else you want to add?`;
   }
 
-  if (hasDestination && hasOrigin) {
-    return `Got it! When are you planning to travel to ${destination}? Let me know your departure and return dates.`;
-  }
-
-  if (hasDestination) {
-    return `${destination} is an excellent choice! When are you thinking of going, and where will you be flying from?`;
-  }
-
-  return "Got it! What else can you tell me about your trip plans?";
+  return "Got it! Anything else you'd like to share?";
 }
 
 interface ActivitySuggestion {
@@ -938,8 +1102,7 @@ Return ONLY the JSON array, no other text.`;
           content: `Generate 6 activity suggestions for ${destination}`,
         },
       ],
-      model: "gpt-4o",
-      temperature: 0.65,
+      model: "gpt-5-mini"
     });
 
     const responseText = chatCompletion.choices[0]?.message?.content || "[]";
