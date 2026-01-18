@@ -20,18 +20,35 @@ export async function searchCheapestFlights(params: {
 }) {
   const { origin, destination, departDate, currency = "EUR" } = params;
 
-  const res = await axios.get(
-    "https://api.travelpayouts.com/v1/prices/cheap",
-    {
-      params: {
-        origin,
-        destination,
-        depart_date: departDate,
-        token: API_TOKEN,
-        currency,
-      },
-    }
-  );
+  const requestParams = {
+    origin,
+    destination,
+    depart_date: departDate,
+    token: API_TOKEN,
+    currency,
+  };
 
-  return res.data;
+  console.log("🔍 Aviasales API request:", {
+    url: "https://api.travelpayouts.com/v1/prices/cheap",
+    params: { ...requestParams, token: API_TOKEN ? "[REDACTED]" : "MISSING" }
+  });
+
+  try {
+    const res = await axios.get(
+      "https://api.travelpayouts.com/v1/prices/cheap",
+      { params: requestParams }
+    );
+
+    console.log("📦 Aviasales API response status:", res.status);
+    console.log("📦 Aviasales API response data:", JSON.stringify(res.data, null, 2));
+
+    return res.data;
+  } catch (error: any) {
+    console.error("❌ Aviasales API error:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw error;
+  }
 }

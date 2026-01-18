@@ -6,8 +6,14 @@ export const CITY_TO_IATA: Record<string, string> = {
   // ===== ITALY =====
   "roma": "ROM",
   "rome": "ROM",
+  "fiumicino": "FCO",  // Rome Fiumicino airport
+  "ciampino": "CIA",   // Rome Ciampino airport
   "milano": "MIL",
   "milan": "MIL",
+  "malpensa": "MXP",   // Milan Malpensa airport
+  "linate": "LIN",     // Milan Linate airport
+  "bergamo": "BGY",    // Milan Bergamo/Orio al Serio
+  "orio al serio": "BGY",
   "napoli": "NAP",
   "naples": "NAP",
   "torino": "TRN",
@@ -217,7 +223,12 @@ export const CITY_TO_IATA: Record<string, string> = {
 export const IATA_TO_CITY: Record<string, string> = {
   // Italy
   "ROM": "Roma",
+  "FCO": "Roma Fiumicino",
+  "CIA": "Roma Ciampino",
   "MIL": "Milano",
+  "MXP": "Milano Malpensa",
+  "LIN": "Milano Linate",
+  "BGY": "Bergamo",
   "NAP": "Napoli",
   "TRN": "Torino",
   "VCE": "Venezia",

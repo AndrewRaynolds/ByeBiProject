@@ -1,9 +1,9 @@
 import OpenAI from "openai";
+import { generateFallbackItinerary } from "./fallback-itinerary";
 
-// the newest OpenAI model is "gpt-5-mini" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-interface ItineraryRequest {
+export interface ItineraryRequest {
   destination: string;
   country: string;
   days: number;
@@ -13,7 +13,7 @@ interface ItineraryRequest {
   theme: string;
 }
 
-interface DailyPlan {
+export interface DailyPlan {
   day: number;
   title: string;
   schedule: {
@@ -26,7 +26,7 @@ interface DailyPlan {
   notes?: string;
 }
 
-interface GeneratedItinerary {
+export interface GeneratedItinerary {
   title: string;
   destination: string;
   summary: string;
@@ -35,237 +35,6 @@ interface GeneratedItinerary {
   estimatedTotalCost: string;
 }
 
-// Funzione per generare itinerari di esempio in caso di fallback
-function generateFallbackItinerary(request: ItineraryRequest): GeneratedItinerary {
-  console.log("Generando itinerario fallback per", request.destination, "con budget", request.budget);
-  
-  // Moltiplicatore di costo basato sul budget
-  const budgetMultiplier = request.budget === "budget" ? 1 : request.budget === "standard" ? 1.6 : 2.5;
-  const baseCost = 80 * budgetMultiplier;
-  const totalPerDay = baseCost * request.groupSize;
-  const totalCost = (totalPerDay * request.days).toFixed(0);
-  
-  // Dati specifici per Barcellona
-  const barcelonaData = {
-    brunch: [
-      { name: "Brunch & Cake", location: "Carrer d'Enric Granados, 19", price: 25 },
-      { name: "Milk Bar & Bistro", location: "Carrer d'en Gignàs, 21", price: 20 },
-      { name: "Federal Café", location: "Carrer del Parlament, 39", price: 18 },
-      { name: "Flax & Kale", location: "Carrer dels Tallers, 74b", price: 30 }
-    ],
-    bars: [
-      { name: "Espit Chupitos", location: "Carrer d'Aribau, 77", price: 30, description: "Famous shots bar with hundreds of different creative shots" },
-      { name: "Dow Jones Bar", location: "Carrer del Bruc, 97", price: 35, description: "Bar where drink prices fluctuate based on demand, like a stock market" },
-      { name: "CocoVail Beer Hall", location: "Carrer d'Aragó, 284", price: 40, description: "American-style beer hall with a wide selection of craft beers" },
-      { name: "Bobby's Free", location: "Carrer de Pau Claris, 85", price: 45, description: "Speakeasy cocktail bar hidden behind a barbershop façade" },
-      { name: "Dr. Stravinsky", location: "Carrer dels Mirallers, 5", price: 50, description: "Innovative cocktail bar with lab-like atmosphere and unique drinks" }
-    ],
-    nightclubs: [
-      { name: "Opium Barcelona", location: "Passeig Marítim, 34", price: 60, description: "Beachfront superclub with international DJs and ocean views" },
-      { name: "Pacha Barcelona", location: "Passeig Marítim, 38", price: 65, description: "Barcelona outpost of the famous Ibiza club" },
-      { name: "Razzmatazz", location: "Carrer dels Almogàvers, 122", price: 50, description: "Huge multi-room club with different music styles in each space" },
-      { name: "Shôko", location: "Passeig Marítim, 36", price: 70, description: "Beachfront restaurant that transforms into a high-energy nightclub" },
-      { name: "Sala Apolo", location: "Carrer Nou de la Rambla, 113", price: 40, description: "Historic venue with different themed nights" }
-    ],
-    restaurants: [
-      { name: "Ciudad Condal", location: "Rambla de Catalunya, 18", price: 45, description: "Popular tapas bar with a wide variety of Spanish cuisine" },
-      { name: "Cervecería Catalana", location: "Carrer de Mallorca, 236", price: 40, description: "Bustling tapas bar serving Spanish classics" },
-      { name: "El Nacional", location: "Passeig de Gràcia, 24", price: 65, description: "Multi-space culinary experience with different food areas" },
-      { name: "Botafumeiro", location: "Carrer Gran de Gràcia, 81", price: 90, description: "Upscale seafood restaurant favored by celebrities" },
-      { name: "Can Culleretes", location: "Carrer d'en Quintana, 5", price: 50, description: "The oldest restaurant in Barcelona (since 1786)" }
-    ],
-    activities: [
-      { name: "Boat Party Barcelona", location: "Port Olímpic", price: 80, description: "3-hour party cruise with drinks and music along the coast" },
-      { name: "Barça Stadium Tour", location: "C. d'Arístides Maillol, 12", price: 35, description: "Tour of Camp Nou, the legendary FC Barcelona stadium" },
-      { name: "Beach Club Day", location: "W Barcelona, Plaça Rosa Del Vents, 1", price: 100, description: "Day beds, cocktails and beach service at a premium beach club" },
-      { name: "Montjuïc Cable Car", location: "Av. Miramar, 30", price: 15, description: "Scenic cable car ride offering panoramic views of the city" },
-      { name: "Cooking Class", location: "Barcelona Cooking, La Rambla, 91", price: 70, description: "Interactive paella and tapas cooking class with drinks" }
-    ],
-    tips: [
-      "Barcelona's nightlife usually doesn't pick up until after midnight, so plan accordingly",
-      "The metro stops running at midnight Sunday to Thursday, and at 2 AM on Friday nights",
-      "Reserve tables at popular clubs in advance to avoid waiting in long lines",
-      "Taxis are plentiful and relatively affordable for late-night transportation",
-      "Pickpocketing can be common in touristy areas, especially La Rambla, so stay alert",
-      "Most bars in Barcelona have happy hour specials from 6-8 PM",
-      "Clubs often have a free guest list you can join online before 1 AM",
-      "Keep a copy of your hotel address in Spanish to show taxi drivers"
-    ]
-  };
-  
-  // Set per tenere traccia dei luoghi usati per evitare duplicati
-  const usedPlaces = new Set<string>();
-  
-  // Funzione per selezionare un elemento casuale da un array senza ripetizioni
-  const getUniqueRandom = <T extends { name: string }>(array: T[]): T => {
-    const availableOptions = array.filter(item => !usedPlaces.has(item.name));
-    if (availableOptions.length === 0) {
-      // Se abbiamo usato tutte le opzioni, ripristiniamo
-      usedPlaces.clear();
-      return array[Math.floor(Math.random() * array.length)];
-    }
-    const selected = availableOptions[Math.floor(Math.random() * availableOptions.length)];
-    usedPlaces.add(selected.name);
-    return selected;
-  };
-  
-  // Temi diversi per ogni giorno
-  const dayThemes = [
-    "The Perfect Introduction",
-    "Local Culture Immersion",
-    "Beach & Party Day",
-    "Final Celebration"
-  ];
-  
-  // Crea giorni diversi per l'itinerario
-  const createDayPlan = (dayNum: number): DailyPlan => {
-    const dayActivities = [];
-    
-    // MATTINA
-    if (dayNum === 1) {
-      // Primo giorno: check-in e introduzione alla città
-      dayActivities.push({
-        time: "11:00",
-        activity: "Check-in & Welcome Drinks",
-        description: "Arrive at your accommodation, check in, and enjoy welcome drinks while planning your adventure",
-        location: "Your Accommodation in Barcelona",
-        cost: `€${(15 * budgetMultiplier).toFixed(0)} per person`
-      });
-    } else {
-      // Brunch di recupero
-      const brunchSpot = getUniqueRandom(barcelonaData.brunch);
-      dayActivities.push({
-        time: "11:00",
-        activity: `Recovery Brunch at ${brunchSpot.name}`,
-        description: "Start the day with a late, hearty brunch to recover from the previous night's activities",
-        location: brunchSpot.location,
-        cost: `€${(brunchSpot.price * budgetMultiplier).toFixed(0)} per person`
-      });
-    }
-    
-    // POMERIGGIO
-    if (dayNum === 1) {
-      // Primo giorno: tour orientativo
-      dayActivities.push({
-        time: "14:00",
-        activity: "Bachelor Party Kickoff Tour",
-        description: "A guided walking tour of Barcelona's best bachelor party spots with a local expert",
-        location: "Gothic Quarter",
-        cost: `€${(30 * budgetMultiplier).toFixed(0)} per person`
-      });
-    } else if (dayNum === request.days) {
-      // Ultimo giorno: attività speciale
-      const activity = barcelonaData.activities[0]; // Boat party
-      dayActivities.push({
-        time: "14:00",
-        activity: activity.name,
-        description: activity.description,
-        location: activity.location,
-        cost: `€${(activity.price * budgetMultiplier).toFixed(0)} per person`
-      });
-    } else {
-      // Altri giorni: attività varie
-      const activity = getUniqueRandom(barcelonaData.activities);
-      dayActivities.push({
-        time: "15:00",
-        activity: activity.name,
-        description: activity.description,
-        location: activity.location,
-        cost: `€${(activity.price * budgetMultiplier).toFixed(0)} per person`
-      });
-    }
-    
-    // SERA: Bar Crawl o Cena
-    if (request.interests.includes("barCrawl")) {
-      // Se hanno selezionato bar crawl
-      const startBar = getUniqueRandom(barcelonaData.bars);
-      const secondBar = getUniqueRandom(barcelonaData.bars);
-      
-      dayActivities.push({
-        time: "19:30",
-        activity: `Bar Crawl Starting at ${startBar.name}`,
-        description: `Begin your epic bar crawl at ${startBar.name} (${startBar.description}), followed by ${secondBar.name} and more`,
-        location: startBar.location,
-        cost: `€${((startBar.price + secondBar.price) * budgetMultiplier).toFixed(0)} per person`
-      });
-    } else {
-      // Altrimenti, cena in ristorante
-      const restaurant = getUniqueRandom(barcelonaData.restaurants);
-      dayActivities.push({
-        time: "20:00",
-        activity: `Group Dinner at ${restaurant.name}`,
-        description: restaurant.description,
-        location: restaurant.location,
-        cost: `€${(restaurant.price * budgetMultiplier).toFixed(0)} per person`
-      });
-    }
-    
-    // NOTTE
-    if (request.interests.includes("nightclubs")) {
-      const club = getUniqueRandom(barcelonaData.nightclubs);
-      dayActivities.push({
-        time: "00:00",
-        activity: `VIP Night at ${club.name}`,
-        description: `${club.description} with VIP table service and bottle service`,
-        location: club.location,
-        cost: `€${(club.price * 2 * budgetMultiplier).toFixed(0)} per person`
-      });
-    } else {
-      // Fallback per chi non ha selezionato locali notturni
-      const bar = getUniqueRandom(barcelonaData.bars);
-      dayActivities.push({
-        time: "22:00",
-        activity: `Premium Experience at ${bar.name}`,
-        description: bar.description,
-        location: bar.location,
-        cost: `€${(bar.price * 1.5 * budgetMultiplier).toFixed(0)} per person`
-      });
-    }
-    
-    // Genera il giorno formattato
-    return {
-      day: dayNum,
-      title: `Day ${dayNum}: ${dayThemes[Math.min(dayNum - 1, dayThemes.length - 1)]}`,
-      schedule: dayActivities,
-      notes: dayNum === 1
-        ? "Start your bachelor party adventure with a perfect introduction to Barcelona's vibrant scene."
-        : dayNum === request.days
-        ? "Make your final day in Barcelona an epic celebration to remember!"
-        : "Continue exploring Barcelona's incredible nightlife and culture."
-    };
-  };
-  
-  // Crea un giorno per ciascun giorno richiesto
-  const days = [];
-  for (let i = 1; i <= request.days; i++) {
-    days.push(createDayPlan(i));
-  }
-  
-  // Calcola il costo stimato totale basato sulle attività
-  let totalEstimated = 0;
-  days.forEach(day => {
-    day.schedule.forEach(activity => {
-      if (activity.cost) {
-        const costMatch = activity.cost.match(/€(\d+)/);
-        if (costMatch && costMatch[1]) {
-          totalEstimated += parseInt(costMatch[1], 10);
-        }
-      }
-    });
-  });
-  
-  // Arrotonda il totale a multipli di 50
-  totalEstimated = Math.ceil(totalEstimated / 50) * 50;
-  
-  return {
-    title: `${request.theme} in ${request.destination}`,
-    destination: `${request.destination}, ${request.country}`,
-    summary: `An unforgettable ${request.days}-day bachelor party in ${request.destination}, featuring the best nightlife, activities, and experiences tailored for a group of ${request.groupSize}. Experience the vibrant atmosphere of Barcelona's famous nightlife with a carefully curated plan that fits your ${request.budget} budget.`,
-    days: days,
-    tips: barcelonaData.tips.slice(0, 5),
-    estimatedTotalCost: `€${totalEstimated} per person`
-  };
-}
 
 export async function generateItinerary(request: ItineraryRequest): Promise<GeneratedItinerary> {
   try {
@@ -380,34 +149,33 @@ export async function generateAssistantResponse(context: {
 
     const { userMessage, selectedDestination, tripDetails, conversationState } = context;
     
-    const systemPrompt = `Sei l'assistente ByeBro per organizzare addii al celibato. Rispondi sempre in italiano con tono informale ed entusiasta.
+    const systemPrompt = `You are ByeBro assistant for planning bachelor parties. Always reply in the language the user initiates the conversation in with an informal and enthusiastic tone.
 
-DESTINAZIONI DISPONIBILI: Roma, Ibiza, Barcellona, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca
+AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Kraków, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
-REGOLE CONVERSAZIONE:
-1. Se l'utente menziona una destinazione, impostala e chiedi dettagli
-2. Per Ibiza, raccogli step-by-step: numero persone → giorni → tipo avventura
-3. Quando hai tutti i dettagli per Ibiza, genera un itinerario dettagliato
-4. Usa emoji e tono entusiasta
-5. Non ripetere domande già fatte
+CONVERSATION RULES:
+1. Your goal is to collect all the information you need to generate a detailed itinerary. As the user provides it, make sure to set it.
+4. Use emojis and an enthusiastic tone
+5. Do not repeat already asked questions
+6. Do not ask the user to format things like dates, numbers, etc. Just ask for the information and then you can format depending on requirements later.
 
-STATO ATTUALE:
-- Destinazione: ${selectedDestination || 'nessuna'}
-- Persone: ${tripDetails?.people || 0}
-- Giorni: ${tripDetails?.days || 0}
-- Tipo avventura: ${tripDetails?.adventureType || 'non specificato'}
-- Step conversazione: ${conversationState?.currentStep || 'initial'}
+CURRENT STATE:
+- Destination: ${selectedDestination || 'none'}
+- People: ${tripDetails?.people || 0}
+- Days: ${tripDetails?.days || 0}
+- Adventure Type: ${tripDetails?.adventureType || 'not specified'}
+- Conversation Step: ${conversationState?.currentStep || 'initial'}
 
-Rispondi al messaggio dell'utente basandoti su questo contesto. Restituisci la risposta in formato JSON con questa struttura:
+Reply to the user's message based on this context. Return your answer in JSON format with this structure:
 {
-  "response": "la tua risposta",
-  "updatedTripDetails": { "people": numero, "days": numero, "adventureType": "tipo" },
+  "response": "your reply",
+  "updatedTripDetails": { "people": number, "days": number, "adventureType": "type" },
   "updatedConversationState": { "currentStep": "step", "askedForPeople": boolean },
-  "selectedDestination": "destinazione"
+  "selectedDestination": "destination"
 }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5-mini", // the newest OpenAI model is "gpt-5-mini" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: "gpt-5-mini",
       messages: [
         {
           role: "system",
@@ -424,7 +192,7 @@ Rispondi al messaggio dell'utente basandoti su questo contesto. Restituisci la r
     const result = JSON.parse(response.choices[0].message.content || "{}");
     
     return {
-      response: result.response || "Scusa, non ho capito. Puoi ripetere?",
+      response: result.response || "Something went wrong. Please try again.",
       updatedTripDetails: result.updatedTripDetails,
       updatedConversationState: result.updatedConversationState,
       selectedDestination: result.selectedDestination
@@ -488,7 +256,8 @@ export interface ToolCall {
 
 export type StreamChunk =
   | { type: "content"; content: string }
-  | { type: "tool_call"; toolCall: ToolCall };
+  | { type: "tool_call"; toolCall: ToolCall }
+  | { type: "tool_result"; name: string; result: Record<string, unknown> };
 
 type ToolValidationResult = {
   validToolCalls: ToolCall[];
@@ -543,8 +312,59 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       }
       return { valid: true };
     }
-    case "search_flights":
+    case "search_flights": {
+      const origin = typeof args.origin === "string" ? args.origin.trim() : "";
+      const destination = typeof args.destination === "string" ? args.destination.trim() : "";
+      const depDate = typeof args.departure_date === "string" ? args.departure_date.trim() : "";
+      const retDate = typeof args.return_date === "string" ? args.return_date.trim() : "";
+      const passengers = Number(args.passengers);
+      
+      if (!origin || !destination) {
+        return {
+          valid: false,
+          message: "I need both the departure city and destination to search flights.",
+        };
+      }
+      if (!depDate || !retDate || !isValidISODate(depDate) || !isValidISODate(retDate)) {
+        return {
+          valid: false,
+          message: "I need departure and return dates (YYYY-MM-DD) to search flights.",
+        };
+      }
+      if (!Number.isInteger(passengers) || passengers <= 0) {
+        return {
+          valid: false,
+          message: "How many people are traveling?",
+        };
+      }
       return { valid: true };
+    }
+    case "search_hotels": {
+      const destination = typeof args.destination === "string" ? args.destination.trim() : "";
+      const checkIn = typeof args.check_in_date === "string" ? args.check_in_date.trim() : "";
+      const checkOut = typeof args.check_out_date === "string" ? args.check_out_date.trim() : "";
+      const guests = Number(args.guests);
+
+      if (!destination) {
+        return {
+          valid: false,
+          message: "Which city should I search hotels in?",
+        };
+      }
+      if (!checkIn || !checkOut || !isValidISODate(checkIn) || !isValidISODate(checkOut)) {
+        return {
+          valid: false,
+          message: "I need check-in and check-out dates (YYYY-MM-DD) to search hotels.",
+        };
+      }
+      if (!Number.isInteger(guests) || guests <= 0) {
+        return {
+          valid: false,
+          message: "How many guests will be staying?",
+        };
+      }
+      return { valid: true };
+    }
     case "select_flight": {
       const flightNumber = Number(args.flight_number);
       if (!Number.isInteger(flightNumber) || flightNumber <= 0) {
@@ -578,6 +398,169 @@ function validateToolCalls(toolCalls: ToolCall[]): ToolValidationResult {
   }
 
   return { validToolCalls, clarification };
+}
+
+/**
+ * Execute a tool call and return the result.
+ * This function is used by the server-side tool loop to execute tools
+ * and feed results back to OpenAI for natural conversation continuation.
+ */
+export async function executeToolCall(
+  name: string,
+  args: Record<string, unknown>,
+  context: ChatContext
+): Promise<Record<string, unknown>> {
+  switch (name) {
+    case "set_destination":
+      return { success: true, destination: args.city };
+
+    case "set_origin":
+      return { success: true, origin: args.city };
+
+    case "set_dates":
+      return {
+        success: true,
+        departure_date: args.departure_date,
+        return_date: args.return_date
+      };
+
+    case "set_participants":
+      return { success: true, participants: args.count };
+
+    case "search_flights": {
+      const { searchFlights } = await import("./amadeus-flights");
+      const { cityToIata } = await import("./cityMapping");
+
+      // Helper to extract IATA code from strings like "Fiumicino (FCO)" or just use cityToIata
+      const extractIata = (input: string): string => {
+        // First try to extract IATA from parentheses, e.g., "Fiumicino (FCO)" -> "FCO"
+        const parenMatch = input.match(/\(([A-Z]{3})\)/i);
+        if (parenMatch) {
+          return parenMatch[1].toUpperCase();
+        }
+        // Then try cityToIata lookup
+        const mapped = cityToIata(input);
+        if (mapped) {
+          return mapped;
+        }
+        // Finally, if it looks like a 3-letter code already, use it
+        if (/^[A-Z]{3}$/i.test(input.trim())) {
+          return input.trim().toUpperCase();
+        }
+        // Last resort: take first 3 characters
+        return input.substring(0, 3).toUpperCase();
+      };
+
+      const originCity = typeof args.origin === "string" ? args.origin : "";
+      const destCity = typeof args.destination === "string" ? args.destination : "";
+      const originIata = extractIata(originCity);
+      const destIata = extractIata(destCity);
+      const numPassengers = typeof args.passengers === "number" ? args.passengers : 1;
+      const departureDate = typeof args.departure_date === "string" ? args.departure_date : "";
+      const returnDate = typeof args.return_date === "string" ? args.return_date : undefined;
+
+      console.log("🔍 search_flights tool called with:", {
+        originCity,
+        destCity,
+        originIata,
+        destIata,
+        departure_date: departureDate,
+        return_date: returnDate,
+        passengers: numPassengers
+      });
+
+      try {
+        const flightResults = await searchFlights({
+          originCode: originIata,
+          destinationCode: destIata,
+          departureDate,
+          returnDate,
+          adults: numPassengers,
+          currency: "EUR"
+        });
+
+        console.log("📦 Amadeus returned", flightResults.length, "flights");
+
+        // Transform to simplified format for OpenAI + add checkout URLs
+        const flights = flightResults.slice(0, 5).map((f) => {
+          const depDate = f.outbound[0]?.departure.at?.slice(0, 10) || departureDate;
+          const retDate = f.inbound?.[0]?.departure.at?.slice(0, 10) || returnDate || depDate;
+          const depDay = depDate.slice(8, 10);
+          const depMonth = depDate.slice(5, 7);
+          const retDay = retDate.slice(8, 10);
+          const retMonth = retDate.slice(5, 7);
+
+          // Generate checkout URL for Aviasales booking
+          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numPassengers}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+
+          return {
+            airline: f.airlines.join(", "),
+            price: f.price,
+            currency: f.currency,
+            departure_at: f.outbound[0]?.departure.at,
+            return_at: f.inbound?.[0]?.departure.at,
+            stops: f.stops,
+            duration: f.totalDuration,
+            checkoutUrl
+          };
+        });
+
+        console.log("✅ Transformed flights:", JSON.stringify(flights, null, 2));
+
+        return { flights, origin: originIata, destination: destIata };
+      } catch (error) {
+        console.error("❌ Flight search error:", error);
+        return { error: "Failed to search flights. Please try again.", flights: [] };
+      }
+    }
+
+    case "search_hotels": {
+      const { searchHotels } = await import("./amadeus-hotels");
+      const { cityToIata } = await import("./cityMapping");
+
+      const destCity = typeof args.destination === "string" ? args.destination : "";
+      const destIata = cityToIata(destCity) || destCity.substring(0, 3).toUpperCase();
+      const checkIn = typeof args.check_in_date === "string" ? args.check_in_date : "";
+      const checkOut = typeof args.check_out_date === "string" ? args.check_out_date : "";
+      const guests = typeof args.guests === "number" ? args.guests : 2;
+
+      try {
+        const hotelResults = await searchHotels({
+          cityCode: destIata,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          adults: guests,
+          currency: "EUR",
+        });
+
+        const hotels = (hotelResults || []).slice(0, 5).map((h) => ({
+          hotelId: h.hotelId,
+          name: h.name,
+          stars: h.stars,
+          priceTotal: h.priceTotal,
+          currency: h.currency,
+          offerId: h.offerId,
+          bookingFlow: h.bookingFlow,
+          paymentPolicy: h.paymentPolicy,
+          roomDescription: h.roomDescription,
+        }));
+
+        return { hotels, destination: destIata };
+      } catch (error) {
+        console.error("Hotel search error:", error);
+        return { error: "Failed to search hotels. Please try again.", hotels: [] };
+      }
+    }
+
+    case "select_flight":
+      return { success: true, selected_flight: args.flight_number };
+
+    case "unlock_checkout":
+      return { success: true, checkout_unlocked: true };
+
+    default:
+      return { error: `Unknown tool: ${name}` };
+  }
 }
 
 const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
@@ -658,12 +641,67 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "search_flights",
+      strict: true,
       description:
-        "Search for available flights once the user has provided enough details",
+        "Search for available flights. Call this when you have origin, destination, dates, and passenger count.",
       parameters: {
         type: "object",
-        properties: {},
-        required: [],
+        properties: {
+          origin: {
+            type: "string",
+            description: "Departure city name (e.g., Rome, Milan, London)",
+          },
+          destination: {
+            type: "string",
+            description: "Destination city name (e.g., Barcelona, Ibiza, Prague)",
+          },
+          departure_date: {
+            type: "string",
+            description: "Departure date in YYYY-MM-DD format",
+          },
+          return_date: {
+            type: "string",
+            description: "Return date in YYYY-MM-DD format",
+          },
+          passengers: {
+            type: ["integer", "null"],
+            description: "Number of passengers/travelers",
+          },
+        },
+        required: ["origin", "destination", "departure_date", "return_date", "passengers"],
+        additionalProperties: false
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_hotels",
+      strict: true,
+      description:
+        "Search for available hotels. Call this when you have destination, check-in date, check-out date, and number of guests.",
+      parameters: {
+        type: "object",
+        properties: {
+          destination: {
+            type: "string",
+            description: "Destination city name (e.g., Barcelona, Rome, Prague)",
+          },
+          check_in_date: {
+            type: "string",
+            description: "Check-in date in YYYY-MM-DD format",
+          },
+          check_out_date: {
+            type: "string",
+            description: "Check-out date in YYYY-MM-DD format",
+          },
+          guests: {
+            type: ["integer", "null"],
+            description: "Number of guests/travelers",
+          },
+        },
+        required: ["destination", "check_in_date", "check_out_date", "guests"],
+        additionalProperties: false,
       },
     },
   },
@@ -709,11 +747,14 @@ TOOL USAGE:
 - Call set_origin when you learn the departure city
 - Call set_dates when you learn travel dates (convert to YYYY-MM-DD format)
 - Call set_participants when you learn the group size
-- Call search_flights when you have enough details to look up flights
+- Call search_flights ONLY when you have ALL of: origin city, destination city, departure date, return date, and passenger count. Pass all these as parameters to the tool.
+- Call search_hotels when you have destination, check-in date, check-out date, and guest count to find accommodations
 - Call select_flight when the user chooses a flight option
 - Call unlock_checkout when the user confirms they want to book
 
 You can call MULTIPLE tools in a single response if the user provides multiple pieces of information. You may ask any clarifying questions you need, in any order.
+
+IMPORTANT: Do NOT call search_flights until you have collected all required information. Ask for missing details first.
 
 When flights are available in the context, list the top options (1, 2, 3) with departure and return date/time and flight number, then ask which option the user prefers.
 
@@ -765,7 +806,7 @@ function buildContextualPrompt(context: ChatContext): string {
   }
 
   if (context.flights && context.flights.length > 0) {
-    const originCity = context.originCityName || "Rome";
+    const originCity = context.originCityName;
     contextualPrompt += `\n\nAVAILABLE REAL FLIGHTS (from ${originCity} to ${context.selectedDestination}):`;
     contextualPrompt += `\nThese are REAL flights with updated prices. Present them to the user and ask which one they prefer.\n`;
     context.flights.forEach((f, idx) => {
@@ -790,6 +831,7 @@ function buildContextualPrompt(context: ChatContext): string {
 
       contextualPrompt += `${idx + 1}. Departure: ${depDate} at ${depTime}\n`;
       contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
+      contextualPrompt += `   Airline: ${f.airline}\n`;
       contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
       if (f.checkoutUrl) {
         contextualPrompt += `   Checkout link: ${f.checkoutUrl}\n\n`;
@@ -850,29 +892,9 @@ export async function createOpenAIChatCompletion(
         : clarification;
     }
 
+    // If no content was returned, generate a quick follow-up without a second API call
     if (!finalContent.trim() && validToolCalls.length > 0 && !clarification) {
-      const toolSummary = validToolCalls
-        .map((tc) => `${tc.name}(${JSON.stringify(tc.arguments)})`)
-        .join(", ");
-      const followUp = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: contextualPrompt },
-          ...conversationHistory.map((msg) => ({
-            role: msg.role as "system" | "user" | "assistant",
-            content: msg.content,
-          })),
-          { role: "user", content: userMessage },
-          {
-            role: "system",
-            content:
-              `Tool calls already issued: ${toolSummary}. ` +
-              "Respond to the user now using the current context. Do not call tools.",
-          },
-        ],
-        model: "gpt-5-mini",
-      });
-      const followUpContent = followUp.choices[0]?.message?.content || "";
-      finalContent = followUpContent || finalContent;
+      finalContent = generateFollowUpMessage(validToolCalls, context);
     }
 
     return { content: finalContent, toolCalls: validToolCalls };
@@ -963,34 +985,14 @@ export async function* streamOpenAIChatCompletion(
       }
     }
 
+    // If the model didn't produce any text content, generate a quick follow-up
+    // without making another API call (which would defeat the purpose of streaming)
     if (!hasContent) {
       if (pendingClarification) {
         yield { type: "content", content: pendingClarification };
       } else if (collectedToolCalls.length > 0) {
-        const toolSummary = collectedToolCalls
-          .map((tc) => `${tc.name}(${JSON.stringify(tc.arguments)})`)
-          .join(", ");
-        const followUp = await openai.chat.completions.create({
-          messages: [
-            { role: "system", content: contextualPrompt },
-            ...conversationHistory.map((msg) => ({
-              role: msg.role as "system" | "user" | "assistant",
-              content: msg.content,
-            })),
-            { role: "user", content: userMessage },
-            {
-              role: "system",
-              content:
-                `Tool calls already issued: ${toolSummary}. ` +
-                "Respond to the user now using the current context. Do not call tools.",
-            },
-          ],
-          model: "gpt-5-mini",
-        });
-        const followUpContent = followUp.choices[0]?.message?.content || "";
-        const fallbackContent =
-          followUpContent ||
-          generateFollowUpMessage(collectedToolCalls, context);
+        // Use local follow-up generation instead of a second API call
+        const fallbackContent = generateFollowUpMessage(collectedToolCalls, context);
         yield { type: "content", content: fallbackContent };
       }
     }
@@ -1033,7 +1035,7 @@ function generateFollowUpMessage(
         });
         const link = f.checkoutUrl ? `\n   Link: ${f.checkoutUrl}` : "";
 
-        return `${idx + 1}) ${originCity} → ${context.selectedDestination}: ${depDate} ${depTime} / Return ${retDate} ${retTime} (Flight ${f.flight_number})${link}`;
+        return `${idx + 1}) ${originCity} → ${context.selectedDestination}: ${depDate} ${depTime} / Return ${retDate} ${retTime} (${f.airline} Flight ${f.flight_number})${link}`;
       })
       .join("\n");
 
@@ -1042,7 +1044,7 @@ function generateFollowUpMessage(
 
   const toolNames = new Set(toolCalls.map((tc) => tc.name));
   if (toolNames.has("search_flights")) {
-    return "Got it! Looking up flights now.";
+    return "Searching for the best flights for you...";
   }
 
   const updated: string[] = [];
@@ -1056,6 +1058,143 @@ function generateFollowUpMessage(
   }
 
   return "Got it! Anything else you'd like to share?";
+}
+
+/**
+ * New streaming function that implements the proper OpenAI function calling loop.
+ * Instead of hard-coding follow-up messages, this function:
+ * 1. Streams the initial response
+ * 2. When tool calls are received, executes them
+ * 3. Sends tool results back to OpenAI
+ * 4. Continues the conversation naturally
+ */
+export async function* streamOpenAIChatCompletionWithTools(
+  userMessage: string,
+  context: ChatContext,
+  conversationHistory: ChatMessage[] = [],
+): AsyncGenerator<StreamChunk, void, unknown> {
+  try {
+    const contextualPrompt = buildContextualPrompt(context);
+
+    // Build initial messages array
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: "system", content: contextualPrompt },
+      ...conversationHistory.map((msg) => ({
+        role: msg.role as "system" | "user" | "assistant",
+        content: msg.content,
+      })),
+      { role: "user", content: userMessage },
+    ];
+
+    // Tool loop: keep calling OpenAI until we get a response without tool calls
+    while (true) {
+      const stream = await openai.chat.completions.create({
+        messages,
+        model: "gpt-5-mini",
+        stream: true,
+        tools: TRIP_TOOLS,
+        tool_choice: "auto",
+      });
+
+      let assistantContent = "";
+      const toolCallsBuffer: Map<number, { id: string; name: string; arguments: string }> = new Map();
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+
+        // Stream content to client immediately
+        if (delta?.content) {
+          assistantContent += delta.content;
+          yield { type: "content", content: delta.content };
+        }
+
+        // Accumulate tool calls (they come in chunks)
+        if (delta?.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index;
+            if (!toolCallsBuffer.has(idx)) {
+              toolCallsBuffer.set(idx, { id: "", name: "", arguments: "" });
+            }
+            const buffer = toolCallsBuffer.get(idx)!;
+            if (tc.id) buffer.id = tc.id;
+            if (tc.function?.name) buffer.name = tc.function.name;
+            if (tc.function?.arguments) buffer.arguments += tc.function.arguments;
+          }
+        }
+      }
+
+      // Finalize tool calls from buffer
+      const toolCalls: Array<{ id: string; name: string; arguments: string }> = [];
+      const entries = Array.from(toolCallsBuffer.entries());
+      for (const [, buffer] of entries) {
+        if (buffer.name && buffer.id) {
+          toolCalls.push(buffer);
+        }
+      }
+
+      // If no tool calls, we're done - exit the loop
+      if (toolCalls.length === 0) {
+        break;
+      }
+
+      // Add assistant message with tool calls to history
+      messages.push({
+        role: "assistant",
+        content: assistantContent || null,
+        tool_calls: toolCalls.map(tc => ({
+          id: tc.id,
+          type: "function" as const,
+          function: { name: tc.name, arguments: tc.arguments }
+        }))
+      });
+
+      // Execute each tool and add results to messages
+      for (const toolCall of toolCalls) {
+        let args: Record<string, unknown>;
+        try {
+          args = JSON.parse(toolCall.arguments || "{}");
+        } catch {
+          args = {};
+        }
+
+        // Validate the tool call first
+        const validation = validateToolCall({ name: toolCall.name, arguments: args });
+        if (!validation.valid) {
+          // Add error result to messages
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({ error: validation.message })
+          });
+          continue;
+        }
+
+        // Notify client about tool call (for UI updates like showing loading state)
+        yield { type: "tool_call", toolCall: { name: toolCall.name, arguments: args } };
+
+        // Execute the tool
+        const result = await executeToolCall(toolCall.name, args, context);
+
+        // Notify client about tool result (for UI state updates like showing flights)
+        yield { type: "tool_result", name: toolCall.name, result };
+
+        // Add tool result to messages for OpenAI
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result)
+        });
+      }
+
+      // Loop continues - OpenAI will now see tool results and generate a natural response
+    }
+  } catch (error) {
+    console.error("OpenAI streaming error:", error);
+    yield {
+      type: "content",
+      content: "Sorry, there was a problem. Please try again!",
+    };
+  }
 }
 
 interface ActivitySuggestion {

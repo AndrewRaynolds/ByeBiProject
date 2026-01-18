@@ -13,9 +13,9 @@ import { generateItinerary } from "./services/openai";
 import { setupAuth } from "./auth";
 import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
-import { searchCheapestFlights } from "./services/aviasales";
+import { searchFlights } from "./services/amadeus-flights";
 import { cityToIata, iataToCity } from "./services/cityMapping";
-import { searchHotels, bookHotel, HotelResult } from "./services/amadeus-hotels";
+import { searchHotels, bookHotel } from "./services/amadeus-hotels";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -668,103 +668,35 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // 🔹 1) Determina codici IATA da usare
-      // Per ora: origine fissa ROM, destination dalla città selezionata
+      // Determine IATA codes for origin
       const originIata = cityToIata(originCity) || "ROM";
       const originCityName = iataToCity(originIata);
-      const destinationIata = cityToIata(selectedDestination);
 
-      let flights: any[] | undefined = undefined;
-      let hotels: HotelResult[] | undefined = undefined;
-
-      // Debug log solo in development
+      // Debug log only in development
       if (process.env.NODE_ENV !== "production") {
         console.log("🔍 OPENAI-STREAM:", { selectedDestination, partyType, originCity });
       }
 
-      if (destinationIata) {
-        try {
-          const raw = await searchCheapestFlights({
-            origin: originIata,
-            destination: destinationIata,
-            currency: "EUR",
-          });
-
-          const destCode = Object.keys(raw.data)[0];
-          const offersObj = raw.data[destCode] || {};
-
-          const numAdults = tripDetails?.people || 2;
-          
-          flights = Object.values(offersObj as any)
-            .sort((a: any, b: any) => a.price - b.price)
-            .slice(0, 3)
-            .map((o: any) => {
-              const depDate = o.departure_at?.slice(0, 10) || "";
-              const retDate = o.return_at?.slice(0, 10) || "";
-              const depDay = depDate.slice(8, 10);
-              const depMonth = depDate.slice(5, 7);
-              const retDay = retDate.slice(8, 10);
-              const retMonth = retDate.slice(5, 7);
-              
-              const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destinationIata}${retDay}${retMonth}${numAdults}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
-              
-              return { ...o, origin: originIata, checkoutUrl };
-            });
-
-        } catch (err) {
-          if (process.env.NODE_ENV !== "production") {
-          console.error("Flight search error in openai-stream:", err);
-          }
-        }
-
-        if (tripDetails?.startDate && tripDetails?.endDate) {
-          try {
-            const hotelResults = await searchHotels({
-              cityCode: destinationIata,
-              checkInDate: tripDetails.startDate,
-              checkOutDate: tripDetails.endDate,
-              adults: tripDetails.people || 2,
-              currency: "EUR",
-            });
-            
-            if (hotelResults && hotelResults.length > 0) {
-              hotels = hotelResults.slice(0, 5);
-            }
-          } catch (hotelErr) {
-            if (process.env.NODE_ENV !== "production") {
-              console.error("Hotel search error:", hotelErr);
-            }
-          }
-        }
-      }
-
-      const { streamOpenAIChatCompletion } = await import('./services/openai');
+      const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
       const context = {
         selectedDestination,
         tripDetails,
         partyType: partyType || 'bachelor',
-        flights,
-        hotels,
         origin: originIata,
         originCityName,
       };
-      
-      // Send flights data to frontend first (before streaming text)
-      if (flights && flights.length > 0) {
-        res.write(`data: ${JSON.stringify({ flights: flights })}\n\n`);
-      }
 
-      // Send hotels data to frontend (if available)
-      if (hotels && hotels.length > 0) {
-        res.write(`data: ${JSON.stringify({ hotels: hotels })}\n\n`);
-      }
-
-      for await (const chunk of streamOpenAIChatCompletion(message, context, conversationHistory || [])) {
+      // Use the new tool-loop streaming function that properly executes tools
+      // and feeds results back to OpenAI for natural conversation continuation
+      for await (const chunk of streamOpenAIChatCompletionWithTools(message, context, conversationHistory || [])) {
         if (chunk.type === "content") {
           res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
         } else if (chunk.type === "tool_call") {
           res.write(`data: ${JSON.stringify({ tool_call: chunk.toolCall })}\n\n`);
+        } else if (chunk.type === "tool_result") {
+          // Send tool results to frontend for state updates (e.g., showing flight cards)
+          res.write(`data: ${JSON.stringify({ tool_result: { name: chunk.name, result: chunk.result } })}\n\n`);
         }
       }
 
@@ -893,54 +825,79 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     try {
       const { origin, destination, departDate, returnDate, passengers, currency } = req.query;
 
+      console.log("🔍 /api/flights/search called with:", { origin, destination, departDate, returnDate, passengers });
+
       if (!origin || !destination) {
         return res.status(400).json({
           error: "origin e destination sono obbligatori",
         });
       }
 
-      const originIata = cityToIata(String(origin)) || String(origin).toUpperCase();
-      const destIata = cityToIata(String(destination)) || String(destination).toUpperCase();
+      // Helper to extract IATA code from strings like "Fiumicino (FCO)" or just use cityToIata
+      const extractIata = (input: string): string => {
+        // First try to extract IATA from parentheses, e.g., "Fiumicino (FCO)" -> "FCO"
+        const parenMatch = input.match(/\(([A-Z]{3})\)/i);
+        if (parenMatch) {
+          return parenMatch[1].toUpperCase();
+        }
+        // Then try cityToIata lookup
+        const mapped = cityToIata(input);
+        if (mapped) {
+          return mapped;
+        }
+        // Finally, if it looks like a 3-letter code already, use it
+        if (/^[A-Z]{3}$/i.test(input.trim())) {
+          return input.trim().toUpperCase();
+        }
+        // Last resort: take first 3 characters
+        return input.substring(0, 3).toUpperCase();
+      };
 
-      const flightData = await searchCheapestFlights({
-        origin: originIata,
-        destination: destIata,
-        departDate: departDate ? String(departDate) : undefined,
-        currency: currency ? String(currency) : "EUR",
-      });
+      const originIata = extractIata(String(origin));
+      const destIata = extractIata(String(destination));
 
-      const destCode = Object.keys(flightData.data || {})[0];
-      const offersObj = flightData.data?.[destCode] || {};
+      console.log("✈️ Resolved IATA codes:", { originIata, destIata });
 
       const numAdults = passengers ? parseInt(String(passengers), 10) : 1;
 
-      const flights = Object.values(offersObj as any)
-        .sort((a: any, b: any) => a.price - b.price)
+      const flightResults = await searchFlights({
+        originCode: originIata,
+        destinationCode: destIata,
+        departureDate: departDate ? String(departDate) : "",
+        returnDate: returnDate ? String(returnDate) : undefined,
+        adults: numAdults,
+        currency: currency ? String(currency) : "EUR",
+      });
+
+      console.log("📦 Amadeus returned", flightResults.length, "flights");
+
+      // Transform to match expected client format + add Aviasales checkout URLs
+      const flights = flightResults
         .slice(0, 5)
-        .map((o: any, idx: number) => {
-          const depDate = o.departure_at?.slice(0, 10) || "";
-          const retDate = o.return_at?.slice(0, 10) || "";
+        .map((f, idx) => {
+          const depDate = f.outbound[0]?.departure.at?.slice(0, 10) || String(departDate);
+          const retDate = f.inbound?.[0]?.departure.at?.slice(0, 10) || String(returnDate) || depDate;
           const depDay = depDate.slice(8, 10);
           const depMonth = depDate.slice(5, 7);
           const retDay = retDate.slice(8, 10);
           const retMonth = retDate.slice(5, 7);
-          
+
           const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numAdults}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
-          
+
           return {
             flightId: `flight-${idx + 1}`,
-            airline: o.airline,
-            price: o.price,
-            currency: currency || "EUR",
-            departureAt: o.departure_at,
-            returnAt: o.return_at,
-            flightNumber: o.flight_number,
-            direct: !o.transfers || o.transfers === 0,
+            airline: f.airlines.join(", "),
+            price: f.price,
+            currency: f.currency,
+            departureAt: f.outbound[0]?.departure.at,
+            returnAt: f.inbound?.[0]?.departure.at,
+            stops: f.stops,
+            duration: f.totalDuration,
+            direct: f.stops === 0,
             bookingFlow: "REDIRECT" as const,
             checkoutUrl,
           };
-        })
-        .filter((f: any) => f.checkoutUrl);
+        });
 
       return res.json({
         origin: originIata,

@@ -87,6 +87,7 @@ export default function ChatDialogCompact({
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +114,6 @@ export default function ChatDialogCompact({
     },
     partyType: "bachelor",
   });
-  const lastFlightSearchKeyRef = useRef<string>("");
 
   const [conversationState, setConversationState] = useState<ConversationState>(
     {
@@ -166,32 +166,6 @@ export default function ChatDialogCompact({
   useEffect(() => {
     conversationStateRef.current = conversationState;
   }, [conversationState]);
-
-  const buildFlightSearchKey = (
-    state: ConversationState,
-    origin: string,
-  ): string => {
-    return [
-      state.selectedDestination || "",
-      origin || "",
-      state.tripDetails.startDate || "",
-      state.tripDetails.endDate || "",
-      state.tripDetails.people || 0,
-    ].join("|");
-  };
-
-  const hasFlightSearchData = (
-    state: ConversationState,
-    origin: string,
-  ): boolean => {
-    return Boolean(
-      state.selectedDestination &&
-        origin &&
-        state.tripDetails.startDate &&
-        state.tripDetails.endDate &&
-        state.tripDetails.people > 0,
-    );
-  };
 
   const sendChatRequest = async (message: string, addUserMessage: boolean) => {
     if (isLoading) return;
@@ -270,16 +244,19 @@ export default function ChatDialogCompact({
                   throw new Error(jsonData.error);
                 }
 
-                if (jsonData.flights && Array.isArray(jsonData.flights)) {
-                  console.log(
-                    "✈️ Received flights from backend:",
-                    jsonData.flights,
-                  );
-                  setFlights(jsonData.flights);
+                if (jsonData.tool_call) {
+                  // Show loading message for long-running tools
+                  if (jsonData.tool_call.name === 'search_flights') {
+                    setLoadingMessage('Searching for flights...');
+                  } else if (jsonData.tool_call.name === 'search_hotels') {
+                    setLoadingMessage('Searching for hotels...');
+                  }
+                  handleToolCall(jsonData.tool_call);
                 }
 
-                if (jsonData.tool_call) {
-                  handleToolCall(jsonData.tool_call);
+                if (jsonData.tool_result) {
+                  // Clear loading message when tool completes
+                  setLoadingMessage(null);
                 }
 
                 if (jsonData.done) {
@@ -306,6 +283,7 @@ export default function ChatDialogCompact({
       }
 
       setIsLoading(false);
+      setLoadingMessage(null);
     } catch (error) {
       console.error("Chat error:", error);
 
@@ -320,6 +298,7 @@ export default function ChatDialogCompact({
 
       setMessages((prev) => [...prev, errorMessage]);
       setIsLoading(false);
+      setLoadingMessage(null);
     }
   };
 
@@ -632,18 +611,49 @@ export default function ChatDialogCompact({
         break;
 
       case "search_flights": {
+        const {
+          origin,
+          destination,
+          departure_date,
+          return_date,
+          passengers,
+        } = toolCall.arguments;
         const currentState = conversationStateRef.current;
         const currentOrigin = originCityRef.current;
-        const key = buildFlightSearchKey(currentState, currentOrigin);
-        if (
-          !isLoading &&
-          hasFlightSearchData(currentState, currentOrigin) &&
-          flightsRef.current.length === 0 &&
-          key &&
-          key !== lastFlightSearchKeyRef.current
-        ) {
-          lastFlightSearchKeyRef.current = key;
-          sendChatRequest("Show me the best flight options.", false);
+
+        // Use tool arguments or fall back to conversation state
+        const searchOrigin = origin || currentOrigin || "Rome";
+        const searchDestination =
+          destination || currentState.selectedDestination;
+        const searchDepartDate =
+          departure_date || currentState.tripDetails.startDate;
+        const searchReturnDate =
+          return_date || currentState.tripDetails.endDate;
+        const searchPassengers =
+          passengers || currentState.tripDetails.people || 2;
+
+        if (searchOrigin && searchDestination && searchDepartDate) {
+          (async () => {
+            try {
+              const params = new URLSearchParams({
+                origin: searchOrigin,
+                destination: searchDestination,
+                departDate: searchDepartDate,
+                returnDate: searchReturnDate || searchDepartDate,
+                passengers: String(searchPassengers),
+              });
+              console.log("✈️ Searching flights with params:", Object.fromEntries(params));
+              const res = await fetch(`/api/flights/search?${params}`);
+              const data = await res.json();
+              if (data.flights && Array.isArray(data.flights)) {
+                console.log("✈️ Flight search results:", data.flights);
+                setFlights(data.flights);
+                flightsRef.current = data.flights;
+              }
+            } catch (err) {
+              console.error("Flight search failed:", err);
+            }
+          })();
         }
         break;
       }
@@ -772,8 +782,13 @@ export default function ChatDialogCompact({
                     <Bot className="w-4 h-4 text-white" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2 flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                  {loadingMessage && (
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {loadingMessage}
+                    </span>
+                  )}
                 </div>
               </div>
             )}
