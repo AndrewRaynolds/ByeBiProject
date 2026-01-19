@@ -1,0 +1,196 @@
+Voglio integrare GetYourGuide nella mia app usando link affiliati per città (short URL gyg.me/...), non link per singole esperienze.
+
+Destinazioni supportate e link affiliati
+
+Usa ESATTAMENTE questi link:
+
+Rome: https://gyg.me/JvxfvhRT
+
+Barcelona: https://gyg.me/dL0Pwlqx
+
+Ibiza: https://gyg.me/EavPKji2
+
+Prague: https://gyg.me/JHh2phID
+
+Budapest: https://gyg.me/fD74LpqV
+
+Krakow: https://gyg.me/SzTVCadI
+
+Amsterdam: https://gyg.me/cPRD7CEG
+
+Berlin: https://gyg.me/TrvBd850
+
+Lisbon: https://gyg.me/rZpPMi3h
+
+Palma de Mallorca: https://gyg.me/sXLoRnFc
+
+Obiettivo UX
+
+Aggiungere una sezione “Esperienze” in:
+
+client/src/pages/Itinerary.tsx
+
+Pagina Checkout (trovala nel repo: client/src/pages/Checkout.tsx o equivalente)
+
+La sezione mostra:
+
+Titolo: “Cose da fare a {destinationCity}”
+
+Bottone: “Vedi esperienze su GetYourGuide”
+
+Click: apre il link affiliato in nuova tab (noopener,noreferrer) e traccia evento interno.
+
+La CTA deve comparire solo se la destinazione è tra quelle supportate (in IT o EN).
+
+Requisiti tecnici
+1) Mapping + normalizzazione (no hardcode sparso)
+
+Crea file: client/src/lib/getyourguide.ts
+
+Deve esportare:
+
+getGetYourGuideCityLink(destinationCity: string | null | undefined): string | null
+
+Implementa una normalizzazione minima IT/EN per evitare mismatch quando l’itinerary salva città in italiano:
+
+Roma ↔ Rome
+
+Barcellona ↔ Barcelona
+
+Praga ↔ Prague
+
+Cracovia ↔ Krakow
+
+Berlino ↔ Berlin
+
+Lisbona ↔ Lisbon
+
+Palma / Palma de Mallorca ↔ Palma de Mallorca
+
+Usa chiavi canoniche:
+
+rome, barcelona, ibiza, prague, budapest, krakow, amsterdam, berlin, lisbon, palma-de-mallorca
+
+Esempio struttura (implementala completa):
+
+const GYG_LINKS: Record<string, string> = {
+  "rome": "https://gyg.me/JvxfvhRT",
+  "barcelona": "https://gyg.me/dL0Pwlqx",
+  "ibiza": "https://gyg.me/EavPKji2",
+  "prague": "https://gyg.me/JHh2phID",
+  "budapest": "https://gyg.me/fD74LpqV",
+  "krakow": "https://gyg.me/SzTVCadI",
+  "amsterdam": "https://gyg.me/cPRD7CEG",
+  "berlin": "https://gyg.me/TrvBd850",
+  "lisbon": "https://gyg.me/rZpPMi3h",
+  "palma-de-mallorca": "https://gyg.me/sXLoRnFc",
+};
+
+
+La funzione deve:
+
+trim() + toLowerCase()
+
+mappare sinonimi → chiave canonica
+
+restituire URL o null se non supportata
+
+2) Componente riusabile CTA
+
+Crea: client/src/components/GetYourGuideCta.tsx
+
+Props:
+
+destinationCity?: string
+
+placement: "itinerary" | "checkout"
+
+tripId?: string
+
+Comportamento:
+
+calcola url = getGetYourGuideCityLink(destinationCity)
+
+se url è null: non renderizzare nulla (oppure renderizza una piccola riga “Esperienze non disponibili” — scegli una delle due e applicala ovunque, coerente)
+
+se url esiste:
+
+mostra titolo + bottone
+
+onClick:
+
+trackEvent("gyg_click", { destinationCity, placement, tripId, url })
+
+window.open(url, "_blank", "noopener,noreferrer")
+
+Stile UI: usa i componenti già presenti (shadcn: Card/Button) coerenti con il resto del progetto.
+
+3) Tracking interno click (minimo ma pulito)
+
+Se nel repo esiste già un tracking/analytics helper, usa quello.
+Altrimenti crea client/src/lib/track.ts:
+
+export function trackEvent(name: string, payload: any) {
+  console.log("[track]", name, payload);
+}
+
+
+Non inventare backend: per ora basta console log strutturato.
+
+4) Integrazione in Itinerary e Checkout
+
+In client/src/pages/Itinerary.tsx e in Checkout:
+
+leggi l’itinerario da localStorage.currentItinerary con parsing robusto:
+
+Requisito: mai crashare se:
+
+chiave mancante
+
+JSON invalido
+
+Estrarre:
+
+destinationCity (o il campo che usa la UI per mostrare la città destinazione)
+
+tripId se presente (se non esiste, passare undefined)
+
+Poi inserire:
+
+<GetYourGuideCta destinationCity={destinationCity} placement="itinerary" tripId={tripId} />
+
+<GetYourGuideCta destinationCity={destinationCity} placement="checkout" tripId={tripId} />
+
+Posizionamento:
+
+Itinerary: sotto la sezione voli/hotel o vicino alle CTA principali
+
+Checkout: sotto i riepiloghi (prima del bottone finale o comunque in zona “upsell”)
+
+Test richiesti (obbligatori)
+
+Se destinationCity = "Roma" → CTA appare e apre https://gyg.me/JvxfvhRT
+
+Se destinationCity = "Rome" → idem
+
+Se destinationCity = "Barcellona" → apre https://gyg.me/dL0Pwlqx
+
+Se destinationCity = "Milano" (non supportata) → CTA non appare (o mostra “non disponibile”), nessun crash
+
+In console deve comparire il tracking:
+
+[track] gyg_click { destinationCity, placement, url, ... }
+
+Deliverable
+
+Un commit con:
+
+client/src/lib/getyourguide.ts
+
+client/src/components/GetYourGuideCta.tsx
+
+client/src/lib/track.ts (solo se manca tracking già esistente)
+
+modifiche a Itinerary.tsx e Checkout
+
+nessun hardcode di link GYG fuori dal mapping
