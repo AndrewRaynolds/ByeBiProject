@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
+import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
@@ -348,6 +349,11 @@ export default function Checkout() {
             </CardContent>
           </Card>
         )}
+
+        <GetYourGuideCta 
+          destinationCity={tripContext.destination} 
+          placement="checkout" 
+        />
 
         {/* Navigation */}
         <div className="flex flex-col md:flex-row gap-4">

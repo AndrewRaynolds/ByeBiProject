@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plane, Calendar, Users, MapPin, ExternalLink, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { formatDateRangeIT } from '@shared/dateUtils';
+import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
@@ -218,6 +219,11 @@ export default function Itinerary() {
               ✈️ Prenota il volo esternamente, poi continua per hotel
             </p>
           </section>
+
+          <GetYourGuideCta 
+            destinationCity={tripContext.destination} 
+            placement="itinerary" 
+          />
 
         </div>
 
