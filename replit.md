@@ -52,9 +52,23 @@ interface TripContext {
 
 An Activity Ideas Generator allows users to get personalized activity suggestions based on destination and month, displayed in a modal with visual cards. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
 
+## GetYourGuide Integration (January 2026)
+Affiliate links for experiences/activities are integrated via `GetYourGuideCta` component in Itinerary and Checkout pages.
+
+**Supported destinations**:
+- Rome, Barcelona, Ibiza, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
+
+**Files**:
+- `client/src/lib/getyourguide.ts` - Link mapping with IT/EN city name normalization (Roma↔Rome, Barcellona↔Barcelona, etc.)
+- `client/src/lib/track.ts` - Event tracking helper (console log structured)
+- `client/src/components/GetYourGuideCta.tsx` - Reusable CTA component
+
+**Behavior**: CTA only renders for supported destinations. Opens affiliate link in new tab with tracking event.
+
 ## External Dependencies
 - **GROQ API**: Primary AI engine (llama-3.3-70b-versatile) for ultra-fast streaming chat responses (Server-Sent Events) and structured JSON generation for activity ideas.
 - **OpenAI API**: Backup AI engine.
 - **Pexels API**: Used for dynamic destination image search, with a fallback to Unsplash.
 - **Zapier**: Integrated via webhooks for AI-powered itinerary generation, allowing structured data exchange for ChatGPT processing.
+- **GetYourGuide**: Affiliate links for city-based experiences (10 destinations supported).
 ```
