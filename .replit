@@ -51,4 +51,9 @@ integrations = ["javascript_openai:1.0.0", "javascript_stripe:1.0.0"]
 
 [userenv.shared]
 AMADEUS_ENV = "production"
+
+[userenv.development]
+NODE_ENV = "development"
+
+[userenv.production]
 NODE_ENV = "production"
