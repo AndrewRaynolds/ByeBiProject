@@ -6,6 +6,7 @@ import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCirc
 import Header from '@/components/Header';
 import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
+import { getCityCode } from '@shared/cityMapping';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
@@ -36,12 +37,6 @@ interface HotelData {
   roomDescription?: string;
 }
 
-const CITY_TO_IATA: Record<string, string> = {
-  'roma': 'ROM', 'ibiza': 'IBZ', 'barcellona': 'BCN', 'praga': 'PRG',
-  'budapest': 'BUD', 'cracovia': 'KRK', 'amsterdam': 'AMS', 'berlino': 'BER',
-  'lisbona': 'LIS', 'palma de mallorca': 'PMI', 'milano': 'MIL', 'napoli': 'NAP',
-  'torino': 'TRN', 'venezia': 'VCE', 'bologna': 'BLQ', 'firenze': 'FLR'
-};
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -100,7 +95,26 @@ export default function Checkout() {
     setHotelError(null);
     
     try {
-      const cityCode = CITY_TO_IATA[context.destination.toLowerCase()] || context.destination.substring(0, 3).toUpperCase();
+      const cityCode = getCityCode(context.destination);
+      
+      if (!cityCode) {
+        if (import.meta.env.DEV) {
+          console.warn('[HOTEL-SEARCH] Unsupported destination:', context.destination);
+        }
+        setHotelError(`La destinazione "${context.destination}" non è supportata. Destinazioni disponibili: Roma, Barcellona, Ibiza, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca.`);
+        setLoadingHotels(false);
+        return;
+      }
+      
+      if (import.meta.env.DEV) {
+        console.log('[HOTEL-SEARCH] Request:', {
+          destinationCity: context.destination,
+          derivedCityCode: cityCode,
+          checkIn: context.startDate,
+          checkOut: context.endDate,
+          guests: context.people
+        });
+      }
       
       const params = new URLSearchParams({
         cityCode,
@@ -112,6 +126,17 @@ export default function Checkout() {
       
       const response = await fetch(`/api/hotels/search?${params}`);
       const result = await response.json();
+      
+      if (import.meta.env.DEV) {
+        console.log('[HOTEL-SEARCH] Response:', {
+          count: result.hotels?.length || 0,
+          top3: result.hotels?.slice(0, 3).map((h: any) => h.name) || [],
+          priceRange: result.hotels?.length ? {
+            min: Math.min(...result.hotels.map((h: any) => h.priceTotal)),
+            max: Math.max(...result.hotels.map((h: any) => h.priceTotal))
+          } : null
+        });
+      }
       
       if (!response.ok) {
         throw new Error(result.error || 'Errore nella ricerca hotel');

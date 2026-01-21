@@ -189,6 +189,9 @@ export async function searchHotels(
 
   const data = offersResp.data?.data || [];
 
+  const MIN_PRICE_PER_NIGHT = 10;
+  const MAX_PRICE_PER_NIGHT = 2000;
+
   const results: HotelResult[] = data
     .map((item: any) => {
       const offer = item.offers?.[0];
@@ -217,7 +220,31 @@ export async function searchHotels(
     })
     .filter((x: HotelResult | null) => x !== null && !Number.isNaN(x!.priceTotal) && x!.offerId);
 
-  return results;
+  const filteredResults = results.filter((hotel) => {
+    const pricePerNight = hotel.priceTotal;
+    if (pricePerNight < MIN_PRICE_PER_NIGHT || pricePerNight > MAX_PRICE_PER_NIGHT) {
+      if (!isProd) {
+        console.log(`[HOTEL-FILTER] Excluded outlier: ${hotel.name} - €${pricePerNight}/night`);
+      }
+      return false;
+    }
+    return true;
+  });
+
+  if (!isProd) {
+    console.log('[HOTEL-RESULTS]', {
+      cityCode,
+      totalFromAPI: results.length,
+      afterPriceFilter: filteredResults.length,
+      top3: filteredResults.slice(0, 3).map(h => h.name),
+      priceRange: filteredResults.length ? {
+        min: Math.min(...filteredResults.map(h => h.priceTotal)),
+        max: Math.max(...filteredResults.map(h => h.priceTotal))
+      } : null
+    });
+  }
+
+  return filteredResults;
 }
 
 /**
