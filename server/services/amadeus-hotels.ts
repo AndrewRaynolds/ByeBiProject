@@ -190,16 +190,18 @@ export async function searchHotels(
   const data = offersResp.data?.data || [];
 
   const MIN_PRICE_PER_NIGHT = 10;
-  const MAX_PRICE_PER_NIGHT = 2000;
+  const MAX_PRICE_PER_NIGHT = 800;
+
+  const checkInDateObj = new Date(checkInDate);
+  const checkOutDateObj = new Date(checkOutDate);
+  const nights = Math.max(1, Math.ceil((checkOutDateObj.getTime() - checkInDateObj.getTime()) / (1000 * 60 * 60 * 24)));
 
   const results: HotelResult[] = data
     .map((item: any) => {
       const offer = item.offers?.[0];
       if (!offer) return null;
 
-      // Determina paymentPolicy dalla risposta Amadeus
       const paymentPolicy = determinePaymentPolicy(offer);
-      // IN_APP solo se PAY_AT_HOTEL, altrimenti REDIRECT
       const bookingFlow: BookingFlow = paymentPolicy === "PAY_AT_HOTEL" ? "IN_APP" : "REDIRECT";
 
       return {
@@ -221,10 +223,10 @@ export async function searchHotels(
     .filter((x: HotelResult | null) => x !== null && !Number.isNaN(x!.priceTotal) && x!.offerId);
 
   const filteredResults = results.filter((hotel) => {
-    const pricePerNight = hotel.priceTotal;
+    const pricePerNight = hotel.priceTotal / nights;
     if (pricePerNight < MIN_PRICE_PER_NIGHT || pricePerNight > MAX_PRICE_PER_NIGHT) {
       if (!isProd) {
-        console.log(`[HOTEL-FILTER] Excluded outlier: ${hotel.name} - €${pricePerNight}/night`);
+        console.log(`[HOTEL-FILTER] Excluded outlier: ${hotel.name} - €${pricePerNight.toFixed(2)}/night (total €${hotel.priceTotal} for ${nights} nights)`);
       }
       return false;
     }
@@ -234,12 +236,13 @@ export async function searchHotels(
   if (!isProd) {
     console.log('[HOTEL-RESULTS]', {
       cityCode,
+      nights,
       totalFromAPI: results.length,
       afterPriceFilter: filteredResults.length,
-      top3: filteredResults.slice(0, 3).map(h => h.name),
-      priceRange: filteredResults.length ? {
-        min: Math.min(...filteredResults.map(h => h.priceTotal)),
-        max: Math.max(...filteredResults.map(h => h.priceTotal))
+      top3: filteredResults.slice(0, 3).map(h => ({ name: h.name, perNight: (h.priceTotal / nights).toFixed(2) })),
+      priceRangePerNight: filteredResults.length ? {
+        min: (Math.min(...filteredResults.map(h => h.priceTotal)) / nights).toFixed(2),
+        max: (Math.max(...filteredResults.map(h => h.priceTotal)) / nights).toFixed(2)
       } : null
     });
   }
