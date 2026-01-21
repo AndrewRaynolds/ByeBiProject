@@ -1,0 +1,95 @@
+Contesto
+L’app ora gira e GYG funziona. Dopo la conversazione col chatbot, l’utente finisce in Checkout con destinazione corretta (es. Barcelona), ma la sezione hotel mostra risultati non coerenti (hotel in altre città/paesi, prezzi fuori scala). Questo uccide fiducia e conversione.
+
+Obiettivo
+Produrre un piano tecnico dettagliato (non implementazione) per correggere il flusso hotel in Checkout in modo:
+
+deterministico (stessa destinazione ⇒ stesso cityCode corretto)
+
+osservabile (log e punti di debug chiari)
+
+robusto (filtri/sanity check per evitare risultati assurdi)
+
+Deliverable richiesto dall’agent
+
+Voglio che tu mi restituisca:
+
+Root-cause analysis (ipotesi ordinate per probabilità) del perché hotel non matchano la destinazione
+
+Mappa dei file/entry point coinvolti (dove si prende destination, dove si chiama API hotel, dove si renderizza)
+
+Piano in steps con priorità, per fixare
+
+Criteri di accettazione (cosa devo vedere per dire “fix ok”)
+
+Risk list (cosa può rompersi a seguito del fix)
+
+Mini test plan (3 casi reali)
+
+Vincoli e decisioni di prodotto
+
+L’MVP supporta 10 destinazioni fisse: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca.
+
+Non voglio derivare cityCode da stringhe (no slice(0,3) ecc.). Voglio mapping deterministico.
+
+Se l’API restituisce risultati anomali, preferisco mostrare “Nessun hotel trovato” piuttosto che hotel di un’altra nazione.
+
+Punti che il piano DEVE includere
+A) Dati canonici
+
+Stabilire un “canonical itinerary model” (da localStorage.currentItinerary) con:
+
+destinationCity (string)
+
+checkIn/checkOut (YYYY-MM-DD)
+
+adults/rooms (o default)
+
+Definire una funzione di normalizzazione city (IT/EN) e una tabella:
+
+Rome→ROM, Barcelona→BCN, Ibiza→IBZ, Prague→PRG, Budapest→BUD, Krakow→KRK, Amsterdam→AMS, Berlin→BER, Lisbon→LIS, Palma→PMI.
+
+B) Tracciamento e osservabilità
+
+Inserire log (solo dev) in 2 punti:
+
+prima della chiamata hotel: destinationCity, derived cityCode, dates, guests
+
+dopo risposta: numero risultati, top 3 hotel names, eventuale city/address se presente, range prezzi
+
+Proporre come disattivare i log in prod.
+
+C) Sanity checks prima del render
+
+Definire filtri minimi:
+
+scarta hotel se la località/indirizzo non è coerente con destinazione (se campo disponibile)
+
+scarta prezzi outlier (soglia ragionevole per MVP)
+
+se resta 0 risultati → mostra messaggio “Nessun hotel trovato” e CTA alternativa.
+
+D) Piano di correzione
+
+Step 1: identificare dove avviene la traduzione destination→parametri hotel
+
+Step 2: sostituire con mapping deterministico
+
+Step 3: aggiungere sanity checks
+
+Step 4: verificare che checkout mantenga UI coerente (city/date header uguale alla query)
+
+Step 5: validare su 3 destinazioni con date diverse
+
+E) Criteri di accettazione (must)
+
+Con destination “Barcelona/Barcellona” il log mostra cityCode “BCN”
+
+Hotel mostrati risultano coerenti con Barcelona (niente Cina)
+
+Nessun prezzo folle “outlier” in lista senza warning/filtri
+
+Se l’API fallisce: UI non crasha e mostra fallback chiaro.
+
+Nota
+Non scrivere codice. Voglio un piano chiaro con riferimenti a file/funzioni reali trovati nel repo e i passi per modificarli, più come testarli.
