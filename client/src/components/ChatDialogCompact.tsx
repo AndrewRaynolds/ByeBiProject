@@ -183,6 +183,7 @@ export default function ChatDialogCompact({
     }
 
     setIsLoading(true);
+    setLoadingMessage("Thinking...");
 
     try {
       const conversationHistory = messagesRef.current.map((msg) => ({
@@ -245,18 +246,26 @@ export default function ChatDialogCompact({
                 }
 
                 if (jsonData.tool_call) {
-                  // Show loading message for long-running tools
+                  // Show loading message based on tool type
                   if (jsonData.tool_call.name === 'search_flights') {
-                    setLoadingMessage('Searching for flights...');
+                    setLoadingMessage('Searching for the best flights...');
                   } else if (jsonData.tool_call.name === 'search_hotels') {
-                    setLoadingMessage('Searching for hotels...');
+                    setLoadingMessage('Finding hotels for you...');
+                  } else if (jsonData.tool_call.name === 'select_flight') {
+                    setLoadingMessage('Selecting your flight...');
+                  } else if (jsonData.tool_call.name === 'unlock_checkout') {
+                    setLoadingMessage('Preparing checkout...');
                   }
                   handleToolCall(jsonData.tool_call);
                 }
 
                 if (jsonData.tool_result) {
-                  // Clear loading message when tool completes
-                  setLoadingMessage(null);
+                  // Show a brief "wrapping up" message while OpenAI summarizes
+                  if (jsonData.tool_result.name === 'search_flights' || jsonData.tool_result.name === 'search_hotels') {
+                    setLoadingMessage('Preparing your results...');
+                  } else {
+                    setLoadingMessage(null);
+                  }
                 }
 
                 if (jsonData.done) {
@@ -264,6 +273,10 @@ export default function ChatDialogCompact({
                 }
 
                 if (jsonData.content) {
+                  // Clear loading message once content starts streaming
+                  if (!accumulatedContent) {
+                    setLoadingMessage(null);
+                  }
                   accumulatedContent += jsonData.content;
 
                   setMessages((prev) =>
@@ -536,43 +549,34 @@ export default function ChatDialogCompact({
     console.log(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
 
     switch (toolCall.name) {
-      case "set_destination":
-        const destination = toolCall.arguments.city?.trim();
+      case "search_flights": {
+        const {
+          origin,
+          destination,
+          departure_date,
+          return_date,
+          passengers,
+        } = toolCall.arguments;
+        const currentState = conversationStateRef.current;
+        const currentOrigin = originCityRef.current;
+
+        // Extract structured state from search_flights arguments
         if (destination) {
-          console.log(`📍 Setting destination: ${destination}`);
           setConversationState((prev) => {
             const next = { ...prev, selectedDestination: destination };
             conversationStateRef.current = next;
             return next;
           });
         }
-        break;
-
-      case "set_origin":
-        const origin = toolCall.arguments.city?.trim();
         if (origin) {
-          console.log(`🛫 Setting origin city: ${origin}`);
           setOriginCity(origin);
           originCityRef.current = origin;
         }
-        break;
-
-      case "set_dates":
-        const rawStart = toolCall.arguments.departure_date;
-        const rawEnd = toolCall.arguments.return_date;
-        if (rawStart && rawEnd) {
-          const normalizedStart = normalizeFutureTripDate(rawStart);
-          const normalizedEnd = normalizeFutureTripDate(rawEnd);
-
-          if (
-            normalizedStart &&
-            normalizedEnd &&
-            isValidDateRange(normalizedStart, normalizedEnd)
-          ) {
+        if (departure_date && return_date) {
+          const normalizedStart = normalizeFutureTripDate(departure_date);
+          const normalizedEnd = normalizeFutureTripDate(return_date);
+          if (normalizedStart && normalizedEnd && isValidDateRange(normalizedStart, normalizedEnd)) {
             const days = calculateTripDays(normalizedStart, normalizedEnd);
-            console.log(
-              `📅 Setting dates: ${rawStart} -> ${normalizedStart}, ${rawEnd} -> ${normalizedEnd} (${days} days)`,
-            );
             setConversationState((prev) => {
               const next = {
                 ...prev,
@@ -586,40 +590,21 @@ export default function ChatDialogCompact({
               conversationStateRef.current = next;
               return next;
             });
-          } else {
-            console.warn(`⚠️ Invalid dates: ${rawStart}, ${rawEnd}`);
           }
         }
-        break;
-
-      case "set_participants":
-        const participants = toolCall.arguments.count;
-        if (typeof participants === "number" && participants > 0) {
-          console.log(`👥 Setting participants: ${participants}`);
+        if (typeof passengers === "number" && passengers > 0) {
           setConversationState((prev) => {
             const next = {
               ...prev,
               tripDetails: {
                 ...prev.tripDetails,
-                people: participants,
+                people: passengers,
               },
             };
             conversationStateRef.current = next;
             return next;
           });
         }
-        break;
-
-      case "search_flights": {
-        const {
-          origin,
-          destination,
-          departure_date,
-          return_date,
-          passengers,
-        } = toolCall.arguments;
-        const currentState = conversationStateRef.current;
-        const currentOrigin = originCityRef.current;
 
         // Use tool arguments or fall back to conversation state
         const searchOrigin = origin || currentOrigin || "Rome";

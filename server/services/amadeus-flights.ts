@@ -190,11 +190,11 @@ export async function searchFlights(
 
     return uniqueFlights;
   } catch (error: any) {
-    console.error("❌ Amadeus Flight Search error:", {
+    console.error("❌ Amadeus Flight Search error:", JSON.stringify({
       status: error.response?.status,
       data: error.response?.data,
       message: error.message,
-    });
+    }, null, 2));
 
     // Return empty array on error (don't throw)
     return [];

@@ -276,42 +276,6 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
   const args = toolCall.arguments || {};
 
   switch (toolCall.name) {
-    case "set_destination": {
-      const city = typeof args.city === "string" ? args.city.trim() : "";
-      if (!city) {
-        return { valid: false, message: "Which destination should I use?" };
-      }
-      return { valid: true };
-    }
-    case "set_origin": {
-      const city = typeof args.city === "string" ? args.city.trim() : "";
-      if (!city) {
-        return { valid: false, message: "Which city are you flying from?" };
-      }
-      return { valid: true };
-    }
-    case "set_dates": {
-      const departure = typeof args.departure_date === "string" ? args.departure_date.trim() : "";
-      const ret = typeof args.return_date === "string" ? args.return_date.trim() : "";
-      if (!departure || !ret || !isValidISODate(departure) || !isValidISODate(ret)) {
-        return {
-          valid: false,
-          message:
-            "What are your departure and return dates? Please use YYYY-MM-DD.",
-        };
-      }
-      return { valid: true };
-    }
-    case "set_participants": {
-      const count = Number(args.count);
-      if (!Number.isInteger(count) || count <= 0) {
-        return {
-          valid: false,
-          message: "How many people are traveling? Please give a number.",
-        };
-      }
-      return { valid: true };
-    }
     case "search_flights": {
       const origin = typeof args.origin === "string" ? args.origin.trim() : "";
       const destination = typeof args.destination === "string" ? args.destination.trim() : "";
@@ -411,22 +375,6 @@ export async function executeToolCall(
   context: ChatContext
 ): Promise<Record<string, unknown>> {
   switch (name) {
-    case "set_destination":
-      return { success: true, destination: args.city };
-
-    case "set_origin":
-      return { success: true, origin: args.city };
-
-    case "set_dates":
-      return {
-        success: true,
-        departure_date: args.departure_date,
-        return_date: args.return_date
-      };
-
-    case "set_participants":
-      return { success: true, participants: args.count };
-
     case "search_flights": {
       const { searchFlights } = await import("./amadeus-flights");
       const { cityToIata } = await import("./cityMapping");
@@ -567,79 +515,6 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "set_destination",
-      description:
-        "Set the travel destination when the user chooses where they want to go",
-      parameters: {
-        type: "object",
-        properties: {
-          city: { type: "string", description: "The destination city name" },
-        },
-        required: ["city"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "set_origin",
-      description:
-        "Set the departure city when the user specifies where they want to fly from",
-      parameters: {
-        type: "object",
-        properties: {
-          city: {
-            type: "string",
-            description: "The origin/departure city name",
-          },
-        },
-        required: ["city"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "set_dates",
-      description:
-        "Set the travel dates when the user provides departure and return dates",
-      parameters: {
-        type: "object",
-        properties: {
-          departure_date: {
-            type: "string",
-            description: "Departure date in YYYY-MM-DD format",
-          },
-          return_date: {
-            type: "string",
-            description: "Return date in YYYY-MM-DD format",
-          },
-        },
-        required: ["departure_date", "return_date"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "set_participants",
-      description:
-        "Set the number of participants when the user specifies how many people are traveling",
-      parameters: {
-        type: "object",
-        properties: {
-          count: {
-            type: "integer",
-            description: "Number of participants/travelers",
-          },
-        },
-        required: ["count"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "search_flights",
       strict: true,
       description:
@@ -743,18 +618,11 @@ const SHARED_SYSTEM_PROMPT = `CRITICAL RULE: Always include a user-facing text r
 AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
 TOOL USAGE:
-- Call set_destination when you learn the destination
-- Call set_origin when you learn the departure city
-- Call set_dates when you learn travel dates (convert to YYYY-MM-DD format)
-- Call set_participants when you learn the group size
-- Call search_flights ONLY when you have ALL of: origin city, destination city, departure date, return date, and passenger count. Pass all these as parameters to the tool.
-- Call search_hotels when you have destination, check-in date, check-out date, and guest count to find accommodations
-- Call select_flight when the user chooses a flight option
-- Call unlock_checkout when the user confirms they want to book
-
-You can call MULTIPLE tools in a single response if the user provides multiple pieces of information. You may ask any clarifying questions you need, in any order.
-
-IMPORTANT: Do NOT call search_flights until you have collected all required information. Ask for missing details first.
+- Call search_flights when you have ALL of: origin city, destination city, departure date (YYYY-MM-DD), return date (YYYY-MM-DD), and passenger count.
+- Call search_hotels when you have destination, check-in date, check-out date, and guest count.
+- Call select_flight when the user chooses a flight option.
+- Call unlock_checkout when the user confirms they want to book.
+- Ask for missing details in natural conversation before calling search tools.
 
 When flights are available in the context, list the top options (1, 2, 3) with departure and return date/time and flight number, then ask which option the user prefers.
 
@@ -1047,16 +915,6 @@ function generateFollowUpMessage(
     return "Searching for the best flights for you...";
   }
 
-  const updated: string[] = [];
-  if (toolNames.has("set_destination")) updated.push("destination");
-  if (toolNames.has("set_origin")) updated.push("origin");
-  if (toolNames.has("set_dates")) updated.push("dates");
-  if (toolNames.has("set_participants")) updated.push("group size");
-
-  if (updated.length > 0) {
-    return `Updated ${updated.join(", ")}. Anything else you want to add?`;
-  }
-
   return "Got it! Anything else you'd like to share?";
 }
 
@@ -1073,6 +931,7 @@ export async function* streamOpenAIChatCompletionWithTools(
   context: ChatContext,
   conversationHistory: ChatMessage[] = [],
 ): AsyncGenerator<StreamChunk, void, unknown> {
+  const totalStart = Date.now();
   try {
     const contextualPrompt = buildContextualPrompt(context);
 
@@ -1086,8 +945,18 @@ export async function* streamOpenAIChatCompletionWithTools(
       { role: "user", content: userMessage },
     ];
 
+    const systemPromptLength = contextualPrompt.length;
+    const historyLength = conversationHistory.length;
+    const totalChars = messages.reduce((sum, m) => sum + (typeof m.content === "string" ? m.content.length : 0), 0);
+    console.log(`⏱️ [STREAM] Start | system_prompt=${systemPromptLength} chars | history=${historyLength} msgs | total_chars=${totalChars}`);
+
     // Tool loop: keep calling OpenAI until we get a response without tool calls
+    let iteration = 0;
     while (true) {
+      iteration++;
+      const apiStart = Date.now();
+      console.log(`⏱️ [STREAM] OpenAI API call #${iteration} starting...`);
+
       const stream = await openai.chat.completions.create({
         messages,
         model: "gpt-5-mini",
@@ -1096,10 +965,19 @@ export async function* streamOpenAIChatCompletionWithTools(
         tool_choice: "auto",
       });
 
+      const firstChunkStart = Date.now();
+      console.log(`⏱️ [STREAM] Stream created in ${firstChunkStart - apiStart}ms, waiting for first chunk...`);
+
       let assistantContent = "";
-      const toolCallsBuffer: Map<number, { id: string; name: string; arguments: string }> = new Map();
+      const toolCallsBuffer: Map<number, { id: string; name: string; arguments: string }> =
+        new Map();
+      let firstChunkReceived = false;
 
       for await (const chunk of stream) {
+        if (!firstChunkReceived) {
+          console.log(`⏱️ [STREAM] First chunk received in ${Date.now() - firstChunkStart}ms (total since API call: ${Date.now() - apiStart}ms)`);
+          firstChunkReceived = true;
+        }
         const delta = chunk.choices[0]?.delta;
 
         // Stream content to client immediately
@@ -1123,17 +1001,22 @@ export async function* streamOpenAIChatCompletionWithTools(
         }
       }
 
+      const streamDone = Date.now();
+      console.log(`⏱️ [STREAM] Stream #${iteration} fully consumed in ${streamDone - apiStart}ms`);
+
       // Finalize tool calls from buffer
       const toolCalls: Array<{ id: string; name: string; arguments: string }> = [];
-      const entries = Array.from(toolCallsBuffer.entries());
-      for (const [, buffer] of entries) {
+      for (const [, buffer] of toolCallsBuffer.entries()) {
         if (buffer.name && buffer.id) {
           toolCalls.push(buffer);
         }
       }
 
+      console.log(`⏱️ [STREAM] Tool calls: [${toolCalls.map(tc => tc.name).join(", ")}] | content=${assistantContent.length} chars`);
+
       // If no tool calls, we're done - exit the loop
       if (toolCalls.length === 0) {
+        console.log(`⏱️ [STREAM] No tool calls, done. Total: ${Date.now() - totalStart}ms`);
         break;
       }
 
@@ -1160,7 +1043,6 @@ export async function* streamOpenAIChatCompletionWithTools(
         // Validate the tool call first
         const validation = validateToolCall({ name: toolCall.name, arguments: args });
         if (!validation.valid) {
-          // Add error result to messages
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
@@ -1173,12 +1055,13 @@ export async function* streamOpenAIChatCompletionWithTools(
         yield { type: "tool_call", toolCall: { name: toolCall.name, arguments: args } };
 
         // Execute the tool
+        const toolStart = Date.now();
         const result = await executeToolCall(toolCall.name, args, context);
+        console.log(`⏱️ [STREAM] Tool "${toolCall.name}" executed in ${Date.now() - toolStart}ms`);
 
         // Notify client about tool result (for UI state updates like showing flights)
         yield { type: "tool_result", name: toolCall.name, result };
 
-        // Add tool result to messages for OpenAI
         messages.push({
           role: "tool",
           tool_call_id: toolCall.id,
@@ -1186,7 +1069,7 @@ export async function* streamOpenAIChatCompletionWithTools(
         });
       }
 
-      // Loop continues - OpenAI will now see tool results and generate a natural response
+      console.log(`⏱️ [STREAM] Needs followup (search tool used), looping. Elapsed: ${Date.now() - totalStart}ms`);
     }
   } catch (error) {
     console.error("OpenAI streaming error:", error);
