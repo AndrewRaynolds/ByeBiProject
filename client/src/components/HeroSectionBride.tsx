@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Send, MessageCircle } from "lucide-react";
-import ActivityIdeasCompactBride from "./ActivityIdeasCompactBride";
 import ChatDialogCompactBride from "./ChatDialogCompactBride";
 
 export default function HeroSectionBride() {
@@ -24,7 +23,7 @@ export default function HeroSectionBride() {
       <section className="relative py-16 md:py-24 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&h=650&w=940')" }}>
         <div className="absolute inset-0 bg-gradient-to-r from-black to-pink-900 bg-opacity-75 mix-blend-multiply"></div>
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-2xl mx-auto">
             <h1 className="text-white font-bold text-4xl md:text-5xl mb-3 leading-tight text-center">
               Last Fling Before The Ring! 💍
             </h1>
@@ -32,47 +31,39 @@ export default function HeroSectionBride() {
               Create unforgettable memories with personalized trips, spa experiences, and celebrations for the bride's last adventure.
             </p>
 
-            {/* Two Column Layout: Ideas Generator + Chat */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left: Activity Ideas Generator */}
-              <ActivityIdeasCompactBride />
-
-              {/* Right: Chat Assistant */}
-              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <MessageCircle className="w-5 h-5 text-pink-300" />
-                  <h3 className="text-white font-bold text-lg">Chat Assistant</h3>
-                </div>
-                
-                <p className="text-white/80 text-sm mb-4">
-                  Get personalized recommendations through conversation
-                </p>
-                
-                <form onSubmit={handleChatSubmit} className="space-y-3">
-                  <Input
-                    type="text"
-                    placeholder="Where do you want to go? (e.g., Ibiza, Barcelona...)"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    className="bg-white/95 border-white/30 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-pink-500"
-                    data-testid="input-hero-chat-bride"
-                  />
-                  <Button 
-                    type="submit"
-                    className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-                    data-testid="button-chat-submit-bride"
-                  >
-                    <Send className="w-4 h-4" />
-                    Start Chat
-                  </Button>
-                </form>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <MessageCircle className="w-6 h-6 text-pink-400" />
+                <h3 className="text-white font-bold text-xl">The Chat Bride</h3>
               </div>
+              
+              <p className="text-white/80 text-sm mb-4">
+                Get personalized recommendations through conversation
+              </p>
+              
+              <form onSubmit={handleChatSubmit} className="space-y-3">
+                <Input
+                  type="text"
+                  placeholder="Where do you want to go? (e.g., Ibiza, Barcelona...)"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  className="bg-white/95 border-white/30 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-pink-500"
+                  data-testid="input-hero-chat-bride"
+                />
+                <Button 
+                  type="submit"
+                  className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                  data-testid="button-chat-submit-bride"
+                >
+                  <Send className="w-4 h-4" />
+                  Start Chat
+                </Button>
+              </form>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Chat Dialog */}
       <ChatDialogCompactBride 
         open={chatDialogOpen} 
         onOpenChange={setChatDialogOpen}

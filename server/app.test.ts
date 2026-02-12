@@ -27,7 +27,6 @@ vi.mock('./zapier-integration', () => ({
 // Mock OpenAI service
 vi.mock('./services/openai', () => ({
   generateItinerary: vi.fn(),
-  generateActivitySuggestions: vi.fn(),
   generateAssistantResponse: vi.fn(),
   streamOpenAIChatCompletion: vi.fn(),
 }));

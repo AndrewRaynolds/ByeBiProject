@@ -616,42 +616,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
-  // GROQ Activity Suggestions endpoint (NEW - AI-powered activity ideas)
-  app.post("/api/chat/activity-suggestions", async (req: Request, res: Response) => {
-    try {
-      const { destination, startDate, endDate, month, partyType } = req.body;
-      
-      if (!destination) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Missing required field: destination" 
-        });
-      }
-
-      if (!process.env.OPENAI_API_KEY) {
-        console.warn("OpenAI API key not configured, using fallback activities");
-      }
-
-      // Import OpenAI service
-      const { generateActivitySuggestions } = await import('./services/openai');
-      
-      const timeReference = month || (startDate && endDate ? `${startDate} to ${endDate}` : 'summer');
-      const suggestions = await generateActivitySuggestions(destination, timeReference, partyType || 'bachelor');
-
-      return res.status(200).json({
-        success: true,
-        suggestions
-      });
-
-    } catch (error: any) {
-      console.error('Activity Suggestions Error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        error: error.message 
-      });
-    }
-  });
-
   // OpenAI Streaming Chat endpoint (with tool calls support)
   app.post("/api/chat/openai-stream", async (req: Request, res: Response) => {
     try {
