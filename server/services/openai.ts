@@ -86,7 +86,7 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-5-mini",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -180,7 +180,7 @@ Reply to the user's message based on this context. Return your answer in JSON fo
 }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -618,39 +618,25 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
-const SHARED_SYSTEM_PROMPT = `CRITICAL RULE: Always include a user-facing text response, even when calling tools. Never respond with ONLY tool calls.
+const SHARED_SYSTEM_PROMPT = `Always include user-facing text, even when calling tools.
 
-AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
+DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
-CONVERSATION RULES — FOLLOW STRICTLY:
-1. NEVER assume the departure city. If the user has not explicitly stated where they are departing from, you MUST ask them. Do NOT default to Rome or any other city.
-2. NEVER ask users to provide dates in a specific format (e.g., YYYY-MM-DD). Accept natural language dates such as "June 10 to June 14", "10/06 to 14/06", "next weekend", "first weekend of July", "August 3–6". Interpret and normalize dates internally to YYYY-MM-DD before calling tools, without ever mentioning the format to the user.
-3. If key information is missing (departure city, destination, dates, number of passengers), ask for it in a natural and minimal way. Only ask for what is strictly necessary. Keep questions short and conversational.
-4. When the destination is provided (e.g., "Prague"), confirm it naturally without assuming anything else.
-5. Once ALL required information is available (departure city, destination, travel dates, number of passengers), briefly confirm the full route and dates in natural language, then proceed with the flight search by calling search_flights.
+RULES:
+- NEVER assume departure city. Always ask if not stated.
+- NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally.
+- Ask only for missing info: departure city, destination, dates, passengers. Keep it short and natural.
+- Confirm destination naturally. Once you have everything, briefly confirm route+dates then call search_flights.
+- Concise: 2-3 sentences max. Friendly startup tone. No jargon.
+- Focus ONLY on flights. No activities, experiences, or hotels.
 
-TOOL USAGE:
-- Call search_flights when you have ALL of: origin city, destination city, departure date, return date, and passenger count. Convert any natural-language dates to YYYY-MM-DD internally before calling the tool.
-- Call search_hotels when you have destination, check-in date, check-out date, and guest count.
-- Call select_flight when the user chooses a flight option.
-- Call unlock_checkout when the user confirms they want to book.
+TOOLS:
+- search_flights: needs origin, destination, departure_date, return_date, passengers. Convert dates to YYYY-MM-DD silently.
+- search_hotels: needs destination, check_in_date, check_out_date, guests.
+- select_flight: when user picks a flight option.
+- unlock_checkout: when user confirms booking. Flights go through external checkout — never say booking is completed.
 
-When flights are available in the context, list the top options (1, 2, 3) with departure and return date/time and flight number, then ask which option the user prefers.
-
-TONE:
-- Friendly, efficient, modern startup assistant
-- No technical jargon, no mention of formats or backend processes
-- Keep responses concise (2-3 sentences max)
-- Focus ONLY on flights - do NOT suggest experiences, activities, or hotels
-- When the user mentions a new destination, start fresh
-
-CHECKOUT FLOW:
-- When flights are shown and the user confirms (yes, ok, sure, confirm, proceed, perfect, let's do it, etc.), call unlock_checkout immediately
-- NEVER confirm bookings as if they were completed - flights go through external checkout
-
-BOOKING INFO:
-- Flights use external affiliate checkout
-- Hotels will appear at checkout (don't mention them in chat)`;
+When showing flights, list top options (1,2,3) with date/time, airline, flight number. Ask which one they prefer.`;
 
 const BYEBRO_SYSTEM_PROMPT = `You are the official assistant of ByeBro, part of the BYEBI app. Your task is to help plan bachelor party trips by finding REAL FLIGHTS. ALWAYS respond in the language the user writes in.
 
@@ -742,7 +728,7 @@ export async function createOpenAIChatCompletion(
 
     const chatCompletion = await openai.chat.completions.create({
       messages,
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       tools: TRIP_TOOLS,
       tool_choice: "auto",
     });
@@ -803,7 +789,7 @@ export async function* streamOpenAIChatCompletion(
 
     const stream = await openai.chat.completions.create({
       messages,
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       stream: true,
       tools: TRIP_TOOLS,
       tool_choice: "auto",
@@ -930,6 +916,118 @@ function generateFollowUpMessage(
   return "Got it! Anything else you'd like to share?";
 }
 
+function detectUserLanguage(context: ChatContext, conversationHistory: ChatMessage[] = []): string {
+  const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === "user");
+  if (!lastUserMsg) return "en";
+  const text = lastUserMsg.content.toLowerCase();
+  const itPatterns = /\b(ciao|voglio|andare|siamo|partiamo|dal|al|persone|voli|quando|dove|prenota|perfetto|procedi)\b/;
+  const esPatterns = /\b(hola|quiero|somos|salimos|del|personas|vuelos|cuando|donde|reservar|perfecto)\b/;
+  if (itPatterns.test(text)) return "it";
+  if (esPatterns.test(text)) return "es";
+  return "en";
+}
+
+interface LocalStrings {
+  noFlightsError: (o: string, d: string) => string;
+  noFlights: (o: string, d: string) => string;
+  flightsHeader: (o: string, d: string) => string;
+  direct: string;
+  stop: (n: number) => string;
+  dep: string;
+  ret: string;
+  whichOne: string;
+  flightSelected: string;
+  checkout: string;
+}
+
+const STRINGS: Record<string, LocalStrings> = {
+  it: {
+    noFlightsError: (o, d) => `Non sono riuscito a trovare voli da ${o} a ${d}. Vuoi provare date diverse?`,
+    noFlights: (o, d) => `Nessun volo disponibile da ${o} a ${d} per quelle date. Prova con date diverse o un'altra destinazione?`,
+    flightsHeader: (o, d) => `Ecco i migliori voli da **${o}** a **${d}**:\n\n`,
+    direct: "diretto",
+    stop: (n) => `${n} scal${n > 1 ? "i" : "o"}`,
+    dep: "Partenza",
+    ret: "Ritorno",
+    whichOne: "Quale preferisci?",
+    flightSelected: "Perfetto, volo selezionato! Vuoi procedere con la prenotazione?",
+    checkout: "Ottimo! Ti porto al checkout per completare la prenotazione.",
+  },
+  en: {
+    noFlightsError: (o, d) => `Couldn't find flights from ${o} to ${d}. Want to try different dates?`,
+    noFlights: (o, d) => `No flights available from ${o} to ${d} for those dates. Try different dates or another destination?`,
+    flightsHeader: (o, d) => `Here are the best flights from **${o}** to **${d}**:\n\n`,
+    direct: "direct",
+    stop: (n) => `${n} stop${n > 1 ? "s" : ""}`,
+    dep: "Departure",
+    ret: "Return",
+    whichOne: "Which one do you prefer?",
+    flightSelected: "Flight selected! Ready to proceed with booking?",
+    checkout: "Taking you to checkout to complete the booking.",
+  },
+  es: {
+    noFlightsError: (o, d) => `No encontré vuelos de ${o} a ${d}. ¿Quieres probar otras fechas?`,
+    noFlights: (o, d) => `No hay vuelos disponibles de ${o} a ${d} para esas fechas. ¿Pruebas con otras fechas u otro destino?`,
+    flightsHeader: (o, d) => `Aquí están los mejores vuelos de **${o}** a **${d}**:\n\n`,
+    direct: "directo",
+    stop: (n) => `${n} escala${n > 1 ? "s" : ""}`,
+    dep: "Salida",
+    ret: "Regreso",
+    whichOne: "¿Cuál prefieres?",
+    flightSelected: "¡Vuelo seleccionado! ¿Quieres proceder con la reserva?",
+    checkout: "¡Genial! Te llevo al checkout para completar la reserva.",
+  },
+};
+
+function generateLocalToolResponse(
+  toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }>,
+  context: ChatContext,
+  conversationHistory: ChatMessage[] = [],
+): string | null {
+  const lang = detectUserLanguage(context, conversationHistory);
+  const s = STRINGS[lang] || STRINGS.en;
+
+  for (const { name, result, args } of toolResults) {
+    switch (name) {
+      case "search_flights": {
+        const flights = result.flights as any[] | undefined;
+        const origin = (args.origin as string) || context.originCityName || "";
+        const destination = (args.destination as string) || context.selectedDestination || "";
+
+        if (!flights || flights.length === 0) {
+          return result.error ? s.noFlightsError(origin, destination) : s.noFlights(origin, destination);
+        }
+
+        const locale = lang === "it" ? "it-IT" : lang === "es" ? "es-ES" : "en-US";
+        const formatDT = (iso: string) => {
+          const d = new Date(iso);
+          return d.toLocaleDateString(locale, { day: "numeric", month: "long" }) +
+            " " + d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+        };
+
+        let msg = s.flightsHeader(origin, destination);
+        flights.slice(0, 3).forEach((f: any, idx: number) => {
+          const dep = f.departure_at ? formatDT(f.departure_at) : "N/A";
+          const ret = f.return_at ? formatDT(f.return_at) : "N/A";
+          const stopsLabel = f.stops > 0 ? ` (${s.stop(f.stops)})` : ` (${s.direct})`;
+          const flightNum = f.flight_number ? ` #${f.flight_number}` : "";
+          msg += `**${idx + 1}.** ${f.airline}${flightNum}${stopsLabel} — ${f.price}€\n`;
+          msg += `   ${s.dep}: ${dep} / ${s.ret}: ${ret}\n\n`;
+        });
+        msg += s.whichOne;
+        return msg;
+      }
+
+      case "select_flight":
+        return s.flightSelected;
+
+      case "unlock_checkout":
+        return s.checkout;
+    }
+  }
+  return null;
+}
+
 /**
  * New streaming function that implements the proper OpenAI function calling loop.
  * Instead of hard-coding follow-up messages, this function:
@@ -971,7 +1069,7 @@ export async function* streamOpenAIChatCompletionWithTools(
 
       const stream = await openai.chat.completions.create({
         messages,
-        model: "gpt-5-mini",
+        model: "gpt-4o-mini",
         stream: true,
         tools: TRIP_TOOLS,
         tool_choice: "auto",
@@ -1043,7 +1141,10 @@ export async function* streamOpenAIChatCompletionWithTools(
         }))
       });
 
-      // Execute each tool and add results to messages
+      // Execute each tool and collect results
+      let canShortCircuit = true;
+      const toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }> = [];
+
       for (const toolCall of toolCalls) {
         let args: Record<string, unknown>;
         try {
@@ -1052,7 +1153,6 @@ export async function* streamOpenAIChatCompletionWithTools(
           args = {};
         }
 
-        // Validate the tool call first
         const validation = validateToolCall({ name: toolCall.name, arguments: args });
         if (!validation.valid) {
           messages.push({
@@ -1060,19 +1160,18 @@ export async function* streamOpenAIChatCompletionWithTools(
             tool_call_id: toolCall.id,
             content: JSON.stringify({ error: validation.message })
           });
+          canShortCircuit = false;
           continue;
         }
 
-        // Notify client about tool call (for UI updates like showing loading state)
         yield { type: "tool_call", toolCall: { name: toolCall.name, arguments: args } };
 
-        // Execute the tool
         const toolStart = Date.now();
         const result = await executeToolCall(toolCall.name, args, context);
         console.log(`⏱️ [STREAM] Tool "${toolCall.name}" executed in ${Date.now() - toolStart}ms`);
 
-        // Notify client about tool result (for UI state updates like showing flights)
         yield { type: "tool_result", name: toolCall.name, result };
+        toolResults.push({ name: toolCall.name, result, args });
 
         messages.push({
           role: "tool",
@@ -1081,7 +1180,20 @@ export async function* streamOpenAIChatCompletionWithTools(
         });
       }
 
-      console.log(`⏱️ [STREAM] Needs followup (search tool used), looping. Elapsed: ${Date.now() - totalStart}ms`);
+      // Short-circuit: generate local response for search tools to avoid a second OpenAI call (~3-8s saved)
+      const searchToolNames = new Set(["search_flights", "select_flight", "unlock_checkout"]);
+      const allToolsAreSimple = canShortCircuit && toolResults.every(t => searchToolNames.has(t.name));
+
+      if (allToolsAreSimple && toolResults.length > 0) {
+        const localResponse = generateLocalToolResponse(toolResults, context, conversationHistory);
+        if (localResponse) {
+          console.log(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);
+          yield { type: "content", content: localResponse };
+          break;
+        }
+      }
+
+      console.log(`⏱️ [STREAM] Needs followup via OpenAI. Elapsed: ${Date.now() - totalStart}ms`);
     }
   } catch (error) {
     console.error("OpenAI streaming error:", error);
@@ -1136,7 +1248,7 @@ Return ONLY the JSON array, no other text.`;
           content: `Generate 6 activity suggestions for ${destination}`,
         },
       ],
-      model: "gpt-5-mini"
+      model: "gpt-4o-mini"
     });
 
     const responseText = chatCompletion.choices[0]?.message?.content || "[]";
