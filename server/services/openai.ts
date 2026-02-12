@@ -284,8 +284,8 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
     case "search_flights": {
       const origin = typeof args.origin === "string" ? args.origin.trim() : "";
       const destination = typeof args.destination === "string" ? args.destination.trim() : "";
-      const depDate = typeof args.departure_date === "string" ? args.departure_date.trim() : "";
-      const retDate = typeof args.return_date === "string" ? args.return_date.trim() : "";
+      let depDate = typeof args.departure_date === "string" ? args.departure_date.trim() : "";
+      let retDate = typeof args.return_date === "string" ? args.return_date.trim() : "";
       const passengers = Number(args.passengers);
       
       if (!origin || !destination) {
@@ -300,6 +300,24 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
           message: "I need your travel dates to search flights. When are you going and coming back?",
         };
       }
+
+      const today = new Date().toISOString().slice(0, 10);
+      if (depDate < today) {
+        const [y, m, d] = depDate.split("-").map(Number);
+        const [ry, rm, rd] = retDate.split("-").map(Number);
+        const tripDays = Math.round((new Date(ry, rm - 1, rd).getTime() - new Date(y, m - 1, d).getTime()) / 86400000);
+        const nowYear = new Date().getFullYear();
+        let newYear = nowYear;
+        const candidateDate = `${newYear}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        if (candidateDate < today) newYear++;
+        depDate = `${newYear}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const newEnd = new Date(newYear, m - 1, d + (tripDays > 0 ? tripDays : 5));
+        retDate = newEnd.toISOString().slice(0, 10);
+        args.departure_date = depDate;
+        args.return_date = retDate;
+        console.log(`📅 Auto-corrected past dates → dep: ${depDate}, ret: ${retDate}`);
+      }
+
       if (!Number.isInteger(passengers) || passengers <= 0) {
         return {
           valid: false,
@@ -618,25 +636,28 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
-const SHARED_SYSTEM_PROMPT = `Always include user-facing text, even when calling tools.
+const SHARED_SYSTEM_PROMPT = (() => {
+  const today = new Date().toISOString().slice(0, 10);
+  return `Today is ${today}. Always include user-facing text, even when calling tools.
 
 DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
 RULES:
 - NEVER assume departure city. Always ask if not stated.
-- NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally.
+- NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
 - Ask only for missing info: departure city, destination, dates, passengers. Keep it short and natural.
 - Confirm destination naturally. Once you have everything, briefly confirm route+dates then call search_flights.
 - Concise: 2-3 sentences max. Friendly startup tone. No jargon.
 - Focus ONLY on flights. No activities, experiences, or hotels.
 
 TOOLS:
-- search_flights: needs origin, destination, departure_date, return_date, passengers. Convert dates to YYYY-MM-DD silently.
+- search_flights: needs origin, destination, departure_date, return_date, passengers. All dates MUST be today or in the future (YYYY-MM-DD).
 - search_hotels: needs destination, check_in_date, check_out_date, guests.
 - select_flight: when user picks a flight option.
 - unlock_checkout: when user confirms booking. Flights go through external checkout — never say booking is completed.
 
 When showing flights, list top options (1,2,3) with date/time, airline, flight number. Ask which one they prefer.`;
+})();
 
 const BYEBRO_SYSTEM_PROMPT = `You are the official assistant of ByeBro, part of the BYEBI app. Your task is to help plan bachelor party trips by finding REAL FLIGHTS. ALWAYS respond in the language the user writes in.
 
