@@ -11,12 +11,12 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
       <div className="max-w-4xl w-full">
         {/* ByeBi Logo */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-14">
           <div className="flex justify-center">
             <img 
               src={byebiLogo} 
               alt="ByeBi Logo" 
-              className="w-auto h-80 md:h-96 lg:h-[28rem] object-contain drop-shadow-2xl"
+              className="w-auto h-40 md:h-48 lg:h-56 object-contain drop-shadow-2xl"
               style={{ 
                 mixBlendMode: 'screen',
                 imageRendering: '-webkit-optimize-contrast',
