@@ -26,7 +26,7 @@ interface ChatContext {
   originCityName?: string;
 
   flights?: {
-    id?: number;
+   .
     airline: string;
     departure_at: string;
     return_at: string;
