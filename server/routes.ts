@@ -668,9 +668,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // Determine IATA codes for origin
-      const originIata = cityToIata(originCity) || "ROM";
-      const originCityName = iataToCity(originIata);
+      const originIata = originCity ? (cityToIata(originCity) || "") : "";
+      const originCityName = originIata ? iataToCity(originIata) : "";
 
       // Debug log only in development
       if (process.env.NODE_ENV !== "production") {
