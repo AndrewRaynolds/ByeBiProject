@@ -1,7 +1,7 @@
 # ByeBi Dual-Brand Travel Platform
 
 ## Overview
-ByeBi is an AI-powered dual-brand travel platform featuring **ByeBro** for bachelor parties and **ByeBride** for bachelorette parties. It offers a OneClick Assistant for ultra-fast conversational itinerary generation, an Activity Ideas Generator, and comprehensive expense management via SplittaBro/SplittaBride. The platform's core vision is to streamline group travel planning for specific event types (bachelor/bachelorette parties) by leveraging AI for personalized and efficient itinerary creation, with a strong focus on user experience and brand-specific customization.
+ByeBi is an AI-powered dual-brand travel platform featuring **ByeBro** for bachelor parties and **ByeBride** for bachelorette parties. It offers "The Chat Bro" / "The Chat Bride" as central chat assistants for conversational flight search and itinerary generation, and comprehensive expense management via SplittaBro/SplittaBride. The platform's core vision is to streamline group travel planning for specific event types (bachelor/bachelorette parties) by leveraging AI for personalized and efficient itinerary creation, with a strong focus on user experience and brand-specific customization.
 
 ## User Preferences
 - Language: Italian interface preferred
@@ -50,7 +50,7 @@ interface TripContext {
 - TripPlanningForm.tsx → saves currentItinerary → navigates to /itinerary
 - ChatDialogCompact.tsx / ChatDialogCompactBride.tsx → saves currentItinerary → navigates to /itinerary
 
-An Activity Ideas Generator allows users to get personalized activity suggestions based on destination and month, displayed in a modal with visual cards. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
+The hero section of each brand features a centered chat assistant ("The Chat Bro" for ByeBro, "The Chat Bride" for ByeBride) as the primary entry point for trip planning. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
 
 ## GetYourGuide Integration (January 2026)
 Affiliate links for experiences/activities are integrated via `GetYourGuideCta` component in Itinerary and Checkout pages.
