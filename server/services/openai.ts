@@ -229,6 +229,7 @@ interface ChatContext {
   partyType?: "bachelor" | "bachelorette";
   origin?: string;
   originCityName?: string;
+  language?: string;
 
   flights?: {
     id?: number;
@@ -943,14 +944,21 @@ function generateFollowUpMessage(
 }
 
 function detectUserLanguage(context: ChatContext, conversationHistory: ChatMessage[] = []): string {
-  const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === "user");
-  if (!lastUserMsg) return "en";
-  const text = lastUserMsg.content.toLowerCase();
-  const itPatterns = /\b(ciao|voglio|andare|siamo|partiamo|dal|al|persone|voli|quando|dove|prenota|perfetto|procedi)\b/;
-  const esPatterns = /\b(hola|quiero|somos|salimos|del|personas|vuelos|cuando|donde|reservar|perfecto)\b/;
-  if (itPatterns.test(text)) return "it";
-  if (esPatterns.test(text)) return "es";
-  return "en";
+  const itPatterns = /\b(ciao|voglio|andare|siamo|partiamo|dal|al|persone|voli|quando|dove|prenota|perfetto|procedi|andiamo|vorrei|cercare|partire|tornare|maggio|giugno|luglio|agosto|settembre|ottobre)\b/;
+  const esPatterns = /\b(hola|quiero|somos|salimos|del|personas|vuelos|cuando|donde|reservar|perfecto|vamos|buscar|salir|volver|mayo|junio|julio|agosto|septiembre|octubre)\b/;
+  const enPatterns = /\b(hello|want|going|looking|people|flights|when|where|book|perfect|let'?s|search|leave|return|may|june|july|august|september|october)\b/;
+  const allMessages = [...conversationHistory].reverse();
+  for (const msg of allMessages) {
+    if (msg.role !== "user") continue;
+    const text = msg.content.toLowerCase();
+    if (itPatterns.test(text)) return "it";
+    if (esPatterns.test(text)) return "es";
+    if (enPatterns.test(text)) return "en";
+  }
+  if (context.language && ["it", "en", "es"].includes(context.language)) {
+    return context.language;
+  }
+  return "it";
 }
 
 interface LocalStrings {

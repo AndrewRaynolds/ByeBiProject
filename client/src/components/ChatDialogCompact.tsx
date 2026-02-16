@@ -199,6 +199,7 @@ export default function ChatDialogCompact({
         conversationHistory,
         partyType: currentState.partyType,
         originCity: originCityRef.current,
+        language: "it",
       };
       console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
 

@@ -619,7 +619,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // OpenAI Streaming Chat endpoint (with tool calls support)
   app.post("/api/chat/openai-stream", async (req: Request, res: Response) => {
     try {
-      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity } = req.body;
+      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity, language } = req.body;
 
       if (!process.env.OPENAI_API_KEY) {
         return res.status(400).json({ 
@@ -648,6 +648,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         partyType: partyType || 'bachelor',
         origin: originIata,
         originCityName,
+        language: language || undefined,
       };
 
       // Use the new tool-loop streaming function that properly executes tools
