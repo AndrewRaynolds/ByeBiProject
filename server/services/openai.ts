@@ -324,6 +324,11 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
           message: "How many people are traveling?",
         };
       }
+      if (passengers > 9) {
+        args._originalPassengers = passengers;
+        args.passengers = 1;
+        console.log(`👥 Passengers capped: ${passengers} → 1 (per-person search for Amadeus max 9 limit)`);
+      }
       return { valid: true };
     }
     case "search_hotels": {
@@ -957,6 +962,7 @@ interface LocalStrings {
   dep: string;
   ret: string;
   whichOne: string;
+  perPersonNote: (n: number) => string;
   flightSelected: string;
   checkout: string;
 }
@@ -971,6 +977,7 @@ const STRINGS: Record<string, LocalStrings> = {
     dep: "Partenza",
     ret: "Ritorno",
     whichOne: "Quale preferisci?",
+    perPersonNote: (n) => `\n> I prezzi sono **per persona**. Per ${n} partecipanti, moltiplica il prezzo x${n}.\n\n`,
     flightSelected: "Perfetto, volo selezionato! Vuoi procedere con la prenotazione?",
     checkout: "Ottimo! Ti porto al checkout per completare la prenotazione.",
   },
@@ -983,6 +990,7 @@ const STRINGS: Record<string, LocalStrings> = {
     dep: "Departure",
     ret: "Return",
     whichOne: "Which one do you prefer?",
+    perPersonNote: (n) => `\n> Prices are **per person**. For ${n} travelers, multiply the price x${n}.\n\n`,
     flightSelected: "Flight selected! Ready to proceed with booking?",
     checkout: "Taking you to checkout to complete the booking.",
   },
@@ -995,6 +1003,7 @@ const STRINGS: Record<string, LocalStrings> = {
     dep: "Salida",
     ret: "Regreso",
     whichOne: "¿Cuál prefieres?",
+    perPersonNote: (n) => `\n> Los precios son **por persona**. Para ${n} viajeros, multiplica el precio x${n}.\n\n`,
     flightSelected: "¡Vuelo seleccionado! ¿Quieres proceder con la reserva?",
     checkout: "¡Genial! Te llevo al checkout para completar la reserva.",
   },
@@ -1014,6 +1023,7 @@ function generateLocalToolResponse(
         const flights = result.flights as any[] | undefined;
         const origin = (args.origin as string) || context.originCityName || "";
         const destination = (args.destination as string) || context.selectedDestination || "";
+        const originalPassengers = args._originalPassengers as number | undefined;
 
         if (!flights || flights.length === 0) {
           return result.error ? s.noFlightsError(origin, destination) : s.noFlights(origin, destination);
@@ -1027,6 +1037,9 @@ function generateLocalToolResponse(
         };
 
         let msg = s.flightsHeader(origin, destination);
+        if (originalPassengers && originalPassengers > 9) {
+          msg += s.perPersonNote(originalPassengers);
+        }
         flights.slice(0, 3).forEach((f: any, idx: number) => {
           const dep = f.departure_at ? formatDT(f.departure_at) : "N/A";
           const ret = f.return_at ? formatDT(f.return_at) : "N/A";

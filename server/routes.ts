@@ -821,7 +821,11 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       console.log("✈️ Resolved IATA codes:", { originIata, destIata });
 
-      const numAdults = passengers ? parseInt(String(passengers), 10) : 1;
+      let numAdults = passengers ? parseInt(String(passengers), 10) : 1;
+      if (numAdults > 9) {
+        console.log(`👥 /api/flights/search: capping passengers ${numAdults} → 1 (Amadeus max 9)`);
+        numAdults = 1;
+      }
 
       const flightResults = await searchFlights({
         originCode: originIata,
