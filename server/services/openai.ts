@@ -1116,6 +1116,8 @@ export async function* streamOpenAIChatCompletionWithTools(
       const toolCallsBuffer: Map<number, { id: string; name: string; arguments: string }> =
         new Map();
       let firstChunkReceived = false;
+      let hasToolCalls = false;
+      const contentBuffer: string[] = [];
 
       for await (const chunk of stream) {
         if (!firstChunkReceived) {
@@ -1124,14 +1126,13 @@ export async function* streamOpenAIChatCompletionWithTools(
         }
         const delta = chunk.choices[0]?.delta;
 
-        // Stream content to client immediately
         if (delta?.content) {
           assistantContent += delta.content;
-          yield { type: "content", content: delta.content };
+          contentBuffer.push(delta.content);
         }
 
-        // Accumulate tool calls (they come in chunks)
         if (delta?.tool_calls) {
+          hasToolCalls = true;
           for (const tc of delta.tool_calls) {
             const idx = tc.index;
             if (!toolCallsBuffer.has(idx)) {
@@ -1143,6 +1144,14 @@ export async function* streamOpenAIChatCompletionWithTools(
             if (tc.function?.arguments) buffer.arguments += tc.function.arguments;
           }
         }
+      }
+
+      if (!hasToolCalls && contentBuffer.length > 0) {
+        for (const chunk of contentBuffer) {
+          yield { type: "content", content: chunk };
+        }
+      } else if (hasToolCalls && assistantContent) {
+        console.log(`⏱️ [STREAM] Discarded filler text before tool call: "${assistantContent.slice(0, 80)}..."`);
       }
 
       const streamDone = Date.now();
