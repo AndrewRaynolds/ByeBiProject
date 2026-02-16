@@ -278,7 +278,24 @@ function isValidISODate(value: string): boolean {
   return !Number.isNaN(parsed.getTime());
 }
 
-function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: string } {
+const VALIDATION_MSGS: Record<string, Record<string, string>> = {
+  origin_dest: { it: "Da dove partite e dove volete andare?", es: "¿De dónde salen y a dónde quieren ir?", de: "Von wo fliegt ihr ab und wohin?", fr: "D'où partez-vous et où voulez-vous aller ?", pt: "De onde saem e para onde querem ir?", en: "Where are you departing from and where to?" },
+  dates: { it: "Quando partite e quando tornate?", es: "¿Cuándo salen y cuándo vuelven?", de: "Wann fliegt ihr hin und zurück?", fr: "Quelles sont vos dates de voyage ?", pt: "Quando vão e quando voltam?", en: "When are you going and coming back?" },
+  passengers: { it: "Quanti siete?", es: "¿Cuántos son?", de: "Wie viele Personen seid ihr?", fr: "Combien de personnes êtes-vous ?", pt: "Quantas pessoas são?", en: "How many people are traveling?" },
+  hotel_dest: { it: "In che città cerco hotel?", es: "¿En qué ciudad busco hoteles?", de: "In welcher Stadt soll ich Hotels suchen?", fr: "Dans quelle ville chercher l'hôtel ?", pt: "Em que cidade procuro hotéis?", en: "Which city should I search hotels in?" },
+  hotel_dates: { it: "Quando fate check-in e check-out?", es: "¿Cuándo hacen check-in y check-out?", de: "Wann ist Check-in und Check-out?", fr: "Quelles sont les dates d'arrivée et de départ ?", pt: "Quando fazem check-in e check-out?", en: "When are you checking in and out?" },
+  hotel_guests: { it: "Quanti ospiti?", es: "¿Cuántos huéspedes?", de: "Wie viele Gäste?", fr: "Combien de personnes ?", pt: "Quantos hóspedes?", en: "How many guests?" },
+  flight_select: { it: "Quale volo preferisci? (1, 2 o 3)", es: "¿Qué vuelo prefieres? (1, 2 o 3)", de: "Welchen Flug bevorzugst du? (1, 2 oder 3)", fr: "Quel vol préfères-tu ? (1, 2 ou 3)", pt: "Qual voo preferes? (1, 2 ou 3)", en: "Which flight do you prefer? (1, 2, or 3)" },
+  unknown: { it: "Puoi essere più preciso?", es: "¿Puedes ser más preciso?", de: "Kannst du genauer sein?", fr: "Peux-tu préciser ?", pt: "Podes ser mais preciso?", en: "Can you be more specific?" },
+};
+
+function getValMsg(key: string, lang: string = "it"): string {
+  const msgs = VALIDATION_MSGS[key];
+  if (!msgs) return "";
+  return msgs[lang] || msgs.en || "";
+}
+
+function validateToolCall(toolCall: ToolCall, lang: string = "it"): { valid: boolean; message?: string } {
   const args = toolCall.arguments || {};
 
   switch (toolCall.name) {
@@ -290,16 +307,10 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       const passengers = Number(args.passengers);
       
       if (!origin || !destination) {
-        return {
-          valid: false,
-          message: "I need both the departure city and destination to search flights.",
-        };
+        return { valid: false, message: getValMsg("origin_dest", lang) };
       }
       if (!depDate || !retDate || !isValidISODate(depDate) || !isValidISODate(retDate)) {
-        return {
-          valid: false,
-          message: "I need your travel dates to search flights. When are you going and coming back?",
-        };
+        return { valid: false, message: getValMsg("dates", lang) };
       }
 
       const today = new Date().toISOString().slice(0, 10);
@@ -320,10 +331,7 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       }
 
       if (!Number.isInteger(passengers) || passengers <= 0) {
-        return {
-          valid: false,
-          message: "How many people are traveling?",
-        };
+        return { valid: false, message: getValMsg("passengers", lang) };
       }
       if (passengers > 9) {
         args._originalPassengers = passengers;
@@ -339,48 +347,36 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       const guests = Number(args.guests);
 
       if (!destination) {
-        return {
-          valid: false,
-          message: "Which city should I search hotels in?",
-        };
+        return { valid: false, message: getValMsg("hotel_dest", lang) };
       }
       if (!checkIn || !checkOut || !isValidISODate(checkIn) || !isValidISODate(checkOut)) {
-        return {
-          valid: false,
-          message: "I need your check-in and check-out dates to search hotels. When are you arriving and leaving?",
-        };
+        return { valid: false, message: getValMsg("hotel_dates", lang) };
       }
       if (!Number.isInteger(guests) || guests <= 0) {
-        return {
-          valid: false,
-          message: "How many guests will be staying?",
-        };
+        return { valid: false, message: getValMsg("hotel_guests", lang) };
       }
       return { valid: true };
     }
     case "select_flight": {
       const flightNumber = Number(args.flight_number);
       if (!Number.isInteger(flightNumber) || flightNumber <= 0) {
-        return {
-          valid: false,
-          message: "Which flight option would you like? You can say 1, 2, or 3.",
-        };
+        return { valid: false, message: getValMsg("flight_select", lang) };
       }
       return { valid: true };
     }
     case "unlock_checkout":
       return { valid: true };
     default:
-      return { valid: false, message: "Can you clarify what you'd like to do?" };
+      return { valid: false, message: getValMsg("unknown", lang) };
   }
 }
 
-function validateToolCalls(toolCalls: ToolCall[]): ToolValidationResult {
+function validateToolCalls(toolCalls: ToolCall[], lang: string = "it"): ToolValidationResult {
   const validToolCalls: ToolCall[] = [];
   let clarification: string | undefined;
 
   for (const toolCall of toolCalls) {
-    const validation = validateToolCall(toolCall);
+    const validation = validateToolCall(toolCall, lang);
     if (validation.valid) {
       validToolCalls.push(toolCall);
       continue;
@@ -674,12 +670,21 @@ const BYEBRIDE_SYSTEM_PROMPT = `You are the official assistant of ByeBride, part
 
 ${SHARED_SYSTEM_PROMPT}`;
 
-function buildContextualPrompt(context: ChatContext): string {
+const LANGUAGE_NAMES: Record<string, string> = {
+  it: "ITALIAN", es: "SPANISH", de: "GERMAN", fr: "FRENCH", pt: "PORTUGUESE", en: "ENGLISH"
+};
+
+function buildContextualPrompt(context: ChatContext, detectedLang?: string): string {
   const basePrompt =
     context.partyType === "bachelorette"
       ? BYEBRIDE_SYSTEM_PROMPT
       : BYEBRO_SYSTEM_PROMPT;
   let contextualPrompt = basePrompt;
+
+  if (detectedLang) {
+    const langName = LANGUAGE_NAMES[detectedLang] || detectedLang.toUpperCase();
+    contextualPrompt += `\n\nCRITICAL LANGUAGE RULE: The user speaks ${langName}. You MUST respond ONLY in ${langName}. Every single word of your response must be in ${langName}. This is non-negotiable.`;
+  }
 
   if (context.origin && context.originCityName) {
     contextualPrompt += `\n\nDEPARTURE CITY: ${context.originCityName} (airport code: ${context.origin})`;
@@ -743,7 +748,8 @@ export async function createOpenAIChatCompletion(
   conversationHistory: ChatMessage[] = [],
 ): Promise<{ content: string; toolCalls: ToolCall[] }> {
   try {
-    const contextualPrompt = buildContextualPrompt(context);
+    const detectedLang = detectUserLanguage(context, conversationHistory, userMessage);
+    const contextualPrompt = buildContextualPrompt(context, detectedLang);
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: "system", content: contextualPrompt },
@@ -778,7 +784,7 @@ export async function createOpenAIChatCompletion(
       }
     }
 
-    const { validToolCalls, clarification } = validateToolCalls(toolCalls);
+    const { validToolCalls, clarification } = validateToolCalls(toolCalls, detectedLang);
     let finalContent = content;
     if (clarification) {
       finalContent = finalContent.trim()
@@ -786,9 +792,8 @@ export async function createOpenAIChatCompletion(
         : clarification;
     }
 
-    // If no content was returned, generate a quick follow-up without a second API call
     if (!finalContent.trim() && validToolCalls.length > 0 && !clarification) {
-      finalContent = generateFollowUpMessage(validToolCalls, context);
+      finalContent = generateFollowUpMessage(validToolCalls, context, detectedLang);
     }
 
     return { content: finalContent, toolCalls: validToolCalls };
@@ -803,8 +808,9 @@ export async function* streamOpenAIChatCompletion(
   context: ChatContext,
   conversationHistory: ChatMessage[] = [],
 ): AsyncGenerator<StreamChunk, void, unknown> {
+  const detectedLang = detectUserLanguage(context, conversationHistory, userMessage);
   try {
-    const contextualPrompt = buildContextualPrompt(context);
+    const contextualPrompt = buildContextualPrompt(context, detectedLang);
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: "system", content: contextualPrompt },
@@ -863,7 +869,7 @@ export async function* streamOpenAIChatCompletion(
             try {
               const args = buffer.arguments ? JSON.parse(buffer.arguments) : {};
               const toolCall = { name: buffer.name, arguments: args };
-              const validation = validateToolCall(toolCall);
+              const validation = validateToolCall(toolCall, detectedLang);
               if (validation.valid) {
                 collectedToolCalls.push(toolCall);
                 yield { type: "tool_call", toolCall };
@@ -886,80 +892,72 @@ export async function* streamOpenAIChatCompletion(
         yield { type: "content", content: pendingClarification };
       } else if (collectedToolCalls.length > 0) {
         // Use local follow-up generation instead of a second API call
-        const fallbackContent = generateFollowUpMessage(collectedToolCalls, context);
+        const fallbackContent = generateFollowUpMessage(collectedToolCalls, context, detectedLang);
         yield { type: "content", content: fallbackContent };
       }
     }
   } catch (error) {
     console.error("OpenAI streaming error:", error);
+    const errLang = FALLBACK_STRINGS[detectedLang] || FALLBACK_STRINGS.it;
     yield {
       type: "content",
-      content:
-        "Sorry, there was a problem with the streaming. Please try again!",
+      content: errLang.error,
     };
   }
 }
 
+const FALLBACK_STRINGS: Record<string, { gotIt: string; error: string }> = {
+  it: { gotIt: "Perfetto! Altro da aggiungere?", error: "Si è verificato un errore. Riprova!" },
+  es: { gotIt: "Perfecto! ¿Algo más?", error: "Se produjo un error. ¡Inténtalo de nuevo!" },
+  de: { gotIt: "Verstanden! Noch etwas?", error: "Ein Fehler ist aufgetreten. Bitte versuche es erneut!" },
+  fr: { gotIt: "Parfait ! Autre chose ?", error: "Une erreur s'est produite. Réessaie !" },
+  pt: { gotIt: "Perfeito! Mais alguma coisa?", error: "Ocorreu um erro. Tente novamente!" },
+  en: { gotIt: "Got it! Anything else?", error: "An error occurred. Please try again!" },
+};
+
 function generateFollowUpMessage(
   toolCalls: ToolCall[],
   context: ChatContext,
+  lang: string = "it",
 ): string {
-  if (context.flights && context.flights.length > 0) {
-    const originCity = context.originCityName;
-    const flightOptions = context.flights
-      .slice(0, 3)
-      .map((f, idx) => {
-        const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const link = f.checkoutUrl ? `\n   Link: ${f.checkoutUrl}` : "";
-
-        return `${idx + 1}) ${originCity} → ${context.selectedDestination}: ${depDate} ${depTime} / Return ${retDate} ${retTime} (${f.airline} Flight ${f.flight_number})${link}`;
-      })
-      .join("\n");
-
-    return `Here are the best flight options I found:\n${flightOptions}\n\nWhich one would you like?`;
-  }
-
-  const toolNames = new Set(toolCalls.map((tc) => tc.name));
-  if (toolNames.has("search_flights")) {
-    return "Searching for the best flights for you...";
-  }
-
-  return "Got it! Anything else you'd like to share?";
+  const s = FALLBACK_STRINGS[lang] || FALLBACK_STRINGS.en;
+  return s.gotIt;
 }
 
-function detectUserLanguage(context: ChatContext, conversationHistory: ChatMessage[] = []): string {
-  const patterns: [string, RegExp][] = [
-    ["it", /\b(ciao|voglio|andare|siamo|partiamo|persone|voli|quando|dove|prenota|perfetto|procedi|andiamo|vorrei|cercare|partire|tornare|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|gennaio|febbraio|marzo|aprile|buongiorno|grazie|prego|scusa)\b/],
-    ["es", /\b(hola|quiero|somos|salimos|personas|vuelos|cuando|donde|reservar|perfecto|vamos|buscar|salir|volver|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|enero|febrero|marzo|abril|gracias|buenos|entonces|pasajeros|volamos)\b/],
-    ["de", /\b(hallo|ich|wir|fliegen|flug|flüge|personen|wann|wohin|buchen|suchen|reise|abflug|rückkehr|mai|juni|juli|august|september|oktober|november|dezember|januar|februar|märz|april|danke|bitte|guten)\b/],
-    ["fr", /\b(bonjour|je|nous|voulons|aller|vol|vols|personnes|quand|chercher|réserver|parfait|partir|retour|mai|juin|juillet|août|septembre|octobre|novembre|décembre|janvier|février|mars|avril|merci|salut|passagers)\b/],
-    ["pt", /\b(olá|oi|quero|vamos|voo|voos|pessoas|quando|onde|reservar|perfeito|partir|voltar|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|janeiro|fevereiro|março|abril|obrigado|passageiros)\b/],
-    ["en", /\b(hello|hi|want|going|looking|people|flights|when|where|book|perfect|let'?s|search|leave|return|may|june|july|august|september|october|november|december|january|february|march|april|thanks|please|passengers)\b/],
+function detectUserLanguage(context: ChatContext, conversationHistory: ChatMessage[] = [], currentMessage?: string): string {
+  const patterns: [string, RegExp[]][] = [
+    ["it", [/\b(ciao|voglio|andare|siamo|partiamo|persone|voli|quando|dove|prenota|perfetto|procedi|andiamo|vorrei|cercare|partire|tornare|buongiorno|grazie|prego|scusa|quale|preferisco|primo|secondo|terzo|questo|quello|bene|facciamo|dai)\b/i, /\b(maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|gennaio|febbraio|marzo|aprile)\b/i]],
+    ["es", [/\b(hola|quiero|somos|salimos|personas|vuelos|cuando|donde|reservar|perfecto|vamos|buscar|salir|volver|gracias|buenos|entonces|pasajeros|volamos|prefiero|primero|segundo|tercero|bien|vale)\b/i, /\b(mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|enero|febrero|marzo|abril)\b/i]],
+    ["de", [/\b(hallo|ich|wir|fliegen|flug|flüge|personen|wann|wohin|buchen|suchen|reise|abflug|rückkehr|danke|bitte|guten|möchte|nehme|ersten|zweiten|dritten|gut|nein)\b/i, /\b(juni|juli|september|oktober|november|dezember|januar|februar|märz)\b/i]],
+    ["fr", [/\b(bonjour|nous|voulons|aller|vols|personnes|quand|chercher|réserver|parfait|partir|retour|merci|salut|passagers|préfère|premier|deuxième|troisième|oui|non|avons|sommes|partons|revenons)\b/i, /\b(juin|juillet|août|septembre|octobre|novembre|décembre|janvier|février|mars|avril)\b/i]],
+    ["pt", [/\b(olá|oi|quero|vamos|voo|voos|pessoas|quando|onde|reservar|perfeito|partir|voltar|obrigado|passageiros|prefiro|primeiro|segundo|terceiro|bem|sim|não)\b/i, /\b(maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|janeiro|fevereiro|março|abril)\b/i]],
+    ["en", [/\b(hello|want|going|looking|people|flights|when|where|book|perfect|let'?s|search|leave|return|thanks|please|passengers|prefer|first|second|third|from|flying)\b/i, /\b(june|july|august|september|october|november|december|january|february|march|april)\b/i]],
   ];
+
+  function scoreText(text: string): string | null {
+    const scores: Record<string, number> = {};
+    for (const [lang, regexes] of patterns) {
+      let count = 0;
+      for (const rx of regexes) {
+        const matches = text.match(new RegExp(rx.source, "gi"));
+        if (matches) count += matches.length;
+      }
+      if (count > 0) scores[lang] = count;
+    }
+    if (Object.keys(scores).length === 0) return null;
+    return Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  if (currentMessage) {
+    const result = scoreText(currentMessage.toLowerCase());
+    if (result) return result;
+  }
+
   const allMessages = [...conversationHistory].reverse();
   for (const msg of allMessages) {
     if (msg.role !== "user") continue;
-    const text = msg.content.toLowerCase();
-    for (const [lang, pattern] of patterns) {
-      if (pattern.test(text)) return lang;
-    }
+    const result = scoreText(msg.content.toLowerCase());
+    if (result) return result;
   }
   return "it";
 }
@@ -1063,8 +1061,9 @@ function generateLocalToolResponse(
   toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }>,
   context: ChatContext,
   conversationHistory: ChatMessage[] = [],
+  currentMessage?: string,
 ): string | null {
-  const lang = detectUserLanguage(context, conversationHistory);
+  const lang = detectUserLanguage(context, conversationHistory, currentMessage);
   const s = STRINGS[lang] || STRINGS.en;
 
   for (const { name, result, args } of toolResults) {
@@ -1128,7 +1127,8 @@ export async function* streamOpenAIChatCompletionWithTools(
 ): AsyncGenerator<StreamChunk, void, unknown> {
   const totalStart = Date.now();
   try {
-    const contextualPrompt = buildContextualPrompt(context);
+    const detectedLang = detectUserLanguage(context, conversationHistory, userMessage);
+    const contextualPrompt = buildContextualPrompt(context, detectedLang);
 
     // Build initial messages array
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -1247,7 +1247,7 @@ export async function* streamOpenAIChatCompletionWithTools(
           args = {};
         }
 
-        const validation = validateToolCall({ name: toolCall.name, arguments: args });
+        const validation = validateToolCall({ name: toolCall.name, arguments: args }, detectedLang);
         if (!validation.valid) {
           messages.push({
             role: "tool",
@@ -1279,7 +1279,7 @@ export async function* streamOpenAIChatCompletionWithTools(
       const allToolsAreSimple = canShortCircuit && toolResults.every(t => searchToolNames.has(t.name));
 
       if (allToolsAreSimple && toolResults.length > 0) {
-        const localResponse = generateLocalToolResponse(toolResults, context, conversationHistory);
+        const localResponse = generateLocalToolResponse(toolResults, context, conversationHistory, userMessage);
         if (localResponse) {
           console.log(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);
           yield { type: "content", content: localResponse };
