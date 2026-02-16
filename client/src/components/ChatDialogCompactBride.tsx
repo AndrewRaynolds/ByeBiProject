@@ -185,7 +185,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         conversationHistory,
         partyType: currentState.partyType,
         originCity: originCityRef.current,
-        language: "it",
       };
       console.log('🔍 OPENAI STREAM PAYLOAD:', payload);
 

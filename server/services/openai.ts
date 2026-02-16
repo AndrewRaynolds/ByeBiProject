@@ -644,15 +644,16 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 
 const SHARED_SYSTEM_PROMPT = (() => {
   const today = new Date().toISOString().slice(0, 10);
-  return `Today is ${today}. Always include user-facing text, even when calling tools.
+  return `Today is ${today}.
 
-DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
+DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca, Madrid, Bilbao
 
 RULES:
+- ALWAYS respond in the same language the user writes in. If user writes German, respond in German. French → French. etc.
 - NEVER assume departure city. Always ask if not stated.
 - NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
 - Ask only for missing info: departure city, destination, dates, passengers. Keep it short and natural.
-- Confirm destination naturally. Once you have everything, briefly confirm route+dates then call search_flights.
+- Once you have all info, call search_flights IMMEDIATELY. Do NOT add any text like "wait", "searching", "un momento", "let me search". Just call the tool directly with NO accompanying text.
 - Concise: 2-3 sentences max. Friendly startup tone. No jargon.
 - Focus ONLY on flights. No activities, experiences, or hotels.
 
@@ -944,19 +945,21 @@ function generateFollowUpMessage(
 }
 
 function detectUserLanguage(context: ChatContext, conversationHistory: ChatMessage[] = []): string {
-  const itPatterns = /\b(ciao|voglio|andare|siamo|partiamo|dal|al|persone|voli|quando|dove|prenota|perfetto|procedi|andiamo|vorrei|cercare|partire|tornare|maggio|giugno|luglio|agosto|settembre|ottobre)\b/;
-  const esPatterns = /\b(hola|quiero|somos|salimos|del|personas|vuelos|cuando|donde|reservar|perfecto|vamos|buscar|salir|volver|mayo|junio|julio|agosto|septiembre|octubre)\b/;
-  const enPatterns = /\b(hello|want|going|looking|people|flights|when|where|book|perfect|let'?s|search|leave|return|may|june|july|august|september|october)\b/;
+  const patterns: [string, RegExp][] = [
+    ["it", /\b(ciao|voglio|andare|siamo|partiamo|persone|voli|quando|dove|prenota|perfetto|procedi|andiamo|vorrei|cercare|partire|tornare|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|gennaio|febbraio|marzo|aprile|buongiorno|grazie|prego|scusa)\b/],
+    ["es", /\b(hola|quiero|somos|salimos|personas|vuelos|cuando|donde|reservar|perfecto|vamos|buscar|salir|volver|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|enero|febrero|marzo|abril|gracias|buenos|entonces|pasajeros|volamos)\b/],
+    ["de", /\b(hallo|ich|wir|fliegen|flug|flüge|personen|wann|wohin|buchen|suchen|reise|abflug|rückkehr|mai|juni|juli|august|september|oktober|november|dezember|januar|februar|märz|april|danke|bitte|guten)\b/],
+    ["fr", /\b(bonjour|je|nous|voulons|aller|vol|vols|personnes|quand|chercher|réserver|parfait|partir|retour|mai|juin|juillet|août|septembre|octobre|novembre|décembre|janvier|février|mars|avril|merci|salut|passagers)\b/],
+    ["pt", /\b(olá|oi|quero|vamos|voo|voos|pessoas|quando|onde|reservar|perfeito|partir|voltar|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|janeiro|fevereiro|março|abril|obrigado|passageiros)\b/],
+    ["en", /\b(hello|hi|want|going|looking|people|flights|when|where|book|perfect|let'?s|search|leave|return|may|june|july|august|september|october|november|december|january|february|march|april|thanks|please|passengers)\b/],
+  ];
   const allMessages = [...conversationHistory].reverse();
   for (const msg of allMessages) {
     if (msg.role !== "user") continue;
     const text = msg.content.toLowerCase();
-    if (itPatterns.test(text)) return "it";
-    if (esPatterns.test(text)) return "es";
-    if (enPatterns.test(text)) return "en";
-  }
-  if (context.language && ["it", "en", "es"].includes(context.language)) {
-    return context.language;
+    for (const [lang, pattern] of patterns) {
+      if (pattern.test(text)) return lang;
+    }
   }
   return "it";
 }
@@ -1015,6 +1018,45 @@ const STRINGS: Record<string, LocalStrings> = {
     flightSelected: "¡Vuelo seleccionado! ¿Quieres proceder con la reserva?",
     checkout: "¡Genial! Te llevo al checkout para completar la reserva.",
   },
+  de: {
+    noFlightsError: (o, d) => `Konnte keine Flüge von ${o} nach ${d} finden. Andere Daten versuchen?`,
+    noFlights: (o, d) => `Keine Flüge von ${o} nach ${d} für diese Daten verfügbar. Andere Daten oder ein anderes Ziel?`,
+    flightsHeader: (o, d) => `Hier sind die besten Flüge von **${o}** nach **${d}**:\n\n`,
+    direct: "direkt",
+    stop: (n) => `${n} Zwischenstopp${n > 1 ? "s" : ""}`,
+    dep: "Abflug",
+    ret: "Rückflug",
+    whichOne: "Welchen bevorzugst du?",
+    perPersonNote: (n) => `\n> Die Preise gelten **pro Person**. Für ${n} Reisende, multipliziere den Preis x${n}.\n\n`,
+    flightSelected: "Flug ausgewählt! Möchtest du mit der Buchung fortfahren?",
+    checkout: "Super! Ich bringe dich zum Checkout.",
+  },
+  fr: {
+    noFlightsError: (o, d) => `Impossible de trouver des vols de ${o} à ${d}. Essayer d'autres dates ?`,
+    noFlights: (o, d) => `Aucun vol disponible de ${o} à ${d} pour ces dates. Essayer d'autres dates ou une autre destination ?`,
+    flightsHeader: (o, d) => `Voici les meilleurs vols de **${o}** à **${d}** :\n\n`,
+    direct: "direct",
+    stop: (n) => `${n} escale${n > 1 ? "s" : ""}`,
+    dep: "Départ",
+    ret: "Retour",
+    whichOne: "Lequel préfères-tu ?",
+    perPersonNote: (n) => `\n> Les prix sont **par personne**. Pour ${n} voyageurs, multiplie le prix x${n}.\n\n`,
+    flightSelected: "Vol sélectionné ! Tu veux procéder à la réservation ?",
+    checkout: "Super ! Je t'emmène au checkout.",
+  },
+  pt: {
+    noFlightsError: (o, d) => `Não encontrei voos de ${o} para ${d}. Tentar outras datas?`,
+    noFlights: (o, d) => `Nenhum voo disponível de ${o} para ${d} nessas datas. Tentar outras datas ou outro destino?`,
+    flightsHeader: (o, d) => `Aqui estão os melhores voos de **${o}** para **${d}**:\n\n`,
+    direct: "direto",
+    stop: (n) => `${n} escala${n > 1 ? "s" : ""}`,
+    dep: "Partida",
+    ret: "Retorno",
+    whichOne: "Qual você prefere?",
+    perPersonNote: (n) => `\n> Os preços são **por pessoa**. Para ${n} viajantes, multiplique o preço x${n}.\n\n`,
+    flightSelected: "Voo selecionado! Quer prosseguir com a reserva?",
+    checkout: "Ótimo! Vou te levar ao checkout.",
+  },
 };
 
 function generateLocalToolResponse(
@@ -1037,7 +1079,8 @@ function generateLocalToolResponse(
           return result.error ? s.noFlightsError(origin, destination) : s.noFlights(origin, destination);
         }
 
-        const locale = lang === "it" ? "it-IT" : lang === "es" ? "es-ES" : "en-US";
+        const localeMap: Record<string, string> = { it: "it-IT", es: "es-ES", de: "de-DE", fr: "fr-FR", pt: "pt-PT", en: "en-US" };
+        const locale = localeMap[lang] || "en-US";
         const formatDT = (iso: string) => {
           const d = new Date(iso);
           return d.toLocaleDateString(locale, { day: "numeric", month: "long" }) +
