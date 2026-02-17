@@ -709,7 +709,7 @@ export default function ChatDialogCompact({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 bg-[#000000]">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-[#fa0006]">
             <Bot className="w-6 h-6 text-red-600" />
             ByeBro Chat Assistant
             {conversationState.selectedDestination && (
