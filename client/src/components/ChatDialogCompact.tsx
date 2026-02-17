@@ -797,7 +797,7 @@ export default function ChatDialogCompact({
             <Input
               {...form.register("message")}
               placeholder="Type your message..."
-              className="flex-1"
+              className="flex-1 bg-[#fafafa]"
               disabled={isLoading}
               data-testid="input-chat-message"
             />
