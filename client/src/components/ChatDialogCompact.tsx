@@ -748,7 +748,7 @@ export default function ChatDialogCompact({
                     </AvatarFallback>
                   </Avatar>
                   <div
-                    className="max-w-[75%] rounded-lg px-4 py-2 text-white bg-[#f50210]"
+                    className="max-w-[75%] rounded-lg px-4 py-2 bg-[#f5f5f5] text-[#000000]"
                   >
                     <p className="text-sm whitespace-pre-wrap">
                       {message.content}
