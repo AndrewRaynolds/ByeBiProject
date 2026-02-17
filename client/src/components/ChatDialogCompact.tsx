@@ -748,11 +748,7 @@ export default function ChatDialogCompact({
                     </AvatarFallback>
                   </Avatar>
                   <div
-                    className={`max-w-[75%] rounded-lg px-4 py-2 ${
-                      message.sender === "user"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gradient-to-br from-red-50 to-red-100 text-gray-900 border border-red-200"
-                    }`}
+                    className="max-w-[75%] rounded-lg px-4 py-2 text-white bg-[#f50210]"
                   >
                     <p className="text-sm whitespace-pre-wrap">
                       {message.content}
