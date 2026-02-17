@@ -643,7 +643,7 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 
 const SHARED_SYSTEM_PROMPT = (() => {
   const today = new Date().toISOString().slice(0, 10);
-  return `Today is ${today}. Always include user-facing text, even when calling tools.
+  return `Today is ${today}.
 
 DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
@@ -651,7 +651,8 @@ RULES:
 - NEVER assume departure city. Always ask if not stated.
 - NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
 - Ask only for missing info: departure city, destination, dates, passengers. Keep it short and natural.
-- Confirm destination naturally. Once you have everything, briefly confirm route+dates then call search_flights.
+- As soon as you have origin, destination, dates and passengers: call search_flights IMMEDIATELY. Do NOT confirm details, do NOT say "let me check", do NOT output any text — just call the tool silently.
+- NEVER output text alongside a tool call. When calling a tool, output ONLY the tool call with zero accompanying text.
 - Concise: 2-3 sentences max. Friendly startup tone. No jargon.
 - Focus ONLY on flights. No activities, experiences, or hotels.
 
