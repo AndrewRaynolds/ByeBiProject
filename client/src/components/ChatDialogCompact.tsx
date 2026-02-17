@@ -11,8 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Send, Bot, User, Sparkles } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, Send, Bot, User, Sparkles, Beer } from "lucide-react";
+import byebiLogo from "@assets/Bb logo_1763313858570.png";
 import {
   normalizeFutureTripDate,
   calculateTripDays,
@@ -735,17 +736,18 @@ export default function ChatDialogCompact({
                   }`}
                 >
                   <Avatar className="w-8 h-8">
-                    <AvatarFallback
-                      className={
-                        message.sender === "user" ? "bg-blue-500" : "bg-red-500"
-                      }
-                    >
-                      {message.sender === "user" ? (
-                        <User className="w-4 h-4 text-white" />
-                      ) : (
-                        <Bot className="w-4 h-4 text-white" />
-                      )}
-                    </AvatarFallback>
+                    {message.sender === "user" ? (
+                      <AvatarFallback className="bg-amber-500">
+                        <Beer className="w-4 h-4 text-white" />
+                      </AvatarFallback>
+                    ) : (
+                      <>
+                        <AvatarImage src={byebiLogo} alt="ByeBi" />
+                        <AvatarFallback className="bg-red-500">
+                          <Bot className="w-4 h-4 text-white" />
+                        </AvatarFallback>
+                      </>
+                    )}
                   </Avatar>
                   <div
                     className="max-w-[75%] rounded-lg px-4 py-2 bg-[#f5f5f5] text-[#000000]"
@@ -759,6 +761,7 @@ export default function ChatDialogCompact({
             {isLoading && (
               <div className="flex gap-3">
                 <Avatar className="w-8 h-8">
+                  <AvatarImage src={byebiLogo} alt="ByeBi" />
                   <AvatarFallback className="bg-red-500">
                     <Bot className="w-4 h-4 text-white" />
                   </AvatarFallback>
