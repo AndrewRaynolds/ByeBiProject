@@ -1,0 +1,172 @@
+I need you to implement a complete, production-ready internationalization (i18n) system for my entire web application.
+
+This must be clean, scalable, and fully refactored. Do NOT implement a quick workaround. This needs to be architected properly.
+
+🎯 OBJECTIVE
+
+Add full multilingual support for:
+
+🇮🇹 Italian (default)
+
+🇬🇧 English
+
+🇪🇸 Spanish
+
+The user must be able to switch languages from the top-right corner of the navbar, next to the "Log In" section.
+
+Language selection must instantly update all UI text across the entire website.
+
+🧱 ARCHITECTURE REQUIREMENTS
+1️⃣ Create Proper i18n Structure
+
+Create a /locales folder with:
+
+/locales/it.json
+
+/locales/en.json
+
+/locales/es.json
+
+Each file must contain ALL application text structured hierarchically, for example:
+
+{
+  "navbar": {
+    "login": "Log In",
+    "signup": "Sign Up"
+  },
+  "homepage": {
+    "title": "Plan your perfect bachelorette party",
+    "subtitle": "Unique experiences across Italy"
+  }
+}
+
+
+All existing hardcoded text across the project must be removed and replaced with translation keys.
+
+2️⃣ Implement Translation Engine
+
+Implement a clean translation system:
+
+Create a global language context / provider
+
+Create a useTranslation() hook (or equivalent)
+
+Implement a t("key.path") function
+
+Add fallback handling if a key is missing
+
+Ensure zero duplicated logic
+
+Do NOT reload the entire page on language change.
+
+3️⃣ Language Persistence
+
+Default language: Italian
+
+When user selects a language:
+
+Update UI instantly
+
+Save selection in localStorage
+
+Restore language on page refresh
+
+Update <html lang=""> dynamically
+
+4️⃣ UI Language Selector
+
+In the navbar, next to "Log In", add:
+
+Three circular flag icons:
+
+🇮🇹
+
+🇬🇧
+
+🇪🇸
+
+Size: 20–24px
+
+Clean, minimal design
+
+Subtle hover effect
+
+Active state indicator (border or opacity)
+
+Smooth micro-animation on selection
+
+Order must be:
+🇮🇹 🇬🇧 🇪🇸
+
+It must visually match the ByeBi elegant aesthetic.
+
+5️⃣ FULL PROJECT REFACTOR
+
+You must:
+
+Replace ALL hardcoded strings in:
+
+Navbar
+
+Homepage
+
+Footer
+
+Forms
+
+Buttons
+
+Errors
+
+Modals
+
+Any static text
+
+Ensure no text remains outside the translation system
+
+Maintain existing styling and layout
+
+Do not break functionality
+
+6️⃣ Future Scalability
+
+Prepare the system for future routing like:
+
+/it
+
+/en
+
+/es
+
+Even if not fully implemented, the structure must allow easy extension.
+
+7️⃣ Quality Standards
+
+The implementation must be:
+
+Modular
+
+Maintainable
+
+Clean
+
+Production-ready
+
+No hacks
+
+No inline translation objects inside components
+
+No duplicated code
+
+8️⃣ Optional Enhancements (If Feasible)
+
+Fade transition when language changes
+
+Automatic fallback to Italian if translation missing
+
+Lazy load locale files for performance
+
+This is a structural upgrade of the entire app.
+
+Do not implement a partial solution.
+Refactor the whole system correctly.
