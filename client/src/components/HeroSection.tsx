@@ -3,8 +3,10 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Send, MessageCircle } from "lucide-react";
 import ChatDialogCompact from "./ChatDialogCompact";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function HeroSection() {
+  const { t } = useTranslation();
   const [chatInput, setChatInput] = useState("");
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [initialChatMessage, setInitialChatMessage] = useState<string | undefined>(undefined);
@@ -25,26 +27,26 @@ export default function HeroSection() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-2xl mx-auto">
             <h1 className="text-white font-bold text-4xl md:text-5xl mb-3 leading-tight text-center">
-              One more Night, no more rights!
+              {t('hero.bro.title')}
             </h1>
             <p className="text-white text-lg mb-10 text-center max-w-3xl mx-auto">
-              Create unforgettable memories with personalized trips, activities, and gear for the groom's last adventure.
+              {t('hero.bro.subtitle')}
             </p>
 
             <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-6">
               <div className="flex items-center gap-2 mb-4">
                 <MessageCircle className="w-6 h-6 text-red-400" />
-                <h3 className="text-white font-bold text-xl">The Chat Bro</h3>
+                <h3 className="text-white font-bold text-xl">{t('hero.bro.chatTitle')}</h3>
               </div>
               
               <p className="text-white/80 text-sm mb-4">
-                Get personalized recommendations through conversation
+                {t('hero.bro.chatSubtitle')}
               </p>
               
               <form onSubmit={handleChatSubmit} className="space-y-3">
                 <Input
                   type="text"
-                  placeholder="Where do you want to go? (e.g., Ibiza, Barcelona...)"
+                  placeholder={t('hero.bro.placeholder')}
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   className="bg-white/95 border-white/30 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-red-500"
@@ -56,7 +58,7 @@ export default function HeroSection() {
                   data-testid="button-chat-submit"
                 >
                   <Send className="w-4 h-4" />
-                  Start Chat
+                  {t('hero.bro.startChat')}
                 </Button>
               </form>
             </div>

@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 type Brand = 'bro' | 'bride';
 
@@ -11,45 +12,18 @@ interface PremiumFeaturesProps {
   brand?: Brand;
 }
 
-const COPY = {
-  bro: {
-    subtitle: "Get exclusive access to premium features and take your bachelor party planning to the next level.",
-    benefits: {
-      blog: { title: "Unlimited Secret Blog Access", desc: "Read and share real bachelor party stories without limits" },
-      avatar: { title: "Create Custom Groom Avatar", desc: "Design a fun avatar of the groom for your trip" },
-      itinerary: { title: "Priority Itinerary Generation", desc: "Get faster and more detailed trip recommendations" },
-      discounts: { title: "Exclusive Discounts", desc: "Special pricing on accommodation and activities" },
-      support: { title: "24/7 Travel Support", desc: "Get help with your trip anytime you need it" }
-    },
-    premiumStatus: "You already have access to all premium features including unlimited blog posts, custom groom avatars, priority itineraries, and exclusive discounts.",
-    annualPlanDesc: "Best value for bachelor party pros"
-  },
-  bride: {
-    subtitle: "Get exclusive access to premium features and take your bachelorette party planning to the next level.",
-    benefits: {
-      blog: { title: "Unlimited Secret Blog Access", desc: "Read and share real bachelorette party stories without limits" },
-      avatar: { title: "Create Custom Bride Avatar", desc: "Design a fun avatar of the bride for your trip" },
-      itinerary: { title: "Priority Itinerary Generation", desc: "Get faster and more detailed trip recommendations" },
-      discounts: { title: "Exclusive Discounts", desc: "Special pricing on accommodation and activities" },
-      support: { title: "24/7 Travel Support", desc: "Get help with your trip anytime you need it" }
-    },
-    premiumStatus: "You already have access to all premium features including unlimited blog posts, custom bride avatars, priority itineraries, and exclusive discounts.",
-    annualPlanDesc: "Best value for bachelorette party pros"
-  }
-};
-
 export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps) {
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("monthly");
   const { user, isAuthenticated, updateUser } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const isPremium = user?.isPremium || false;
-  const copy = COPY[brand];
 
   const handleUpgrade = async () => {
     if (!isAuthenticated) {
       toast({
-        title: "Authentication required",
-        description: "Please login or register to upgrade to premium.",
+        title: t('premium.authRequired'),
+        description: t('premium.authRequiredDesc'),
         variant: "destructive",
       });
       return;
@@ -64,8 +38,8 @@ export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps)
       updateUser(updatedUser);
       
       toast({
-        title: "Upgrade successful!",
-        description: `You now have full access to all premium features. ${selectedPlan === "annual" ? "Your 3 free t-shirts will be available in your dashboard." : ""}`,
+        title: t('premium.upgradeSuccess'),
+        description: `${t('premium.upgradeSuccessDesc')}${selectedPlan === "annual" ? t('premium.upgradeSuccessAnnual') : ""}`,
       });
       
       // Invalidate queries that depend on premium status
@@ -73,8 +47,8 @@ export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps)
       
     } catch (error) {
       toast({
-        title: "Upgrade failed",
-        description: "There was a problem upgrading your account. Please try again later.",
+        title: t('premium.upgradeFailed'),
+        description: t('premium.upgradeFailedDesc'),
         variant: "destructive",
       });
     }
@@ -84,64 +58,64 @@ export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps)
     <section id="premium-features" className="py-16 bg-gradient-to-r from-red-600 to-red-700">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Upgrade to Premium</h2>
-          <p className="text-white opacity-90 max-w-3xl mx-auto">{copy.subtitle}</p>
+          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t('premium.title')}</h2>
+          <p className="text-white opacity-90 max-w-3xl mx-auto">{brand === 'bride' ? t('premium.bride.subtitle') : t('premium.bro.subtitle')}</p>
         </div>
         
         <div className="max-w-4xl mx-auto bg-black rounded-xl overflow-hidden shadow-xl border border-red-600">
           <div className="grid grid-cols-1 lg:grid-cols-3">
             <div className="p-8 bg-gray-900">
-              <h3 className="text-2xl font-bold mb-6 font-poppins text-white">Premium Benefits</h3>
+              <h3 className="text-2xl font-bold mb-6 font-poppins text-white">{t('premium.benefitsTitle')}</h3>
               <ul className="space-y-4">
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">{copy.benefits.blog.title}</span>
-                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.blog.desc}</p>
+                    <span className="font-medium text-white">{t(`premium.${brand}.blogTitle`)}</span>
+                    <p className="text-sm text-gray-300 mt-1">{t(`premium.${brand}.blogDesc`)}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">{copy.benefits.avatar.title}</span>
-                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.avatar.desc}</p>
+                    <span className="font-medium text-white">{t(`premium.${brand}.avatarTitle`)}</span>
+                    <p className="text-sm text-gray-300 mt-1">{t(`premium.${brand}.avatarDesc`)}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">{copy.benefits.itinerary.title}</span>
-                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.itinerary.desc}</p>
+                    <span className="font-medium text-white">{t('premium.itineraryTitle')}</span>
+                    <p className="text-sm text-gray-300 mt-1">{t('premium.itineraryDesc')}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">{copy.benefits.discounts.title}</span>
-                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.discounts.desc}</p>
+                    <span className="font-medium text-white">{t('premium.discountsTitle')}</span>
+                    <p className="text-sm text-gray-300 mt-1">{t('premium.discountsDesc')}</p>
                   </div>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-red-600 mt-1 mr-3 h-5 w-5" />
                   <div>
-                    <span className="font-medium text-white">{copy.benefits.support.title}</span>
-                    <p className="text-sm text-gray-300 mt-1">{copy.benefits.support.desc}</p>
+                    <span className="font-medium text-white">{t('premium.supportTitle')}</span>
+                    <p className="text-sm text-gray-300 mt-1">{t('premium.supportDesc')}</p>
                   </div>
                 </li>
               </ul>
             </div>
             
             <div className="col-span-2 p-8 bg-black">
-              <h3 className="text-2xl font-bold mb-6 font-poppins text-white">Choose Your Plan</h3>
+              <h3 className="text-2xl font-bold mb-6 font-poppins text-white">{t('premium.choosePlan')}</h3>
               
               {isPremium ? (
                 <div className="text-center p-6 bg-gray-900 rounded-lg border border-red-600">
-                  <h4 className="text-xl font-bold text-red-600 mb-2">You're a Premium Member!</h4>
+                  <h4 className="text-xl font-bold text-red-600 mb-2">{t('premium.alreadyMember')}</h4>
                   <p className="text-gray-300">
-                    {copy.premiumStatus}
+                    {brand === 'bride' ? t('premium.bride.alreadyDesc') : t('premium.bro.alreadyDesc')}
                   </p>
                   <Button className="mt-4 bg-red-600 hover:bg-red-700">
-                    Go to Dashboard
+                    {t('premium.goToDashboard')}
                   </Button>
                 </div>
               ) : (
@@ -154,34 +128,34 @@ export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps)
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h4 className="text-xl font-bold text-white">Monthly</h4>
-                        <p className="text-gray-300 text-sm">Perfect for one-time planning</p>
+                        <h4 className="text-xl font-bold text-white">{t('premium.monthly')}</h4>
+                        <p className="text-gray-300 text-sm">{t('premium.monthlyDesc')}</p>
                       </div>
-                      <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Popular</div>
+                      <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">{t('premium.popular')}</div>
                     </div>
                     <div className="mb-4">
                       <span className="text-3xl font-bold text-white">€2.99</span>
-                      <span className="text-gray-400">/month</span>
+                      <span className="text-gray-400">{t('premium.monthlyPerMonth')}</span>
                     </div>
                     <ul className="space-y-2 mb-6">
                       <li className="flex items-center">
                         <Check className="text-red-600 mr-2 h-4 w-4" />
-                        <span className="text-sm text-gray-300">All premium benefits</span>
+                        <span className="text-sm text-gray-300">{t('premium.allBenefits')}</span>
                       </li>
                       <li className="flex items-center">
                         <Check className="text-red-600 mr-2 h-4 w-4" />
-                        <span className="text-sm text-gray-300">Cancel anytime</span>
+                        <span className="text-sm text-gray-300">{t('premium.cancelAnytime')}</span>
                       </li>
                       <li className="flex items-center">
                         <Check className="text-red-600 mr-2 h-4 w-4" />
-                        <span className="text-sm text-gray-300">10% off custom merchandise</span>
+                        <span className="text-sm text-gray-300">{t('premium.discount10')}</span>
                       </li>
                     </ul>
                     <Button 
                       className={`w-full ${selectedPlan === "monthly" ? "bg-red-600" : "bg-gray-600"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
                       onClick={handleUpgrade}
                     >
-                      Choose Monthly
+                      {t('premium.chooseMonthly')}
                     </Button>
                   </div>
                   
@@ -193,34 +167,34 @@ export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps)
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h4 className="text-xl font-bold text-white">Annual</h4>
-                        <p className="text-gray-300 text-sm">{copy.annualPlanDesc}</p>
+                        <h4 className="text-xl font-bold text-white">{t('premium.annual')}</h4>
+                        <p className="text-gray-300 text-sm">{brand === 'bride' ? t('premium.bride.annualDesc') : t('premium.bro.annualDesc')}</p>
                       </div>
-                      <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">Save 33%</div>
+                      <div className="bg-red-900 text-white text-xs px-2 py-1 rounded-full font-medium">{t('premium.save33')}</div>
                     </div>
                     <div className="mb-4">
                       <span className="text-3xl font-bold text-white">€23.99</span>
-                      <span className="text-gray-400">/year</span>
+                      <span className="text-gray-400">{t('premium.annualPerYear')}</span>
                     </div>
                     <ul className="space-y-2 mb-6">
                       <li className="flex items-center">
                         <Check className="text-red-600 mr-2 h-4 w-4" />
-                        <span className="text-sm text-gray-300">All premium benefits</span>
+                        <span className="text-sm text-gray-300">{t('premium.allBenefits')}</span>
                       </li>
                       <li className="flex items-center">
                         <Check className="text-red-600 mr-2 h-4 w-4" />
-                        <span className="text-sm text-gray-300">3 free t-shirts for your group</span>
+                        <span className="text-sm text-gray-300">{t('premium.freeTshirts')}</span>
                       </li>
                       <li className="flex items-center">
                         <Check className="text-red-600 mr-2 h-4 w-4" />
-                        <span className="text-sm text-gray-300">20% off custom merchandise</span>
+                        <span className="text-sm text-gray-300">{t('premium.discount20')}</span>
                       </li>
                     </ul>
                     <Button 
                       className={`w-full ${selectedPlan === "annual" ? "bg-red-600" : "bg-gray-600"} text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300`}
                       onClick={handleUpgrade}
                     >
-                      Choose Annual
+                      {t('premium.chooseAnnual')}
                     </Button>
                   </div>
                 </div>
@@ -228,7 +202,7 @@ export default function PremiumFeatures({ brand = 'bro' }: PremiumFeaturesProps)
               
               {!isPremium && (
                 <div className="mt-6 text-center text-sm text-gray-300">
-                  <p>Not sure yet? <a href="#" className="text-red-600 hover:text-red-700">Start with a 7-day free trial</a></p>
+                  <p>{t('premium.notSure')}<a href="#" className="text-red-600 hover:text-red-700">{t('premium.freeTrial')}</a></p>
                 </div>
               )}
             </div>

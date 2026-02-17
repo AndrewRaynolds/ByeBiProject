@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Lock } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 type Brand = 'bro' | 'bride';
 
@@ -12,19 +13,11 @@ interface SecretBlogProps {
   brand?: Brand;
 }
 
-const COPY = {
-  bro: {
-    subtitle: "Real, anonymous stories from bachelor parties around Europe. Learn from others' experiences and share your own."
-  },
-  bride: {
-    subtitle: "Real, anonymous stories from bachelorette parties around Europe. Learn from others' experiences and share your own."
-  }
-};
-
 export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
   const { isAuthenticated, user } = useAuth();
   const isPremium = user?.isPremium || false;
-  const copy = COPY[brand];
+  const { t } = useTranslation();
+  const subtitle = brand === 'bride' ? t('blog.bride.subtitle') : t('blog.bro.subtitle');
 
   const { data: blogPosts, isLoading, error } = useQuery<BlogPost[]>({
     queryKey: ["/api/blog-posts"],
@@ -71,8 +64,8 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
       <section className="py-16 bg-black">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Secret Blog</h2>
-            <p className="text-red-500">Error loading blog posts. Please try again later.</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t('blog.title')}</h2>
+            <p className="text-red-500">{t('blog.errorLoading')}</p>
           </div>
         </div>
       </section>
@@ -87,14 +80,14 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center mb-12">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Secret Blog</h2>
-            <p className="text-gray-300 max-w-2xl">{copy.subtitle}</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t('blog.title')}</h2>
+            <p className="text-gray-300 max-w-2xl">{subtitle}</p>
           </div>
           <div className="mt-6 md:mt-0">
             {!isPremium && (
               <Link href="#premium-features">
                 <Button className="bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-3 px-6 rounded-lg transition hover:opacity-90">
-                  Unlock Premium Access
+                  {t('blog.unlockPremium')}
                 </Button>
               </Link>
             )}
@@ -108,7 +101,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
               <div className="relative">
                 <img src={post.image} alt={post.title} className="w-full h-48 object-cover" />
                 <div className="absolute top-3 left-3">
-                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">Free</span>
+                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">{t('common.free')}</span>
                 </div>
               </div>
               <div className="p-5">
@@ -119,10 +112,10 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
                     <div className="w-8 h-8 bg-black border border-gray-700 rounded-full flex items-center justify-center">
                       <i className="fas fa-user text-gray-400"></i>
                     </div>
-                    <span className="text-gray-300 ml-2 text-sm">Anonymous</span>
+                    <span className="text-gray-300 ml-2 text-sm">{t('common.anonymous')}</span>
                   </div>
                   <Link href={`/secret-blog/${post.id}`} className="text-red-600 hover:text-red-700 font-medium">
-                    Read More
+                    {t('common.readMore')}
                   </Link>
                 </div>
               </div>
@@ -135,10 +128,10 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
               {!isPremium && (
                 <div className="absolute inset-0 bg-black/80 z-10 flex flex-col items-center justify-center">
                   <Lock className="text-red-600 text-3xl mb-3" />
-                  <span className="text-white font-bold">Premium Content</span>
+                  <span className="text-white font-bold">{t('blog.premiumContent')}</span>
                   <Link href="#premium-features">
                     <Button className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition">
-                      Upgrade to Access
+                      {t('blog.upgradeToAccess')}
                     </Button>
                   </Link>
                 </div>
@@ -146,7 +139,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
               <div className="relative">
                 <img src={post.image} alt={post.title} className="w-full h-48 object-cover" />
                 <div className="absolute top-3 left-3">
-                  <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full font-medium">Premium</span>
+                  <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full font-medium">{t('common.premium')}</span>
                 </div>
               </div>
               <div className="p-5">
@@ -157,10 +150,10 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
                     <div className="w-8 h-8 bg-black border border-gray-700 rounded-full flex items-center justify-center">
                       <i className="fas fa-user text-gray-400"></i>
                     </div>
-                    <span className="text-gray-300 ml-2 text-sm">Anonymous</span>
+                    <span className="text-gray-300 ml-2 text-sm">{t('common.anonymous')}</span>
                   </div>
                   <Link href={`/secret-blog/${post.id}`} className="text-red-600 hover:text-red-700 font-medium">
-                    Read More
+                    {t('common.readMore')}
                   </Link>
                 </div>
               </div>
@@ -171,7 +164,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
         <div className="text-center">
           <Link href="/secret-blog">
             <Button variant="outline" className="border border-red-600 text-red-600 hover:bg-red-600 hover:text-white font-bold py-2 px-6 rounded-lg transition duration-300">
-              View All Stories
+              {t('blog.viewAllStories')}
             </Button>
           </Link>
         </div>

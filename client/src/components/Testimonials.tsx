@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 // Testimonial data per brand
 const testimonialsBro = [
@@ -76,25 +77,17 @@ interface TestimonialsProps {
   brand?: Brand;
 }
 
-const COPY = {
-  bro: {
-    subtitle: "Don't just take our word for it. Here's what bachelor parties planned with ByeBro have to say."
-  },
-  bride: {
-    subtitle: "Don't just take our word for it. Here's what bachelorette parties planned with ByeBride have to say."
-  }
-};
-
 export default function Testimonials({ brand = 'bro' }: TestimonialsProps) {
-  const copy = COPY[brand];
+  const { t } = useTranslation();
   const testimonials = brand === 'bride' ? testimonialsBride : testimonialsBro;
+  const subtitle = brand === 'bride' ? t('testimonials.bride.subtitle') : t('testimonials.bro.subtitle');
   
   return (
     <section className="py-16 bg-light">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">What Our Customers Say</h2>
-          <p className="text-gray-600 max-w-3xl mx-auto">{copy.subtitle}</p>
+          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">{t('testimonials.title')}</h2>
+          <p className="text-gray-600 max-w-3xl mx-auto">{subtitle}</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -1,12 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
 import byebiLogo from "@assets/Bb logo_1763313858570.png";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 interface BrandSelectionProps {
   onSelectBrand: (brand: 'byebro' | 'byebride') => void;
 }
 
 export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
       <div className="max-w-4xl w-full">
@@ -25,7 +27,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
             />
           </div>
           <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
-            Your Ultimate Party Planning Experience
+            {t('brand.subtitle')}
           </p>
         </div>
 
@@ -48,11 +50,11 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
               </h2>
               
               <p className="text-gray-300 text-sm mb-6 leading-relaxed">
-                Plan the ultimate bachelor party experience with AI-powered recommendations for nightlife, activities, and unforgettable adventures.
+                {t('brand.bro.desc')}
               </p>
               
               <div className="flex items-center gap-2 text-red-400 text-sm font-semibold">
-                <span>For Bachelor Parties</span>
+                <span>{t('brand.bro.label')}</span>
                 <div className="h-px flex-1 bg-gradient-to-r from-red-500 to-transparent"></div>
               </div>
             </CardContent>
@@ -75,11 +77,11 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
               </h2>
               
               <p className="text-gray-300 text-sm mb-6 leading-relaxed">
-                Create magical bachelorette party moments with personalized itineraries, spa experiences, beach clubs, and celebration ideas.
+                {t('brand.bride.desc')}
               </p>
               
               <div className="flex items-center gap-2 text-pink-400 text-sm font-semibold">
-                <span>For Bachelorette Parties</span>
+                <span>{t('brand.bride.label')}</span>
                 <div className="h-px flex-1 bg-gradient-to-r from-pink-500 to-transparent"></div>
               </div>
             </CardContent>
@@ -89,7 +91,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* Footer */}
         <div className="text-center mt-12">
           <p className="text-gray-500 text-sm">
-            AI-Powered • Personalized • Unforgettable
+            {t('brand.footer')}
           </p>
         </div>
       </div>

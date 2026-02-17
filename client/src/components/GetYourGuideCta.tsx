@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Compass, ExternalLink } from 'lucide-react';
 import { getGetYourGuideCityLink } from '@/lib/getyourguide';
 import { trackEvent } from '@/lib/track';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 interface GetYourGuideCtaProps {
   destinationCity?: string;
@@ -11,6 +12,7 @@ interface GetYourGuideCtaProps {
 }
 
 export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourGuideCtaProps) {
+  const { t } = useTranslation();
   const url = getGetYourGuideCityLink(destinationCity);
 
   if (!url) {
@@ -36,10 +38,10 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-bold text-white mb-1">
-              Cose da fare a {destinationCity}
+              {t('gyg.title', { city: destinationCity || '' })}
             </h3>
             <p className="text-white/70 text-sm mb-4">
-              Scopri tour, attività ed esperienze uniche nella tua destinazione
+              {t('gyg.subtitle')}
             </p>
             <Button
               onClick={handleClick}
@@ -47,7 +49,7 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
               data-testid={`button-gyg-${placement}`}
             >
               <Compass className="w-4 h-4 mr-2" />
-              Vedi esperienze su GetYourGuide
+              {t('gyg.cta')}
               <ExternalLink className="w-4 h-4 ml-2" />
             </Button>
           </div>

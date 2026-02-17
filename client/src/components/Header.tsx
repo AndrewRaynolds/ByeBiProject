@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, X, User, LogOut, Loader2, ArrowLeft } from "lucide-react";
+import { Menu, X, User, LogOut, Loader2, ArrowLeft, Globe } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
 import { throttle } from "@/lib/performance";
+import { useTranslation, type Locale } from "@/contexts/LanguageContext";
+
+const FLAG_LABELS: Record<Locale, { flag: string; label: string }> = {
+  it: { flag: '🇮🇹', label: 'Italiano' },
+  en: { flag: '🇬🇧', label: 'English' },
+  es: { flag: '🇪🇸', label: 'Español' },
+};
 
 // Utilizziamo React.memo per evitare re-render inutili
 const Header = memo(function Header() {
@@ -19,6 +26,7 @@ const Header = memo(function Header() {
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const menuRef = useRef<HTMLDivElement>(null);
+  const { t, locale, setLocale } = useTranslation();
 
   // Check which brand is selected
   useEffect(() => {
@@ -88,7 +96,7 @@ const Header = memo(function Header() {
             data-testid="button-change-brand"
           >
             <ArrowLeft className="w-3 h-3" />
-            Cambia brand
+            {t('brand.changeBrand')}
           </Button>
         </div>
         
@@ -98,35 +106,35 @@ const Header = memo(function Header() {
               ? `hover:text-pink-600 ${location === "/" ? "text-pink-600" : ""}`
               : `hover:text-red-600 ${location === "/" ? "text-red-600" : ""}`
           }`}>
-            How It Works
+            {t('header.howItWorks')}
           </Link>
           <Link href="/destinations" className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride'
               ? `hover:text-pink-600 ${location === "/destinations" ? "text-pink-600" : ""}`
               : `hover:text-red-600 ${location === "/destinations" ? "text-red-600" : ""}`
           }`}>
-            Destinations
+            {t('header.destinations')}
           </Link>
           <Link href="/experiences" className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride'
               ? `hover:text-pink-600 ${location === "/experiences" ? "text-pink-600" : ""}`
               : `hover:text-red-600 ${location === "/experiences" ? "text-red-600" : ""}`
           }`}>
-            Experiences
+            {t('header.experiences')}
           </Link>
           <Link href="/secret-blog" className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride'
               ? `hover:text-pink-600 ${location === "/secret-blog" ? "text-pink-600" : ""}`
               : `hover:text-red-600 ${location === "/secret-blog" ? "text-red-600" : ""}`
           }`}>
-            Secret Blog
+            {t('header.secretBlog')}
           </Link>
           <Link href="/merchandise" className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride'
               ? `hover:text-pink-600 ${location === "/merchandise" ? "text-pink-600" : ""}`
               : `hover:text-red-600 ${location === "/merchandise" ? "text-red-600" : ""}`
           }`}>
-            Merch
+            {t('header.merch')}
           </Link>
           <Link href={selectedBrand === 'byebride' ? "/splitta-bride" : "/splitta-bro"} className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride'
@@ -137,7 +145,28 @@ const Header = memo(function Header() {
           </Link>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-sm gap-1 px-2">
+                <span>{FLAG_LABELS[locale].flag}</span>
+                <Globe className="w-3.5 h-3.5 text-gray-500" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {(Object.keys(FLAG_LABELS) as Locale[]).map((loc) => (
+                <DropdownMenuItem
+                  key={loc}
+                  onClick={() => setLocale(loc)}
+                  className={locale === loc ? 'bg-gray-100 font-semibold' : ''}
+                >
+                  <span className="mr-2">{FLAG_LABELS[loc].flag}</span>
+                  {FLAG_LABELS[loc].label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {user ? (
             <div className="hidden md:block">
               <DropdownMenu>
@@ -149,18 +178,18 @@ const Header = memo(function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Dashboard</Link>
+                    <Link href="/dashboard">{t('header.dashboard')}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
                     {logoutMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Logging out...
+                        {t('header.loggingOut')}
                       </>
                     ) : (
                       <>
                         <LogOut className="mr-2 h-4 w-4" />
-                        Logout
+                        {t('header.logout')}
                       </>
                     )}
                   </DropdownMenuItem>
@@ -178,7 +207,7 @@ const Header = memo(function Header() {
                 }`}
                 onClick={() => navigateToAuth("login")}
               >
-                Log In
+                {t('header.login')}
               </Button>
               <Button
                 className={`hidden md:block text-white px-4 py-2 rounded-lg font-medium transition ${
@@ -188,7 +217,7 @@ const Header = memo(function Header() {
                 }`}
                 onClick={() => navigateToAuth("register")}
               >
-                Sign Up
+                {t('header.signup')}
               </Button>
             </>
           )}
@@ -215,23 +244,23 @@ const Header = memo(function Header() {
               className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 justify-start"
             >
               <ArrowLeft className="w-3 h-3" />
-              Cambia brand
+              {t('brand.changeBrand')}
             </Button>
             <Link href="/" className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>How It Works</Link>
+            }`}>{t('header.howItWorks')}</Link>
             <Link href="/destinations" className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>Destinations</Link>
+            }`}>{t('header.destinations')}</Link>
             <Link href="/experiences" className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>Experiences</Link>
+            }`}>{t('header.experiences')}</Link>
             <Link href="/secret-blog" className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>Secret Blog</Link>
+            }`}>{t('header.secretBlog')}</Link>
             <Link href="/merchandise" className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>Merch</Link>
+            }`}>{t('header.merch')}</Link>
             <Link href={selectedBrand === 'byebride' ? "/splitta-bride" : "/splitta-bro"} className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
             }`}>{selectedBrand === 'byebride' ? 'SplittaBride' : 'SplittaBro'}</Link>
@@ -239,7 +268,7 @@ const Header = memo(function Header() {
             <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200 mt-2">
               {user ? (
                 <>
-                  <Link href="/dashboard" className="text-dark hover:text-red-600 transition font-medium">Dashboard</Link>
+                  <Link href="/dashboard" className="text-dark hover:text-red-600 transition font-medium">{t('header.dashboard')}</Link>
                   <Button 
                     variant="ghost" 
                     className="text-left" 
@@ -249,12 +278,12 @@ const Header = memo(function Header() {
                     {logoutMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 inline animate-spin" />
-                        Logging out...
+                        {t('header.loggingOut')}
                       </>
                     ) : (
                       <>
                         <LogOut className="mr-2 h-4 w-4 inline" />
-                        Logout
+                        {t('header.logout')}
                       </>
                     )}
                   </Button>
@@ -270,7 +299,7 @@ const Header = memo(function Header() {
                     }`}
                     onClick={() => navigateToAuth("login")}
                   >
-                    Log In
+                    {t('header.login')}
                   </Button>
                   <Button 
                     className={`text-white px-4 py-2 rounded-lg font-medium transition ${
@@ -280,7 +309,7 @@ const Header = memo(function Header() {
                     }`}
                     onClick={() => navigateToAuth("register")}
                   >
-                    Sign Up
+                    {t('header.signup')}
                   </Button>
                 </>
               )}

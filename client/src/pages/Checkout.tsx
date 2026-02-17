@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 import { getCityCode } from '@shared/cityMapping';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
@@ -40,6 +41,7 @@ interface HotelData {
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
   const [hotels, setHotels] = useState<HotelData[]>([]);
   const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
@@ -101,7 +103,7 @@ export default function Checkout() {
         if (import.meta.env.DEV) {
           console.warn('[HOTEL-SEARCH] Unsupported destination:', context.destination);
         }
-        setHotelError(`La destinazione "${context.destination}" non è supportata. Destinazioni disponibili: Roma, Barcellona, Ibiza, Praga, Budapest, Cracovia, Amsterdam, Berlino, Lisbona, Palma de Mallorca.`);
+        setHotelError(t('checkout.unsupportedDest', { destination: context.destination }));
         setLoadingHotels(false);
         return;
       }
@@ -139,17 +141,17 @@ export default function Checkout() {
       }
       
       if (!response.ok) {
-        throw new Error(result.error || 'Errore nella ricerca hotel');
+        throw new Error(result.error || t('checkout.hotelSearchError'));
       }
       
       if (result.hotels && result.hotels.length > 0) {
         setHotels(result.hotels.slice(0, 5));
       } else {
-        setHotelError('Nessun hotel disponibile per le date selezionate. Prova a modificare le date del viaggio.');
+        setHotelError(t('checkout.noHotelsForDates'));
       }
     } catch (error: any) {
       console.error('Hotel fetch error:', error);
-      setHotelError(`Impossibile caricare gli hotel: ${error.message}. Le API potrebbero essere temporaneamente non disponibili.`);
+      setHotelError(t('checkout.hotelLoadError', { error: error.message }));
     } finally {
       setLoadingHotels(false);
     }
@@ -164,7 +166,7 @@ export default function Checkout() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900 flex items-center justify-center">
-        <div className="text-white text-xl">Caricamento...</div>
+        <div className="text-white text-xl">{t('common.loading')}</div>
       </div>
     );
   }
@@ -180,18 +182,18 @@ export default function Checkout() {
               <div className="mx-auto mb-4 p-4 bg-red-500/20 rounded-full w-fit">
                 <AlertCircle className="w-12 h-12 text-red-400" />
               </div>
-              <CardTitle className="text-2xl text-white">Dati Viaggio Mancanti</CardTitle>
+              <CardTitle className="text-2xl text-white">{t('checkout.missingData')}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-gray-300 mb-6">
-                I dati del viaggio sono incompleti. Torna al chatbot per completare la pianificazione.
+                {t('checkout.missingDataDesc')}
               </p>
               <Button
                 onClick={() => setLocation('/')}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 text-lg"
                 data-testid="button-back-chatbot"
               >
-                Torna al Chatbot
+                {t('itinerary.backToChatbot')}
               </Button>
             </CardContent>
           </Card>
@@ -213,9 +215,9 @@ export default function Checkout() {
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
-              Prenota il tuo Viaggio
+              {t('checkout.title')}
             </h1>
-            <p className="text-white/80 text-lg">Seleziona l'hotel e completa la prenotazione</p>
+            <p className="text-white/80 text-lg">{t('checkout.subtitle')}</p>
           </div>
           
           {/* Trip Info Pills */}
@@ -230,7 +232,7 @@ export default function Checkout() {
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Users className="w-5 h-5 text-red-400" />
-              <span className="font-medium" data-testid="text-people">{tripContext.people} persone</span>
+              <span className="font-medium" data-testid="text-people">{tripContext.people} {t('common.people')}</span>
             </div>
           </div>
         </div>
@@ -245,7 +247,7 @@ export default function Checkout() {
               <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg">
                 <Plane className="w-5 h-5 text-white" />
               </div>
-              Volo
+              {t('checkout.flight')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -254,11 +256,11 @@ export default function Checkout() {
                 {tripContext.flightLabel}
               </p>
               <p className="text-sm text-white/70 mt-1">
-                {formattedDates} • {tripContext.people} passeggeri
+                {formattedDates} • {tripContext.people} {t('common.passengers')}
               </p>
             </div>
             <p className="text-xs text-white/50 mb-3 italic">
-              Prenota il volo direttamente su Aviasales per le migliori tariffe
+              {t('checkout.bookOnAviasales')}
             </p>
             
             {tripContext.aviasalesCheckoutUrl ? (
@@ -273,12 +275,12 @@ export default function Checkout() {
                   rel="noopener noreferrer"
                 >
                   <Plane className="w-4 h-4 mr-2" />
-                  Vai su Aviasales
+                  {t('checkout.goToAviasales')}
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>
               </Button>
             ) : (
-              <p className="text-yellow-400 text-sm">Link volo non disponibile. Torna al chatbot per selezionare un volo.</p>
+              <p className="text-yellow-400 text-sm">{t('checkout.flightUnavailable')}</p>
             )}
           </CardContent>
         </Card>
@@ -290,21 +292,21 @@ export default function Checkout() {
               <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
                 <Hotel className="w-5 h-5 text-white" />
               </div>
-              Seleziona Hotel
+              {t('checkout.selectHotel')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loadingHotels ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-10 h-10 animate-spin text-red-400 mb-4" />
-                <p className="text-white/70">Caricamento hotel disponibili...</p>
+                <p className="text-white/70">{t('checkout.loadingHotels')}</p>
               </div>
             ) : hotelError ? (
               <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-yellow-200 font-medium">Hotel non disponibili</p>
+                    <p className="text-yellow-200 font-medium">{t('checkout.noHotels')}</p>
                     <p className="text-yellow-200/70 text-sm mt-1">{hotelError}</p>
                   </div>
                 </div>
@@ -330,14 +332,14 @@ export default function Checkout() {
                             <span className="text-yellow-400 text-sm">{'⭐'.repeat(parseInt(hotel.stars))}</span>
                           )}
                         </div>
-                        <p className="text-sm text-white/70 mt-1">{hotel.roomDescription || 'Camera standard'}</p>
+                        <p className="text-sm text-white/70 mt-1">{hotel.roomDescription || t('common.standardRoom')}</p>
                         <p className="text-xs text-white/50 mt-1">
                           {hotel.checkInDate} → {hotel.checkOutDate} | {hotel.paymentPolicy}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-red-400 text-xl">€{hotel.priceTotal}</p>
-                        <p className="text-xs text-white/60">totale soggiorno</p>
+                        <p className="text-xs text-white/60">{t('common.totalStay')}</p>
                       </div>
                     </div>
                   </div>
@@ -352,7 +354,7 @@ export default function Checkout() {
                 data-testid="button-book-hotel"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Prenota Hotel su Booking.com
+                {t('checkout.bookOnBooking')}
               </Button>
             )}
           </CardContent>
@@ -364,12 +366,12 @@ export default function Checkout() {
             <CardContent className="pt-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-white/80">
-                  <span>Hotel ({tripDays} notti)</span>
+                  <span>{t('checkout.hotelNights', { nights: String(tripDays) })}</span>
                   <span className="font-semibold text-white">€{selectedHotel.priceTotal}</span>
                 </div>
               </div>
               <p className="text-center text-white/50 text-xs mt-4">
-                I prezzi hotel sono indicativi. Conferma sul sito partner.
+                {t('checkout.priceNote')}
               </p>
             </CardContent>
           </Card>
@@ -389,7 +391,7 @@ export default function Checkout() {
             onClick={() => setLocation('/itinerary')}
             data-testid="button-back-itinerary"
           >
-            ← Torna all'Itinerario
+            {t('checkout.backToItinerary')}
           </Button>
           <Button
             variant="outline"
@@ -398,7 +400,7 @@ export default function Checkout() {
             onClick={() => setLocation('/')}
             data-testid="button-back-home"
           >
-            🏠 Torna alla Home
+            {t('checkout.backToHome')}
           </Button>
         </div>
       </div>

@@ -13,6 +13,7 @@ import { FaGoogle, FaFacebook } from "react-icons/fa";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const { toast } = useToast();
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   // Login form
   const loginForm = useForm<LoginFormValues>({
@@ -85,15 +87,15 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       login(userData);
       
       toast({
-        title: "Login successful",
-        description: "Welcome back to ByeBro!",
+        title: t('auth.loginSuccess'),
+        description: t('auth.loginSuccessDesc'),
       });
       
       onClose();
     } catch (error) {
       toast({
-        title: "Login failed",
-        description: "Invalid username or password. Please try again.",
+        title: t('auth.loginFailed'),
+        description: t('auth.loginFailedDesc'),
         variant: "destructive",
       });
     }
@@ -113,15 +115,15 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       login(userData);
       
       toast({
-        title: "Registration successful",
-        description: "Welcome to ByeBro! Your account has been created.",
+        title: t('auth.registerSuccess'),
+        description: t('auth.registerSuccessDesc'),
       });
       
       onClose();
     } catch (error) {
       toast({
-        title: "Registration failed",
-        description: "There was an error creating your account. Please try again.",
+        title: t('auth.registerFailed'),
+        description: t('auth.registerFailedDesc'),
         variant: "destructive",
       });
     }
@@ -132,14 +134,14 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            {activeTab === "login" ? "Welcome Back!" : "Join ByeBro"}
+            {activeTab === "login" ? t('auth.welcomeBack') : t('auth.joinByebro')}
           </DialogTitle>
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="login">{t('auth.login')}</TabsTrigger>
+            <TabsTrigger value="signup">{t('auth.signup')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="login">
@@ -150,7 +152,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>{t('auth.username')}</FormLabel>
                       <FormControl>
                         <Input placeholder="your@email.com" {...field} />
                       </FormControl>
@@ -164,7 +166,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t('auth.password')}</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
@@ -185,15 +187,15 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <FormLabel className="text-sm">Remember me</FormLabel>
+                        <FormLabel className="text-sm">{t('auth.rememberMe')}</FormLabel>
                       </FormItem>
                     )}
                   />
-                  <a href="#" className="text-sm text-primary hover:text-accent">Forgot password?</a>
+                  <a href="#" className="text-sm text-primary hover:text-accent">{t('auth.forgotPassword')}</a>
                 </div>
                 
                 <Button type="submit" className="w-full bg-primary hover:bg-accent">
-                  Log In
+                  {t('auth.logIn')}
                 </Button>
               </form>
             </Form>
@@ -207,11 +209,11 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             <div className="mt-6 space-y-3">
               <Button variant="outline" className="w-full flex items-center justify-center">
                 <FaGoogle className="mr-2 text-red-500" />
-                Continue with Google
+                {t('auth.continueGoogle')}
               </Button>
               <Button variant="outline" className="w-full flex items-center justify-center">
                 <FaFacebook className="mr-2 text-blue-600" />
-                Continue with Facebook
+                {t('auth.continueFacebook')}
               </Button>
             </div>
           </TabsContent>
@@ -225,7 +227,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First name</FormLabel>
+                        <FormLabel>{t('auth.firstName')}</FormLabel>
                         <FormControl>
                           <Input placeholder="John" {...field} />
                         </FormControl>
@@ -238,7 +240,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last name</FormLabel>
+                        <FormLabel>{t('auth.lastName')}</FormLabel>
                         <FormControl>
                           <Input placeholder="Doe" {...field} />
                         </FormControl>
@@ -253,7 +255,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t('auth.email')}</FormLabel>
                       <FormControl>
                         <Input placeholder="your@email.com" {...field} />
                       </FormControl>
@@ -267,7 +269,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>{t('auth.username')}</FormLabel>
                       <FormControl>
                         <Input placeholder="username" {...field} />
                       </FormControl>
@@ -281,7 +283,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t('auth.password')}</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
@@ -295,7 +297,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="confirmPassword"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
+                      <FormLabel>{t('auth.confirmPassword')}</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
@@ -317,10 +319,10 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                       </FormControl>
                       <div>
                         <FormLabel className="text-sm">
-                          I agree to the 
-                          <a href="#" className="text-primary hover:text-accent ml-1">Terms of Service</a> 
-                          and 
-                          <a href="#" className="text-primary hover:text-accent ml-1">Privacy Policy</a>
+                          {t('auth.agreeTerms')}
+                          <a href="#" className="text-primary hover:text-accent ml-1">{t('auth.termsOfService')}</a>
+                          {t('auth.and')}
+                          <a href="#" className="text-primary hover:text-accent ml-1">{t('auth.privacyPolicy')}</a>
                         </FormLabel>
                         <FormMessage />
                       </div>
@@ -329,7 +331,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                 />
                 
                 <Button type="submit" className="w-full bg-primary hover:bg-accent">
-                  Sign Up
+                  {t('auth.signUp')}
                 </Button>
               </form>
             </Form>

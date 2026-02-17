@@ -6,6 +6,7 @@ import { Plane, Calendar, Users, MapPin, ExternalLink, AlertCircle } from 'lucid
 import Header from '@/components/Header';
 import { formatDateRangeIT } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
@@ -23,6 +24,7 @@ interface TripContext {
 
 export default function Itinerary() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export default function Itinerary() {
     const savedItinerary = localStorage.getItem('currentItinerary');
     
     if (!savedItinerary) {
-      setError('Nessun itinerario trovato. Torna al chatbot per creare il tuo viaggio.');
+      setError(t('itinerary.noItineraryError'));
       setIsLoading(false);
       return;
     }
@@ -43,7 +45,7 @@ export default function Itinerary() {
 
       // Validate required fields
       if (!parsed.destination || !parsed.startDate || !parsed.endDate || !parsed.people) {
-        setError('Dati del viaggio incompleti. Torna al chatbot per completare la pianificazione.');
+        setError(t('itinerary.incompleteData'));
         setIsLoading(false);
         return;
       }
@@ -69,7 +71,7 @@ export default function Itinerary() {
       setTripContext(context);
     } catch (err) {
       console.error('Error parsing TripContext:', err);
-      setError('Errore nel caricamento dei dati. Torna al chatbot per riprovare.');
+      setError(t('itinerary.loadError'));
     }
     
     setIsLoading(false);
@@ -88,7 +90,7 @@ export default function Itinerary() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900 flex items-center justify-center">
-        <div className="text-white text-xl">Caricamento...</div>
+        <div className="text-white text-xl">{t('common.loading')}</div>
       </div>
     );
   }
@@ -104,18 +106,18 @@ export default function Itinerary() {
               <div className="mx-auto mb-4 p-4 bg-red-500/20 rounded-full w-fit">
                 <AlertCircle className="w-12 h-12 text-red-400" />
               </div>
-              <CardTitle className="text-2xl text-white">Nessun Itinerario</CardTitle>
+              <CardTitle className="text-2xl text-white">{t('itinerary.noItinerary')}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-gray-300 mb-6">
-                {error || 'Devi prima pianificare il tuo viaggio con il chatbot.'}
+                {error || t('itinerary.mustPlan')}
               </p>
               <Button
                 onClick={handleBackToChatbot}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 text-lg"
                 data-testid="button-back-chatbot"
               >
-                Torna al Chatbot
+                {t('itinerary.backToChatbot')}
               </Button>
             </CardContent>
           </Card>
@@ -136,9 +138,9 @@ export default function Itinerary() {
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
-              Il Tuo Viaggio a {tripContext.destination}
+              {t('itinerary.title', { destination: tripContext.destination })}
             </h1>
-            <p className="text-white/80 text-lg">Conferma i dettagli e continua al checkout</p>
+            <p className="text-white/80 text-lg">{t('itinerary.subtitle')}</p>
           </div>
           
           {/* Trip Info Pills */}
@@ -149,7 +151,7 @@ export default function Itinerary() {
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <Users className="w-5 h-5 text-red-400" />
-              <span className="font-medium" data-testid="text-people">{tripContext.people} persone</span>
+              <span className="font-medium" data-testid="text-people">{tripContext.people} {t('common.people')}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
               <MapPin className="w-5 h-5 text-red-400" />
@@ -169,7 +171,7 @@ export default function Itinerary() {
               <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
                 <Plane className="w-6 h-6 text-white" />
               </div>
-              Volo
+              {t('itinerary.flight')}
             </h2>
             
             <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-2 border-gray-600 hover:border-red-400 transition-all">
@@ -184,7 +186,7 @@ export default function Itinerary() {
                         {tripContext.flightLabel || `${tripContext.origin} → ${tripContext.destination}`}
                       </CardTitle>
                       <p className="text-sm text-gray-300 mt-1">
-                        {formattedDates} • {tripContext.people} passeggeri
+                        {formattedDates} • {tripContext.people} {t('common.passengers')}
                       </p>
                     </div>
                   </div>
@@ -192,7 +194,7 @@ export default function Itinerary() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-400 mb-4">
-                  Prenota il volo direttamente su Aviasales per le migliori tariffe disponibili.
+                  {t('itinerary.bookOnAviasales')}
                 </p>
                 
                 {tripContext.aviasalesCheckoutUrl && (
@@ -207,7 +209,7 @@ export default function Itinerary() {
                       rel="noopener noreferrer"
                     >
                       <Plane className="w-4 h-4 mr-2" />
-                      Vai su Aviasales
+                      {t('itinerary.goToAviasales')}
                       <ExternalLink className="w-4 h-4 ml-2" />
                     </a>
                   </Button>
@@ -216,7 +218,7 @@ export default function Itinerary() {
             </Card>
             
             <p className="text-sm text-white/60 mt-2 ml-1 bg-white/5 inline-block px-3 py-1 rounded-full">
-              ✈️ Prenota il volo esternamente, poi continua per hotel
+              {t('itinerary.bookExternally')}
             </p>
           </section>
 
@@ -231,8 +233,8 @@ export default function Itinerary() {
         <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-r from-black/90 via-red-900/90 to-black/90 backdrop-blur-md border-t-2 border-red-500/50 shadow-2xl mt-12 p-6 rounded-t-3xl">
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
-              <p className="text-white/70 text-sm">Prossimo passo</p>
-              <p className="text-xl text-white font-bold">Scegli il tuo hotel</p>
+              <p className="text-white/70 text-sm">{t('itinerary.nextStep')}</p>
+              <p className="text-xl text-white font-bold">{t('itinerary.chooseHotel')}</p>
             </div>
             <Button
               size="lg"
@@ -240,7 +242,7 @@ export default function Itinerary() {
               onClick={handleContinue}
               data-testid="button-continue"
             >
-              Continua al Checkout →
+              {t('itinerary.continueToCheckout')}
             </Button>
           </div>
         </div>

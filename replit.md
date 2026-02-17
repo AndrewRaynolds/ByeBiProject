@@ -65,6 +65,23 @@ Affiliate links for experiences/activities are integrated via `GetYourGuideCta` 
 
 **Behavior**: CTA only renders for supported destinations. Opens affiliate link in new tab with tracking event.
 
+## i18n System (February 2026)
+Complete internationalization system supporting Italian (default), English, and Spanish.
+
+**Architecture**:
+- `client/src/contexts/LanguageContext.tsx` - LanguageProvider, useTranslation hook, t() function with {{param}} interpolation
+- `client/src/locales/it.json` - Italian translations (221 keys, default/fallback)
+- `client/src/locales/en.json` - English translations (221 keys, lazy-loaded)
+- `client/src/locales/es.json` - Spanish translations (221 keys, lazy-loaded)
+
+**Usage**: `const { t, locale, setLocale } = useTranslation();` then `t('key.name')` or `t('key.name', { param: value })`
+
+**Language selector**: Flag dropdown in Header navbar (🇮🇹/🇬🇧/🇪🇸), persisted to localStorage under `byebi_locale`
+
+**Refactored components**: Header, Footer, BrandSelection, HeroSection, HeroSectionBride, Testimonials, Newsletter, SecretBlog, CustomMerchandise, PremiumFeatures, AuthModal, Itinerary, Checkout, GetYourGuideCta, not-found
+
+**Note**: Italian locale is loaded synchronously (bundled) for instant first render. EN/ES are lazy-loaded on demand. Chat responses are handled separately by AI language detection.
+
 ## External Dependencies
 - **GROQ API**: Primary AI engine (llama-3.3-70b-versatile) for ultra-fast streaming chat responses (Server-Sent Events) and structured JSON generation for activity ideas.
 - **OpenAI API**: Backup AI engine.

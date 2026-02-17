@@ -24,6 +24,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { lazy, Suspense, useState, useEffect } from "react";
 import PerformanceOptimizer from "@/lib/performance-optimizer";
 import BrandSelection from "@/components/BrandSelection";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 function Router() {
   const [selectedBrand, setSelectedBrand] = useState<'byebro' | 'byebride' | null>(null);
@@ -72,18 +73,19 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          {/* Aggiungiamo l'ottimizzatore di performance globale */}
-          <PerformanceOptimizer />
-          <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-pulse text-xl font-semibold">Caricamento...</div>
-            </div>
-          }>
-            <Router />
-          </Suspense>
-        </TooltipProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <PerformanceOptimizer />
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-pulse text-xl font-semibold">Loading...</div>
+              </div>
+            }>
+              <Router />
+            </Suspense>
+          </TooltipProvider>
+        </LanguageProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
