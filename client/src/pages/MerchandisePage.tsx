@@ -71,8 +71,11 @@ export default function MerchandisePage() {
           }
         })
         .catch(() => {
-          setPaymentSuccess(true);
-          setCart([]);
+          toast({
+            title: "Errore verifica",
+            description: "Impossibile verificare il pagamento. Contattaci se hai completato il pagamento.",
+            variant: "destructive",
+          });
         });
       window.history.replaceState({}, "", "/merchandise");
     } else if (params.get("payment") === "cancelled") {

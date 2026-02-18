@@ -44,44 +44,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const productIds = Array.from(new Set(items.map((item: any) => item.productId))).filter(Boolean);
+      if (productIds.length === 0) {
+        return res.status(400).json({ message: "All items must have a valid productId" });
+      }
+
       const verifiedVariants = new Map<number, { name: string; price: string; currency: string; imageUrl: string; productName: string }>();
 
       for (const productId of productIds) {
-        try {
-          const product = await getProductDetail(productId);
-          for (const variant of product.variants) {
-            verifiedVariants.set(variant.id, {
-              name: variant.name,
-              price: variant.retailPrice,
-              currency: variant.currency,
-              imageUrl: variant.previewUrl || variant.imageUrl,
-              productName: product.name,
-            });
-          }
-        } catch (err) {
-          console.error(`Failed to verify product ${productId}:`, err);
+        const product = await getProductDetail(productId);
+        for (const variant of product.variants) {
+          verifiedVariants.set(variant.id, {
+            name: variant.name,
+            price: variant.retailPrice,
+            currency: variant.currency,
+            imageUrl: variant.previewUrl || variant.imageUrl,
+            productName: product.name,
+          });
         }
+      }
+
+      const unverifiedItems = items.filter((item: any) => !verifiedVariants.has(item.variantId));
+      if (unverifiedItems.length > 0) {
+        return res.status(400).json({
+          message: "Some items could not be verified",
+          unverifiedVariantIds: unverifiedItems.map((item: any) => item.variantId),
+        });
       }
 
       const stripe = await getUncachableStripeClient();
 
       const lineItems = items.map((item: any) => {
-        const verified = verifiedVariants.get(item.variantId);
-        const price = verified ? verified.price : item.price;
-        const currency = verified ? verified.currency : (item.currency || "eur");
-        const productName = verified ? verified.productName : item.productName;
-        const variantName = verified ? verified.name : item.variantName;
-        const imageUrl = verified ? verified.imageUrl : item.imageUrl;
+        const verified = verifiedVariants.get(item.variantId)!;
 
         return {
           price_data: {
-            currency: currency.toLowerCase(),
+            currency: verified.currency.toLowerCase(),
             product_data: {
-              name: productName,
-              description: variantName,
-              ...(imageUrl ? { images: [imageUrl] } : {}),
+              name: verified.productName,
+              description: verified.name,
+              ...(verified.imageUrl ? { images: [verified.imageUrl] } : {}),
             },
-            unit_amount: Math.round(parseFloat(price) * 100),
+            unit_amount: Math.round(parseFloat(verified.price) * 100),
           },
           quantity: item.quantity,
         };
