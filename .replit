@@ -45,7 +45,7 @@ localPort = 5173
 externalPort = 5173
 
 [agent]
-integrations = ["javascript_openai:1.0.0", "javascript_stripe:1.0.0"]
+integrations = ["javascript_openai:1.0.0", "javascript_stripe:1.0.0", "stripe:2.0.0"]
 
 [userenv]
 

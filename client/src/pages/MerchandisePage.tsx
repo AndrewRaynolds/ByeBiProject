@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -8,9 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingBag, Heart, ShoppingCart, Package, Minus, Plus, X, ExternalLink } from "lucide-react";
+import { ShoppingBag, Heart, ShoppingCart, Package, Minus, Plus, X, CreditCard, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { apiRequest } from "@/lib/queryClient";
 
 interface PrintfulVariant {
   id: number;
@@ -35,6 +36,7 @@ interface CartItem {
   variantId: number;
   variantName: string;
   productName: string;
+  productId: number;
   quantity: number;
   price: string;
   currency: string;
@@ -46,8 +48,42 @@ export default function MerchandisePage() {
   const [selectedProduct, setSelectedProduct] = useState<PrintfulProduct | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [showCart, setShowCart] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    if (params.get("payment") === "success" && sessionId) {
+      fetch(`/api/stripe/session/${sessionId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "paid") {
+            setPaymentSuccess(true);
+            setCart([]);
+          } else {
+            toast({
+              title: "Pagamento in attesa",
+              description: "Il pagamento non è ancora stato confermato.",
+            });
+          }
+        })
+        .catch(() => {
+          setPaymentSuccess(true);
+          setCart([]);
+        });
+      window.history.replaceState({}, "", "/merchandise");
+    } else if (params.get("payment") === "cancelled") {
+      toast({
+        title: "Pagamento annullato",
+        description: "Il pagamento è stato annullato. I tuoi articoli sono ancora nel carrello.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/merchandise");
+    }
+  }, []);
 
   const { data: products, isLoading, error } = useQuery<PrintfulProduct[]>({
     queryKey: ["/api/printful/products"],
@@ -69,6 +105,7 @@ export default function MerchandisePage() {
         variantId: variant.id,
         variantName: variant.name,
         productName: product.name,
+        productId: product.id,
         quantity: 1,
         price: variant.retailPrice,
         currency: variant.currency,
@@ -350,11 +387,65 @@ export default function MerchandisePage() {
                 <span className="text-lg font-bold">Totale:</span>
                 <span className="text-2xl font-bold text-red-400">€{cartTotal.toFixed(2)}</span>
               </div>
+              <Button
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg mt-2"
+                disabled={isCheckingOut}
+                onClick={async () => {
+                  setIsCheckingOut(true);
+                  try {
+                    const response = await apiRequest("POST", "/api/stripe/checkout", {
+                      items: cart,
+                    });
+                    const data = await response.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    } else {
+                      throw new Error("No checkout URL returned");
+                    }
+                  } catch (error: any) {
+                    console.error("Checkout error:", error);
+                    toast({
+                      title: "Errore checkout",
+                      description: "Si è verificato un errore. Riprova.",
+                      variant: "destructive",
+                    });
+                    setIsCheckingOut(false);
+                  }
+                }}
+              >
+                {isCheckingOut ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <CreditCard className="mr-2 h-5 w-5" />
+                )}
+                {isCheckingOut ? "Reindirizzamento..." : "Procedi al Pagamento"}
+              </Button>
               <p className="text-xs text-gray-500 text-center">
-                Le spese di spedizione verranno calcolate al checkout
+                Pagamento sicuro tramite Stripe. Le spese di spedizione verranno calcolate al checkout.
               </p>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentSuccess} onOpenChange={setPaymentSuccess}>
+        <DialogContent className="max-w-md bg-gray-900 border-gray-700 text-white text-center">
+          <div className="py-6">
+            <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Pagamento completato!</h2>
+            <p className="text-gray-400 mb-4">
+              Il tuo ordine è stato ricevuto. I prodotti saranno stampati e spediti al tuo indirizzo.
+            </p>
+            <p className="text-gray-500 text-sm">
+              Riceverai una email di conferma con i dettagli della spedizione.
+            </p>
+            <Button
+              className="mt-6 bg-red-600 hover:bg-red-700"
+              onClick={() => setPaymentSuccess(false)}
+            >
+              Continua a fare shopping
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

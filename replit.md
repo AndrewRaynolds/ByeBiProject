@@ -105,4 +105,21 @@ Print-on-demand merchandise store for travel gadgets via Printful API.
 - `POST /api/printful/orders` - Create orders (draft or confirmed)
 
 **Legacy**: Old `/api/merchandise` route still works as fallback with in-memory mock data.
+
+## Stripe Integration (February 2026)
+Payment processing for merchandise via Stripe Checkout (connector: Stripe).
+
+**Files**:
+- `server/stripeClient.ts` - Stripe client with Replit connector credentials
+- `server/webhookHandlers.ts` - Stripe webhook processing via stripe-replit-sync
+- `server/index.ts` - Stripe initialization (migrations, webhook, sync) and webhook route (BEFORE express.json())
+- `server/routes.ts` - Checkout session and payment routes under `/api/stripe/*`
+
+**API Endpoints**:
+- `GET /api/stripe/publishable-key` - Get Stripe publishable key
+- `POST /api/stripe/checkout` - Create Stripe Checkout Session from cart items
+- `GET /api/stripe/session/:sessionId` - Get session payment status
+
+**Flow**: Cart → Stripe Checkout (with shipping address collection) → Payment → Success page
+**Database**: stripe-replit-sync manages `stripe` schema automatically via PostgreSQL
 ```
