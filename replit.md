@@ -88,4 +88,21 @@ Complete internationalization system supporting Italian (default), English, and 
 - **Pexels API**: Used for dynamic destination image search, with a fallback to Unsplash.
 - **Zapier**: Integrated via webhooks for AI-powered itinerary generation, allowing structured data exchange for ChatGPT processing.
 - **GetYourGuide**: Affiliate links for city-based experiences (10 destinations supported).
+- **Printful API**: Print-on-demand merchandise integration for travel gadgets (t-shirts, caps). Uses Bearer token auth via `PRINTFUL_API_KEY` secret.
+
+## Printful Integration (February 2026)
+Print-on-demand merchandise store for travel gadgets via Printful API.
+
+**Files**:
+- `server/services/printful.ts` - Printful API service (products, variants, shipping rates, orders)
+- `server/routes.ts` - API routes under `/api/printful/*`
+- `client/src/pages/MerchandisePage.tsx` - Storefront showing real Printful products
+
+**API Endpoints**:
+- `GET /api/printful/products` - List all store products with variants
+- `GET /api/printful/products/:id` - Get single product details
+- `POST /api/printful/shipping-rates` - Calculate shipping rates
+- `POST /api/printful/orders` - Create orders (draft or confirmed)
+
+**Legacy**: Old `/api/merchandise` route still works as fallback with in-memory mock data.
 ```

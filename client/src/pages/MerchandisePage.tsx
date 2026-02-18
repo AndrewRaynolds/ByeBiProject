@@ -1,178 +1,363 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Merchandise } from "@shared/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import CustomMerchandise from "@/components/CustomMerchandise";
-import Newsletter from "@/components/Newsletter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingBag, Heart, ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShoppingBag, Heart, ShoppingCart, Package, Minus, Plus, X, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { useTranslation } from "@/contexts/LanguageContext";
+
+interface PrintfulVariant {
+  id: number;
+  name: string;
+  retailPrice: string;
+  currency: string;
+  sku: string;
+  imageUrl: string;
+  previewUrl: string;
+  productName: string;
+}
+
+interface PrintfulProduct {
+  id: number;
+  name: string;
+  thumbnailUrl: string;
+  variantCount: number;
+  variants: PrintfulVariant[];
+}
+
+interface CartItem {
+  variantId: number;
+  variantName: string;
+  productName: string;
+  quantity: number;
+  price: string;
+  currency: string;
+  imageUrl: string;
+}
 
 export default function MerchandisePage() {
-  const [cart, setCart] = useState<Array<{ id: number; quantity: number }>>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<PrintfulProduct | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
+  const [showCart, setShowCart] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
-  // Funzione helper per aggiungere il cache buster alle URL delle immagini
-  const getCacheBustedImageUrl = (url: string) => {
-    return `${url}?t=${Date.now()}`;
-  };
-  
-  // Aggiungiamo un useEffect per invalidare la cache all'avvio del componente
-  useEffect(() => {
-    // Invalida la cache della query
-    queryClient.invalidateQueries({ queryKey: ["/api/merchandise"] });
-  }, []);
-
-  const { data: merchandise, isLoading, error } = useQuery<Merchandise[]>({
-    queryKey: ["/api/merchandise"],
-    staleTime: 0, // Non usare la cache
-    refetchOnMount: true, // Forza il refresh quando il componente viene montato
+  const { data: products, isLoading, error } = useQuery<PrintfulProduct[]>({
+    queryKey: ["/api/printful/products"],
+    staleTime: 60000,
+    refetchOnMount: true,
   });
 
-  const handleAddToCart = (id: number) => {
-    const existingItemIndex = cart.findIndex(item => item.id === id);
-    
-    if (existingItemIndex >= 0) {
-      const newCart = [...cart];
-      newCart[existingItemIndex].quantity += 1;
-      setCart(newCart);
-    } else {
-      setCart([...cart, { id, quantity: 1 }]);
-    }
-    
+  const handleAddToCart = (product: PrintfulProduct, variant: PrintfulVariant) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.variantId === variant.id);
+      if (existing) {
+        return prev.map(item =>
+          item.variantId === variant.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, {
+        variantId: variant.id,
+        variantName: variant.name,
+        productName: product.name,
+        quantity: 1,
+        price: variant.retailPrice,
+        currency: variant.currency,
+        imageUrl: variant.previewUrl || variant.imageUrl,
+      }];
+    });
+
     toast({
-      title: "Added to cart",
-      description: "Item has been added to your cart.",
+      title: t('merch.addedToCartTitle'),
+      description: `${variant.name} aggiunto al carrello`,
     });
   };
 
-  // Group merchandise by type
-  const groupedMerchandise = merchandise?.reduce((acc, item) => {
-    if (!acc[item.type]) {
-      acc[item.type] = [];
-    }
-    acc[item.type].push(item);
-    return acc;
-  }, {} as Record<string, Merchandise[]>) || {};
+  const updateCartQuantity = (variantId: number, delta: number) => {
+    setCart(prev =>
+      prev
+        .map(item =>
+          item.variantId === variantId
+            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+            : item
+        )
+        .filter(item => item.quantity > 0)
+    );
+  };
 
-  // Get unique types for tabs
-  const types = Object.keys(groupedMerchandise);
+  const removeFromCart = (variantId: number) => {
+    setCart(prev => prev.filter(item => item.variantId !== variantId));
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + parseFloat(item.price) * item.quantity, 0);
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const getFirstVariantPrice = (product: PrintfulProduct) => {
+    if (product.variants.length === 0) return null;
+    const prices = product.variants.map(v => parseFloat(v.retailPrice));
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min === max) return `€${min.toFixed(2)}`;
+    return `€${min.toFixed(2)} - €${max.toFixed(2)}`;
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-light">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       <Header />
-      
+
       <main className="flex-grow">
-        <div className="bg-primary text-white py-16">
+        <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-800 text-white py-16">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold font-poppins mb-4">Custom Bachelor Party Merchandise</h1>
-            <p className="max-w-2xl mx-auto">Create personalized gear for the whole crew. Make your bachelor party unforgettable with custom t-shirts, caps, and more.</p>
+            <h1 className="text-4xl md:text-5xl font-bold font-poppins mb-4">
+              {t('merch.title')}
+            </h1>
+            <p className="max-w-2xl mx-auto text-red-100 text-lg">
+              {t('merch.subtitle')}
+            </p>
           </div>
         </div>
-        
+
         <div className="container mx-auto px-4 py-10">
-          {/* Shopping Cart Badge */}
           <div className="flex justify-end mb-6">
-            <Button variant="outline" className="relative">
+            <Button
+              variant="outline"
+              className="relative border-red-500/50 text-white hover:bg-red-600/20"
+              onClick={() => setShowCart(true)}
+            >
               <ShoppingCart className="h-5 w-5 mr-2" />
-              <span>Cart</span>
-              {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
+              <span>Carrello</span>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {cartItemCount}
                 </span>
               )}
             </Button>
           </div>
-          
-          {/* Product Categories */}
+
           {isLoading ? (
-            <div className="mb-12">
-              <Skeleton className="h-10 w-64 mb-6" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <Card key={i} className="overflow-hidden">
-                    <Skeleton className="h-64 w-full" />
-                    <CardContent className="p-4">
-                      <Skeleton className="h-6 w-3/4 mb-2" />
-                      <Skeleton className="h-4 w-full mb-4" />
-                      <Skeleton className="h-5 w-20" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map(i => (
+                <Card key={i} className="overflow-hidden bg-gray-800/60 border-gray-700">
+                  <Skeleton className="h-72 w-full bg-gray-700" />
+                  <CardContent className="p-4">
+                    <Skeleton className="h-6 w-3/4 mb-2 bg-gray-700" />
+                    <Skeleton className="h-4 w-full mb-4 bg-gray-700" />
+                    <Skeleton className="h-5 w-20 bg-gray-700" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : error ? (
-            <div className="text-center py-10">
-              <p className="text-red-500">Error loading merchandise. Please try again later.</p>
+            <div className="text-center py-16">
+              <Package className="h-16 w-16 mx-auto text-gray-500 mb-4" />
+              <p className="text-red-400 text-lg mb-2">{t('merch.errorLoading')}</p>
+              <p className="text-gray-500 text-sm">Controlla la configurazione dell'API Printful</p>
             </div>
-          ) : types.length > 0 ? (
-            <Tabs defaultValue={types[0]} className="mb-12">
-              <TabsList className="mb-6">
-                {types.map((type) => (
-                  <TabsTrigger key={type} value={type} className="capitalize">
-                    {type}s
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {types.map((type) => (
-                <TabsContent key={type} value={type}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {groupedMerchandise[type].map((item) => (
-                      <Card key={item.id} className="overflow-hidden group">
-                        <div className="relative h-64 overflow-hidden">
-                          <img 
-                            src={getCacheBustedImageUrl(item.image)} 
-                            alt={item.name} 
-                            className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
-                          />
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute top-2 right-2 bg-white/80 text-gray-600 hover:text-primary hover:bg-white"
-                          >
-                            <Heart className="h-5 w-5" />
-                          </Button>
-                        </div>
-                        <CardContent className="p-4">
-                          <h3 className="font-bold text-lg mb-1">{item.name}</h3>
-                          <p className="text-gray-600 text-sm mb-3">{item.description}</p>
-                          <p className="text-primary font-bold">€{(item.price / 100).toFixed(2)}</p>
-                        </CardContent>
-                        <CardFooter className="pt-0 pb-4 px-4">
-                          <Button 
-                            className="w-full bg-primary hover:bg-accent"
-                            onClick={() => handleAddToCart(item.id)}
-                          >
-                            <ShoppingBag className="mr-2 h-4 w-4" />
-                            Add to Cart
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
+          ) : products && products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.map(product => (
+                <Card
+                  key={product.id}
+                  className="overflow-hidden group bg-gray-800/60 border-gray-700 hover:border-red-500/50 transition-all duration-300 cursor-pointer"
+                  onClick={() => {
+                    setSelectedProduct(product);
+                    setSelectedVariantId(product.variants[0]?.id.toString() || "");
+                  }}
+                >
+                  <div className="relative h-72 overflow-hidden bg-gray-900">
+                    <img
+                      src={product.thumbnailUrl}
+                      alt={product.name}
+                      className="w-full h-full object-contain transition duration-500 group-hover:scale-105 p-2"
+                    />
+                    <Badge className="absolute top-3 left-3 bg-red-600 text-white">
+                      {product.variantCount} varianti
+                    </Badge>
                   </div>
-                </TabsContent>
+                  <CardContent className="p-4">
+                    <h3 className="font-bold text-lg mb-2 text-white">{product.name}</h3>
+                    <p className="text-red-400 font-bold text-lg">
+                      {getFirstVariantPrice(product)}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="pt-0 pb-4 px-4">
+                    <Button
+                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProduct(product);
+                        setSelectedVariantId(product.variants[0]?.id.toString() || "");
+                      }}
+                    >
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      Vedi Dettagli
+                    </Button>
+                  </CardFooter>
+                </Card>
               ))}
-            </Tabs>
+            </div>
           ) : (
-            <div className="text-center py-10">
-              <p>No merchandise found. Please check back later.</p>
+            <div className="text-center py-16">
+              <Package className="h-16 w-16 mx-auto text-gray-500 mb-4" />
+              <p className="text-gray-400 text-lg">Nessun prodotto trovato nel tuo store Printful.</p>
+              <p className="text-gray-500 text-sm mt-2">Aggiungi prodotti al tuo store Printful per vederli qui.</p>
             </div>
           )}
         </div>
-        
-        {/* Custom Merchandise Section */}
-        <CustomMerchandise />
-        
-        {/* Newsletter */}
-        <Newsletter />
       </main>
-      
+
+      {selectedProduct && (
+        <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">{selectedProduct.name}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div className="bg-gray-800 rounded-lg overflow-hidden">
+                <img
+                  src={
+                    selectedVariantId
+                      ? selectedProduct.variants.find(v => v.id.toString() === selectedVariantId)?.previewUrl ||
+                        selectedProduct.variants.find(v => v.id.toString() === selectedVariantId)?.imageUrl ||
+                        selectedProduct.thumbnailUrl
+                      : selectedProduct.thumbnailUrl
+                  }
+                  alt={selectedProduct.name}
+                  className="w-full h-80 object-contain p-4"
+                />
+              </div>
+              <div className="flex flex-col justify-between">
+                <div>
+                  <p className="text-red-400 font-bold text-2xl mb-4">
+                    {selectedVariantId
+                      ? `€${selectedProduct.variants.find(v => v.id.toString() === selectedVariantId)?.retailPrice || "0.00"}`
+                      : getFirstVariantPrice(selectedProduct)}
+                  </p>
+
+                  {selectedProduct.variants.length > 0 && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Seleziona variante (taglia/colore)
+                      </label>
+                      <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
+                        <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                          <SelectValue placeholder="Seleziona..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-600">
+                          {selectedProduct.variants.map(variant => (
+                            <SelectItem
+                              key={variant.id}
+                              value={variant.id.toString()}
+                              className="text-white hover:bg-gray-700"
+                            >
+                              {variant.name} - €{variant.retailPrice}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg"
+                  disabled={!selectedVariantId}
+                  onClick={() => {
+                    const variant = selectedProduct.variants.find(
+                      v => v.id.toString() === selectedVariantId
+                    );
+                    if (variant) {
+                      handleAddToCart(selectedProduct, variant);
+                      setSelectedProduct(null);
+                    }
+                  }}
+                >
+                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  {t('merch.addToCart')}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <Dialog open={showCart} onOpenChange={setShowCart}>
+        <DialogContent className="max-w-lg bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Carrello ({cartItemCount} articoli)
+            </DialogTitle>
+          </DialogHeader>
+          {cart.length === 0 ? (
+            <div className="text-center py-8">
+              <ShoppingCart className="h-12 w-12 mx-auto text-gray-500 mb-3" />
+              <p className="text-gray-400">Il carrello è vuoto</p>
+            </div>
+          ) : (
+            <div className="space-y-4 mt-4">
+              {cart.map(item => (
+                <div key={item.variantId} className="flex items-center gap-4 bg-gray-800 rounded-lg p-3">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.variantName}
+                    className="w-16 h-16 object-contain rounded bg-gray-700"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-white truncate">{item.productName}</p>
+                    <p className="text-xs text-gray-400 truncate">{item.variantName}</p>
+                    <p className="text-red-400 font-bold">€{item.price}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-gray-400 hover:text-white"
+                      onClick={() => updateCartQuantity(item.variantId, -1)}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-6 text-center text-sm">{item.quantity}</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-gray-400 hover:text-white"
+                      onClick={() => updateCartQuantity(item.variantId, 1)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-gray-400 hover:text-red-400"
+                    onClick={() => removeFromCart(item.variantId)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="border-t border-gray-700 pt-4 flex justify-between items-center">
+                <span className="text-lg font-bold">Totale:</span>
+                <span className="text-2xl font-bold text-red-400">€{cartTotal.toFixed(2)}</span>
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                Le spese di spedizione verranno calcolate al checkout
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );

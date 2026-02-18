@@ -16,6 +16,7 @@ import { imageSearchService } from "./services/image-search";
 import { searchFlights } from "./services/amadeus-flights";
 import { cityToIata, iataToCity } from "./services/cityMapping";
 import { searchHotels, bookHotel } from "./services/amadeus-hotels";
+import { getStoreProducts, getProductDetail, getShippingRates, createOrder } from "./services/printful";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -174,7 +175,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Merchandise routes
+  // Printful Merchandise routes
+  app.get("/api/printful/products", async (req: Request, res: Response) => {
+    try {
+      const products = await getStoreProducts();
+      return res.status(200).json(products);
+    } catch (error: any) {
+      console.error("Error fetching Printful products:", error);
+      return res.status(500).json({ message: "Failed to fetch products from Printful", error: error.message });
+    }
+  });
+
+  app.get("/api/printful/products/:id", async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const product = await getProductDetail(productId);
+      return res.status(200).json(product);
+    } catch (error: any) {
+      console.error("Error fetching Printful product detail:", error);
+      return res.status(500).json({ message: "Failed to fetch product details", error: error.message });
+    }
+  });
+
+  app.post("/api/printful/shipping-rates", async (req: Request, res: Response) => {
+    try {
+      const { countryCode, items } = req.body;
+      if (!countryCode || !items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "countryCode and items array are required" });
+      }
+      const rates = await getShippingRates(countryCode, items);
+      return res.status(200).json(rates);
+    } catch (error: any) {
+      console.error("Error fetching shipping rates:", error);
+      return res.status(500).json({ message: "Failed to fetch shipping rates", error: error.message });
+    }
+  });
+
+  app.post("/api/printful/orders", async (req: Request, res: Response) => {
+    try {
+      const { recipient, items, confirm } = req.body;
+      if (!recipient || !items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "recipient and items array are required" });
+      }
+      const order = await createOrder(recipient, items, !confirm);
+      return res.status(201).json(order);
+    } catch (error: any) {
+      console.error("Error creating Printful order:", error);
+      return res.status(500).json({ message: "Failed to create order", error: error.message });
+    }
+  });
+
+  // Legacy merchandise route (fallback to in-memory data)
   app.get("/api/merchandise", async (req: Request, res: Response) => {
     try {
       const { type } = req.query;
