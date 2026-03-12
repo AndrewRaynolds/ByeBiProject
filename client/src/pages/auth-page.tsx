@@ -16,7 +16,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -78,7 +79,13 @@ export default function AuthPage() {
   return (
     <div className="flex min-h-screen">
       {/* Authentication Form */}
-      <div className="w-full lg:w-1/2 p-8 flex items-center justify-center bg-black text-white">
+      <div className="w-full lg:w-1/2 p-8 flex items-center justify-center bg-black text-white relative">
+        <Link href="/">
+          <Button variant="ghost" className="absolute top-4 left-4 text-gray-400 hover:text-white hover:bg-gray-800">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </Link>
         <div className="max-w-md w-full space-y-8">
 
           <div className="text-center">
