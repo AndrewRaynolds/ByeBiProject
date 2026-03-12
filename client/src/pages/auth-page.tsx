@@ -80,12 +80,12 @@ export default function AuthPage() {
     <div className="flex min-h-screen">
       {/* Authentication Form */}
       <div className="w-full lg:w-1/2 p-8 flex items-center justify-center bg-black text-white relative">
-        <Link href="/">
-          <Button variant="ghost" className="absolute top-4 left-4 text-gray-400 hover:text-white hover:bg-gray-800">
+        <Button variant="ghost" asChild className="absolute top-4 left-4 text-gray-400 hover:text-white hover:bg-gray-800">
+          <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <div className="max-w-md w-full space-y-8">
 
           <div className="text-center">
