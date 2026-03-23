@@ -177,16 +177,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users/:id/premium", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = req.params.id;
-      const { isPremium } = req.body;
+      const supabaseUser = (req as any).supabaseUser;
+      const requestedId = req.params.id;
 
+      // Enforce that users can only modify their own premium status
+      if (requestedId !== supabaseUser.id) {
+        return res.status(403).json({ message: "Forbidden: cannot modify another user's premium status" });
+      }
+
+      const { isPremium } = req.body;
       if (typeof isPremium !== "boolean") {
         return res.status(400).json({ message: "isPremium must be a boolean" });
       }
 
-      premiumStatusMap.set(userId, isPremium);
+      premiumStatusMap.set(supabaseUser.id, isPremium);
 
-      const supabaseUser = (req as any).supabaseUser;
       const meta = supabaseUser.user_metadata || {};
       return res.status(200).json({
         id: supabaseUser.id,
@@ -204,7 +209,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trip routes
   app.post("/api/trips", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const tripData = insertTripSchema.parse(req.body);
+      // Supabase users have UUID string IDs; userId in trips schema expects integer.
+      // We strip userId from body and set it to 0 for Supabase-authenticated users.
+      const tripPayload = { ...req.body, userId: 0 };
+      const tripData = insertTripSchema.parse(tripPayload);
       const trip = await storage.createTrip(tripData);
       return res.status(201).json(trip);
     } catch (error) {
