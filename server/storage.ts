@@ -16,7 +16,7 @@ export interface IStorage {
   
   // Trip operations
   getTrip(id: number): Promise<Trip | undefined>;
-  getTripsByUserId(userId: number): Promise<Trip[]>;
+  getTripsByUserId(userId: string): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
 
   // Itinerary operations
@@ -161,7 +161,7 @@ export class MemStorage implements IStorage {
     return this.trips.get(id);
   }
 
-  async getTripsByUserId(userId: number): Promise<Trip[]> {
+  async getTripsByUserId(userId: string): Promise<Trip[]> {
     return Array.from(this.trips.values()).filter(trip => trip.userId === userId);
   }
 

@@ -209,9 +209,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trip routes
   app.post("/api/trips", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Supabase users have UUID string IDs; userId in trips schema expects integer.
-      // We strip userId from body and set it to 0 for Supabase-authenticated users.
-      const tripPayload = { ...req.body, userId: 0 };
+      const supabaseUser = (req as any).supabaseUser;
+      // Always use the authenticated user's UUID as userId (ignoring any client-sent userId)
+      const tripPayload = { ...req.body, userId: supabaseUser.id };
       const tripData = insertTripSchema.parse(tripPayload);
       const trip = await storage.createTrip(tripData);
       return res.status(201).json(trip);
@@ -223,14 +223,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trips/user/:userId", async (req: Request, res: Response) => {
+  app.get("/api/trips/user/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const rawUserId = req.params.userId;
-      const userId = parseInt(rawUserId);
-      if (isNaN(userId)) {
-        return res.status(200).json([]);
+      const supabaseUser = (req as any).supabaseUser;
+      const requestedUserId = req.params.userId;
+
+      // Enforce that users can only fetch their own trips
+      if (requestedUserId !== supabaseUser.id) {
+        return res.status(403).json({ message: "Forbidden: cannot access another user's trips" });
       }
-      const trips = await storage.getTripsByUserId(userId);
+
+      const trips = await storage.getTripsByUserId(requestedUserId);
       return res.status(200).json(trips);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });

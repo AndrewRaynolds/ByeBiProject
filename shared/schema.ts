@@ -25,7 +25,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 // Trip model
 export const trips = pgTable("trips", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: text("user_id").notNull(),
   name: text("name").notNull(),
   participants: integer("participants").notNull(),
   startDate: text("start_date").notNull(),
