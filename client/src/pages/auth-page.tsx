@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,18 +16,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
 
-// Validation schemas
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Email non valida"),
+  password: z.string().min(1, "Password richiesta"),
 });
 
 const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Email non valida"),
+  password: z.string().min(6, "La password deve essere di almeno 6 caratteri"),
+  username: z.string().optional(),
   fullName: z.string().optional(),
 });
 
@@ -40,14 +37,12 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
-  // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
       navigate("/");
     }
   }, [user, navigate]);
 
-  // Login form
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -56,29 +51,31 @@ export default function AuthPage() {
     },
   });
 
-  // Register form
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      username: "",
       email: "",
       password: "",
+      username: "",
       fullName: "",
     },
   });
 
-  // Submit handlers
   const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+    loginMutation.mutate({ email: data.email, password: data.password });
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data);
+    registerMutation.mutate({
+      email: data.email,
+      password: data.password,
+      username: data.username || undefined,
+      fullName: data.fullName || undefined,
+    });
   };
 
   return (
     <div className="flex min-h-screen">
-      {/* Authentication Form */}
       <div className="w-full lg:w-1/2 p-8 flex items-center justify-center bg-black text-white relative">
         <Button variant="ghost" asChild className="absolute top-4 left-4 text-gray-400 hover:text-white hover:bg-gray-800">
           <Link href="/">
@@ -87,7 +84,6 @@ export default function AuthPage() {
           </Link>
         </Button>
         <div className="max-w-md w-full space-y-8">
-
           <div className="text-center">
             <h2 className="mt-6 text-3xl font-bold text-white">
               Welcome to <span className="text-red-600">Bye</span>Bro
@@ -103,10 +99,9 @@ export default function AuthPage() {
               <TabsTrigger value="register" className="text-white data-[state=active]:bg-red-600">Sign Up</TabsTrigger>
             </TabsList>
 
-            {/* Login Form */}
             <TabsContent value="login" className="mt-6">
               <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 auth-page-form">
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
                     name="email"
@@ -143,7 +138,7 @@ export default function AuthPage() {
                     {loginMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Logging in...
+                        Accesso in corso...
                       </>
                     ) : (
                       "Login"
@@ -153,24 +148,9 @@ export default function AuthPage() {
               </Form>
             </TabsContent>
 
-            {/* Register Form */}
             <TabsContent value="register" className="mt-6">
               <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4 auth-page-form">
-                  <FormField
-                    control={registerForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                   <FormField
                     control={registerForm.control}
                     name="email"
@@ -187,12 +167,26 @@ export default function AuthPage() {
 
                   <FormField
                     control={registerForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username (opzionale)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="username" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={registerForm.control}
                     name="fullName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Full Name (Optional)</FormLabel>
+                        <FormLabel>Nome completo (opzionale)</FormLabel>
                         <FormControl>
-                          <Input placeholder="John Doe" {...field} />
+                          <Input placeholder="Mario Rossi" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -221,10 +215,10 @@ export default function AuthPage() {
                     {registerMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
+                        Registrazione in corso...
                       </>
                     ) : (
-                      "Create Account"
+                      "Crea Account"
                     )}
                   </Button>
                 </form>
@@ -234,7 +228,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Hero image section - senza filtro colorato */}
       <div
         className="hidden lg:block lg:w-1/2 bg-cover bg-center"
         style={{

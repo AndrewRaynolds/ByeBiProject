@@ -10,7 +10,7 @@ import {
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateItinerary } from "./services/openai";
-import { setupAuth } from "./auth";
+import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
 import { searchFlights } from "./services/amadeus-flights";
@@ -20,9 +20,9 @@ import { getStoreProducts, getProductDetail, getShippingRates, createOrder } fro
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
 
+const premiumStatusMap = new Map<string, boolean>();
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
-  setupAuth(app);
 
   // Stripe integration routes (connector: Stripe)
   app.get("/api/stripe/publishable-key", async (req: Request, res: Response) => {
@@ -135,37 +135,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authorization middleware
+  // Authorization middleware — verifies Supabase JWT Bearer token
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated()) {
-      return next();
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Authentication required" });
     }
-    res.status(401).json({ message: "Authentication required" });
+    const token = authHeader.split(" ")[1];
+    supabase.auth.getUser(token).then(({ data: { user }, error }) => {
+      if (error || !user) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+      (req as any).supabaseUser = user;
+      next();
+    }).catch(() => {
+      return res.status(401).json({ message: "Authentication error" });
+    });
   };
+
+  // Get current user from Supabase JWT
+  app.get("/api/user", async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const token = authHeader.split(" ")[1];
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const meta = user.user_metadata || {};
+    return res.json({
+      id: user.id,
+      email: user.email,
+      username: meta.username || user.email?.split("@")[0],
+      firstName: meta.firstName || meta.first_name,
+      lastName: meta.lastName || meta.last_name,
+      isPremium: premiumStatusMap.get(user.id) ?? meta.isPremium ?? false,
+    });
+  });
 
   app.post("/api/users/:id/premium", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const userId = req.params.id;
       const { isPremium } = req.body;
-      
-      if (typeof isPremium !== 'boolean') {
+
+      if (typeof isPremium !== "boolean") {
         return res.status(400).json({ message: "isPremium must be a boolean" });
       }
-      
-      const updatedUser = await storage.updateUserPremiumStatus(id, isPremium);
-      
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Don't return password in response
-      const { password, ...userWithoutPassword } = updatedUser;
-      
-      return res.status(200).json(userWithoutPassword);
+
+      premiumStatusMap.set(userId, isPremium);
+
+      const supabaseUser = (req as any).supabaseUser;
+      const meta = supabaseUser.user_metadata || {};
+      return res.status(200).json({
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        username: meta.username || supabaseUser.email?.split("@")[0],
+        firstName: meta.firstName,
+        lastName: meta.lastName,
+        isPremium,
+      });
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
     }
- });
+  });
 
   // Trip routes
   app.post("/api/trips", isAuthenticated, async (req: Request, res: Response) => {
@@ -183,7 +217,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/trips/user/:userId", async (req: Request, res: Response) => {
     try {
-      const userId = parseInt(req.params.userId);
+      const rawUserId = req.params.userId;
+      const userId = parseInt(rawUserId);
+      if (isNaN(userId)) {
+        return res.status(200).json([]);
+      }
       const trips = await storage.getTripsByUserId(userId);
       return res.status(200).json(trips);
     } catch (error) {
@@ -622,8 +660,13 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Get user ID if authenticated
-      const userId = (req.user as any)?.id;
+      // Get user ID if authenticated (via Supabase JWT)
+      const authHeader = req.headers.authorization;
+      let userId: string | undefined;
+      if (authHeader?.startsWith("Bearer ")) {
+        const { data: { user: supaUser } } = await supabase.auth.getUser(authHeader.split(" ")[1]);
+        userId = supaUser?.id;
+      }
 
       // Map destination to IATA code for flight search (using centralized mapping)
       const destIATA = cityToIata(destination);

@@ -12,6 +12,14 @@ ByeBi is an AI-powered dual-brand travel platform featuring **ByeBro** for bache
 ## System Architecture
 The platform is built with React and TypeScript for the frontend, utilizing Shadcn components with Tailwind CSS for a modern UI/UX featuring dark gradients, glassmorphism, and responsive design. Wouter handles client-side routing. The backend is an Express.js server with in-memory storage.
 
+**Authentication: Supabase Auth** (migrated from Passport.js, March 2025)
+- All auth is handled by Supabase. Users appear in the Supabase Authentication dashboard.
+- Frontend: `useAuth()` hook (`client/src/hooks/use-auth.tsx`) wraps Supabase `signInWithPassword`, `signUp`, `signOut`, and `onAuthStateChange`. `AuthUser` type has UUID `id`.
+- Backend: `server/supabase.ts` creates a Supabase client using `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The `isAuthenticated` middleware in `routes.ts` verifies Bearer JWT tokens via `supabase.auth.getUser(token)`.
+- `queryClient.ts` automatically attaches `Authorization: Bearer <token>` headers to all API requests.
+- Premium status is tracked server-side in a `Map<userId, boolean>`.
+- Auth page (`/auth`) uses email + password (not username).
+
 Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.
 
 The OneClick Assistant implements a strict, step-by-step conversational flow with origin city selection and real flight integration:
