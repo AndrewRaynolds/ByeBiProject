@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase"; //import per supabase
 import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import {
   useQuery,
@@ -20,7 +21,7 @@ type AuthContextType = {
 };
 
 type LoginData = {
-  username: string;
+  email: string;
   password: string;
 };
 
@@ -45,12 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     isLoading,
     refetch,
-  } = useQuery<User | null, Error>({
-    queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+  } = useQuery({
+    queryKey: ["/api/user"], // Manteniamo la stessa chiave per non rompere il resto dell'app
+    queryFn: async () => {
+      // Chiediamo a Supabase se c'è una sessione attiva
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error || !session) return null;
+
+      // Adattiamo i dati di Supabase al formato che si aspetta la tua app
+      return {
+        id: session.user.id,
+        email: session.user.email,
+        username: session.user.user_metadata?.username || session.user.email,
+      };
+    },
     enabled: isInitialized,
-    // Ensure we always have null rather than undefined for proper typing
-    select: (data) => data || null,
   });
 
   // Initialize auth state
@@ -87,18 +98,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (userData: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", userData);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Registration failed");
+      // Usiamo Supabase per la registrazione invece dell'API locale
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            username: userData.username,
+            full_name: userData.fullName,
+          }
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
       }
-      return await res.json();
+      return data.user;
     },
-    onSuccess: (user: User) => {
+    onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registration successful",
-        description: `Welcome, ${user.username}!`,
+        description: `Benvenuto su ByeBro!`,
       });
     },
     onError: (error: Error) => {
@@ -113,17 +134,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/logout");
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Logout failed");
-      }
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       toast({
         title: "Logged out",
-        description: "You have been logged out successfully",
+        description: "Sei uscito con successo.",
       });
     },
     onError: (error: Error) => {
