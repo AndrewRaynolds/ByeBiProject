@@ -196,6 +196,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       premiumStatusMap.set(supabaseUser.id, isPremium);
 
+      // Persist premium status to Supabase user_metadata so it survives page reloads
+      await supabase.auth.admin.updateUserById(supabaseUser.id, {
+        user_metadata: { ...supabaseUser.user_metadata, isPremium },
+      });
+
       const meta = supabaseUser.user_metadata || {};
       return res.status(200).json({
         id: supabaseUser.id,
