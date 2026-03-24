@@ -14,10 +14,11 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 
 **Authentication: Supabase Auth** (migrated from Passport.js, March 2025)
 - All auth is handled by Supabase. Users appear in the Supabase Authentication dashboard.
-- Frontend: `useAuth()` hook (`client/src/hooks/use-auth.tsx`) wraps Supabase `signInWithPassword`, `signUp`, `signOut`, and `onAuthStateChange`. `AuthUser` type has UUID `id`.
-- Backend: `server/supabase.ts` creates a Supabase client using `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The `isAuthenticated` middleware in `routes.ts` verifies Bearer JWT tokens via `supabase.auth.getUser(token)`.
+- Frontend: `useAuth()` hook (`client/src/hooks/use-auth.tsx`) wraps Supabase `signInWithPassword`, `signUp`, `signOut`, and `onAuthStateChange`. `AuthUser` type has UUID `id`. Frontend uses `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`.
+- Backend: `server/supabase.ts` creates a Supabase client using server-only secrets `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (throws on startup if missing — no fallbacks). The `isAuthenticated` middleware in `routes.ts` verifies Bearer JWT tokens via `supabase.auth.getUser(token)` and attaches the verified `User` to `req.supabaseUser` (typed via Express namespace in `server/types.ts`).
 - `queryClient.ts` automatically attaches `Authorization: Bearer <token>` headers to all API requests.
-- Premium status is tracked server-side in a `Map<userId, boolean>`.
+- Premium status tracked server-side in a `Map<string, boolean>` keyed by Supabase UUID.
+- Trip `userId` is now `text` (Supabase UUID) — changed from `integer`. Trip creation/retrieval enforces ownership against the JWT-verified user.
 - Auth page (`/auth`) uses email + password (not username).
 
 Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.

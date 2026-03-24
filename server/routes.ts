@@ -1,3 +1,4 @@
+import "./types";
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -146,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error || !user) {
         return res.status(401).json({ message: "Invalid or expired token" });
       }
-      (req as any).supabaseUser = user;
+      req.supabaseUser = user;
       next();
     }).catch(() => {
       return res.status(401).json({ message: "Authentication error" });
@@ -177,7 +178,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users/:id/premium", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const supabaseUser = (req as any).supabaseUser;
+      const supabaseUser = req.supabaseUser;
+      if (!supabaseUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       const requestedId = req.params.id;
 
       // Enforce that users can only modify their own premium status
@@ -209,7 +213,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trip routes
   app.post("/api/trips", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const supabaseUser = (req as any).supabaseUser;
+      const supabaseUser = req.supabaseUser;
+      if (!supabaseUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       // Always use the authenticated user's UUID as userId (ignoring any client-sent userId)
       const tripPayload = { ...req.body, userId: supabaseUser.id };
       const tripData = insertTripSchema.parse(tripPayload);
@@ -225,7 +232,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/trips/user/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const supabaseUser = (req as any).supabaseUser;
+      const supabaseUser = req.supabaseUser;
+      if (!supabaseUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       const requestedUserId = req.params.userId;
 
       // Enforce that users can only fetch their own trips
