@@ -17,7 +17,6 @@ import {
   BrideCard,
   getAnonymousAlias,
   getAvatarEmoji,
-  extractLocation,
 } from "@/components/SecretBlog";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -81,10 +80,7 @@ interface PostGridProps {
 
 function PostGrid({ posts, isPremium, brand, t, filterLocation }: PostGridProps) {
   const filtered = filterLocation
-    ? posts.filter(p => {
-        const loc = extractLocation(p.title);
-        return loc?.includes(filterLocation);
-      })
+    ? posts.filter(p => p.location === filterLocation)
     : posts;
 
   const CardComponent = brand === 'bride' ? BrideCard : BroCard;
@@ -350,17 +346,20 @@ export default function SecretBlogPage() {
   });
 
   const popularPosts = useMemo(() => blogPosts ?? [], [blogPosts]);
-  const newestPosts = useMemo(() => [...(blogPosts ?? [])].sort((a, b) => b.id - a.id), [blogPosts]);
+  const newestPosts = useMemo(
+    () => [...(blogPosts ?? [])].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    }),
+    [blogPosts]
+  );
 
   const availableLocations = useMemo(() => {
     if (!blogPosts) return [];
     const locs = new Set<string>();
     blogPosts.forEach(p => {
-      const loc = extractLocation(p.title);
-      if (loc) {
-        const name = loc.replace(/^[^\s]+\s/, '');
-        locs.add(name);
-      }
+      if (p.location) locs.add(p.location);
     });
     return Array.from(locs);
   }, [blogPosts]);
@@ -371,10 +370,6 @@ export default function SecretBlogPage() {
 
   const totalStories = (blogPosts?.length ?? 0) + 197;
 
-  const heroBg = isBride
-    ? 'bg-gradient-to-b from-[#0a0515] via-[#120a2a] to-[#0a0515]'
-    : 'bg-gradient-to-b from-[#0a0000] via-[#1a0505] to-black';
-
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';
   const tabAccent = isBride ? 'text-purple-300' : 'text-red-400';
@@ -384,16 +379,25 @@ export default function SecretBlogPage() {
       <Header />
 
       <main className="flex-grow">
-        <section className={`relative overflow-hidden ${heroBg} py-24`}>
+        <section className="relative overflow-hidden py-28">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: isBride
+                ? "url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=1400&q=80')"
+                : "url('https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1400&q=80')"
+            }}
+          />
+          <div className={`absolute inset-0 ${isBride ? 'bg-[#0a0515]/85' : 'bg-black/80'}`} />
           {isBride ? (
             <>
-              <div className="absolute top-0 left-1/3 w-96 h-96 bg-purple-900/15 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-pink-900/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute top-0 left-1/3 w-96 h-96 bg-purple-900/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-pink-900/20 rounded-full blur-3xl pointer-events-none" />
             </>
           ) : (
             <>
-              <div className="absolute top-0 right-1/4 w-72 h-72 bg-red-900/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-red-900/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute top-0 right-1/4 w-72 h-72 bg-red-900/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-red-900/10 rounded-full blur-3xl pointer-events-none" />
             </>
           )}
 

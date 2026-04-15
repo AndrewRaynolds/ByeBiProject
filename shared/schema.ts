@@ -89,6 +89,7 @@ export const blogPosts = pgTable("blog_posts", {
   content: text("content").notNull(),
   image: text("image").notNull(),
   isPremium: boolean("is_premium").default(false),
+  location: text("location"),
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -97,6 +98,7 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
   content: true,
   image: true,
   isPremium: true,
+  location: true,
 });
 
 // Merchandise model

@@ -48,6 +48,21 @@ export function getAvatarEmoji(postId: number, brand: Brand): string {
   return emojis[postId % emojis.length];
 }
 
+export const DESTINATIONS_MAP: Record<string, string> = {
+  Roma: "🇮🇹 Roma",
+  Ibiza: "🇪🇸 Ibiza",
+  Cracovia: "🇵🇱 Cracovia",
+  Barcellona: "🇪🇸 Barcellona",
+  Amsterdam: "🇳🇱 Amsterdam",
+  Praga: "🇨🇿 Praga",
+  Berlino: "🇩🇪 Berlino",
+  Budapest: "🇭🇺 Budapest",
+  Parigi: "🇫🇷 Parigi",
+  Mykonos: "🇬🇷 Mykonos",
+  Santorini: "🇬🇷 Santorini",
+  Lisbona: "🇵🇹 Lisbona",
+};
+
 export function extractLocation(title: string): string | null {
   const locations: Record<string, string> = {
     roma: "🇮🇹 Roma",
@@ -78,7 +93,9 @@ export function extractLocation(title: string): string | null {
 export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
   const alias = getAnonymousAlias(post.id, 'bro');
   const emoji = getAvatarEmoji(post.id, 'bro');
-  const location = extractLocation(post.title);
+  const locationLabel = post.location
+    ? (DESTINATIONS_MAP[post.location] ?? `📍 ${post.location}`)
+    : extractLocation(post.title);
   const isLocked = post.isPremium && !isPremium;
 
   return (
@@ -112,9 +129,9 @@ export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boo
               {t('common.free')}
             </span>
           )}
-          {location && (
+          {locationLabel && (
             <span className="bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium border border-white/10">
-              {location}
+              {locationLabel}
             </span>
           )}
         </div>
@@ -171,7 +188,9 @@ export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boo
 export function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
   const alias = getAnonymousAlias(post.id, 'bride');
   const emoji = getAvatarEmoji(post.id, 'bride');
-  const location = extractLocation(post.title);
+  const locationLabel = post.location
+    ? (DESTINATIONS_MAP[post.location] ?? `📍 ${post.location}`)
+    : extractLocation(post.title);
   const isLocked = post.isPremium && !isPremium;
 
   return (
@@ -205,9 +224,9 @@ export function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: b
               {t('common.free')}
             </span>
           )}
-          {location && (
+          {locationLabel && (
             <span className="bg-black/50 backdrop-blur-sm text-pink-100 text-xs px-2 py-1 rounded-full font-medium border border-purple-400/20">
-              {location}
+              {locationLabel}
             </span>
           )}
         </div>

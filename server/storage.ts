@@ -512,27 +512,24 @@ export class MemStorage implements IStorage {
     const blogPosts = [
       {
         title: "Roma: The Night We Can't Remember",
-        excerpt: "Epic Roman nights that blend history with modern party culture...",
-        content: "From Trastevere's wine bars to Testaccio's underground clubs, Rome offers an incredible nightlife scene...",
+        content: "From Trastevere's wine bars to Testaccio's underground clubs, Rome offers an incredible nightlife scene. We started at a rooftop aperitivo with views of the Colosseum, then ended up in a basement club at 5am. The bachelor had no idea what hit him.",
         image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        tags: ["nightlife", "rome", "history"],
-        isPremium: false
+        isPremium: false,
+        location: "Roma"
       },
       {
         title: "Ibiza Uncovered: The Ultimate Party Guide",
-        excerpt: "Everything you need to know about Ibiza's legendary club scene...",
-        content: "From Amnesia to Pacha, we break down the best clubs, when to go, and how to do it right...",
+        content: "From Amnesia to Pacha, we break down the best clubs, when to go, and how to do it right. We got VIP access to three clubs in one night, watched the sunrise from a yacht, and somehow everyone made the flight home. Barely.",
         image: "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        tags: ["ibiza", "clubs", "nightlife"],
-        isPremium: true
+        isPremium: true,
+        location: "Ibiza"
       },
       {
         title: "Cracovia: Eastern Europe's Hidden Gem",
-        excerpt: "Discover why Poland's ancient capital is becoming the go-to destination...",
-        content: "Affordable prices, incredible architecture, and a nightlife scene that rivals any major European city...",
+        content: "Affordable prices, incredible architecture, and a nightlife scene that rivals any major European city. We spent four days exploring the Old Town by day and the underground clubs by night. The vodka was cheaper than water and twice as dangerous.",
         image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        tags: ["krakow", "budget", "culture"],
-        isPremium: false
+        isPremium: false,
+        location: "Cracovia"
       }
     ];
     
