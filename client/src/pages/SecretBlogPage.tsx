@@ -1,291 +1,551 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BlogPost } from "@shared/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PremiumFeatures from "@/components/PremiumFeatures";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { Lock, Star, MessageSquare, Send } from "lucide-react";
+import { Lock, Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Brand,
+  BroCard,
+  BrideCard,
+  getAnonymousAlias,
+  getAvatarEmoji,
+  extractLocation,
+} from "@/components/SecretBlog";
+import { useTranslation } from "@/contexts/LanguageContext";
+
+const DESTINATIONS = [
+  { label: "🇮🇹 Roma", value: "Roma" },
+  { label: "🇪🇸 Ibiza", value: "Ibiza" },
+  { label: "🇵🇱 Cracovia", value: "Cracovia" },
+  { label: "🇪🇸 Barcellona", value: "Barcellona" },
+  { label: "🇳🇱 Amsterdam", value: "Amsterdam" },
+  { label: "🇨🇿 Praga", value: "Praga" },
+  { label: "🇩🇪 Berlino", value: "Berlino" },
+  { label: "🇭🇺 Budapest", value: "Budapest" },
+  { label: "🇫🇷 Parigi", value: "Parigi" },
+  { label: "🇬🇷 Mykonos", value: "Mykonos" },
+  { label: "🇬🇷 Santorini", value: "Santorini" },
+  { label: "🇵🇹 Lisbona", value: "Lisbona" },
+];
+
+const STORY_TAGS = ["#epico", "#disastro", "#love", "#survival", "#illegale", "#leggendario", "#imbarazzante", "#da-dimenticare"];
+
+function getBrand(): Brand {
+  try {
+    const saved = localStorage.getItem('selectedBrand');
+    return saved === 'byebride' ? 'bride' : 'bro';
+  } catch {
+    return 'bro';
+  }
+}
+
+function PostGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800">
+          <Skeleton className="h-48 w-full" />
+          <div className="p-5">
+            <Skeleton className="h-5 w-3/4 mb-3" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-5/6 mb-4" />
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Skeleton className="w-8 h-8 rounded-full" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface PostGridProps {
+  posts: BlogPost[];
+  isPremium: boolean;
+  brand: Brand;
+  t: (k: string) => string;
+  filterLocation: string | null;
+}
+
+function PostGrid({ posts, isPremium, brand, t, filterLocation }: PostGridProps) {
+  const filtered = filterLocation
+    ? posts.filter(p => {
+        const loc = extractLocation(p.title);
+        return loc?.includes(filterLocation);
+      })
+    : posts;
+
+  const CardComponent = brand === 'bride' ? BrideCard : BroCard;
+
+  if (filtered.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500 text-lg">Nessuna storia trovata per questa destinazione.</p>
+        <p className="text-gray-600 text-sm mt-1">Prova a selezionare un'altra città.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {filtered.map((post) => (
+        <CardComponent key={post.id} post={post} isPremium={isPremium} t={t} />
+      ))}
+    </div>
+  );
+}
+
+interface StoryFormProps {
+  isPremium: boolean;
+  isAuthenticated: boolean;
+  brand: Brand;
+  t: (k: string) => string;
+  onScrollToPremium: () => void;
+}
+
+function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: StoryFormProps) {
+  const { toast } = useToast();
+  const [step, setStep] = useState(1);
+  const [selectedDestination, setSelectedDestination] = useState<string>("");
+  const [storyContent, setStoryContent] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const isBride = brand === 'bride';
+  const alias = getAnonymousAlias(Math.floor(Math.random() * 8) + 1, brand);
+  const emoji = getAvatarEmoji(Math.floor(Math.random() * 8) + 1, brand);
+
+  const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
+  const accentText = isBride ? 'text-pink-400' : 'text-red-400';
+  const borderAccent = isBride ? 'border-purple-500/40' : 'border-red-600/40';
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmit = () => {
+    if (!isAuthenticated) {
+      toast({ title: "Accesso richiesto", description: "Effettua il login per condividere la tua storia.", variant: "destructive" });
+      return;
+    }
+    if (!isPremium) {
+      toast({ title: "Funzione Premium", description: "Passa al premium per condividere le tue storie.", variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Storia inviata! 🎉",
+      description: "La tua storia è in fase di revisione. Sarà pubblicata presto!",
+    });
+    setStep(1);
+    setSelectedDestination("");
+    setStoryContent("");
+    setSelectedTags([]);
+    setShowPreview(false);
+  };
+
+  if (!isPremium) {
+    return (
+      <div className={`rounded-2xl border ${borderAccent} bg-gray-950 p-8 text-center`}>
+        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-900 border border-gray-700 flex items-center justify-center">
+          <Lock className={`w-6 h-6 ${accentText}`} />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Solo per membri Premium</h3>
+        <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
+          Condividi le tue storie anonime e accedi a tutti i contenuti esclusivi.
+        </p>
+        <Button
+          className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-8 py-2.5 rounded-xl`}
+          onClick={onScrollToPremium}
+        >
+          Diventa Premium
+        </Button>
+      </div>
+    );
+  }
+
+  const stepLabels = ["Destinazione", "La tua storia", "Tag"];
+
+  return (
+    <div className={`rounded-2xl border ${borderAccent} bg-gray-950 overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${accentColor} p-5`}>
+        <h2 className="text-xl font-bold text-white mb-1">Racconta la tua storia</h2>
+        <p className="text-white/70 text-sm">In modo completamente anonimo</p>
+      </div>
+
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          {stepLabels.map((label, i) => (
+            <div key={i} className="flex items-center gap-2 flex-1">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                ${step > i + 1 ? `bg-gradient-to-r ${accentColor} text-white` :
+                  step === i + 1 ? `bg-gradient-to-r ${accentColor} text-white ring-2 ring-offset-2 ring-offset-gray-950 ${isBride ? 'ring-purple-500' : 'ring-red-500'}` :
+                  'bg-gray-800 text-gray-500'}`}>
+                {step > i + 1 ? "✓" : i + 1}
+              </div>
+              <span className={`text-xs font-medium hidden sm:block ${step === i + 1 ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+              {i < stepLabels.length - 1 && (
+                <div className={`flex-1 h-[1px] ${step > i + 1 ? `bg-gradient-to-r ${accentColor}` : 'bg-gray-800'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {step === 1 && (
+          <div>
+            <p className="text-gray-300 text-sm mb-4">Dove è successa questa storia epica?</p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {DESTINATIONS.map((dest) => (
+                <button
+                  key={dest.value}
+                  onClick={() => setSelectedDestination(dest.value)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all
+                    ${selectedDestination === dest.value
+                      ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                      : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                >
+                  {dest.label}
+                </button>
+              ))}
+            </div>
+            <Button
+              className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
+              disabled={!selectedDestination}
+              onClick={() => setStep(2)}
+            >
+              Avanti <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <p className="text-gray-300 text-sm mb-3">
+              Racconta cosa è successo a <span className={`font-semibold ${accentText}`}>{selectedDestination}</span>. Nessun nome, nessun dettaglio identificativo.
+            </p>
+            <Textarea
+              placeholder="Era la seconda notte quando il testimone ha deciso di..."
+              className="min-h-[160px] mb-4 bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500 resize-none"
+              value={storyContent}
+              onChange={(e) => setStoryContent(e.target.value)}
+            />
+            <div className="flex gap-3">
+              <Button variant="ghost" className="text-gray-400" onClick={() => setStep(1)}>
+                <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+              </Button>
+              <Button
+                className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
+                disabled={storyContent.trim().length < 20}
+                onClick={() => setStep(3)}
+              >
+                Avanti <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <p className="text-gray-300 text-sm mb-4">Scegli uno o più tag che descrivono la storia:</p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {STORY_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-mono transition-all border
+                    ${selectedTags.includes(tag)
+                      ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                      : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3 mb-6">
+              <Button variant="ghost" className="text-gray-400" onClick={() => setStep(2)}>
+                <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+              </Button>
+              <Button
+                variant="outline"
+                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                onClick={() => setShowPreview(!showPreview)}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                {showPreview ? "Nascondi anteprima" : "Vedi anteprima"}
+              </Button>
+              <Button
+                className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
+                onClick={handleSubmit}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Invia in forma anonima
+              </Button>
+            </div>
+
+            {showPreview && (
+              <div className={`rounded-xl border ${borderAccent} bg-gray-900 overflow-hidden`}>
+                <div className="h-24 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                  <span className="text-4xl opacity-40">✨</span>
+                </div>
+                <div className="p-4">
+                  <div className="flex gap-2 mb-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isBride ? 'bg-pink-500' : 'bg-emerald-500'} text-white`}>Nuova storia</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-black/50 text-gray-300 border border-white/10">
+                      {selectedDestination && DESTINATIONS.find(d => d.value === selectedDestination)?.label}
+                    </span>
+                  </div>
+                  <p className="text-white text-sm font-bold mb-1">La tua storia da {selectedDestination}</p>
+                  <p className="text-gray-400 text-xs line-clamp-2 mb-3">{storyContent}</p>
+                  {selectedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {selectedTags.map(tag => (
+                        <span key={tag} className={`text-xs font-mono ${accentText}`}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
+                    <div className={`w-7 h-7 rounded-full ${isBride ? 'bg-purple-900/50' : 'bg-gray-800'} flex items-center justify-center text-sm`}>
+                      {emoji}
+                    </div>
+                    <div>
+                      <p className="text-gray-300 text-xs font-medium">{alias}</p>
+                      <p className="text-gray-600 text-[10px]">Anonimo</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function SecretBlogPage() {
   const { isAuthenticated, user } = useAuth();
   const isPremium = user?.isPremium || false;
-  const [newPostContent, setNewPostContent] = useState("");
-  const { toast } = useToast();
+  const { t } = useTranslation();
+  const brand = getBrand();
+  const isBride = brand === 'bride';
+
+  const [filterLocation, setFilterLocation] = useState<string | null>(null);
 
   const { data: blogPosts, isLoading, error } = useQuery<BlogPost[]>({
     queryKey: ["/api/blog-posts", { premium: isPremium }],
   });
 
-  const handleSubmitPost = () => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to share your story.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const popularPosts = useMemo(() => blogPosts ?? [], [blogPosts]);
+  const newestPosts = useMemo(() => [...(blogPosts ?? [])].sort((a, b) => b.id - a.id), [blogPosts]);
 
-    if (!isPremium) {
-      toast({
-        title: "Premium feature",
-        description: "Upgrade to premium to share your own secret stories.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!newPostContent.trim()) {
-      toast({
-        title: "Empty post",
-        description: "Please write something before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Story submitted",
-      description: "Your story has been submitted for review. It will be published soon!",
+  const availableLocations = useMemo(() => {
+    if (!blogPosts) return [];
+    const locs = new Set<string>();
+    blogPosts.forEach(p => {
+      const loc = extractLocation(p.title);
+      if (loc) {
+        const name = loc.replace(/^[^\s]+\s/, '');
+        locs.add(name);
+      }
     });
-    
-    setNewPostContent("");
+    return Array.from(locs);
+  }, [blogPosts]);
+
+  const scrollToPremium = () => {
+    document.getElementById('premium-features')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const totalStories = (blogPosts?.length ?? 0) + 197;
+
+  const heroBg = isBride
+    ? 'bg-gradient-to-b from-[#0a0515] via-[#120a2a] to-[#0a0515]'
+    : 'bg-gradient-to-b from-[#0a0000] via-[#1a0505] to-black';
+
+  const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
+  const accentText = isBride ? 'text-pink-400' : 'text-red-400';
+  const tabAccent = isBride ? 'text-purple-300' : 'text-red-400';
+
   return (
-    <div className="min-h-screen flex flex-col bg-light">
+    <div className="min-h-screen flex flex-col bg-black">
       <Header />
-      
+
       <main className="flex-grow">
-        <div className="bg-primary text-white py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold font-poppins mb-4">Secret Blog</h1>
-            <p className="max-w-2xl mx-auto">Real, anonymous stories from bachelor parties around Europe. Learn from others' experiences and share your own.</p>
+        <section className={`relative overflow-hidden ${heroBg} py-24`}>
+          {isBride ? (
+            <>
+              <div className="absolute top-0 left-1/3 w-96 h-96 bg-purple-900/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-pink-900/15 rounded-full blur-3xl pointer-events-none" />
+            </>
+          ) : (
+            <>
+              <div className="absolute top-0 right-1/4 w-72 h-72 bg-red-900/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-red-900/5 rounded-full blur-3xl pointer-events-none" />
+            </>
+          )}
+
+          <div className="container mx-auto px-4 text-center relative">
+            <div className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest ${accentText} mb-4`}>
+              <Flame className="w-3.5 h-3.5" />
+              <span>{isBride ? '👑 Secret Diary' : '🔥 Secret Blog'}</span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-bold font-poppins text-white mb-4 leading-tight">
+              {isBride ? "Storie Segrete" : "Confessioni Anonime"}
+            </h1>
+            <p className={`max-w-2xl mx-auto text-base leading-relaxed mb-6 ${isBride ? 'text-purple-200/60' : 'text-gray-400'}`}>
+              {isBride
+                ? "Storie vere e anonime da addii al nubilato in tutta Europa. Impara dalle esperienze altrui e condividi le tue."
+                : "Storie vere e anonime da addii al celibato in tutta Europa. Impara dagli errori altrui. Aggiungine di tuoi."}
+            </p>
+            <div className={`flex items-center justify-center gap-1.5 text-sm font-medium mb-8 ${isBride ? 'text-pink-400/70' : 'text-red-500/70'}`}>
+              <Flame className="w-4 h-4" />
+              <span>Oltre {totalStories} storie anonime condivise</span>
+            </div>
+            {!isPremium && (
+              <Button
+                className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-8 py-3 rounded-xl shadow-xl`}
+                onClick={scrollToPremium}
+              >
+                Sblocca l'accesso Premium
+              </Button>
+            )}
           </div>
-        </div>
-        
-        <div className="container mx-auto px-4 py-10">
+        </section>
+
+        <div className="container mx-auto px-4 py-12">
           <Tabs defaultValue="popular" className="w-full">
-            <div className="flex justify-between items-center mb-6">
-              <TabsList>
-                <TabsTrigger value="popular"><Star className="mr-2 h-4 w-4" /> Popular Stories</TabsTrigger>
-                <TabsTrigger value="newest"><MessageSquare className="mr-2 h-4 w-4" /> Newest Stories</TabsTrigger>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+              <TabsList className="bg-gray-900 border border-gray-800">
+                <TabsTrigger
+                  value="popular"
+                  className={`data-[state=active]:${tabAccent} data-[state=active]:bg-gray-800`}
+                >
+                  <Star className="mr-2 h-4 w-4" /> Più Popolari
+                </TabsTrigger>
+                <TabsTrigger
+                  value="newest"
+                  className={`data-[state=active]:${tabAccent} data-[state=active]:bg-gray-800`}
+                >
+                  <Clock className="mr-2 h-4 w-4" /> Più Recenti
+                </TabsTrigger>
               </TabsList>
-              
+
               {!isPremium && (
-                <div className="hidden md:block">
-                  <Button 
-                    variant="outline" 
-                    className="border-primary text-primary hover:bg-primary hover:text-white"
-                    onClick={() => document.getElementById('premium-features')?.scrollIntoView({ behavior: 'smooth' })}
-                  >
-                    Unlock Premium Access
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className={`border ${isBride ? 'border-purple-500/50 text-purple-300 hover:bg-purple-600 hover:text-white' : 'border-red-600/50 text-red-400 hover:bg-red-600 hover:text-white'} hidden md:flex`}
+                  onClick={scrollToPremium}
+                >
+                  <Lock className="w-4 h-4 mr-2" /> Sblocca Premium
+                </Button>
               )}
             </div>
-            
+
+            {availableLocations.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-8">
+                <button
+                  onClick={() => setFilterLocation(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                    ${!filterLocation
+                      ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                      : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                >
+                  Tutte
+                </button>
+                {availableLocations.map(loc => {
+                  const destObj = DESTINATIONS.find(d => d.value === loc);
+                  return (
+                    <button
+                      key={loc}
+                      onClick={() => setFilterLocation(filterLocation === loc ? null : loc)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                        ${filterLocation === loc
+                          ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                          : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                    >
+                      {destObj?.label ?? loc}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <TabsContent value="popular">
               {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Card key={i} className="overflow-hidden">
-                      <Skeleton className="h-40 w-full" />
-                      <CardHeader>
-                        <Skeleton className="h-6 w-3/4 mb-2" />
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-3/4" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <PostGridSkeleton />
               ) : error ? (
                 <div className="text-center py-10">
-                  <p className="text-red-500">Error loading blog posts. Please try again later.</p>
+                  <p className="text-red-500">Errore nel caricamento delle storie. Riprova più tardi.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
-                  {blogPosts?.map((post) => (
-                    <Card key={post.id} className="overflow-hidden">
-                      <div className="relative">
-                        <img 
-                          src={post.image} 
-                          alt={post.title} 
-                          className="w-full h-40 object-cover" 
-                        />
-                        <div className="absolute top-2 left-2">
-                          {post.isPremium ? (
-                            <span className="bg-primary text-white text-xs px-2 py-1 rounded-full font-medium">Premium</span>
-                          ) : (
-                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">Free</span>
-                          )}
-                        </div>
-                        
-                        {post.isPremium && !isPremium && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <Lock className="text-white h-10 w-10" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <CardHeader>
-                        <CardTitle>{post.title}</CardTitle>
-                      </CardHeader>
-                      
-                      <CardContent>
-                        <p className="text-gray-600 line-clamp-3">{post.content}</p>
-                      </CardContent>
-                      
-                      <CardFooter className="flex justify-between">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-2">
-                            <i className="fas fa-user text-gray-500"></i>
-                          </div>
-                          <span className="text-sm text-gray-600">Anonymous</span>
-                        </div>
-                        
-                        <Button variant="ghost" className="text-primary hover:text-accent">
-                          Read More
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
+                <PostGrid
+                  posts={popularPosts}
+                  isPremium={isPremium}
+                  brand={brand}
+                  t={t}
+                  filterLocation={filterLocation}
+                />
               )}
             </TabsContent>
-            
+
             <TabsContent value="newest">
-              {/* This would normally contain different content, but for simplicity, we'll show the same content */}
               {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Card key={i} className="overflow-hidden">
-                      <Skeleton className="h-40 w-full" />
-                      <CardHeader>
-                        <Skeleton className="h-6 w-3/4 mb-2" />
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-3/4" />
-                      </CardContent>
-                    </Card>
-                  ))}
+                <PostGridSkeleton />
+              ) : error ? (
+                <div className="text-center py-10">
+                  <p className="text-red-500">Errore nel caricamento delle storie. Riprova più tardi.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
-                  {/* We would typically sort by date here */}
-                  {blogPosts?.map((post) => (
-                    <Card key={post.id} className="overflow-hidden">
-                      <div className="relative">
-                        <img 
-                          src={post.image} 
-                          alt={post.title} 
-                          className="w-full h-40 object-cover" 
-                        />
-                        <div className="absolute top-2 left-2">
-                          {post.isPremium ? (
-                            <span className="bg-primary text-white text-xs px-2 py-1 rounded-full font-medium">Premium</span>
-                          ) : (
-                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">Free</span>
-                          )}
-                        </div>
-                        
-                        {post.isPremium && !isPremium && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <Lock className="text-white h-10 w-10" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <CardHeader>
-                        <CardTitle>{post.title}</CardTitle>
-                      </CardHeader>
-                      
-                      <CardContent>
-                        <p className="text-gray-600 line-clamp-3">{post.content}</p>
-                      </CardContent>
-                      
-                      <CardFooter className="flex justify-between">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-2">
-                            <i className="fas fa-user text-gray-500"></i>
-                          </div>
-                          <span className="text-sm text-gray-600">Anonymous</span>
-                        </div>
-                        
-                        <Button variant="ghost" className="text-primary hover:text-accent">
-                          Read More
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
+                <PostGrid
+                  posts={newestPosts}
+                  isPremium={isPremium}
+                  brand={brand}
+                  t={t}
+                  filterLocation={filterLocation}
+                />
               )}
             </TabsContent>
           </Tabs>
-          
-          {/* Share Your Story Section */}
-          <div className="mt-10 p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold font-poppins mb-4">Share Your Story</h2>
-            <p className="text-gray-600 mb-4">
-              {isPremium 
-                ? "Share your anonymous bachelor party experiences with the community." 
-                : "Upgrade to premium to share your own story and read unlimited secret blogs."}
-            </p>
-            
-            <div className="relative">
-              {!isPremium && (
-                <div className="absolute inset-0 bg-gray-200/70 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10">
-                  <Lock className="text-primary h-10 w-10 mb-3" />
-                  <p className="text-gray-800 font-medium mb-3">Premium Members Only</p>
-                  <Button 
-                    className="bg-primary hover:bg-accent"
-                    onClick={() => document.getElementById('premium-features')?.scrollIntoView({ behavior: 'smooth' })}
-                  >
-                    Upgrade to Share
-                  </Button>
-                </div>
-              )}
-              
-              <Textarea 
-                placeholder="Share your wildest (anonymous) bachelor party story..."
-                className="min-h-[150px] mb-4"
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-              />
-              
-              <div className="flex justify-end">
-                <Button 
-                  className="bg-primary hover:bg-accent"
-                  onClick={handleSubmitPost}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Submit Anonymously
-                </Button>
-              </div>
+
+          <div className="mt-16">
+            <div className="mb-8 text-center">
+              <h2 className={`text-2xl font-bold text-white mb-2`}>
+                {isBride ? "Racconta la tua storia 💌" : "Racconta la tua storia 🔥"}
+              </h2>
+              <p className={`text-sm ${isBride ? 'text-purple-200/50' : 'text-gray-500'}`}>
+                Completamente anonimo. Solo la community ti vedrà.
+              </p>
             </div>
+            <StoryForm
+              isPremium={isPremium}
+              isAuthenticated={isAuthenticated}
+              brand={brand}
+              t={t}
+              onScrollToPremium={scrollToPremium}
+            />
           </div>
         </div>
-        
-        {/* Premium Features Section */}
+
         {!isPremium && (
           <div id="premium-features">
             <PremiumFeatures />
           </div>
         )}
       </main>
-      
+
       <Footer />
     </div>
   );

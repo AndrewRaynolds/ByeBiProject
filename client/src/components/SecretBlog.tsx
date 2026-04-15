@@ -7,13 +7,13 @@ import { Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 
-type Brand = 'bro' | 'bride';
+export type Brand = 'bro' | 'bride';
 
 interface SecretBlogProps {
   brand?: Brand;
 }
 
-const BRO_ALIASES = [
+export const BRO_ALIASES = [
   "Il Best Man di Barcellona",
   "Lo Sposo di Roma",
   "Il Padrino di Ibiza",
@@ -24,7 +24,7 @@ const BRO_ALIASES = [
   "Il Testimone di Budapest",
 ];
 
-const BRIDE_ALIASES = [
+export const BRIDE_ALIASES = [
   "La Sposa di Parigi",
   "La Testimone di Barcellona",
   "La Damigella di Santorini",
@@ -35,20 +35,20 @@ const BRIDE_ALIASES = [
   "La Testimone di Berlino",
 ];
 
-const BRO_EMOJIS = ["🤘", "🍺", "🔥", "💀", "🎯", "⚡", "🏆", "🎲"];
-const BRIDE_EMOJIS = ["👑", "🌸", "💎", "🥂", "✨", "🌷", "💍", "🦋"];
+export const BRO_EMOJIS = ["🤘", "🍺", "🔥", "💀", "🎯", "⚡", "🏆", "🎲"];
+export const BRIDE_EMOJIS = ["👑", "🌸", "💎", "🥂", "✨", "🌷", "💍", "🦋"];
 
-function getAnonymousAlias(postId: number, brand: Brand): string {
+export function getAnonymousAlias(postId: number, brand: Brand): string {
   const aliases = brand === 'bride' ? BRIDE_ALIASES : BRO_ALIASES;
   return aliases[postId % aliases.length];
 }
 
-function getAvatarEmoji(postId: number, brand: Brand): string {
+export function getAvatarEmoji(postId: number, brand: Brand): string {
   const emojis = brand === 'bride' ? BRIDE_EMOJIS : BRO_EMOJIS;
   return emojis[postId % emojis.length];
 }
 
-function extractLocation(title: string): string | null {
+export function extractLocation(title: string): string | null {
   const locations: Record<string, string> = {
     roma: "🇮🇹 Roma",
     rome: "🇮🇹 Roma",
@@ -75,7 +75,7 @@ function extractLocation(title: string): string | null {
   return null;
 }
 
-function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
+export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
   const alias = getAnonymousAlias(post.id, 'bro');
   const emoji = getAvatarEmoji(post.id, 'bro');
   const location = extractLocation(post.title);
@@ -168,7 +168,7 @@ function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t
   );
 }
 
-function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
+export function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
   const alias = getAnonymousAlias(post.id, 'bride');
   const emoji = getAvatarEmoji(post.id, 'bride');
   const location = extractLocation(post.title);
