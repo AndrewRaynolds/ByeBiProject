@@ -120,8 +120,8 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   const [showPreview, setShowPreview] = useState(false);
 
   const isBride = brand === 'bride';
-  const alias = getAnonymousAlias(Math.floor(Math.random() * 8) + 1, brand);
-  const emoji = getAvatarEmoji(Math.floor(Math.random() * 8) + 1, brand);
+  const alias = useMemo(() => getAnonymousAlias(Math.floor(Math.random() * 8) + 1, brand), [brand]);
+  const emoji = useMemo(() => getAvatarEmoji(Math.floor(Math.random() * 8) + 1, brand), [brand]);
 
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';
@@ -372,7 +372,6 @@ export default function SecretBlogPage() {
 
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';
-  const tabAccent = isBride ? 'text-purple-300' : 'text-red-400';
 
   return (
     <div className="min-h-screen flex flex-col bg-black">
@@ -435,13 +434,17 @@ export default function SecretBlogPage() {
               <TabsList className="bg-gray-900 border border-gray-800">
                 <TabsTrigger
                   value="popular"
-                  className={`data-[state=active]:${tabAccent} data-[state=active]:bg-gray-800`}
+                  className={isBride
+                    ? 'data-[state=active]:text-purple-300 data-[state=active]:bg-gray-800'
+                    : 'data-[state=active]:text-red-400 data-[state=active]:bg-gray-800'}
                 >
                   <Star className="mr-2 h-4 w-4" /> Più Popolari
                 </TabsTrigger>
                 <TabsTrigger
                   value="newest"
-                  className={`data-[state=active]:${tabAccent} data-[state=active]:bg-gray-800`}
+                  className={isBride
+                    ? 'data-[state=active]:text-purple-300 data-[state=active]:bg-gray-800'
+                    : 'data-[state=active]:text-red-400 data-[state=active]:bg-gray-800'}
                 >
                   <Clock className="mr-2 h-4 w-4" /> Più Recenti
                 </TabsTrigger>
