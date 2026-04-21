@@ -874,13 +874,22 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
+      interface RawFlight {
+        flightId?: string; id?: string | number;
+        airline?: string;
+        departure_at?: string; departureAt?: string;
+        return_at?: string; returnAt?: string;
+        flight_number?: number; flightNumber?: number | string;
+        origin?: string; destination?: string;
+        checkoutUrl?: string;
+      }
       const normalizedFlights = Array.isArray(flights)
-        ? flights.map((f: any) => ({
+        ? (flights as RawFlight[]).map((f) => ({
             id: f.flightId || f.id,
             airline: f.airline,
             departure_at: f.departure_at || f.departureAt,
             return_at: f.return_at || f.returnAt,
-            flight_number: f.flight_number || f.flightNumber || 0,
+            flight_number: f.flight_number || (typeof f.flightNumber === "number" ? f.flightNumber : undefined),
             origin: f.origin,
             destination: f.destination,
             checkoutUrl: f.checkoutUrl,
