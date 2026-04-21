@@ -200,6 +200,7 @@ export default function ChatDialogCompact({
         conversationHistory,
         partyType: currentState.partyType,
         originCity: originCityRef.current,
+        flights: flightsRef.current,
       };
       console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
 

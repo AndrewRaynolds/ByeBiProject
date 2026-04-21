@@ -851,7 +851,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // OpenAI Streaming Chat endpoint (with tool calls support)
   app.post("/api/chat/openai-stream", async (req: Request, res: Response) => {
     try {
-      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity } = req.body;
+      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity, flights } = req.body;
 
       if (!process.env.OPENAI_API_KEY) {
         return res.status(400).json({ 
@@ -874,12 +874,26 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
+      const normalizedFlights = Array.isArray(flights)
+        ? flights.map((f: any) => ({
+            id: f.flightId || f.id,
+            airline: f.airline,
+            departure_at: f.departure_at || f.departureAt,
+            return_at: f.return_at || f.returnAt,
+            flight_number: f.flight_number || f.flightNumber || 0,
+            origin: f.origin,
+            destination: f.destination,
+            checkoutUrl: f.checkoutUrl,
+          }))
+        : undefined;
+
       const context = {
         selectedDestination,
         tripDetails,
         partyType: partyType || 'bachelor',
         origin: originIata,
         originCityName,
+        flights: normalizedFlights,
       };
 
       // Use the new tool-loop streaming function that properly executes tools
