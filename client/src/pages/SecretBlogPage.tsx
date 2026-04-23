@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { BlogPost } from "@shared/schema";
 import Header from "@/components/Header";
@@ -8,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye } from "lucide-react";
+import { Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Brand,
@@ -133,6 +134,10 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   };
 
   const handleSubmit = () => {
+    if (!isAuthenticated) {
+      toast({ title: "Accesso richiesto", description: "Effettua il login per condividere la tua storia.", variant: "destructive" });
+      return;
+    }
     toast({
       title: "Storia inviata! 🎉",
       description: "La tua storia è in fase di revisione. Sarà pubblicata presto!",
@@ -145,6 +150,25 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   };
 
   const stepLabels = ["Destinazione", "La tua storia", "Tag"];
+
+  if (!isAuthenticated) {
+    return (
+      <div className={`rounded-2xl border ${borderAccent} bg-gray-950 p-8 text-center`}>
+        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-900 border border-gray-700 flex items-center justify-center">
+          <LogIn className={`w-6 h-6 ${accentText}`} />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Accedi per condividere</h3>
+        <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
+          Crea un account gratuito o accedi per condividere la tua storia in modo anonimo con la community.
+        </p>
+        <Link href="/auth">
+          <Button className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-8 py-2.5 rounded-xl`}>
+            Accedi o Registrati
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-2xl border ${borderAccent} bg-gray-950 overflow-hidden`}>
