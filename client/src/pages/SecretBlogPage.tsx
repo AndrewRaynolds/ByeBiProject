@@ -3,13 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { BlogPost } from "@shared/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import PremiumFeatures from "@/components/PremiumFeatures";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { Lock, Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye } from "lucide-react";
+import { Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Brand,
@@ -134,14 +133,6 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   };
 
   const handleSubmit = () => {
-    if (!isAuthenticated) {
-      toast({ title: "Accesso richiesto", description: "Effettua il login per condividere la tua storia.", variant: "destructive" });
-      return;
-    }
-    if (!isPremium) {
-      toast({ title: "Funzione Premium", description: "Passa al premium per condividere le tue storie.", variant: "destructive" });
-      return;
-    }
     toast({
       title: "Storia inviata! 🎉",
       description: "La tua storia è in fase di revisione. Sarà pubblicata presto!",
@@ -152,26 +143,6 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
     setSelectedTags([]);
     setShowPreview(false);
   };
-
-  if (!isPremium) {
-    return (
-      <div className={`rounded-2xl border ${borderAccent} bg-gray-950 p-8 text-center`}>
-        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-900 border border-gray-700 flex items-center justify-center">
-          <Lock className={`w-6 h-6 ${accentText}`} />
-        </div>
-        <h3 className="text-xl font-bold text-white mb-2">Solo per membri Premium</h3>
-        <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
-          Condividi le tue storie anonime e accedi a tutti i contenuti esclusivi.
-        </p>
-        <Button
-          className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-8 py-2.5 rounded-xl`}
-          onClick={onScrollToPremium}
-        >
-          Diventa Premium
-        </Button>
-      </div>
-    );
-  }
 
   const stepLabels = ["Destinazione", "La tua storia", "Tag"];
 
@@ -333,8 +304,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 }
 
 export default function SecretBlogPage() {
-  const { isAuthenticated, user } = useAuth();
-  const isPremium = user?.isPremium || false;
+  const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const brand = getBrand();
   const isBride = brand === 'bride';
@@ -342,7 +312,7 @@ export default function SecretBlogPage() {
   const [filterLocation, setFilterLocation] = useState<string | null>(null);
 
   const { data: blogPosts, isLoading, error } = useQuery<BlogPost[]>({
-    queryKey: ["/api/blog-posts", { premium: isPremium }],
+    queryKey: ["/api/blog-posts"],
   });
 
   const popularPosts = useMemo(() => blogPosts ?? [], [blogPosts]);
@@ -363,10 +333,6 @@ export default function SecretBlogPage() {
     });
     return Array.from(locs);
   }, [blogPosts]);
-
-  const scrollToPremium = () => {
-    document.getElementById('premium-features')?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const totalStories = (blogPosts?.length ?? 0) + 197;
 
@@ -417,14 +383,6 @@ export default function SecretBlogPage() {
               <Flame className="w-4 h-4" />
               <span>Oltre {totalStories} storie anonime condivise</span>
             </div>
-            {!isPremium && (
-              <Button
-                className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-8 py-3 rounded-xl shadow-xl`}
-                onClick={scrollToPremium}
-              >
-                Sblocca l'accesso Premium
-              </Button>
-            )}
           </div>
         </section>
 
@@ -450,15 +408,6 @@ export default function SecretBlogPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {!isPremium && (
-                <Button
-                  variant="outline"
-                  className={`border ${isBride ? 'border-purple-500/50 text-purple-300 hover:bg-purple-600 hover:text-white' : 'border-red-600/50 text-red-400 hover:bg-red-600 hover:text-white'} hidden md:flex`}
-                  onClick={scrollToPremium}
-                >
-                  <Lock className="w-4 h-4 mr-2" /> Sblocca Premium
-                </Button>
-              )}
             </div>
 
             {availableLocations.length > 0 && (
@@ -500,7 +449,7 @@ export default function SecretBlogPage() {
               ) : (
                 <PostGrid
                   posts={popularPosts}
-                  isPremium={isPremium}
+                  isPremium={true}
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}
@@ -518,7 +467,7 @@ export default function SecretBlogPage() {
               ) : (
                 <PostGrid
                   posts={newestPosts}
-                  isPremium={isPremium}
+                  isPremium={true}
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}
@@ -537,20 +486,15 @@ export default function SecretBlogPage() {
               </p>
             </div>
             <StoryForm
-              isPremium={isPremium}
+              isPremium={true}
               isAuthenticated={isAuthenticated}
               brand={brand}
               t={t}
-              onScrollToPremium={scrollToPremium}
+              onScrollToPremium={() => {}}
             />
           </div>
         </div>
 
-        {!isPremium && (
-          <div id="premium-features">
-            <PremiumFeatures />
-          </div>
-        )}
       </main>
 
       <Footer />

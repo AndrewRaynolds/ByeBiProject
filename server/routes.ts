@@ -336,15 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Blog post routes
   app.get("/api/blog-posts", async (req: Request, res: Response) => {
     try {
-      const { premium } = req.query;
-      let blogPosts;
-      
-      if (premium === 'true') {
-        blogPosts = await storage.getAllBlogPosts();
-      } else {
-        blogPosts = await storage.getFreeBlogPosts();
-      }
-      
+      const blogPosts = await storage.getAllBlogPosts();
       return res.status(200).json(blogPosts);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
