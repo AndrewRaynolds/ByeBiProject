@@ -157,7 +157,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
         <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-900 border border-gray-700 flex items-center justify-center">
           <LogIn className={`w-6 h-6 ${accentText}`} />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Accedi per condividere</h3>
+        <h3 className="text-xl font-bold text-white mb-2">Accedi per condividere la tua storia</h3>
         <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
           Crea un account gratuito o accedi per condividere la tua storia in modo anonimo con la community.
         </p>
