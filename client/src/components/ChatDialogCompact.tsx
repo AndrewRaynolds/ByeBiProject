@@ -88,6 +88,7 @@ export default function ChatDialogCompact({
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const isLoadingRef = useRef(false);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -99,9 +100,11 @@ export default function ChatDialogCompact({
   const originCityRef = useRef<string>("");
   const [selectedFlight, setSelectedFlight] =
     useState<SelectedFlightData | null>(null);
+  const selectedFlightRef = useRef<SelectedFlightData | null>(null);
   const [pendingFlightSelection, setPendingFlightSelection] = useState<
     number | null
   >(null);
+  const pendingItineraryNavigation = useRef(false);
   const conversationStateRef = useRef<ConversationState>({
     selectedDestination: "",
     tripDetails: {
@@ -167,6 +170,14 @@ export default function ChatDialogCompact({
   useEffect(() => {
     conversationStateRef.current = conversationState;
   }, [conversationState]);
+
+  useEffect(() => {
+    selectedFlightRef.current = selectedFlight;
+  }, [selectedFlight]);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   const sendChatRequest = async (message: string, addUserMessage: boolean) => {
     if (isLoading) return;
@@ -299,6 +310,14 @@ export default function ChatDialogCompact({
 
       setIsLoading(false);
       setLoadingMessage(null);
+
+      if (pendingItineraryNavigation.current) {
+        pendingItineraryNavigation.current = false;
+        console.log("🗺️ Auto-navigating to itinerary after flight selection");
+        saveCurrentItinerary();
+        onOpenChange(false);
+        setLocation("/itinerary");
+      }
     } catch (error) {
       console.error("Chat error:", error);
 
@@ -338,8 +357,17 @@ export default function ChatDialogCompact({
             flightData,
           );
           setSelectedFlight(flightData);
+          selectedFlightRef.current = flightData;
           localStorage.setItem("selectedFlight", JSON.stringify(flightData));
           setShowGenerateButton(true);
+          if (isLoadingRef.current) {
+            pendingItineraryNavigation.current = true;
+          } else {
+            console.log("🗺️ Auto-navigating to itinerary (deferred flight, stream already done)");
+            saveCurrentItinerary();
+            onOpenChange(false);
+            setLocation("/itinerary");
+          }
         }
       }
       setPendingFlightSelection(null);
@@ -375,7 +403,8 @@ export default function ChatDialogCompact({
   };
 
   const saveCurrentItinerary = () => {
-    const { selectedDestination, tripDetails } = conversationState;
+    const currentConversationState = conversationStateRef.current;
+    const { selectedDestination, tripDetails } = currentConversationState;
 
     if (!selectedDestination || tripDetails.people <= 0) {
       return;
@@ -387,7 +416,7 @@ export default function ChatDialogCompact({
         : "Date da definire";
 
     // Use user-selected origin city, fallback to stored origin or default
-    const userOriginCity = originCity || "Roma";
+    const userOriginCity = originCityRef.current || originCity || "Roma";
 
     console.log("✈️ FLIGHT DATA:", {
       selectedFlight,
@@ -396,15 +425,16 @@ export default function ChatDialogCompact({
     });
 
     // Use selected flight if available, otherwise first flight, otherwise fallback
+    const currentSelectedFlight = selectedFlightRef.current ?? selectedFlight;
     let flightItem;
-    if (selectedFlight) {
+    if (currentSelectedFlight) {
       flightItem = {
         id: "flight-selected",
         type: "flight" as const,
-        name: `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}`,
-        description: `Volo da ${selectedFlight.originCity}`,
+        name: `${currentSelectedFlight.airline} - ${currentSelectedFlight.originCity} → ${currentSelectedFlight.destinationCity}`,
+        description: `Volo da ${currentSelectedFlight.originCity}`,
         details: [
-          `Volo: ${selectedFlight.flight_number}`,
+          `Volo: ${currentSelectedFlight.flight_number}`,
           "Bagaglio a mano incluso",
         ],
       };
@@ -502,11 +532,11 @@ export default function ChatDialogCompact({
     });
 
     // Fallback to flight's checkoutUrl if helper returned null
-    if (!aviasalesUrl && selectedFlight?.checkoutUrl) {
+    if (!aviasalesUrl && currentSelectedFlight?.checkoutUrl) {
       console.log(
         "⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback",
       );
-      aviasalesUrl = selectedFlight.checkoutUrl;
+      aviasalesUrl = currentSelectedFlight.checkoutUrl;
     }
 
     console.log("🔗 Aviasales URL built with user dates:", {
@@ -523,12 +553,12 @@ export default function ChatDialogCompact({
       startDate: tripDetails.startDate,
       endDate: tripDetails.endDate,
       days: tripDetails.days,
-      partyType: conversationState.partyType,
+      partyType: currentConversationState.partyType,
       originCity: userOriginCity,
-      selectedFlight: selectedFlight,
-      aviasalesCheckoutUrl: aviasalesUrl || selectedFlight?.checkoutUrl || "",
-      flightLabel: selectedFlight
-        ? `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}`
+      selectedFlight: currentSelectedFlight,
+      aviasalesCheckoutUrl: aviasalesUrl || currentSelectedFlight?.checkoutUrl || "",
+      flightLabel: currentSelectedFlight
+        ? `${currentSelectedFlight.airline} - ${currentSelectedFlight.originCity} → ${currentSelectedFlight.destinationCity}`
         : `${userOriginCity} → ${selectedDestination}`,
       flights: [flightItem],
       cars: carItems,
@@ -536,8 +566,8 @@ export default function ChatDialogCompact({
     };
 
     localStorage.setItem("currentItinerary", JSON.stringify(currentItinerary));
-    if (selectedFlight) {
-      localStorage.setItem("selectedFlight", JSON.stringify(selectedFlight));
+    if (currentSelectedFlight) {
+      localStorage.setItem("selectedFlight", JSON.stringify(currentSelectedFlight));
     }
     console.log("💾 Saved currentItinerary to localStorage:", currentItinerary);
   };
@@ -663,7 +693,9 @@ export default function ChatDialogCompact({
               };
               console.log(`✈️ User selected flight ${flightNum}:`, flightData);
               setSelectedFlight(flightData);
+              selectedFlightRef.current = flightData;
               localStorage.setItem("selectedFlight", JSON.stringify(flightData));
+              pendingItineraryNavigation.current = true;
               setShowGenerateButton(true);
             }
           } else {
