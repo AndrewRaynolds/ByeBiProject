@@ -657,7 +657,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   const handleGenerateItinerary = () => {
     saveCurrentItinerary();
     onOpenChange(false);
-    setLocation('/itinerary');
+    setLocation('/checkout');
   };
 
   return (

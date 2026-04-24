@@ -1,0 +1,48 @@
+Voglio semplificare il flusso dopo la conversazione con il chatbot.
+
+CONTESTO:
+Attualmente, dopo che l’utente conclude la conversazione con il chatbot, l’app lo reindirizza prima alla pagina Itinerary e poi successivamente alla pagina Checkout.
+
+Questo crea un passaggio inutile e confonde il flusso.
+
+OBIETTIVO:
+Eliminare la pagina/intermedio Itinerary dal flusso utente e fare in modo che, appena il chatbot ha raccolto tutti i dati necessari e genera il viaggio, l’utente venga mandato direttamente alla pagina Checkout.
+
+La pagina Checkout deve diventare la pagina principale post-chatbot, dove l’utente vede e seleziona:
+
+1. Volo reale / link affiliato Aviasales o Travelpayouts
+2. Hotel reale / risultati da Amadeus o integrazione attuale
+3. Esperienze / link GetYourGuide relativi alla destinazione
+4. Riepilogo del viaggio con destinazione, date, numero persone, budget e preferenze raccolte dal chatbot
+
+ISTRUZIONI TECNICHE:
+- Rimuovi o disattiva il redirect verso `/itinerary`.
+- Dopo il completamento della chat, fai redirect diretto verso `/checkout`.
+- Assicurati che tutti i dati raccolti dal chatbot vengano passati correttamente alla pagina Checkout.
+- Se oggi i dati passano tramite `localStorage`, mantieni lo stesso sistema ma usa una sola chiave coerente, ad esempio `currentItinerary` o `checkoutTripData`.
+- Evita duplicazioni tra Itinerary, ItineraryPage, ItineraryPreviewPage e Checkout.
+- La pagina Checkout deve leggere i dati reali del viaggio generato, non mock data o dati hardcoded.
+- Rimuovi eventuali date statiche o fallback sbagliati, ad esempio date di marzo mostrate anche quando l’utente ha inserito altre date.
+- Se ci sono componenti utili dentro Itinerary, spostali dentro Checkout invece di mantenere due pagine separate.
+- Controlla le route nel frontend, probabilmente in `App.tsx`, `routes.tsx` o file simili.
+- Controlla anche i punti in cui il chatbot chiama `navigate("/itinerary")`, `setLocation("/itinerary")`, `window.location.href = "/itinerary"` o simili, e sostituiscili con `/checkout`.
+- Se `/itinerary` non serve più, rimuovila dalle route oppure falla reindirizzare automaticamente a `/checkout`.
+
+RISULTATO ATTESO:
+Dopo la chat, il flusso deve essere:
+
+Chatbot → Checkout
+
+Non più:
+
+Chatbot → Itinerary → Checkout
+
+Dentro Checkout devo trovare tutto ciò che serve per completare il viaggio:
+- voli
+- hotel
+- esperienze GetYourGuide
+- riepilogo dati viaggio
+- link esterni/affiliati reali
+
+IMPORTANTE:
+Non rompere il flusso esistente. Prima individua dove viene gestito il redirect post-chatbot, poi modifica solo il necessario. Se ci sono componenti duplicati tra Itinerary e Checkout, consolida tutto in Checkout.

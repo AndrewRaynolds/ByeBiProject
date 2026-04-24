@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,7 +9,6 @@ import HomeBride from "@/pages/HomeBride";
 import Dashboard from "@/pages/Dashboard";
 import SecretBlogPage from "@/pages/SecretBlogPage";
 import MerchandisePage from "@/pages/MerchandisePage";
-import Itinerary from "@/pages/Itinerary";
 import Checkout from "@/pages/Checkout";
 import SplittaBroPage from "@/pages/SplittaBroPage";
 import SplittaBridePage from "@/pages/SplittaBridePage";
@@ -56,7 +55,7 @@ function Router() {
       <Route path="/experiences" component={ExperiencesPage} />
       <Route path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
-      <Route path="/itinerary" component={Itinerary} />
+      <Route path="/itinerary">{() => <Redirect to="/checkout" />}</Route>
       <Route path="/checkout" component={Checkout} />
       <Route path="/splitta-bro" component={SplittaPage} />
       <Route path="/splitta-bride" component={SplittaPage} />

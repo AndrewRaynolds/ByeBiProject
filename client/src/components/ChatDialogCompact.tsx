@@ -313,10 +313,10 @@ export default function ChatDialogCompact({
 
       if (pendingItineraryNavigation.current) {
         pendingItineraryNavigation.current = false;
-        console.log("🗺️ Auto-navigating to itinerary after flight selection");
+        console.log("🛒 Auto-navigating to checkout after flight selection");
         saveCurrentItinerary();
         onOpenChange(false);
-        setLocation("/itinerary");
+        setLocation("/checkout");
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -363,10 +363,10 @@ export default function ChatDialogCompact({
           if (isLoadingRef.current) {
             pendingItineraryNavigation.current = true;
           } else {
-            console.log("🗺️ Auto-navigating to itinerary (deferred flight, stream already done)");
+            console.log("🛒 Auto-navigating to checkout (deferred flight, stream already done)");
             saveCurrentItinerary();
             onOpenChange(false);
-            setLocation("/itinerary");
+            setLocation("/checkout");
           }
         }
       }
@@ -736,7 +736,7 @@ export default function ChatDialogCompact({
   const handleGenerateItinerary = () => {
     saveCurrentItinerary();
     onOpenChange(false);
-    setLocation("/itinerary");
+    setLocation("/checkout");
   };
 
   return (

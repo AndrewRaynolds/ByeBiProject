@@ -388,15 +388,6 @@ export default function Checkout() {
             variant="outline"
             size="lg"
             className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-            onClick={() => setLocation('/itinerary')}
-            data-testid="button-back-itinerary"
-          >
-            {t('checkout.backToItinerary')}
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
             onClick={() => setLocation('/')}
             data-testid="button-back-home"
           >
