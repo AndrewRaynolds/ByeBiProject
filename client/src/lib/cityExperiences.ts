@@ -1,0 +1,655 @@
+import { getGetYourGuideCityLink } from "./getyourguide";
+
+export type ExperienceCategory = "restaurants" | "bars" | "nightlife" | "activities";
+
+export interface CityExperienceItem {
+  name: string;
+  category: ExperienceCategory;
+  description: string;
+  rating?: number;
+  url: string;
+  isAffiliate: boolean;
+  source: "getyourguide" | "google-maps" | "official";
+}
+
+export interface CityExperiences {
+  cityKey: string;
+  displayName: string;
+  items: CityExperienceItem[];
+}
+
+const CITY_KEY_SYNONYMS: Record<string, string> = {
+  "roma": "rome",
+  "rome": "rome",
+  "ibiza": "ibiza",
+  "barcellona": "barcelona",
+  "barcelona": "barcelona",
+  "praga": "prague",
+  "prague": "prague",
+  "budapest": "budapest",
+  "cracovia": "krakow",
+  "krakow": "krakow",
+  "amsterdam": "amsterdam",
+  "berlino": "berlin",
+  "berlin": "berlin",
+  "lisbona": "lisbon",
+  "lisbon": "lisbon",
+  "palma": "palma-de-mallorca",
+  "palma de mallorca": "palma-de-mallorca",
+  "palma di maiorca": "palma-de-mallorca",
+  "mallorca": "palma-de-mallorca",
+  "maiorca": "palma-de-mallorca",
+};
+
+function gm(name: string, city: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${city}`)}`;
+}
+
+function activitiesFor(displayCity: string, items: Array<{ name: string; description: string }>): CityExperienceItem[] {
+  const gygUrl = getGetYourGuideCityLink(displayCity) ?? `https://www.getyourguide.com/s/?q=${encodeURIComponent(displayCity)}`;
+  const isAff = !!getGetYourGuideCityLink(displayCity);
+  return items.map((it) => ({
+    name: it.name,
+    category: "activities" as const,
+    description: it.description,
+    url: gygUrl,
+    isAffiliate: isAff,
+    source: "getyourguide" as const,
+  }));
+}
+
+function venues(
+  city: string,
+  category: Exclude<ExperienceCategory, "activities">,
+  items: Array<{ name: string; description: string }>,
+): CityExperienceItem[] {
+  return items.map((it) => ({
+    name: it.name,
+    category,
+    description: it.description,
+    url: gm(it.name, city),
+    isAffiliate: false,
+    source: "google-maps" as const,
+  }));
+}
+
+const CITY_DATA: CityExperiences[] = [
+  {
+    cityKey: "rome",
+    displayName: "Roma",
+    items: [
+      ...venues("Roma", "restaurants", [
+        { name: "Roscioli", description: "Salumeria-ristorante storica con cucina romana raffinata" },
+        { name: "Da Enzo al 29", description: "Trattoria autentica nel cuore di Trastevere" },
+        { name: "Armando al Pantheon", description: "Cucina romana classica accanto al Pantheon" },
+        { name: "Pizzarium", description: "Pizza al taglio gourmet di Bonci" },
+        { name: "Pierluigi", description: "Pesce e atmosfera vivace in piazza de' Ricci" },
+        { name: "Felice a Testaccio", description: "Tempio della cacio e pepe e dei classici romani" },
+        { name: "Trapizzino", description: "Street food romano: triangoli di pizza ripieni" },
+        { name: "Glass Hostaria", description: "Stella Michelin a Trastevere, cucina creativa" },
+        { name: "Trattoria Da Cesare al Casaletto", description: "Cucina romana fuori dai circuiti turistici" },
+        { name: "Salumeria Roscioli", description: "Carbonara e amatriciana da manuale" },
+      ]),
+      ...venues("Roma", "bars", [
+        { name: "Drink Kong", description: "Cocktail bar pluripremiato in stile cyberpunk" },
+        { name: "Freni e Frizioni", description: "Cocktail bar e aperitivo iconico a Trastevere" },
+        { name: "The Jerry Thomas Speakeasy", description: "Speakeasy storico, accesso con password" },
+        { name: "Stravinskij Bar", description: "Cocktail eleganti nel giardino dell'Hotel de Russie" },
+        { name: "Salotto 42", description: "Lounge bar di design davanti al Tempio di Adriano" },
+        { name: "Argot", description: "Cocktail bar intimo nel Centro Storico" },
+        { name: "Officina Beat", description: "Cocktail bar di ricerca a Trastevere" },
+        { name: "Co.So", description: "Cocktail bar pop nel Pigneto" },
+        { name: "Spirito", description: "Speakeasy nascosto dietro un panificio" },
+        { name: "Hey Güey", description: "Mezcal e cocktail messicani" },
+      ]),
+      ...venues("Roma", "nightlife", [
+        { name: "Goa Club", description: "Tempio della techno romana dal 1999" },
+        { name: "Shari Vari Playhouse", description: "Discoteca centrale, mix di generi musicali" },
+        { name: "Lanificio 159", description: "Spazio multifunzione con DJ set internazionali" },
+        { name: "Akab Club", description: "Club storico a Testaccio" },
+        { name: "Spazio 900", description: "Disco club per under 30, hip-hop e commerciale" },
+        { name: "Room 26", description: "Discoteca all'EUR, formato grande" },
+        { name: "Piper Club", description: "Locale leggendario aperto dal 1965" },
+        { name: "La Maison", description: "Club esclusivo nel Centro Storico" },
+        { name: "Art Cafè", description: "Discoteca nel cuore di Villa Borghese" },
+        { name: "Brancaleone", description: "Club underground per house ed elettronica" },
+      ]),
+      ...activitiesFor("Roma", [
+        { name: "Tour del Colosseo e Foro Romano", description: "Skip-the-line con guida nei monumenti più iconici" },
+        { name: "Vaticano e Cappella Sistina", description: "Visita guidata ai Musei Vaticani" },
+        { name: "Tour gastronomico di Trastevere", description: "Cibo, vino e curiosità nel quartiere bohémien" },
+        { name: "Galleria Borghese", description: "Capolavori di Bernini e Caravaggio" },
+        { name: "Castel Sant'Angelo", description: "Visita al mausoleo con vista panoramica" },
+        { name: "Catacombe di Roma", description: "Esplora i sotterranei dell'antica città" },
+        { name: "Pantheon: ingresso prioritario", description: "Il monumento meglio conservato dell'antichità" },
+        { name: "Bus Hop-on Hop-off", description: "Giro panoramico per tutta la città" },
+        { name: "Tour in Vespa", description: "Roma vista dalle due ruote più iconiche d'Italia" },
+        { name: "Day trip Pompei e Costiera", description: "Gita di un giorno fuori Roma" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "ibiza",
+    displayName: "Ibiza",
+    items: [
+      ...venues("Ibiza", "restaurants", [
+        { name: "Sa Capilla", description: "Cena romantica in una cappella sconsacrata" },
+        { name: "La Brasa", description: "Cucina mediterranea in giardino, Ibiza Town" },
+        { name: "Es Boldado", description: "Vista mozzafiato su Es Vedrà, pesce fresco" },
+        { name: "Cana Sofia", description: "Trattoria di mare a Cala Vadella" },
+        { name: "Es Xarcu", description: "Beach restaurant con pesce alla griglia" },
+        { name: "Casa Maca", description: "Cucina farm-to-table con vista sulla città" },
+        { name: "El Chiringuito", description: "Beach club elegante a Es Cavallet" },
+        { name: "Locals Only", description: "Ristorante e bar nella piazza del centro" },
+        { name: "Calma Ibiza", description: "Cucina di pesce al porto di Marina Botafoch" },
+        { name: "Ses Boques", description: "Pesce fresco con vista sulla baia" },
+      ]),
+      ...venues("Ibiza", "bars", [
+        { name: "Lío Ibiza", description: "Cabaret, cena e DJ set sul porto" },
+        { name: "Sunset Ashram", description: "Tramonto leggendario a Cala Conta" },
+        { name: "Café del Mar", description: "Storico spot per il tramonto a San Antonio" },
+        { name: "Hostal La Torre", description: "Vista sul tramonto e DJ set chill" },
+        { name: "Mambo", description: "Sunset bar a San Antonio con grandi DJ" },
+        { name: "Kumharas", description: "Atmosfera hippie e tramonti unici" },
+        { name: "Atzaró Beach", description: "Beach club elegante a Cala Nova" },
+        { name: "Paradise Lost", description: "Cocktail bar a Ibiza Town" },
+        { name: "El Patio", description: "Cocktail e tapas a Dalt Vila" },
+        { name: "Beachouse", description: "Beach club con DJ set diurni" },
+      ]),
+      ...venues("Ibiza", "nightlife", [
+        { name: "Pacha Ibiza", description: "Club leggendario aperto dal 1973" },
+        { name: "Ushuaïa", description: "Club open-air con i top DJ mondiali" },
+        { name: "Hï Ibiza", description: "Eletto miglior club al mondo più volte" },
+        { name: "Amnesia", description: "Iconico club con foam parties" },
+        { name: "DC-10", description: "Tempio della techno underground" },
+        { name: "Privilege", description: "Il club più grande del mondo per capienza" },
+        { name: "Eden", description: "Club a San Antonio con resident di alto livello" },
+        { name: "Es Paradis", description: "Club storico con water party" },
+        { name: "Octan", description: "Club techno indipendente" },
+        { name: "Akasha", description: "Underground club a Las Dalias" },
+      ]),
+      ...activitiesFor("Ibiza", [
+        { name: "Tour in barca con snorkeling", description: "Calette nascoste e mare cristallino" },
+        { name: "Gita a Formentera", description: "Catamaran per l'isola gemella, spiagge bianche" },
+        { name: "Sunset boat party", description: "Festa al tramonto con DJ a bordo" },
+        { name: "Quad tour nell'entroterra", description: "Avventura fuoristrada tra calette e villaggi" },
+        { name: "Es Vedrà boat tour", description: "Avvicinamento all'isola magnetica più famosa" },
+        { name: "Tour Dalt Vila", description: "Visita guidata al centro storico patrimonio UNESCO" },
+        { name: "Cala Comte e Cala Salada", description: "Le spiagge più fotografate di Ibiza" },
+        { name: "Las Dalias hippie market", description: "Mercatino iconico aperto dal 1985" },
+        { name: "Boat party Ocean Beach", description: "Festa diurna in stile Ibiza" },
+        { name: "Jet ski safari", description: "Tour costiero a tutta velocità" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "barcelona",
+    displayName: "Barcellona",
+    items: [
+      ...venues("Barcellona", "restaurants", [
+        { name: "Tickets", description: "Tapas creative dei fratelli Adrià" },
+        { name: "Disfrutar", description: "Stella Michelin, cucina di ricerca" },
+        { name: "Cervecería Catalana", description: "Tapas classiche sempre piene" },
+        { name: "Bar del Pla", description: "Tapas moderne nel Born" },
+        { name: "Can Solé", description: "Paella storica alla Barceloneta" },
+        { name: "Bodega 1900", description: "Vermut e tapas dei Adrià" },
+        { name: "Paco Meralgo", description: "Tapas raffinate vicino Diagonal" },
+        { name: "Quimet & Quimet", description: "Montaditos in piedi al banco" },
+        { name: "La Cova Fumada", description: "Tradizione alla Barceloneta, prova le bombas" },
+        { name: "El Xampanyet", description: "Cava e tapas storiche dal 1929" },
+      ]),
+      ...venues("Barcellona", "bars", [
+        { name: "Paradiso", description: "Speakeasy entrato nei World's 50 Best Bars" },
+        { name: "Two Schmucks", description: "Cocktail bar pluripremiato nel Raval" },
+        { name: "Sips", description: "Cocktail bar tra i migliori al mondo" },
+        { name: "Caribbean Club", description: "Bar storico nel Gòtic" },
+        { name: "Dr. Stravinsky", description: "Cocktail di ricerca con erbe" },
+        { name: "Boadas", description: "Il cocktail bar più vecchio della città (1933)" },
+        { name: "Old Fashioned", description: "Cocktail bar elegante" },
+        { name: "Bobby's Free", description: "Speakeasy con barbiere all'ingresso" },
+        { name: "El Diset", description: "Vini naturali e cocktail" },
+        { name: "Solange", description: "James Bond style cocktail bar" },
+      ]),
+      ...venues("Barcellona", "nightlife", [
+        { name: "Opium Barcelona", description: "Club fronte mare con grandi DJ" },
+        { name: "Pacha Barcelona", description: "Brand iconico anche a BCN" },
+        { name: "Razzmatazz", description: "5 sale, tutti i generi musicali" },
+        { name: "Sutton Club", description: "Discoteca esclusiva su Tuset" },
+        { name: "Otto Zutz", description: "3 piani di musica diversa" },
+        { name: "Shôko", description: "Cena, DJ e mare al Port Olímpic" },
+        { name: "Apolo", description: "Club indie e elettronica" },
+        { name: "City Hall", description: "Discoteca centrale a Plaça Catalunya" },
+        { name: "Bling Bling", description: "Discoteca trendy in Diagonal" },
+        { name: "Catwalk", description: "Discoteca elegante al Port Olímpic" },
+      ]),
+      ...activitiesFor("Barcellona", [
+        { name: "Sagrada Família skip-the-line", description: "Ingresso prioritario al capolavoro di Gaudí" },
+        { name: "Park Güell", description: "Visita guidata al parco più colorato d'Europa" },
+        { name: "Casa Batlló", description: "Visita immersiva con realtà aumentata" },
+        { name: "Camp Nou Experience", description: "Tour dello stadio del Barcellona" },
+        { name: "Quartiere Gotico", description: "Tour a piedi nel cuore medievale" },
+        { name: "Tour delle tapas", description: "Degustazione gastronomica guidata" },
+        { name: "Montjuïc cable car", description: "Funivia con vista sulla città" },
+        { name: "Spettacolo flamenco", description: "Tablao tradizionale con cena" },
+        { name: "Day trip a Montserrat", description: "Monastero e natura fuori città" },
+        { name: "Tour in catamarano", description: "Navigazione lungo la costa di BCN" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "prague",
+    displayName: "Praga",
+    items: [
+      ...venues("Praga", "restaurants", [
+        { name: "Lokál Dlouhááá", description: "Cucina ceca tradizionale e birra Pilsner perfetta" },
+        { name: "Café Savoy", description: "Caffè storico con cucina raffinata" },
+        { name: "La Degustation Bohême Bourgeoise", description: "Stella Michelin, menu degustazione" },
+        { name: "Field Restaurant", description: "Stella Michelin, cucina creativa" },
+        { name: "U Modré Kachničky", description: "Anatra e selvaggina in stile classico" },
+        { name: "Mlejnice", description: "Trattoria ceca nel centro" },
+        { name: "Eska", description: "Cucina moderna nell'ex fabbrica di Karlín" },
+        { name: "U Glaubiců", description: "Birra e classici cechi a Mala Strana" },
+        { name: "Sansho", description: "Fusion asiatica di livello" },
+        { name: "Kalina Anežka", description: "Cucina franco-ceca raffinata" },
+      ]),
+      ...venues("Praga", "bars", [
+        { name: "Hemingway Bar", description: "Cocktail bar nei World's 50 Best" },
+        { name: "Black Angel's Bar", description: "Speakeasy nel sotterraneo dell'U Prince Hotel" },
+        { name: "AnonymouS Bar", description: "Bar a tema V for Vendetta" },
+        { name: "Bugsy's Bar", description: "Cocktail bar storico in stile americano" },
+        { name: "Cash Only", description: "Cocktail bar di nicchia" },
+        { name: "L'Fleur", description: "Bar elegante in Anežská" },
+        { name: "ParlourBar", description: "Cocktail bar intimo" },
+        { name: "Cobra", description: "Bar con menu cocktail innovativo" },
+        { name: "Manifesto Market", description: "Food market con bar all'aperto" },
+        { name: "BarBar", description: "Cocktail bar nel quartiere ebraico" },
+      ]),
+      ...venues("Praga", "nightlife", [
+        { name: "Karlovy Lázně", description: "Il club più grande dell'Europa centrale, 5 piani" },
+        { name: "Roxy", description: "Club elettronica e concerti" },
+        { name: "Cross Club", description: "Discoteca industriale unica al mondo" },
+        { name: "Lucerna Music Bar", description: "Storico locale per concerti e 80s/90s nights" },
+        { name: "M1 Lounge", description: "Cocktail bar e discoteca centrale" },
+        { name: "Sasazu", description: "Discoteca asiatica di lusso" },
+        { name: "Duplex", description: "Club sul tetto in piazza Venceslao" },
+        { name: "Mecca Club", description: "Discoteca house elegante" },
+        { name: "Chapeau Rouge", description: "Club leggendario nel centro" },
+        { name: "Epic Prague", description: "Club di techno e house" },
+      ]),
+      ...activitiesFor("Praga", [
+        { name: "Castello di Praga", description: "Visita guidata al complesso più antico" },
+        { name: "Crociera sulla Moldava", description: "Vista panoramica della città dall'acqua" },
+        { name: "Tour della birra", description: "Degustazione nelle birrerie storiche" },
+        { name: "Tour dei fantasmi", description: "Leggende notturne nel centro storico" },
+        { name: "Quartiere ebraico", description: "Sinagoghe e cimitero ebraico" },
+        { name: "Orologio astronomico", description: "Salita alla torre municipale" },
+        { name: "Day trip Český Krumlov", description: "Borgo fiabesco patrimonio UNESCO" },
+        { name: "Tour del comunismo", description: "La Praga sovietica raccontata" },
+        { name: "Tour della vodka e assenzio", description: "Degustazione di liquori cechi" },
+        { name: "Crociera con cena", description: "Romantica navigazione serale" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "budapest",
+    displayName: "Budapest",
+    items: [
+      ...venues("Budapest", "restaurants", [
+        { name: "Costes", description: "Prima stella Michelin di Budapest" },
+        { name: "Borkonyha Winekitchen", description: "Stella Michelin, cucina ungherese moderna" },
+        { name: "Onyx", description: "Due stelle Michelin nel cuore della città" },
+        { name: "Stand Restaurant", description: "Stella Michelin con cucina creativa" },
+        { name: "Mák Bistro", description: "Cucina ungherese contemporanea" },
+        { name: "Hungarikum Bisztró", description: "Specialità tradizionali ungheresi" },
+        { name: "Menza", description: "Cucina ungherese in stile retro" },
+        { name: "Café Gerbeaud", description: "Caffè storico dal 1858" },
+        { name: "Comme Chez Soi", description: "Cucina italiana raffinata" },
+        { name: "Két Szerecsen", description: "Bistrot internazionale di tendenza" },
+      ]),
+      ...venues("Budapest", "bars", [
+        { name: "Szimpla Kert", description: "Il primo e più famoso ruin pub" },
+        { name: "Instant-Fogasház", description: "Mega ruin pub con 7 bar e 4 piste" },
+        { name: "Mazel Tov", description: "Ruin pub nel quartiere ebraico, ottimo cibo" },
+        { name: "Doboz", description: "Ruin pub elegante con installazioni artistiche" },
+        { name: "Hello Baby", description: "Cocktail bar di tendenza" },
+        { name: "Anker't", description: "Cortile interno con musica e cocktail" },
+        { name: "Csendes Vintage", description: "Bar retro con arredi anni '60" },
+        { name: "Kőleves Kert", description: "Giardino estivo nel quartiere ebraico" },
+        { name: "Ellátó Kert", description: "Ruin pub in stile messicano" },
+        { name: "Telep", description: "Bar artistico a Erzsébetváros" },
+      ]),
+      ...venues("Budapest", "nightlife", [
+        { name: "Akvárium Klub", description: "Club concerti sotto la piazza Erzsébet" },
+        { name: "A38", description: "Discoteca su una nave ucraina sul Danubio" },
+        { name: "Lärm", description: "Tempio della techno underground" },
+        { name: "Aether", description: "Club elegante per house" },
+        { name: "Toldi Klub", description: "Cinema-club per drum&bass" },
+        { name: "Dürer Kert", description: "Club indie e rock" },
+        { name: "Corvintető", description: "Club sul tetto con vista panoramica" },
+        { name: "Bestiario", description: "Club di musica elettronica" },
+        { name: "Ötkert", description: "Discoteca centrale, commerciale" },
+        { name: "Spíler Shanghai", description: "Discoteca con menù asiatico" },
+      ]),
+      ...activitiesFor("Budapest", [
+        { name: "Bagni Széchenyi", description: "Le terme termali più grandi d'Europa" },
+        { name: "Crociera sul Danubio", description: "Navigazione panoramica con cena" },
+        { name: "Castello di Buda", description: "Visita guidata al quartiere reale" },
+        { name: "Ruin pubs tour", description: "Pub crawl nel quartiere ebraico" },
+        { name: "Parlamento", description: "Tour interno del simbolo della città" },
+        { name: "Bastione dei Pescatori", description: "Vista panoramica spettacolare" },
+        { name: "Sinagoga di Dohány", description: "La più grande sinagoga d'Europa" },
+        { name: "Tour gastronomico", description: "Goulash, langos e vini ungheresi" },
+        { name: "Memento Park", description: "Statue dell'era comunista" },
+        { name: "Caves tour", description: "Esplorazione delle grotte sotto Buda" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "krakow",
+    displayName: "Cracovia",
+    items: [
+      ...venues("Cracovia", "restaurants", [
+        { name: "Pod Nosem", description: "Cucina polacca raffinata a Kazimierz" },
+        { name: "Szara Gęś", description: "Eleganza nella piazza del mercato" },
+        { name: "Trzy Rybki", description: "Cucina polacca creativa al Stary Hotel" },
+        { name: "Bottiglieria 1881", description: "Stella Michelin, cucina d'autore" },
+        { name: "Miód Malina", description: "Tradizione polacca nel Centro" },
+        { name: "Hawełka", description: "Storica cucina polacca dal 1876" },
+        { name: "Pierogarnia Krakowiacy", description: "I migliori pierogi della città" },
+        { name: "Starka", description: "Cucina polacca con vodka di casa" },
+        { name: "Plaża Kraków", description: "Spiaggia urbana con cucina internazionale" },
+        { name: "Boscaiola", description: "Italiana di livello" },
+      ]),
+      ...venues("Cracovia", "bars", [
+        { name: "Mercy Brown", description: "Speakeasy d'eccellenza" },
+        { name: "Hush Live", description: "Cocktail bar con musica live" },
+        { name: "Singer", description: "Bar storico con macchine da cucire come tavoli" },
+        { name: "Alchemia", description: "Bar bohémien iconico di Kazimierz" },
+        { name: "Eszeweria", description: "Atmosfera vintage a Kazimierz" },
+        { name: "Hevre", description: "Bar in ex sinagoga" },
+        { name: "Movida", description: "Cocktail bar internazionale" },
+        { name: "BAL", description: "Bar e bistro a Zabłocie" },
+        { name: "Karma", description: "Cocktail bar elegante" },
+        { name: "Ambasada Śledzia", description: "Vodka e aringhe come tradizione vuole" },
+      ]),
+      ...venues("Cracovia", "nightlife", [
+        { name: "Prozak 2.0", description: "Discoteca underground in cantina medievale" },
+        { name: "Frantic", description: "Discoteca commerciale centrale" },
+        { name: "Kitsch Klub", description: "Discoteca LGBTQ+ vivace" },
+        { name: "Cień Klub", description: "Discoteca in cantina nel centro" },
+        { name: "Shine", description: "Club electronic e house" },
+        { name: "Drukarnia", description: "Bar con musica live a Podgórze" },
+        { name: "Showtime", description: "Discoteca con karaoke e cabaret" },
+        { name: "Coco Music Club", description: "Club commerciale centrale" },
+        { name: "Strefa 22", description: "Discoteca con musica anni '80 e '90" },
+        { name: "Choice Club", description: "Club di musica elettronica" },
+      ]),
+      ...activitiesFor("Cracovia", [
+        { name: "Auschwitz-Birkenau", description: "Visita guidata al memoriale" },
+        { name: "Miniere di sale di Wieliczka", description: "Patrimonio UNESCO sotterraneo" },
+        { name: "Castello del Wawel", description: "Residenza dei re polacchi" },
+        { name: "Quartiere ebraico Kazimierz", description: "Tour culturale e gastronomico" },
+        { name: "Schindler Factory Museum", description: "Storia di Cracovia durante la guerra" },
+        { name: "Tour vodka", description: "Degustazione delle migliori vodke polacche" },
+        { name: "Day trip Zakopane", description: "Le montagne dei Tatra" },
+        { name: "Crociera sulla Vistola", description: "Navigazione panoramica" },
+        { name: "Pub crawl", description: "Tour delle migliori birrerie del centro" },
+        { name: "Tour gastronomico polacco", description: "Pierogi, kielbasa e specialità locali" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "amsterdam",
+    displayName: "Amsterdam",
+    items: [
+      ...venues("Amsterdam", "restaurants", [
+        { name: "De Kas", description: "Cucina farm-to-table in una serra storica" },
+        { name: "Foodhallen", description: "Food hall con cucine internazionali" },
+        { name: "Pllek", description: "Beach restaurant nel nord, vibe rilassato" },
+        { name: "Moeders", description: "Cucina olandese tradizionale autentica" },
+        { name: "The Pancake Bakery", description: "Pannenkoeken classici sui canali" },
+        { name: "Cafe de Klos", description: "I migliori spareribs della città" },
+        { name: "Restaurant Greetje", description: "Cucina olandese moderna" },
+        { name: "Toscanini", description: "Italiana storica nel Jordaan" },
+        { name: "Bistro Bij Ons", description: "Comfort food olandese genuino" },
+        { name: "Wilde Zwijnen", description: "Cucina creativa con prodotti locali" },
+      ]),
+      ...venues("Amsterdam", "bars", [
+        { name: "Tales & Spirits", description: "Cocktail bar nel quartiere centrale" },
+        { name: "Pulitzer's Bar", description: "Bar elegante nello storico Pulitzer Hotel" },
+        { name: "Door 74", description: "Speakeasy con prenotazione obbligatoria" },
+        { name: "Hiding in Plain Sight", description: "Cocktail bar nascosto" },
+        { name: "Rosalia's Menagerie", description: "Cocktail bar nel Pulitzer Hotel" },
+        { name: "Vesper Bar", description: "Cocktail elegante nel Jordaan" },
+        { name: "Flying Dutchmen Cocktails", description: "Mixology di livello" },
+        { name: "Bar Centraal", description: "Vini naturali e tapas" },
+        { name: "Café Brecht", description: "Atmosfera berlinese a Leidseplein" },
+        { name: "Wynand Fockink", description: "Distilleria storica dal 1679" },
+      ]),
+      ...venues("Amsterdam", "nightlife", [
+        { name: "De School", description: "Tempio della musica elettronica" },
+        { name: "Shelter", description: "Club techno sotterraneo" },
+        { name: "Paradiso", description: "Iconica chiesa sconsacrata trasformata in club" },
+        { name: "Melkweg", description: "Club di musica live e DJ set" },
+        { name: "Jimmy Woo", description: "Discoteca esclusiva a Leidseplein" },
+        { name: "AIR Amsterdam", description: "Club moderno con sound system top" },
+        { name: "Club NYX", description: "Discoteca LGBTQ+ friendly su 3 piani" },
+        { name: "Chicago Social Club", description: "Club centrale con DJ resident" },
+        { name: "Bitterzoet", description: "Club intimo con musica eclettica" },
+        { name: "Club Lite", description: "Club elettronico vicino Marineterrein" },
+      ]),
+      ...activitiesFor("Amsterdam", [
+        { name: "Crociera sui canali", description: "1 ora sulle vie d'acqua di Amsterdam" },
+        { name: "Museo Van Gogh", description: "Skip-the-line al museo più famoso" },
+        { name: "Rijksmuseum", description: "Capolavori di Rembrandt e Vermeer" },
+        { name: "Casa di Anna Frank", description: "Visita al rifugio storico" },
+        { name: "Heineken Experience", description: "Tour interattivo della birra olandese" },
+        { name: "Tour in bicicletta", description: "Amsterdam come gli olandesi" },
+        { name: "Red Light District tour", description: "Visita guidata al quartiere a luci rosse" },
+        { name: "Coffee shop tour", description: "Esplora la cultura locale legalmente" },
+        { name: "Day trip Zaanse Schans", description: "Mulini a vento e formaggi tipici" },
+        { name: "Pub crawl", description: "Notte tra i locali del centro" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "berlin",
+    displayName: "Berlino",
+    items: [
+      ...venues("Berlino", "restaurants", [
+        { name: "Mustafas Gemüse Kebap", description: "Il kebab più famoso di Berlino" },
+        { name: "Curry 36", description: "Currywurst icona della città" },
+        { name: "Burgermeister", description: "Burger sotto la metropolitana di Schlesisches Tor" },
+        { name: "Katz Orange", description: "Cucina farm-to-table in Mitte" },
+        { name: "Nobelhart & Schmutzig", description: "Stella Michelin, prodotti locali" },
+        { name: "Restaurant Tim Raue", description: "Due stelle Michelin, cucina asiatica" },
+        { name: "Lavanderia Vecchia", description: "Italiana fine dining a Neukölln" },
+        { name: "Markthalle Neun", description: "Street food market il giovedì sera" },
+        { name: "Konnopke's Imbiss", description: "Currywurst storico a Prenzlauer Berg" },
+        { name: "Lokal", description: "Cucina tedesca moderna in Mitte" },
+      ]),
+      ...venues("Berlino", "bars", [
+        { name: "Buck and Breck", description: "Cocktail bar speakeasy" },
+        { name: "Lebensstern", description: "Cocktail bar elegante a Schöneberg" },
+        { name: "Beckett's Kopf", description: "Cocktail bar nascosto a Prenzlauer Berg" },
+        { name: "Schwarze Traube", description: "Cocktail bar piccolo di altissimo livello" },
+        { name: "Würgeengel", description: "Cocktail bar storico a Kreuzberg" },
+        { name: "Velvet Bar", description: "Cocktail moderni a Mitte" },
+        { name: "Bar Tausend", description: "Speakeasy sotto il ponte Friedrichstraße" },
+        { name: "Le Croco Bleu", description: "Cocktail bar in ex fabbrica di birra" },
+        { name: "Truffle Pig", description: "Cocktail bar di tendenza" },
+        { name: "Reingold", description: "Cocktail bar elegante anni '20" },
+      ]),
+      ...venues("Berlino", "nightlife", [
+        { name: "Berghain", description: "Il tempio mondiale della techno" },
+        { name: "Sisyphos", description: "Club outdoor con vibe da festival" },
+        { name: "Kater Blau", description: "Club sul fiume Spree" },
+        { name: "Watergate", description: "Club techno con vista sul fiume" },
+        { name: "Tresor", description: "Club techno storico in ex caveau" },
+        { name: "About Blank", description: "Club queer-friendly con giardino" },
+        { name: "Renate", description: "Club indie e elettronica nostalgica" },
+        { name: "KitKatClub", description: "Club fetish leggendario" },
+        { name: "Suicide Circus", description: "Club techno di livello" },
+        { name: "Club der Visionäre", description: "Club outdoor sull'acqua" },
+      ]),
+      ...activitiesFor("Berlino", [
+        { name: "Brandenburg Gate", description: "Tour guidato del simbolo della città" },
+        { name: "Reichstag", description: "Visita alla cupola del Parlamento" },
+        { name: "East Side Gallery", description: "Murales sul Muro di Berlino" },
+        { name: "Memoriale dell'Olocausto", description: "Sito commemorativo a Mitte" },
+        { name: "Checkpoint Charlie", description: "Storia della Guerra Fredda" },
+        { name: "Museumsinsel", description: "Isola dei Musei patrimonio UNESCO" },
+        { name: "Berlin Wall tour", description: "Storia del Muro raccontata in bici" },
+        { name: "Topografia del Terrore", description: "Museo sulla Gestapo" },
+        { name: "TV Tower (Fernsehturm)", description: "Vista panoramica da 207m" },
+        { name: "Pub crawl", description: "Notte tra i club di Kreuzberg e Friedrichshain" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "lisbon",
+    displayName: "Lisbona",
+    items: [
+      ...venues("Lisbona", "restaurants", [
+        { name: "Belcanto", description: "Due stelle Michelin di José Avillez" },
+        { name: "Cervejaria Ramiro", description: "Crostacei e frutti di mare leggendari" },
+        { name: "Time Out Market", description: "Food hall con i migliori chef della città" },
+        { name: "Pastéis de Belém", description: "I pastel de nata originali dal 1837" },
+        { name: "A Cevicheria", description: "Ceviche peruviano di tendenza" },
+        { name: "Pinóquio", description: "Pesce fresco in piazza Restauradores" },
+        { name: "A Taberna da Rua das Flores", description: "Tapas portoghesi creative" },
+        { name: "Solar dos Presuntos", description: "Cucina tradizionale portoghese" },
+        { name: "Cantinho do Avillez", description: "Bistro di José Avillez" },
+        { name: "100 Maneiras", description: "Cucina creativa con menù degustazione" },
+      ]),
+      ...venues("Lisbona", "bars", [
+        { name: "Pensão Amor", description: "Bar di tendenza in ex bordello" },
+        { name: "Park Bar", description: "Rooftop sopra un parcheggio con vista mozzafiato" },
+        { name: "Cinco Lounge", description: "Cocktail bar elegante a Príncipe Real" },
+        { name: "Foxtrot", description: "Speakeasy storico" },
+        { name: "Topo Chiado", description: "Rooftop con vista su Castelo de São Jorge" },
+        { name: "Lost In", description: "Bar con vista sui tetti di Lisbona" },
+        { name: "Pavilhão Chinês", description: "Bar curioso con cimeli da tutto il mondo" },
+        { name: "Memmo Alfama Rooftop", description: "Vista sull'Alfama e sul Tejo" },
+        { name: "Sky Bar Tivoli", description: "Cocktail in alto sull'Avenida da Liberdade" },
+        { name: "Procópio Bar", description: "Bar storico in stile retro" },
+      ]),
+      ...venues("Lisbona", "nightlife", [
+        { name: "Lux Frágil", description: "Il club più famoso di Lisbona" },
+        { name: "Ministerium", description: "Club elegante a Praça do Comércio" },
+        { name: "K Urban Beach", description: "Club sul fiume Tejo" },
+        { name: "Music Box", description: "Club sotto un arco a Cais do Sodré" },
+        { name: "Lust in Rio", description: "Club tropicale all'aperto" },
+        { name: "Plateau", description: "Discoteca elegante a Príncipe Real" },
+        { name: "Construction", description: "Club LGBTQ+ a Cais do Sodré" },
+        { name: "Trumps", description: "Iconico club LGBTQ+" },
+        { name: "Pensão Amor", description: "Anche pista da ballo nei weekend" },
+        { name: "Casino Lisboa", description: "Casinò con DJ e spettacoli" },
+      ]),
+      ...activitiesFor("Lisbona", [
+        { name: "Torre di Belém", description: "Simbolo dell'era delle scoperte" },
+        { name: "Monastero dos Jerónimos", description: "Capolavoro manuelino patrimonio UNESCO" },
+        { name: "Tram 28", description: "Giro panoramico nei quartieri storici" },
+        { name: "Castello di San Giorgio", description: "Vista mozzafiato sulla città" },
+        { name: "Day trip a Sintra", description: "Palazzo da Pena e villaggio fiabesco" },
+        { name: "Quartiere di Alfama", description: "Tour guidato nel cuore antico" },
+        { name: "Crociera sul Tago", description: "Lisbona vista dall'acqua" },
+        { name: "Time Out Market", description: "Esperienza gastronomica completa" },
+        { name: "Spettacolo di Fado", description: "Cena con musica tradizionale" },
+        { name: "LX Factory", description: "Quartiere creativo con bar e shop" },
+      ]),
+    ],
+  },
+  {
+    cityKey: "palma-de-mallorca",
+    displayName: "Palma di Maiorca",
+    items: [
+      ...venues("Palma di Maiorca", "restaurants", [
+        { name: "Marc Fosh", description: "Stella Michelin, cucina mediterranea creativa" },
+        { name: "Ca'n Eduardo", description: "Pesce fresco al porto dal 1943" },
+        { name: "Tast Club", description: "Tapas creative nel centro storico" },
+        { name: "Forn de Sant Joan", description: "Cucina mallorquina in 4 ambienti" },
+        { name: "La Bóveda", description: "Tapas tradizionali nel centro" },
+        { name: "Quadrat", description: "Fine dining nel Sant Francesc Hotel" },
+        { name: "Adrián Quetglas", description: "Stella Michelin, cucina spagnola moderna" },
+        { name: "Sumailla", description: "Sushi giapponese-peruviano" },
+        { name: "Sa Pernera", description: "Cucina mallorquina autentica" },
+        { name: "Bar España", description: "Tapas casual molto frequentate dai locali" },
+      ]),
+      ...venues("Palma di Maiorca", "bars", [
+        { name: "Brassclub", description: "Cocktail bar pluripremiato" },
+        { name: "Hotel Cuba Roof Bar", description: "Rooftop con vista cattedrale" },
+        { name: "Bar Abaco", description: "Cocktail bar surreale in palazzo del XVII secolo" },
+        { name: "Hotel Saratoga Sky Bar", description: "Piscina e cocktail sui tetti" },
+        { name: "Atlántico", description: "Bar storico a Sa Llotja" },
+        { name: "Café La Lonja", description: "Iconico bar nella piazza della Lonja" },
+        { name: "Gibson Bar", description: "Cocktail bar moderno in Plaça Mercat" },
+        { name: "Idem", description: "Cocktail bar di tendenza" },
+        { name: "Lab Cocktail", description: "Mixology nel centro storico" },
+        { name: "Bar Flexas", description: "Atmosfera bohémien e arte" },
+      ]),
+      ...venues("Palma di Maiorca", "nightlife", [
+        { name: "Tito's Mallorca", description: "Discoteca storica con vista sul porto" },
+        { name: "Pacha Mallorca", description: "Brand iconico anche a Palma" },
+        { name: "BCM Planet Dance", description: "Mega club a Magaluf" },
+        { name: "Garito Café", description: "Club con DJ resident di livello" },
+        { name: "Social Club", description: "Discoteca elegante nel centro" },
+        { name: "Mood Beach Club", description: "Beach club a sud dell'isola" },
+        { name: "Ocean Beach Mallorca", description: "Pool party in stile Ibiza" },
+        { name: "Megapark", description: "Mega discoteca a Playa de Palma" },
+        { name: "Bierkönig", description: "Locale tedesco a Playa de Palma" },
+        { name: "Aquarium Reef", description: "Club a Magaluf con grande pista" },
+      ]),
+      ...activitiesFor("Palma di Maiorca", [
+        { name: "Cattedrale La Seu", description: "Capolavoro gotico in riva al mare" },
+        { name: "Castello di Bellver", description: "Castello circolare unico in Europa" },
+        { name: "Caves of Drach", description: "Grotte sotterranee con concerto" },
+        { name: "Treno di Soller", description: "Treno storico tra montagne e mare" },
+        { name: "Tour in barca", description: "Calette nascoste della costa sud" },
+        { name: "Quad tour nella sierra", description: "Avventura fuoristrada nella Tramuntana" },
+        { name: "Cala Mondragó", description: "Spiaggia paradisiaca nel parco naturale" },
+        { name: "Es Trenc", description: "La spiaggia caraibica di Maiorca" },
+        { name: "Valldemossa", description: "Borgo dove visse Chopin" },
+        { name: "Magaluf boat party", description: "Festa in barca con DJ" },
+      ]),
+    ],
+  },
+];
+
+const CITY_BY_KEY: Record<string, CityExperiences> = CITY_DATA.reduce((acc, c) => {
+  acc[c.cityKey] = c;
+  return acc;
+}, {} as Record<string, CityExperiences>);
+
+export function getCityExperiences(destinationCity: string | null | undefined): CityExperiences | null {
+  if (!destinationCity) return null;
+  const normalized = destinationCity.trim().toLowerCase();
+  const canonicalKey = CITY_KEY_SYNONYMS[normalized];
+  if (!canonicalKey) return null;
+  return CITY_BY_KEY[canonicalKey] ?? null;
+}
+
+export function getAllCityExperiences(): CityExperiences[] {
+  return CITY_DATA;
+}
+
+export function getItemsByCategory(
+  city: CityExperiences,
+  category: ExperienceCategory,
+): CityExperienceItem[] {
+  return city.items.filter((it) => it.category === category);
+}
+
+export const CATEGORY_LABELS: Record<ExperienceCategory, string> = {
+  restaurants: "Top 10 Ristoranti",
+  bars: "Top 10 Bar",
+  nightlife: "Top 10 Discoteche & Nightlife",
+  activities: "Top 10 Attività & Esperienze",
+};
+
+export const CATEGORY_SHORT_LABELS: Record<ExperienceCategory, string> = {
+  restaurants: "Ristoranti",
+  bars: "Bar",
+  nightlife: "Nightlife",
+  activities: "Attività",
+};

@@ -1,0 +1,83 @@
+Voglio migliorare le sezioni “Destinazioni” ed “Esperienze” mantenendo l’obiettivo principale del sito: generare traffico verso link affiliati reali.
+
+CONTESTO:
+Il sito ha già destinazioni predefinite/designate. Dopo la scelta della meta tramite chatbot, probabilmente esistono già link GetYourGuide collegati alla destinazione.
+
+OBIETTIVO 1 — SEZIONE DESTINAZIONI:
+Nella sezione “Destinazioni”, ogni card/vignetta/casella città deve essere cliccabile.
+
+Quando l’utente clicca su una città, deve essere aperto un link GetYourGuide relativo a quella città.
+
+Esempio:
+- Roma → GetYourGuide Roma
+- Ibiza → GetYourGuide Ibiza
+- Barcellona → GetYourGuide Barcellona
+- Praga → GetYourGuide Praga
+- Budapest → GetYourGuide Budapest
+- Cracovia → GetYourGuide Cracovia
+- Amsterdam → GetYourGuide Amsterdam
+- Berlino → GetYourGuide Berlino
+- Lisbona → GetYourGuide Lisbona
+- Palma di Maiorca → GetYourGuide Palma di Maiorca
+
+Se nel progetto esiste già una funzione o mappa che genera link GetYourGuide dopo la scelta tramite chatbot, riutilizzala anche nella sezione Destinazioni.
+
+Se possibile, usa link affiliati GetYourGuide. Non usare link generici se sono già disponibili link affiliati o parametri referral.
+
+IMPORTANTE:
+- Aprire i link in una nuova scheda.
+- Non usare link placeholder/finti.
+- Se una città non ha ancora link affiliato configurato, crea una struttura dati chiara dove poterlo inserire facilmente.
+- Mantieni il design attuale delle card, ma rendile cliccabili.
+
+OBIETTIVO 2 — SEZIONE ESPERIENZE:
+Nella sezione “Esperienze”, voglio mostrare contenuti utili per ogni destinazione designata.
+
+Per ogni città, crea o integra liste “Top 10” divise per categoria, ad esempio:
+
+- Top 10 ristoranti
+- Top 10 bar
+- Top 10 discoteche / nightlife
+- Top 10 attività o esperienze
+
+L’obiettivo è aiutare l’utente a esplorare cosa fare nella città e, dove possibile, portarlo verso link monetizzabili o affiliati.
+
+FONTI / INTEGRAZIONI:
+Valuta la soluzione migliore tra:
+- GetYourGuide per attività ed esperienze
+- Tripadvisor per ristoranti, bar e nightlife, solo se esiste una modalità utilizzabile e conforme
+- Google Places API per ristoranti, bar e locali
+- Yelp/Foursquare o alternative simili se più adatte
+- Dati statici solo come fallback temporaneo, ma evitare contenuti finti
+
+REQUISITI:
+- Ogni destinazione deve avere una pagina/sezione esperienze coerente.
+- L’utente deve poter selezionare o visualizzare una città e vedere le Top 10 relative a quella città.
+- I risultati devono essere reali, non mock data.
+- Se vengono usati dati statici iniziali, separarli chiaramente in un file tipo `cityExperiences.ts` o simile, così poi potranno essere sostituiti da API reali.
+- Ogni item dovrebbe mostrare almeno:
+  - nome
+  - categoria
+  - breve descrizione
+  - rating, se disponibile
+  - link esterno
+  - indicazione se il link è affiliato o no
+
+LOGICA AFFILIAZIONE:
+Il sito deve privilegiare link affiliati quando disponibili.
+
+Priorità:
+1. Link affiliati GetYourGuide per esperienze e attività
+2. Eventuali programmi affiliati per ristoranti/hotel/attività, se già configurati
+3. Link esterni normali solo se non esiste alternativa affiliata
+
+ATTENZIONE:
+Non inventare affiliazioni.
+Non inserire parametri referral casuali.
+Non usare dati falsi.
+Non rompere il flusso chatbot → checkout già esistente.
+
+RISULTATO ATTESO:
+- Le card città nella sezione Destinazioni aprono GetYourGuide con link affiliati, se disponibili.
+- La sezione Esperienze mostra Top 10 reali o predisposte per ogni città.
+- L’architettura deve essere pulita, scalabile e facile da aggiornare per aggiungere nuove città, nuove categorie e nuovi partner affiliati.

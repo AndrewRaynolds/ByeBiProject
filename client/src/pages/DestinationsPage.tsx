@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Destination, Experience } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, StarHalf } from "lucide-react";
+import { Star, StarHalf, ExternalLink, Compass } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ReactCountryFlag from "react-country-flag";
+import { getGetYourGuideCityLink } from "@/lib/getyourguide";
+import { trackEvent } from "@/lib/track";
 
 export default function DestinationsPage() {
   const { data: destinations, isLoading: isLoadingDestinations } = useQuery<Destination[]>({
@@ -195,14 +197,39 @@ export default function DestinationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {destinations?.map((destination) => {
                 const recommendedExperiences = getDestinationExperiences(destination);
+                const gygUrl = getGetYourGuideCityLink(destination.name);
+                const handleCardClick = () => {
+                  if (!gygUrl) return;
+                  trackEvent("gyg_click", {
+                    destinationCity: destination.name,
+                    placement: "destinations",
+                    url: gygUrl,
+                  });
+                  window.open(gygUrl, "_blank", "noopener,noreferrer");
+                };
+                const cardClickable = !!gygUrl;
                 
                 return (
-                  <div key={destination.id} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition duration-300">
+                  <div
+                    key={destination.id}
+                    role={cardClickable ? "link" : undefined}
+                    tabIndex={cardClickable ? 0 : undefined}
+                    aria-label={cardClickable ? `Esplora esperienze a ${destination.name} su GetYourGuide` : undefined}
+                    onClick={cardClickable ? handleCardClick : undefined}
+                    onKeyDown={(e) => {
+                      if (cardClickable && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        handleCardClick();
+                      }
+                    }}
+                    data-testid={`card-destination-${destination.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    className={`group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300 ${cardClickable ? "cursor-pointer hover:-translate-y-1" : ""}`}
+                  >
                     <div className="relative h-64 overflow-hidden">
                       <img 
                         src={destination.image} 
                         alt={`${destination.name} - ${destination.country}`} 
-                        className="w-full h-full object-cover transition duration-500 hover:scale-105" 
+                        className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
                       />
                       <div className="absolute top-4 left-4 flex items-center space-x-2">
                         <ReactCountryFlag 
@@ -217,6 +244,12 @@ export default function DestinationsPage() {
                           }}
                         />
                       </div>
+                      {cardClickable && (
+                        <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                          <Compass className="w-3 h-3" />
+                          GetYourGuide
+                        </div>
+                      )}
                       <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black to-transparent">
                         <h3 className="text-white text-xl font-bold">{destination.name}</h3>
                         <p className="text-white text-sm">{destination.country}</p>
@@ -245,11 +278,19 @@ export default function DestinationsPage() {
                       
                       <p className="text-gray-700 mb-4">{destination.description}</p>
                       
-                      <div className="flex items-center">
-                        <div className="text-yellow-400 flex">
-                          {renderRatingStars(destination.rating)}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="text-yellow-400 flex">
+                            {renderRatingStars(destination.rating)}
+                          </div>
+                          <span className="text-gray-600 ml-2 text-sm">{destination.rating} ({destination.reviewCount})</span>
                         </div>
-                        <span className="text-gray-600 ml-2 text-sm">{destination.rating} ({destination.reviewCount} reviews)</span>
+                        {cardClickable && (
+                          <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600 group-hover:underline">
+                            Scopri attività
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
