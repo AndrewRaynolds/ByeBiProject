@@ -496,7 +496,7 @@ export default function TripPlanningForm() {
                           <FormItem>
                             <FormLabel>Trip Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Mike's Last Ride" className="bg-white" {...field} />
+                              <Input placeholder="" className="bg-white" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -514,7 +514,7 @@ export default function TripPlanningForm() {
                                 type="number" 
                                 min="1" 
                                 max="30" 
-                                placeholder="6" 
+                                placeholder="" 
                                 className="bg-white"
                                 {...field}
                                 onChange={e => field.onChange(Number(e.target.value))}
@@ -569,7 +569,7 @@ export default function TripPlanningForm() {
                             <div className="relative" ref={cityDropdownRef}>
                               <FormControl>
                                 <Input 
-                                  placeholder="Type to search cities (e.g. 'Rome', 'Berlin')" 
+                                  placeholder="" 
                                   value={citySearchTerm}
                                   onChange={(e) => {
                                     handleCitySearch(e.target.value);
@@ -891,7 +891,7 @@ export default function TripPlanningForm() {
                             <FormControl>
                               <Textarea 
                                 rows={3} 
-                                placeholder="Any specific requests or things to avoid?" 
+                                placeholder="" 
                                 {...field} 
                               />
                             </FormControl>

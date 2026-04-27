@@ -260,7 +260,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
               Racconta cosa è successo a <span className={`font-semibold ${accentText}`}>{selectedDestination}</span>. Nessun nome, nessun dettaglio identificativo.
             </p>
             <Textarea
-              placeholder="Era la seconda notte quando il testimone ha deciso di..."
+              placeholder=""
               className="min-h-[160px] mb-4 bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500 resize-none"
               value={storyContent}
               onChange={(e) => setStoryContent(e.target.value)}

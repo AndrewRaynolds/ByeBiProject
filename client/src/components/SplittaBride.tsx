@@ -383,7 +383,7 @@ export function SplittaBride() {
                       <Input
                         id="name"
                         {...groupForm.register('name')}
-                        placeholder="es. Addio al Nubilato Sara"
+                        placeholder=""
                         className="bg-gray-800/50 border-gray-700 text-white mt-1"
                         data-testid="input-group-name"
                       />
@@ -399,7 +399,7 @@ export function SplittaBride() {
                       <Textarea
                         id="description"
                         {...groupForm.register('description')}
-                        placeholder="Descrizione del gruppo..."
+                        placeholder=""
                         className="bg-gray-800/50 border-gray-700 text-white mt-1"
                         data-testid="input-group-description"
                       />
@@ -412,7 +412,7 @@ export function SplittaBride() {
                           <Input
                             value={newMemberName}
                             onChange={(e) => setNewMemberName(e.target.value)}
-                            placeholder="Nome del membro"
+                            placeholder=""
                             className="bg-gray-800/50 border-gray-700 text-white flex-1"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
@@ -595,7 +595,7 @@ export function SplittaBride() {
                       <Input
                         id="description"
                         {...expenseForm.register('description')}
-                        placeholder="es. Spa e massaggio"
+                        placeholder=""
                         className="bg-gray-800/50 border-gray-700 text-white mt-1"
                         data-testid="input-expense-description"
                       />

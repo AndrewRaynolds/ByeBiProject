@@ -264,7 +264,7 @@ export default function SplittaBroFixed() {
                       <Label>Nome del gruppo</Label>
                       <Input 
                         {...groupForm.register("name")} 
-                        placeholder="es. Viaggio Amsterdam, Cena gruppo..."
+                        placeholder=""
                       />
                       {groupForm.formState.errors.name && (
                         <p className="text-red-500 text-sm mt-1">{groupForm.formState.errors.name.message}</p>
@@ -343,7 +343,7 @@ export default function SplittaBroFixed() {
                           <Label>Nome del gruppo</Label>
                           <Input 
                             {...groupForm.register("name")} 
-                            placeholder="es. Viaggio Amsterdam, Cena gruppo..."
+                            placeholder=""
                           />
                         </div>
 

@@ -321,7 +321,7 @@ export default function SplittaBroMainPage() {
                       <Label>Nome del gruppo</Label>
                       <Input 
                         {...groupForm.register("name")} 
-                        placeholder="es. Viaggio Amsterdam, Cena gruppo..."
+                        placeholder=""
                       />
                       {groupForm.formState.errors.name && (
                         <p className="text-red-500 text-sm mt-1">{groupForm.formState.errors.name.message}</p>
@@ -401,7 +401,7 @@ export default function SplittaBroMainPage() {
                           <Label>Nome del gruppo</Label>
                           <Input 
                             {...groupForm.register("name")} 
-                            placeholder="es. Viaggio Amsterdam, Cena gruppo..."
+                            placeholder=""
                           />
                           {groupForm.formState.errors.name && (
                             <p className="text-red-500 text-sm mt-1">{groupForm.formState.errors.name.message}</p>
@@ -516,7 +516,7 @@ export default function SplittaBroMainPage() {
                                 <Label className="text-base font-medium">Descrizione della spesa</Label>
                                 <Input 
                                   {...expenseForm.register("description")} 
-                                  placeholder="Inserisci descrizione (es. Cena al ristorante)" 
+                                  placeholder="" 
                                   className="text-lg"
                                 />
                                 {expenseForm.formState.errors.description && (
