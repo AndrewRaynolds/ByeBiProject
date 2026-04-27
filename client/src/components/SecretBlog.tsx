@@ -135,6 +135,11 @@ export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boo
             </span>
           )}
         </div>
+        {post.category && (
+          <div className="absolute top-3 right-3 w-8 h-8 bg-black/70 backdrop-blur-sm rounded-full flex items-center justify-center text-base border border-white/10 shadow">
+            {post.category === 'sex' ? '🔞' : post.category === 'drink' ? '🍺' : '🤪'}
+          </div>
+        )}
       </div>
 
       <div className="p-5">
@@ -230,6 +235,11 @@ export function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: b
             </span>
           )}
         </div>
+        {post.category && (
+          <div className="absolute top-3 right-3 w-8 h-8 bg-black/70 backdrop-blur-sm rounded-full flex items-center justify-center text-base border border-purple-400/20 shadow">
+            {post.category === 'sex' ? '🔞' : post.category === 'drink' ? '🍺' : '🤪'}
+          </div>
+        )}
       </div>
 
       <div className="p-5">

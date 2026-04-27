@@ -6,7 +6,8 @@ import {
   insertUserSchema, 
   insertTripSchema, 
   insertExpenseGroupSchema, 
-  insertExpenseSchema 
+  insertExpenseSchema,
+  insertBlogPostSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -339,6 +340,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const blogPosts = await storage.getAllBlogPosts();
       return res.status(200).json(blogPosts);
     } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/blog-posts", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertBlogPostSchema.parse(req.body);
+      const blogPost = await storage.createBlogPost(validatedData);
+      return res.status(201).json(blogPost);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dati non validi", errors: error.errors });
+      }
       return res.status(500).json({ message: "Server error" });
     }
   });

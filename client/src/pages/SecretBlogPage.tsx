@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { BlogPost } from "@shared/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Brand,
   BroCard,
@@ -111,11 +112,20 @@ interface StoryFormProps {
   onScrollToPremium: () => void;
 }
 
+type Category = 'sex' | 'drink' | 'weird';
+
+const CATEGORY_OPTIONS: { value: Category; icon: string; label: string; desc: string }[] = [
+  { value: 'sex', icon: '🔞', label: 'Sex', desc: 'Racconto a sfondo erotico' },
+  { value: 'drink', icon: '🍺', label: 'Drink', desc: 'Racconto a sfondo alcolico' },
+  { value: 'weird', icon: '🤪', label: 'Weird', desc: 'Racconto strano, assurdo o nonsense' },
+];
+
 function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: StoryFormProps) {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
   const [storyContent, setStoryContent] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<Category | ''>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -133,23 +143,45 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
     );
   };
 
-  const handleSubmit = () => {
-    if (!isAuthenticated) {
-      toast({ title: "Accesso richiesto", description: "Effettua il login per condividere la tua storia.", variant: "destructive" });
-      return;
-    }
-    toast({
-      title: "Storia inviata! 🎉",
-      description: "La tua storia è in fase di revisione. Sarà pubblicata presto!",
-    });
+  const resetForm = () => {
     setStep(1);
     setSelectedDestination("");
     setStoryContent("");
+    setSelectedCategory('');
     setSelectedTags([]);
     setShowPreview(false);
   };
 
-  const stepLabels = ["Destinazione", "La tua storia", "Tag"];
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      const tagsText = selectedTags.length > 0 ? ` ${selectedTags.join(' ')}` : '';
+      return apiRequest("POST", "/api/blog-posts", {
+        title: `${selectedDestination}: La storia di ${alias}${tagsText}`,
+        content: storyContent,
+        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80",
+        isPremium: false,
+        location: selectedDestination,
+        category: selectedCategory,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/blog-posts"] });
+      toast({
+        title: "Storia pubblicata! 🎉",
+        description: "La tua storia è ora visibile nella community.",
+      });
+      resetForm();
+    },
+    onError: () => {
+      toast({
+        title: "Errore",
+        description: "Non è stato possibile pubblicare la storia. Riprova.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const stepLabels = ["Destinazione", "La tua storia", "Categoria", "Tag"];
 
   if (!isAuthenticated) {
     return (
@@ -250,6 +282,40 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
         {step === 3 && (
           <div>
+            <p className="text-gray-300 text-sm mb-5">Che tipo di storia è questa?</p>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {CATEGORY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSelectedCategory(opt.value)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
+                    ${selectedCategory === opt.value
+                      ? `bg-gradient-to-br ${accentColor} border-transparent text-white shadow-lg scale-105`
+                      : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500 hover:bg-gray-800'}`}
+                >
+                  <span className="text-3xl">{opt.icon}</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">{opt.label}</span>
+                  <span className="text-[10px] text-center opacity-70 leading-tight">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="ghost" className="text-gray-400" onClick={() => setStep(2)}>
+                <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+              </Button>
+              <Button
+                className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
+                disabled={!selectedCategory}
+                onClick={() => setStep(4)}
+              >
+                Avanti <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div>
             <p className="text-gray-300 text-sm mb-4">Scegli uno o più tag che descrivono la storia:</p>
             <div className="flex flex-wrap gap-2 mb-6">
               {STORY_TAGS.map((tag) => (
@@ -267,7 +333,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
             </div>
 
             <div className="flex gap-3 mb-6">
-              <Button variant="ghost" className="text-gray-400" onClick={() => setStep(2)}>
+              <Button variant="ghost" className="text-gray-400" onClick={() => setStep(3)}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
               </Button>
               <Button
@@ -280,17 +346,23 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
               </Button>
               <Button
                 className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
-                onClick={handleSubmit}
+                disabled={submitMutation.isPending}
+                onClick={() => submitMutation.mutate()}
               >
                 <Send className="w-4 h-4 mr-2" />
-                Invia in forma anonima
+                {submitMutation.isPending ? "Pubblicazione..." : "Pubblica in forma anonima"}
               </Button>
             </div>
 
             {showPreview && (
               <div className={`rounded-xl border ${borderAccent} bg-gray-900 overflow-hidden`}>
-                <div className="h-24 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                <div className="h-24 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative">
                   <span className="text-4xl opacity-40">✨</span>
+                  {selectedCategory && (
+                    <div className="absolute top-3 right-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-base">
+                      {selectedCategory === 'sex' ? '🔞' : selectedCategory === 'drink' ? '🍺' : '🤪'}
+                    </div>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex gap-2 mb-3">
