@@ -171,7 +171,7 @@ export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boo
                 <span>Premium</span>
               </div>
             ) : (
-              <Link href="/secret-blog" className="flex items-center gap-1 text-red-500 hover:text-red-400 font-semibold text-xs transition-colors">
+              <Link href={`/secret-blog/${post.id}`} className="flex items-center gap-1 text-red-500 hover:text-red-400 font-semibold text-xs transition-colors">
                 <BookOpen className="w-3.5 h-3.5" />
                 {t('common.readMore')}
               </Link>
@@ -271,7 +271,7 @@ export function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: b
                 <span>Premium</span>
               </div>
             ) : (
-              <Link href="/secret-blog" className="flex items-center gap-1 text-pink-400 hover:text-pink-300 font-semibold text-xs transition-colors">
+              <Link href={`/secret-blog/${post.id}`} className="flex items-center gap-1 text-pink-400 hover:text-pink-300 font-semibold text-xs transition-colors">
                 <BookOpen className="w-3.5 h-3.5" />
                 {t('common.readMore')}
               </Link>

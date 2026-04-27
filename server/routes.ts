@@ -344,6 +344,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/blog-posts/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "ID non valido" });
+      const blogPost = await storage.getBlogPost(id);
+      if (!blogPost) return res.status(404).json({ message: "Storia non trovata" });
+      return res.status(200).json(blogPost);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.post("/api/blog-posts", async (req: Request, res: Response) => {
     try {
       const validatedData = insertBlogPostSchema.parse(req.body);

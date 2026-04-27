@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import HomeBride from "@/pages/HomeBride";
 import Dashboard from "@/pages/Dashboard";
 import SecretBlogPage from "@/pages/SecretBlogPage";
+import SecretBlogPostPage from "@/pages/SecretBlogPostPage";
 import MerchandisePage from "@/pages/MerchandisePage";
 import Checkout from "@/pages/Checkout";
 import SplittaBroPage from "@/pages/SplittaBroPage";
@@ -53,6 +54,7 @@ function Router() {
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/destinations" component={DestinationsPage} />
       <Route path="/experiences" component={ExperiencesPage} />
+      <Route path="/secret-blog/:id" component={SecretBlogPostPage} />
       <Route path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
       <Route path="/itinerary">{() => <Redirect to="/checkout" />}</Route>
