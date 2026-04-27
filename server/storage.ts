@@ -515,21 +515,24 @@ export class MemStorage implements IStorage {
         content: "From Trastevere's wine bars to Testaccio's underground clubs, Rome offers an incredible nightlife scene. We started at a rooftop aperitivo with views of the Colosseum, then ended up in a basement club at 5am. The bachelor had no idea what hit him.",
         image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         isPremium: false,
-        location: "Roma"
+        location: "Roma",
+        category: "drink" as const
       },
       {
         title: "Ibiza Uncovered: The Ultimate Party Guide",
         content: "From Amnesia to Pacha, we break down the best clubs, when to go, and how to do it right. We got VIP access to three clubs in one night, watched the sunrise from a yacht, and somehow everyone made the flight home. Barely.",
         image: "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         isPremium: true,
-        location: "Ibiza"
+        location: "Ibiza",
+        category: "weird" as const
       },
       {
         title: "Cracovia: Eastern Europe's Hidden Gem",
         content: "Affordable prices, incredible architecture, and a nightlife scene that rivals any major European city. We spent four days exploring the Old Town by day and the underground clubs by night. The vodka was cheaper than water and twice as dangerous.",
         image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
         isPremium: false,
-        location: "Cracovia"
+        location: "Cracovia",
+        category: "drink" as const
       }
     ];
     
