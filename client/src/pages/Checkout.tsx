@@ -127,6 +127,13 @@ export default function Checkout() {
       });
       
       const response = await fetch(`/api/hotels/search?${params}`);
+
+      // Distingui "nessun risultato" (200 OK, array vuoto) da "errore server" (5xx)
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || t('checkout.hotelSearchError'));
+      }
+
       const result = await response.json();
       
       if (import.meta.env.DEV) {
@@ -140,13 +147,10 @@ export default function Checkout() {
         });
       }
       
-      if (!response.ok) {
-        throw new Error(result.error || t('checkout.hotelSearchError'));
-      }
-      
       if (result.hotels && result.hotels.length > 0) {
         setHotels(result.hotels.slice(0, 5));
       } else {
+        // 200 OK ma nessun hotel trovato: messaggio specifico, non "API non disponibile"
         setHotelError(t('checkout.noHotelsForDates'));
       }
     } catch (error: any) {

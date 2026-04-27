@@ -171,6 +171,11 @@ export async function searchHotels(
   }
 
   // STEP 2: offerte reali per quei hotelIds
+  // Amadeus interpreta "adults" come adulti PER CAMERA, non per il gruppo.
+  // Cappare a 2 garantisce risultati per qualsiasi dimensione del gruppo;
+  // il numero reale di persone viene usato solo per la URL Booking.com.
+  const adultsPerRoom = Math.min(adults, 2);
+
   const offersResp = await axios.get(
     `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers`,
     {
@@ -179,7 +184,7 @@ export async function searchHotels(
       },
       params: {
         hotelIds: hotelIds.join(","),
-        adults,
+        adults: adultsPerRoom,
         checkInDate,
         checkOutDate,
         currency,
