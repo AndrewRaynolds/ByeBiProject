@@ -142,7 +142,7 @@ export default function ImageTestPage() {
               <Button 
                 onClick={testApiConnection}
                 disabled={isLoading}
-                variant="outline"
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               >
                 Test Connessione API
               </Button>

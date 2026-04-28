@@ -68,7 +68,7 @@ export default function ImageTestPageFixed() {
             <Button onClick={searchImages} disabled={loading}>
               {loading ? 'Cercando...' : 'Cerca'}
             </Button>
-            <Button onClick={testBarcelona} variant="outline" disabled={loading}>
+            <Button onClick={testBarcelona} className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white" disabled={loading}>
               Test Barcellona
             </Button>
           </div>

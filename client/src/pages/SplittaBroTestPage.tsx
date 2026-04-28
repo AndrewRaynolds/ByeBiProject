@@ -437,7 +437,7 @@ export default function SplittaBroTestPage() {
                         </div>
 
                         <DialogFooter className="mt-6">
-                          <Button type="button" variant="outline" onClick={() => setShowExpenseDialog(false)}>
+                          <Button type="button" className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white" onClick={() => setShowExpenseDialog(false)}>
                             Annulla
                           </Button>
                           <Button 
