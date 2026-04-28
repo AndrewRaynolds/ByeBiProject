@@ -426,8 +426,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
         <div className="text-center">
           <Link href="/secret-blog">
             <Button
-              variant="outline"
-              className={`${viewAllClass} font-bold py-2.5 px-8 rounded-xl transition-all duration-300`}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2.5 px-8 rounded-xl transition-all duration-300"
             >
               {t('blog.viewAllStories')}
             </Button>

@@ -556,8 +556,7 @@ export function SplittaBro() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
                 <Button
                   onClick={() => setSelectedGroup(null)}
-                  variant="outline"
-                  className="border-gray-700 text-white hover:bg-red-900/20 hover:border-red-500 w-full sm:w-auto"
+                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white w-full sm:w-auto"
                   data-testid="button-back-to-groups"
                 >
                   ← Torna ai gruppi

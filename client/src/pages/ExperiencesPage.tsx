@@ -59,9 +59,8 @@ function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: 
         <p className="text-white/60 text-sm mb-3">{item.description}</p>
         <Button
           onClick={handleClick}
-          variant="outline"
           size="sm"
-          className="bg-transparent border-orange-500/50 text-orange-300 hover:bg-orange-500 hover:text-white"
+          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           data-testid={`button-open-experience-${item.category}-${index}`}
         >
           {item.source === "getyourguide" ? "Prenota su GetYourGuide" : "Apri su Google Maps"}

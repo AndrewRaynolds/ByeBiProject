@@ -389,9 +389,8 @@ export default function Checkout() {
         {/* Navigation */}
         <div className="flex flex-col md:flex-row gap-4">
           <Button
-            variant="outline"
             size="lg"
-            className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+            className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
             onClick={() => setLocation('/')}
             data-testid="button-back-home"
           >

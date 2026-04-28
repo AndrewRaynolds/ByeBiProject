@@ -150,7 +150,7 @@ export default function ItineraryResults({ tripId }: ItineraryResultsProps) {
         
         {itineraries.length > 2 && (
           <div className="text-center">
-            <Button variant="outline" className="border border-primary text-primary hover:bg-primary hover:text-white font-bold py-2 px-6 rounded-lg">
+            <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2 px-6 rounded-lg">
               Show More Options
             </Button>
           </div>

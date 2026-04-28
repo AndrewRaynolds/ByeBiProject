@@ -169,8 +169,7 @@ export default function MerchandisePage() {
         <div className="container mx-auto px-4 py-10">
           <div className="flex justify-end mb-6">
             <Button
-              variant="outline"
-              className="relative border-red-500/50 text-white hover:bg-red-600/20"
+              className="relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               onClick={() => setShowCart(true)}
             >
               <ShoppingCart className="h-5 w-5 mr-2" />

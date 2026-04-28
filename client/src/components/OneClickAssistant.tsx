@@ -1222,7 +1222,7 @@ export default function OneClickAssistant() {
 
           <DialogFooter>
             <Button
-              variant="outline"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               onClick={() => setCheckoutDialogOpen(false)}
             >
               Annulla
@@ -1351,7 +1351,7 @@ export default function OneClickAssistant() {
 
           <DialogFooter className="bg-gray-50 -m-6 mt-4 p-6">
             <Button
-              variant="outline"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               onClick={() => setShowItineraryDialog(false)}
             >
               Chiudi

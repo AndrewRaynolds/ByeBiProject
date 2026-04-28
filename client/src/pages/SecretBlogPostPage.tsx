@@ -200,12 +200,7 @@ export default function SecretBlogPostPage() {
         <div className="mt-8 text-center">
           <Link href="/secret-blog">
             <Button
-              variant="outline"
-              className={`${
-                isBride
-                  ? "border-purple-500/40 text-purple-300 hover:bg-purple-900/30"
-                  : "border-gray-700 text-gray-400 hover:bg-gray-900"
-              } font-semibold rounded-xl px-6`}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl px-6"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               Leggi altre storie

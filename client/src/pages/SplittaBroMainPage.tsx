@@ -341,8 +341,8 @@ export default function SplittaBroMainPage() {
                             {participants.length > 2 && (
                               <Button
                                 type="button"
-                                variant="outline"
                                 size="icon"
+                                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                                 onClick={() => removeParticipant(index)}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -353,9 +353,8 @@ export default function SplittaBroMainPage() {
                       </div>
                       <Button
                         type="button"
-                        variant="outline"
+                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white w-full mt-2"
                         onClick={addParticipant}
-                        className="w-full mt-2"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Aggiungi partecipante
@@ -363,7 +362,7 @@ export default function SplittaBroMainPage() {
                     </div>
 
                     <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setShowCreateGroupDialog(false)}>
+                      <Button type="button" className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white" onClick={() => setShowCreateGroupDialog(false)}>
                         Annulla
                       </Button>
                       <Button type="submit" disabled={createGroup.isPending} className="bg-red-600 hover:bg-red-700">
@@ -421,8 +420,8 @@ export default function SplittaBroMainPage() {
                                 {participants.length > 2 && (
                                   <Button
                                     type="button"
-                                    variant="outline"
                                     size="icon"
+                                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                                     onClick={() => removeParticipant(index)}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -433,9 +432,8 @@ export default function SplittaBroMainPage() {
                           </div>
                           <Button
                             type="button"
-                            variant="outline"
+                            className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white w-full mt-2"
                             onClick={addParticipant}
-                            className="w-full mt-2"
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Aggiungi partecipante
@@ -443,7 +441,7 @@ export default function SplittaBroMainPage() {
                         </div>
 
                         <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setShowCreateGroupDialog(false)}>
+                          <Button type="button" className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white" onClick={() => setShowCreateGroupDialog(false)}>
                             Annulla
                           </Button>
                           <Button type="submit" disabled={createGroup.isPending} className="bg-red-600 hover:bg-red-700">
@@ -491,7 +489,7 @@ export default function SplittaBroMainPage() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={shareGroup}>
+                      <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white" onClick={shareGroup}>
                         <Share className="h-4 w-4 mr-2" />
                         Condividi su WhatsApp
                       </Button>
@@ -626,7 +624,7 @@ export default function SplittaBroMainPage() {
                             </div>
 
                             <DialogFooter className="mt-6">
-                              <Button type="button" variant="outline" onClick={() => setShowExpenseDialog(false)}>
+                              <Button type="button" className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white" onClick={() => setShowExpenseDialog(false)}>
                                 Annulla
                               </Button>
                               <Button 

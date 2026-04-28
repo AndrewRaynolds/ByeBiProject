@@ -143,8 +143,7 @@ export default function OneClickPackagePage() {
             <CardContent>
               <div className="space-y-3">
                 <Button 
-                  variant="outline" 
-                  className="w-full justify-start border-red-600 text-white hover:bg-red-900 hover:text-white hover:border-red-500"
+                  className="w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   onClick={() => {
                     setActiveTab('assistant');
                   }}
@@ -152,8 +151,7 @@ export default function OneClickPackagePage() {
                   Amsterdam, Paesi Bassi
                 </Button>
                 <Button 
-                  variant="outline" 
-                  className="w-full justify-start border-red-600 text-white hover:bg-red-900 hover:text-white hover:border-red-500"
+                  className="w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   onClick={() => {
                     setActiveTab('assistant');
                   }}
@@ -161,8 +159,7 @@ export default function OneClickPackagePage() {
                   Berlino, Germania
                 </Button>
                 <Button 
-                  variant="outline" 
-                  className="w-full justify-start border-red-600 text-white hover:bg-red-900 hover:text-white hover:border-red-500"
+                  className="w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   onClick={() => {
                     setActiveTab('assistant');
                   }}
@@ -170,8 +167,7 @@ export default function OneClickPackagePage() {
                   Praga, Repubblica Ceca
                 </Button>
                 <Button 
-                  variant="outline" 
-                  className="w-full justify-start border-red-600 text-white hover:bg-red-900 hover:text-white hover:border-red-500"
+                  className="w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   onClick={() => {
                     setActiveTab('assistant');
                   }}
@@ -179,8 +175,7 @@ export default function OneClickPackagePage() {
                   Budapest, Ungheria
                 </Button>
                 <Button 
-                  variant="outline" 
-                  className="w-full justify-start border-red-600 text-white hover:bg-red-900 hover:text-white hover:border-red-500"
+                  className="w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                   onClick={() => {
                     setActiveTab('assistant');
                   }}

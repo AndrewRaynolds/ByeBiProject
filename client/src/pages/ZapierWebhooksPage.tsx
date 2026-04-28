@@ -103,7 +103,7 @@ export default function ZapierWebhooksPage() {
           <p className="text-gray-500">Gestisci i webhook per l'integrazione con Zapier</p>
         </div>
         <Link href="/">
-          <Button variant="outline">Torna alla Home</Button>
+          <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white">Torna alla Home</Button>
         </Link>
       </div>
       

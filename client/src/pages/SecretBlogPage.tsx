@@ -337,8 +337,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                 <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
               </Button>
               <Button
-                variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                 onClick={() => setShowPreview(!showPreview)}
               >
                 <Eye className="w-4 h-4 mr-2" />

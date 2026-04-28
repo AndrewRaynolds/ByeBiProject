@@ -817,8 +817,7 @@ export default function TripPlanningForm() {
                     <div className="flex justify-between">
                       <Button 
                         type="button" 
-                        variant="outline"
-                        className="border border-gray-300 text-gray-700 font-medium py-2 px-6 rounded-lg hover:bg-gray-50"
+                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2 px-6 rounded-lg"
                         onClick={goToPreviousStep}
                       >
                         Back
@@ -929,8 +928,7 @@ export default function TripPlanningForm() {
                     <div className="flex justify-between">
                       <Button 
                         type="button" 
-                        variant="outline"
-                        className="border border-gray-300 text-gray-700 font-medium py-2 px-6 rounded-lg hover:bg-gray-50"
+                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2 px-6 rounded-lg"
                         onClick={goToPreviousStep}
                       >
                         Back

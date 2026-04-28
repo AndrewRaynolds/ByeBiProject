@@ -233,8 +233,7 @@ export default function CustomMerchandise() {
                   <div className="flex">
                     <Button 
                       type="button" 
-                      variant="outline"
-                      className="px-3 rounded-l-lg"
+                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-3 rounded-l-lg"
                       onClick={decrementQuantity}
                     >
                       <Minus className="h-4 w-4" />
@@ -249,8 +248,7 @@ export default function CustomMerchandise() {
                     />
                     <Button 
                       type="button" 
-                      variant="outline"
-                      className="px-3 rounded-r-lg"
+                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-3 rounded-r-lg"
                       onClick={incrementQuantity}
                     >
                       <Plus className="h-4 w-4" />
