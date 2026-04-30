@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye, LogIn } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -139,6 +140,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   const [step, setStep] = useState(1);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
   const [storyContent, setStoryContent] = useState("");
+  const [customTitle, setCustomTitle] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category | ''>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -146,6 +148,13 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   const isBride = brand === 'bride';
   const alias = useMemo(() => getAnonymousAlias(Math.floor(Math.random() * 8) + 1, brand), [brand]);
   const emoji = useMemo(() => getAvatarEmoji(Math.floor(Math.random() * 8) + 1, brand), [brand]);
+
+  const autoTitle = useMemo(() => {
+    const tagsText = selectedTags.length > 0 ? ` ${selectedTags.join(' ')}` : '';
+    return `${selectedDestination}: La storia di ${alias}${tagsText}`;
+  }, [selectedDestination, alias, selectedTags]);
+
+  const resolvedTitle = customTitle.trim() !== '' ? customTitle.trim() : autoTitle;
 
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';
@@ -161,6 +170,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
     setStep(1);
     setSelectedDestination("");
     setStoryContent("");
+    setCustomTitle("");
     setSelectedCategory('');
     setSelectedTags([]);
     setShowPreview(false);
@@ -168,9 +178,8 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const tagsText = selectedTags.length > 0 ? ` ${selectedTags.join(' ')}` : '';
       return apiRequest("POST", "/api/blog-posts", {
-        title: `${selectedDestination}: La storia di ${alias}${tagsText}`,
+        title: resolvedTitle,
         content: storyContent,
         image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80",
         isPremium: false,
@@ -279,6 +288,19 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
               value={storyContent}
               onChange={(e) => setStoryContent(e.target.value)}
             />
+            <div className="mb-4">
+              <label className="block text-gray-400 text-xs font-medium mb-1.5">
+                Titolo personalizzato <span className="text-gray-600">(facoltativo)</span>
+              </label>
+              <Input
+                placeholder={autoTitle}
+                className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                maxLength={100}
+              />
+              <p className="text-gray-600 text-[11px] mt-1">Se vuoto, verrà usato il titolo generato automaticamente.</p>
+            </div>
             <div className="flex gap-3">
               <Button variant="ghost" className="text-gray-400" onClick={() => setStep(1)}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
@@ -384,7 +406,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                       {selectedDestination && DESTINATIONS.find(d => d.value === selectedDestination)?.label}
                     </span>
                   </div>
-                  <p className="text-white text-sm font-bold mb-1">La tua storia da {selectedDestination}</p>
+                  <p className="text-white text-sm font-bold mb-1">{resolvedTitle}</p>
                   <p className="text-gray-400 text-xs line-clamp-2 mb-3">{storyContent}</p>
                   {selectedTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
