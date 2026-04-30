@@ -161,9 +161,29 @@ export default function SecretBlogPostPage() {
               )}
             </div>
 
-            <h1 className="text-2xl md:text-3xl font-bold text-white font-poppins leading-snug mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-white font-poppins leading-snug mb-4">
               {post.title}
             </h1>
+
+            {(() => {
+              const titleTags = (post.title.match(/#[\w-]+/g) ?? []);
+              return titleTags.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {titleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`text-xs px-2 py-1 rounded-full font-medium border ${
+                        isBride
+                          ? "bg-purple-800/30 text-purple-200 border-purple-500/20"
+                          : "bg-gray-800 text-gray-300 border-gray-700"
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null;
+            })()}
 
             <div className={`flex items-center gap-3 pb-6 mb-6 ${borderTop} pt-0`}>
               <div
