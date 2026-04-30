@@ -71,26 +71,40 @@ function PostGridSkeleton() {
   );
 }
 
+type CategoryFilter = 'sex' | 'drink' | 'weird' | null;
+
+const CATEGORY_FILTERS: { value: CategoryFilter; icon: string; label: string }[] = [
+  { value: null, icon: '', label: 'Tutte' },
+  { value: 'sex', icon: '🔞', label: 'Sex' },
+  { value: 'drink', icon: '🍺', label: 'Drink' },
+  { value: 'weird', icon: '🤪', label: 'Weird' },
+];
+
 interface PostGridProps {
   posts: BlogPost[];
   isPremium: boolean;
   brand: Brand;
   t: (k: string) => string;
   filterLocation: string | null;
+  filterCategory: CategoryFilter;
 }
 
-function PostGrid({ posts, isPremium, brand, t, filterLocation }: PostGridProps) {
-  const filtered = filterLocation
-    ? posts.filter(p => p.location === filterLocation)
-    : posts;
+function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }: PostGridProps) {
+  const filtered = posts.filter(p => {
+    const locationMatch = filterLocation ? p.location === filterLocation : true;
+    const categoryMatch = filterCategory
+      ? p.category === filterCategory || !p.category
+      : true;
+    return locationMatch && categoryMatch;
+  });
 
   const CardComponent = brand === 'bride' ? BrideCard : BroCard;
 
   if (filtered.length === 0) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500 text-lg">Nessuna storia trovata per questa destinazione.</p>
-        <p className="text-gray-600 text-sm mt-1">Prova a selezionare un'altra città.</p>
+        <p className="text-gray-500 text-lg">Nessuna storia trovata per questi filtri.</p>
+        <p className="text-gray-600 text-sm mt-1">Prova a selezionare un'altra combinazione.</p>
       </div>
     );
   }
@@ -405,6 +419,7 @@ export default function SecretBlogPage() {
   const isBride = brand === 'bride';
 
   const [filterLocation, setFilterLocation] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<CategoryFilter>(null);
 
   const { data: blogPosts, isLoading, error } = useQuery<BlogPost[]>({
     queryKey: ["/api/blog-posts"],
@@ -505,34 +520,52 @@ export default function SecretBlogPage() {
 
             </div>
 
-            {availableLocations.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-8">
-                <button
-                  onClick={() => setFilterLocation(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all
-                    ${!filterLocation
-                      ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
-                      : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                >
-                  Tutte
-                </button>
-                {availableLocations.map(loc => {
-                  const destObj = DESTINATIONS.find(d => d.value === loc);
-                  return (
-                    <button
-                      key={loc}
-                      onClick={() => setFilterLocation(filterLocation === loc ? null : loc)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all
-                        ${filterLocation === loc
-                          ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
-                          : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                    >
-                      {destObj?.label ?? loc}
-                    </button>
-                  );
-                })}
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              {availableLocations.length > 0 && (
+                <div className="flex flex-wrap gap-2 flex-1">
+                  <button
+                    onClick={() => setFilterLocation(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                      ${!filterLocation
+                        ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                        : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                  >
+                    Tutte
+                  </button>
+                  {availableLocations.map(loc => {
+                    const destObj = DESTINATIONS.find(d => d.value === loc);
+                    return (
+                      <button
+                        key={loc}
+                        onClick={() => setFilterLocation(filterLocation === loc ? null : loc)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                          ${filterLocation === loc
+                            ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                            : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                      >
+                        {destObj?.label ?? loc}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex gap-2 shrink-0">
+                {CATEGORY_FILTERS.map(cat => (
+                  <button
+                    key={String(cat.value)}
+                    onClick={() => setFilterCategory(filterCategory === cat.value ? null : cat.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5
+                      ${filterCategory === cat.value
+                        ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                        : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                  >
+                    {cat.icon && <span>{cat.icon}</span>}
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
             <TabsContent value="popular">
               {isLoading ? (
@@ -548,6 +581,7 @@ export default function SecretBlogPage() {
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}
+                  filterCategory={filterCategory}
                 />
               )}
             </TabsContent>
@@ -566,6 +600,7 @@ export default function SecretBlogPage() {
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}
+                  filterCategory={filterCategory}
                 />
               )}
             </TabsContent>
