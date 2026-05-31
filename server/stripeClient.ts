@@ -2,7 +2,24 @@ import Stripe from 'stripe';
 
 let connectionSettings: any;
 
+export function hasStripeCredentials() {
+  return Boolean(
+    process.env.STRIPE_SECRET_KEY &&
+      (process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLISHABLE_KEY)
+  );
+}
+
 async function getCredentials() {
+  const envSecretKey = process.env.STRIPE_SECRET_KEY;
+  const envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
+  if (envSecretKey && envPublishableKey) {
+    return {
+      publishableKey: envPublishableKey,
+      secretKey: envSecretKey,
+    };
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY

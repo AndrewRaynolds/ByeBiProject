@@ -4,7 +4,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import amadeusDebugRoute from "./routes/amadeus-debug";
 import { runMigrations } from 'stripe-replit-sync';
-import { getStripeSync } from './stripeClient';
+import { getStripeSync, hasStripeCredentials } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 
 const app = express();
@@ -76,6 +76,11 @@ async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.warn('DATABASE_URL not set - Stripe sync disabled');
+    return;
+  }
+
+  if (!hasStripeCredentials() && !process.env.REPL_IDENTITY && !process.env.WEB_REPL_RENEWAL) {
+    console.warn('Stripe credentials not set - Stripe sync disabled');
     return;
   }
 

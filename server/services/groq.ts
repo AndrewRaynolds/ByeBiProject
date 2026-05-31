@@ -26,13 +26,14 @@ interface ChatContext {
   originCityName?: string;
 
   flights?: {
-   .
+    id?: number;
     airline: string;
     departure_at: string;
     return_at: string;
     flight_number: number;
     origin?: string;
     destination?: string;
+    checkoutUrl?: string;
   }[];
 
   hotels?: {
@@ -458,4 +459,3 @@ function generateFollowUpMessage(
 
   return "Got it! What else can you tell me about your trip plans?";
 }
-
