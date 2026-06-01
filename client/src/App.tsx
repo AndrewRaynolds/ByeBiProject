@@ -17,11 +17,10 @@ import DestinationsPage from "@/pages/DestinationsPage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
 import OneClickPackagePage from "@/pages/OneClickPackagePage";
 import ZapierWebhooksPage from "@/pages/ZapierWebhooksPage";
-import ImageTestPage from "@/pages/ImageTestPage";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
-import { lazy, Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import PerformanceOptimizer from "@/lib/performance-optimizer";
 import BrandSelection from "@/components/BrandSelection";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -63,7 +62,6 @@ function Router() {
       <Route path="/splitta-bro" component={SplittaPage} />
       <Route path="/splitta-bride" component={SplittaPage} />
       <Route path="/one-click-package" component={OneClickPackagePage} />
-      <Route path="/image-test" component={ImageTestPage} />
       <Route path="/zapier-webhooks" component={ZapierWebhooksPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

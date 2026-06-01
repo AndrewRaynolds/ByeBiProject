@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Experience } from "@shared/schema";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 
 type Brand = 'bro' | 'bride';
@@ -73,7 +71,7 @@ export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps)
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t('experiences.exploreTitle')}</h2>
-            <p className="text-red-500">Error loading experiences. Please try again later.</p>
+            <p className="text-red-500">{t('experiences.errorLoading')}</p>
           </div>
         </div>
       </section>
