@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import ReactCountryFlag from "react-country-flag";
+import { buildAviasalesUrl, getCityIata } from "@/lib/aviasales";
 
 const formSchema = z.object({
   name: z.string().min(2, "Trip name must be at least 2 characters"),
@@ -271,6 +272,15 @@ export default function TripPlanningForm() {
       };
       
       console.log("Sending itinerary request:", JSON.stringify(itineraryRequest));
+      const originIata = getCityIata(data.departureCity) || "FCO";
+      const destIata = getCityIata(primaryDestination);
+      const aviasalesCheckoutUrl = buildAviasalesUrl({
+        originIata,
+        destinationIata: destIata || primaryDestination.substring(0, 3).toUpperCase(),
+        departDate: data.startDate,
+        returnDate: data.endDate,
+        adults: data.participants,
+      }) || "";
       
       try {
         // Mostra un toast per informare l'utente che l'IA sta generando l'itinerario
@@ -290,7 +300,7 @@ export default function TripPlanningForm() {
           startDate: data.startDate,
           endDate: data.endDate,
           people: data.participants,
-          aviasalesCheckoutUrl: '',
+          aviasalesCheckoutUrl,
           flightLabel: `${data.departureCity || 'Italia'} → ${primaryDestination}`,
           itineraryData: result
         }));
@@ -308,8 +318,7 @@ export default function TripPlanningForm() {
           });
         }
         
-        // Navigate to unified itinerary page
-        setLocation(`/itinerary`);
+        setLocation(`/checkout`);
       } catch (err) {
         console.error("Error generating AI itinerary:", err);
         
@@ -342,7 +351,7 @@ export default function TripPlanningForm() {
           startDate: data.startDate,
           endDate: data.endDate,
           people: data.participants,
-          aviasalesCheckoutUrl: '',
+          aviasalesCheckoutUrl,
           flightLabel: `${data.departureCity || 'Italia'} → ${primaryDestination}`,
           itineraryData: {
             title: "Bachelor Party in " + primaryDestination,
@@ -354,7 +363,7 @@ export default function TripPlanningForm() {
           }
         }));
         
-        setLocation(`/itinerary`);
+        setLocation(`/checkout`);
       }
     } catch (error) {
       toast({

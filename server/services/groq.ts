@@ -135,24 +135,6 @@ const TRIP_TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "select_flight",
-      description:
-        "Select a specific flight when the user chooses from the available options",
-      parameters: {
-        type: "object",
-        properties: {
-          flight_number: {
-            type: "integer",
-            description: "The flight option number (1, 2, or 3)",
-          },
-        },
-        required: ["flight_number"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "unlock_checkout",
       description:
         "Unlock the checkout button when the user confirms they want to proceed with booking",
@@ -175,7 +157,7 @@ Before searching for flights, you MUST have ALL of the following:
 - return date
 - number of participants
 
-If the user provides multiple data points in one message, process ALL of them at once by calling the appropriate tools. You don't need to ask one question at a time. If some are still missing, ask for them naturally in your response. Once all information is collected, proceed to search and show flights immediately.
+If the user provides multiple data points in one message, process ALL of them at once by calling the appropriate tools. You don't need to ask one question at a time. If some are still missing, ask for them naturally in your response. Once all information is collected, send the user to checkout.
 
 AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
@@ -184,8 +166,7 @@ TOOL USAGE:
 - Call set_origin when you learn the departure city
 - Call set_dates when you learn travel dates (convert to YYYY-MM-DD format)
 - Call set_participants when you learn the group size
-- Call select_flight when the user chooses a flight option
-- Call unlock_checkout when the user confirms they want to book
+- Call unlock_checkout as soon as destination, origin, dates and group size are collected
 
 You can call MULTIPLE tools in a single response if the user provides multiple pieces of information.
 
@@ -193,18 +174,19 @@ PROACTIVE FOLLOW-UPS:
 After processing what the user provides, ALWAYS respond with text AND check which required data points are still missing. Ask about them naturally. Be conversational - don't just list what's missing. For example:
 - If you have destination and dates but no origin: "Great choice! Where will you be flying from?"
 - If you only have destination: "Sounds exciting! When are you thinking of going, and how many people will be joining?"
-- If everything is ready: Proceed to show flights immediately.
+- If everything is ready: tell them you are taking them to checkout, where they can choose the actual flight on Aviasales.
 
 BEHAVIOR:
 - ALWAYS include a text message in your response - never just tool calls alone
 - Keep responses concise (2-3 sentences max)
 - Professional and friendly tone
-- Focus ONLY on flights - do NOT suggest experiences, activities, or hotels
+- Focus ONLY on collecting departure city, destination, dates and participants - do NOT suggest experiences, activities, hotels, or specific flight options
 - When the user mentions a new destination, start fresh
 
 CHECKOUT FLOW:
-- When flights are shown and the user confirms (yes, ok, sure, confirm, proceed, perfect, let's do it, etc.), ALWAYS call unlock_checkout immediately
+- When destination, origin, dates and group size are available, ALWAYS call unlock_checkout immediately
 - NEVER confirm bookings as if they were completed - flights go through external checkout
+- NEVER list 3 flight options in chat. The user chooses flights directly on Aviasales from checkout.
 
 BOOKING INFO:
 - Flights use external affiliate checkout
@@ -241,37 +223,6 @@ function buildContextualPrompt(context: ChatContext): string {
       if (context.tripDetails.adventureType)
         contextualPrompt += `\n- Type: ${context.tripDetails.adventureType}`;
     }
-  }
-
-  if (context.flights && context.flights.length > 0) {
-    const originCity = context.originCityName || "Rome";
-    contextualPrompt += `\n\nAVAILABLE REAL FLIGHTS (from ${originCity} to ${context.selectedDestination}):`;
-    contextualPrompt += `\nThese are REAL flights with updated prices. Present them to the user and ask which one they prefer.\n`;
-    context.flights.forEach((f, idx) => {
-      const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-      const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-      const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      contextualPrompt += `${idx + 1}. Departure: ${depDate} at ${depTime}\n`;
-      contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
-      contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
-    });
-    contextualPrompt += `\nWhen the user chooses a flight (e.g., "the 2nd one", "I'll take the first", "flight 3"), call select_flight with the flight number.\n`;
   }
 
   return contextualPrompt;
@@ -438,7 +389,7 @@ function generateFollowUpMessage(
 
   // Generate contextual follow-up
   if (hasDestination && hasDates && hasOrigin && hasParticipants) {
-    return `Perfect! I've got all the details for your trip to ${destination}. Let me find the best flights for you!`;
+    return `Perfect! I've got all the details for your trip to ${destination}. I'll take you to checkout so you can choose the flight directly on Aviasales.`;
   }
 
   if (hasDestination && hasDates && hasOrigin) {

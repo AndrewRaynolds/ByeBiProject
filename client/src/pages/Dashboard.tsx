@@ -9,12 +9,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, Map, GlassWater, ListChecks, Shirt, Crown } from "lucide-react";
+import { Calendar, Map, GlassWater, ListChecks, Shirt, User } from "lucide-react";
 import { format } from "date-fns";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -40,38 +42,26 @@ export default function Dashboard() {
       <main className="flex-grow py-10">
         <div className="container mx-auto px-4">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold font-poppins mb-2">Welcome, {user?.firstName || user?.username}!</h1>
-            <p className="text-gray-600">Manage your bachelor party plans and preferences.</p>
+            <h1 className="text-3xl font-bold font-poppins mb-2">
+              {t('dashboard.welcome', { name: user?.firstName || user?.username || '' })}
+            </h1>
+            <p className="text-gray-600">{t('dashboard.subtitle')}</p>
           </div>
           
           <div className="flex items-center mb-8">
             <div className="bg-primary text-white p-2 rounded-full mr-4">
-              {user?.isPremium && <Crown className="h-6 w-6" />}
+              <User className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="font-bold text-lg">
-                {user?.isPremium ? 'Premium Member' : 'Free Membership'}
-              </h2>
-              <p className="text-sm text-gray-600">
-                {user?.isPremium 
-                  ? 'You have access to all premium features' 
-                  : 'Upgrade to access premium features'}
-              </p>
+              <h2 className="font-bold text-lg">{t('dashboard.account')}</h2>
+              <p className="text-sm text-gray-600">{t('dashboard.accountDesc')}</p>
             </div>
-            {!user?.isPremium && (
-              <Button 
-                className="ml-auto bg-primary hover:bg-accent"
-                onClick={() => setLocation("/#premium-features")}
-              >
-                Upgrade Now
-              </Button>
-            )}
           </div>
           
           <Tabs defaultValue="trips" className="w-full">
             <TabsList className="mb-6">
-              <TabsTrigger value="trips"><ListChecks className="mr-2 h-4 w-4" /> My Trips</TabsTrigger>
-              <TabsTrigger value="merchandise"><Shirt className="mr-2 h-4 w-4" /> My Merchandise</TabsTrigger>
+              <TabsTrigger value="trips"><ListChecks className="mr-2 h-4 w-4" /> {t('dashboard.myTrips')}</TabsTrigger>
+              <TabsTrigger value="merchandise"><Shirt className="mr-2 h-4 w-4" /> {t('dashboard.myMerchandise')}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="trips">
@@ -98,7 +88,7 @@ export default function Dashboard() {
                 </div>
               ) : error ? (
                 <div className="text-center p-10">
-                  <p className="text-red-500">Error loading your trips. Please try again later.</p>
+                  <p className="text-red-500">{t('dashboard.errorTrips')}</p>
                 </div>
               ) : trips && trips.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -122,25 +112,37 @@ export default function Dashboard() {
                         <div className="space-y-3">
                           <div className="flex items-center text-sm">
                             <Map className="mr-2 h-4 w-4 text-primary" />
-                            <span>Destinations: {trip.destinations.join(", ")}</span>
+                            <span>{t('dashboard.destinations')}: {trip.destinations.join(", ")}</span>
                           </div>
                           <div className="flex items-center text-sm">
                             <GlassWater className="mr-2 h-4 w-4 text-primary" />
-                            <span>Activities: {trip.activities.slice(0, 2).join(", ")}
+                            <span>{t('dashboard.activities')}: {trip.activities.slice(0, 2).join(", ")}
                               {trip.activities.length > 2 ? ` and ${trip.activities.length - 2} more` : ""}
                             </span>
                           </div>
                           <div className="text-sm">
-                            <span className="font-semibold">Budget:</span> €{trip.budget} per person
+                            <span className="font-semibold">{t('dashboard.budget')}:</span> €{trip.budget} {t('dashboard.perPerson')}
                           </div>
                         </div>
                       </CardContent>
                       <CardFooter>
                         <Button 
                           className="w-full bg-primary hover:bg-accent"
-                          onClick={() => setLocation(`/itinerary/${trip.id}`)}
+                          onClick={() => {
+                            const destination = trip.destinations?.[0] || "";
+                            localStorage.setItem("currentItinerary", JSON.stringify({
+                              destination,
+                              origin: "Italia",
+                              startDate: trip.startDate,
+                              endDate: trip.endDate,
+                              people: trip.participants,
+                              aviasalesCheckoutUrl: "",
+                              flightLabel: `Italia → ${destination}`,
+                            }));
+                            setLocation("/checkout");
+                          }}
                         >
-                          View Itineraries
+                          {t('dashboard.openCheckout')}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -148,8 +150,8 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="text-center p-10 border-2 border-dashed border-gray-300 rounded-xl">
-                  <h3 className="text-xl font-bold mb-2">No Trips Planned Yet</h3>
-                  <p className="text-gray-600 mb-4">Start planning your unforgettable bachelor party experience!</p>
+                  <h3 className="text-xl font-bold mb-2">{t('dashboard.noTrips')}</h3>
+                  <p className="text-gray-600 mb-4">{t('dashboard.noTripsDesc')}</p>
                   <Button 
                     className="bg-primary hover:bg-accent"
                     onClick={() => setLocation("/#trip-planning")}
@@ -162,8 +164,8 @@ export default function Dashboard() {
             
             <TabsContent value="merchandise">
               <div className="text-center p-10 border-2 border-dashed border-gray-300 rounded-xl">
-                <h3 className="text-xl font-bold mb-2">No Merchandise Orders Yet</h3>
-                <p className="text-gray-600 mb-4">Customize t-shirts and other gear for your bachelor party!</p>
+                <h3 className="text-xl font-bold mb-2">{t('dashboard.noMerch')}</h3>
+                <p className="text-gray-600 mb-4">{t('dashboard.noMerchDesc')}</p>
                 <Button 
                   className="bg-primary hover:bg-accent"
                   onClick={() => setLocation("/merchandise")}

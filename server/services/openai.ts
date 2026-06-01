@@ -404,7 +404,6 @@ export async function executeToolCall(
 ): Promise<Record<string, unknown>> {
   switch (name) {
     case "search_flights": {
-      const { searchFlights } = await import("./amadeus-flights");
       const { cityToIata } = await import("./cityMapping");
 
       // Helper to extract IATA code from strings like "Fiumicino (FCO)" or just use cityToIata
@@ -435,7 +434,7 @@ export async function executeToolCall(
       const departureDate = typeof args.departure_date === "string" ? args.departure_date : "";
       const returnDate = typeof args.return_date === "string" ? args.return_date : undefined;
 
-      console.log("🔍 search_flights tool called with:", {
+      console.log("🔍 prepare Aviasales checkout called with:", {
         originCity,
         destCity,
         originIata,
@@ -445,49 +444,19 @@ export async function executeToolCall(
         passengers: numPassengers
       });
 
-      try {
-        const flightResults = await searchFlights({
-          originCode: originIata,
-          destinationCode: destIata,
-          departureDate,
-          returnDate,
-          adults: numPassengers,
-          currency: "EUR"
-        });
+      const depDay = departureDate.slice(8, 10);
+      const depMonth = departureDate.slice(5, 7);
+      const retDate = returnDate || departureDate;
+      const retDay = retDate.slice(8, 10);
+      const retMonth = retDate.slice(5, 7);
+      const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numPassengers}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
 
-        console.log("📦 Amadeus returned", flightResults.length, "flights");
-
-        // Transform to simplified format for OpenAI + add checkout URLs
-        const flights = flightResults.slice(0, 5).map((f) => {
-          const depDate = f.outbound[0]?.departure.at?.slice(0, 10) || departureDate;
-          const retDate = f.inbound?.[0]?.departure.at?.slice(0, 10) || returnDate || depDate;
-          const depDay = depDate.slice(8, 10);
-          const depMonth = depDate.slice(5, 7);
-          const retDay = retDate.slice(8, 10);
-          const retMonth = retDate.slice(5, 7);
-
-          // Generate checkout URL for Aviasales booking
-          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numPassengers}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
-
-          return {
-            airline: f.airlines.join(", "),
-            price: f.price,
-            currency: f.currency,
-            departure_at: f.outbound[0]?.departure.at,
-            return_at: f.inbound?.[0]?.departure.at,
-            stops: f.stops,
-            duration: f.totalDuration,
-            checkoutUrl
-          };
-        });
-
-        console.log("✅ Transformed flights:", JSON.stringify(flights, null, 2));
-
-        return { flights, origin: originIata, destination: destIata };
-      } catch (error) {
-        console.error("❌ Flight search error:", error);
-        return { error: "Failed to search flights. Please try again.", flights: [] };
-      }
+      return {
+        checkoutReady: true,
+        checkoutUrl,
+        origin: originIata,
+        destination: destIata,
+      };
     }
 
     case "search_hotels": {
@@ -546,7 +515,7 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       name: "search_flights",
       strict: true,
       description:
-        "Search for available flights. Call this when you have origin, destination, dates, and passenger count.",
+        "Prepare the trip checkout link. Call this when you have origin, destination, dates, and passenger count.",
       parameters: {
         type: "object",
         properties: {
@@ -613,7 +582,7 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "select_flight",
       description:
-        "Select a specific flight when the user chooses from the available options",
+        "Legacy fallback only. The user normally chooses flights directly on Aviasales.",
       parameters: {
         type: "object",
         properties: {
@@ -651,18 +620,18 @@ RULES:
 - NEVER assume departure city. Always ask if not stated.
 - NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
 - Ask only for missing info: departure city, destination, dates, passengers. Keep it short and natural.
-- As soon as you have origin, destination, dates and passengers: call search_flights IMMEDIATELY. Do NOT confirm details, do NOT say "let me check", do NOT output any text — just call the tool silently.
+- As soon as you have origin, destination, dates and passengers: call search_flights IMMEDIATELY. Do NOT ask the user to choose between flight options.
 - NEVER output text alongside a tool call. When calling a tool, output ONLY the tool call with zero accompanying text.
 - Concise: 2-3 sentences max. Friendly startup tone. No jargon.
-- Focus ONLY on flights. No activities, experiences, or hotels.
+- Focus ONLY on collecting departure city, destination, dates, and passengers. No activities, experiences, or hotels.
 
 TOOLS:
-- search_flights: needs origin, destination, departure_date, return_date, passengers. All dates MUST be today or in the future (YYYY-MM-DD).
+- search_flights: prepares the checkout link. Needs origin, destination, departure_date, return_date, passengers. All dates MUST be today or in the future (YYYY-MM-DD).
 - search_hotels: needs destination, check_in_date, check_out_date, guests.
-- select_flight: when user picks a flight option.
+- select_flight: legacy fallback only.
 - unlock_checkout: when user confirms booking. Flights go through external checkout — never say booking is completed.
 
-When showing flights, list top options (1,2,3) with date/time, airline, flight number. Ask which one they prefer.`;
+Never list 3 flight options in chat. The user will choose the actual flight directly on Aviasales from checkout.`;
 })();
 
 const BYEBRO_SYSTEM_PROMPT = `You are the official assistant of ByeBro, part of the BYEBI app. Your task is to help plan bachelor party trips by finding REAL FLIGHTS. ALWAYS respond in the language the user writes in.
@@ -970,8 +939,8 @@ interface LocalStrings {
 
 const STRINGS: Record<string, LocalStrings> = {
   it: {
-    noFlightsError: (o, d) => `Non sono riuscito a trovare voli da ${o} a ${d}. Vuoi provare date diverse?`,
-    noFlights: (o, d) => `Nessun volo disponibile da ${o} a ${d} per quelle date. Prova con date diverse o un'altra destinazione?`,
+    noFlightsError: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
+    noFlights: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
     flightsHeader: (o, d) => `Ecco i migliori voli da **${o}** a **${d}**:\n\n`,
     direct: "diretto",
     stop: (n) => `${n} scal${n > 1 ? "i" : "o"}`,
@@ -983,8 +952,8 @@ const STRINGS: Record<string, LocalStrings> = {
     checkout: "Ottimo! Ti porto al checkout per completare la prenotazione.",
   },
   en: {
-    noFlightsError: (o, d) => `Couldn't find flights from ${o} to ${d}. Want to try different dates?`,
-    noFlights: (o, d) => `No flights available from ${o} to ${d} for those dates. Try different dates or another destination?`,
+    noFlightsError: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
+    noFlights: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
     flightsHeader: (o, d) => `Here are the best flights from **${o}** to **${d}**:\n\n`,
     direct: "direct",
     stop: (n) => `${n} stop${n > 1 ? "s" : ""}`,
@@ -996,8 +965,8 @@ const STRINGS: Record<string, LocalStrings> = {
     checkout: "Taking you to checkout to complete the booking.",
   },
   es: {
-    noFlightsError: (o, d) => `No encontré vuelos de ${o} a ${d}. ¿Quieres probar otras fechas?`,
-    noFlights: (o, d) => `No hay vuelos disponibles de ${o} a ${d} para esas fechas. ¿Pruebas con otras fechas u otro destino?`,
+    noFlightsError: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
+    noFlights: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
     flightsHeader: (o, d) => `Aquí están los mejores vuelos de **${o}** a **${d}**:\n\n`,
     direct: "directo",
     stop: (n) => `${n} escala${n > 1 ? "s" : ""}`,
@@ -1021,36 +990,9 @@ function generateLocalToolResponse(
   for (const { name, result, args } of toolResults) {
     switch (name) {
       case "search_flights": {
-        const flights = result.flights as any[] | undefined;
         const origin = (args.origin as string) || context.originCityName || "";
         const destination = (args.destination as string) || context.selectedDestination || "";
-        const originalPassengers = args._originalPassengers as number | undefined;
-
-        if (!flights || flights.length === 0) {
-          return result.error ? s.noFlightsError(origin, destination) : s.noFlights(origin, destination);
-        }
-
-        const locale = lang === "it" ? "it-IT" : lang === "es" ? "es-ES" : "en-US";
-        const formatDT = (iso: string) => {
-          const d = new Date(iso);
-          return d.toLocaleDateString(locale, { day: "numeric", month: "long" }) +
-            " " + d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-        };
-
-        let msg = s.flightsHeader(origin, destination);
-        if (originalPassengers && originalPassengers > 9) {
-          msg += s.perPersonNote(originalPassengers);
-        }
-        flights.slice(0, 3).forEach((f: any, idx: number) => {
-          const dep = f.departure_at ? formatDT(f.departure_at) : "N/A";
-          const ret = f.return_at ? formatDT(f.return_at) : "N/A";
-          const stopsLabel = f.stops > 0 ? ` (${s.stop(f.stops)})` : ` (${s.direct})`;
-          const flightNum = f.flight_number ? ` #${f.flight_number}` : "";
-          msg += `**${idx + 1}.** ${f.airline}${flightNum}${stopsLabel} — ${f.price}€\n`;
-          msg += `   ${s.dep}: ${dep} / ${s.ret}: ${ret}\n\n`;
-        });
-        msg += s.whichOne;
-        return msg;
+        return result.error ? s.noFlightsError(origin, destination) : s.noFlights(origin, destination);
       }
 
       case "select_flight":
@@ -1247,4 +1189,3 @@ export async function* streamOpenAIChatCompletionWithTools(
     };
   }
 }
-

@@ -3,6 +3,7 @@ import { Experience } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 type Brand = 'bro' | 'bride';
 
@@ -12,12 +13,12 @@ interface ExperienceTypesProps {
 
 const COPY = {
   bro: {
-    title: "Choose Your Experience",
-    subtitle: "From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelor party."
+    titleKey: "experiences.exploreTitle",
+    subtitleKey: "experiences.exploreSubtitleBro"
   },
   bride: {
-    title: "Choose Your Experience",
-    subtitle: "From adrenaline-pumping adventures to relaxing getaways, we've got the perfect experience for every bachelorette party."
+    titleKey: "experiences.exploreTitle",
+    subtitleKey: "experiences.exploreSubtitleBride"
   }
 };
 
@@ -29,6 +30,7 @@ const EXPERIENCE_NAME_MAP: Record<string, string> = {
 };
 
 export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps) {
+  const { t } = useTranslation();
   const { data: experiences, isLoading, error } = useQuery<Experience[]>({
     queryKey: ["/api/experiences"],
   });
@@ -70,7 +72,7 @@ export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps)
       <section className="py-16 bg-black">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">Choose Your Experience</h2>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t('experiences.exploreTitle')}</h2>
             <p className="text-red-500">Error loading experiences. Please try again later.</p>
           </div>
         </div>
@@ -82,8 +84,8 @@ export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps)
     <section className="py-16 bg-black">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{copy.title}</h2>
-          <p className="text-gray-300 max-w-3xl mx-auto">{copy.subtitle}</p>
+          <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t(copy.titleKey)}</h2>
+          <p className="text-gray-300 max-w-3xl mx-auto">{t(copy.subtitleKey)}</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

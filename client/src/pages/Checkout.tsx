@@ -11,7 +11,7 @@ import { useTranslation } from '@/contexts/LanguageContext';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
- * Must match Itinerary.tsx's TripContext
+ * Populated by chatbot/form, read directly by Checkout
  */
 interface TripContext {
   origin: string;
@@ -128,7 +128,6 @@ export default function Checkout() {
       
       const response = await fetch(`/api/hotels/search?${params}`);
 
-      // Distingui "nessun risultato" (200 OK, array vuoto) da "errore server" (5xx)
       if (!response.ok) {
         const errBody = await response.json().catch(() => ({}));
         throw new Error(errBody.error || t('checkout.hotelSearchError'));
@@ -150,8 +149,7 @@ export default function Checkout() {
       if (result.hotels && result.hotels.length > 0) {
         setHotels(result.hotels.slice(0, 5));
       } else {
-        // 200 OK ma nessun hotel trovato: messaggio specifico, non "API non disponibile"
-        setHotelError(t('checkout.noHotelsForDates'));
+        setHotelError(result.fallbackReason || t('checkout.noHotelsForDates'));
       }
     } catch (error: any) {
       console.error('Hotel fetch error:', error);
@@ -165,6 +163,11 @@ export default function Checkout() {
     const hotelName = encodeURIComponent(hotel.name);
     const city = encodeURIComponent(tripContext?.destination || '');
     return `https://www.booking.com/searchresults.html?ss=${hotelName}+${city}&checkin=${hotel.checkInDate}&checkout=${hotel.checkOutDate}&group_adults=${tripContext?.people || 2}`;
+  };
+
+  const getDestinationBookingUrl = (): string => {
+    const city = encodeURIComponent(tripContext?.destination || '');
+    return `https://www.booking.com/searchresults.html?ss=${city}&checkin=${tripContext?.startDate || ''}&checkout=${tripContext?.endDate || ''}&group_adults=${tripContext?.people || 2}`;
   };
 
   if (isLoading) {
@@ -312,6 +315,14 @@ export default function Checkout() {
                   <div>
                     <p className="text-yellow-200 font-medium">{t('checkout.noHotels')}</p>
                     <p className="text-yellow-200/70 text-sm mt-1">{hotelError}</p>
+                    <Button
+                      className="mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                      onClick={() => window.open(getDestinationBookingUrl(), '_blank')}
+                      data-testid="button-search-hotels-booking"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      {t('checkout.searchHotelsBooking')}
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -98,7 +98,7 @@ interface PrintfulRecipient {
 
 async function printfulFetch(endpoint: string, options: RequestInit = {}) {
   const apiKey = process.env.PRINTFUL_API_KEY;
-  if (!apiKey) {
+  if (!apiKey || apiKey.trim() === "...") {
     throw new Error("PRINTFUL_API_KEY is not configured");
   }
 
