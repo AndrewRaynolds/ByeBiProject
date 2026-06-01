@@ -137,10 +137,6 @@ export default function SecretBlogPostPage() {
           {isBride && (
             <div className="h-[3px] bg-gradient-to-r from-purple-600 to-pink-500" />
           )}
-          {!isBride && post.isPremium && (
-            <div className="h-[3px] bg-gradient-to-r from-red-700 via-red-500 to-red-700" />
-          )}
-
           <div className="p-8">
             <div className="flex flex-wrap items-center gap-2 mb-6">
               {post.category && (
@@ -152,11 +148,6 @@ export default function SecretBlogPostPage() {
                 <span className="flex items-center gap-1 text-sm px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white font-medium">
                   <MapPin className="w-3 h-3" />
                   {locationLabel}
-                </span>
-              )}
-              {post.isPremium && (
-                <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold border border-yellow-500/30">
-                  Premium
                 </span>
               )}
             </div>

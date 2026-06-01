@@ -2,10 +2,14 @@ import Stripe from 'stripe';
 
 let connectionSettings: any;
 
+function hasRealValue(value: string | undefined) {
+  return Boolean(value && value.trim() !== "...");
+}
+
 export function hasStripeCredentials() {
   return Boolean(
-    process.env.STRIPE_SECRET_KEY &&
-      (process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLISHABLE_KEY)
+    hasRealValue(process.env.STRIPE_SECRET_KEY) &&
+      (hasRealValue(process.env.STRIPE_PUBLISHABLE_KEY) || hasRealValue(process.env.VITE_STRIPE_PUBLISHABLE_KEY))
   );
 }
 
@@ -13,7 +17,7 @@ async function getCredentials() {
   const envSecretKey = process.env.STRIPE_SECRET_KEY;
   const envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
-  if (envSecretKey && envPublishableKey) {
+  if (hasRealValue(envSecretKey) && hasRealValue(envPublishableKey)) {
     return {
       publishableKey: envPublishableKey,
       secretKey: envSecretKey,

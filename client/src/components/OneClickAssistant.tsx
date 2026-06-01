@@ -926,8 +926,18 @@ export default function OneClickAssistant() {
         description: "Il tuo itinerario personalizzato è pronto.",
       });
 
-      // Navigate to itinerary page with the generated ID
-      window.location.href = `/itinerary/${itinerary.id}`;
+      localStorage.setItem("currentItinerary", JSON.stringify({
+        destination: selectedDestination,
+        origin: "Italia",
+        startDate: tripDetails.startDate,
+        endDate: tripDetails.endDate,
+        people: tripDetails.people,
+        aviasalesCheckoutUrl: "",
+        flightLabel: `Italia → ${selectedDestination}`,
+        itineraryData: itinerary,
+      }));
+
+      window.location.href = "/checkout";
     } catch (error) {
       console.error("Error generating itinerary:", error);
       toast({

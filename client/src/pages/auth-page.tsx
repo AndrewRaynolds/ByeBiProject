@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const loginSchema = z.object({
   email: z.string().email("Email non valida"),
@@ -36,6 +37,7 @@ export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (user) {
@@ -80,13 +82,13 @@ export default function AuthPage() {
         <Button variant="ghost" asChild className="absolute top-4 left-4 text-gray-400 hover:text-white hover:bg-gray-800">
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t('auth.back')}
           </Link>
         </Button>
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h2 className="mt-6 text-3xl font-bold text-white">
-              Welcome to <span className="text-red-600">Bye</span>Bro
+              {t('auth.welcomeTo')} <span className="text-red-600">Bye</span>Bro
             </h2>
             <p className="mt-2 text-sm text-gray-400">
               One more Night, no more rights!
@@ -95,8 +97,8 @@ export default function AuthPage() {
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="mt-8">
             <TabsList className="grid w-full grid-cols-2 bg-gray-900">
-              <TabsTrigger value="login" className="text-white data-[state=active]:bg-red-600">Login</TabsTrigger>
-              <TabsTrigger value="register" className="text-white data-[state=active]:bg-red-600">Sign Up</TabsTrigger>
+              <TabsTrigger value="login" className="text-white data-[state=active]:bg-red-600">{t('auth.login')}</TabsTrigger>
+              <TabsTrigger value="register" className="text-white data-[state=active]:bg-red-600">{t('auth.signup')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login" className="mt-6">
@@ -121,7 +123,7 @@ export default function AuthPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>{t('auth.password')}</FormLabel>
                         <FormControl>
                           <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
@@ -138,10 +140,10 @@ export default function AuthPage() {
                     {loginMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Accesso in corso...
+                        {t('auth.loggingIn')}
                       </>
                     ) : (
-                      "Login"
+                      t('auth.login')
                     )}
                   </Button>
                 </form>
@@ -170,7 +172,7 @@ export default function AuthPage() {
                     name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Username (opzionale)</FormLabel>
+                        <FormLabel>{t('auth.usernameOptional')}</FormLabel>
                         <FormControl>
                           <Input placeholder="username" {...field} />
                         </FormControl>
@@ -184,7 +186,7 @@ export default function AuthPage() {
                     name="fullName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome completo (opzionale)</FormLabel>
+                        <FormLabel>{t('auth.fullNameOptional')}</FormLabel>
                         <FormControl>
                           <Input placeholder="Mario Rossi" {...field} />
                         </FormControl>
@@ -198,7 +200,7 @@ export default function AuthPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>{t('auth.password')}</FormLabel>
                         <FormControl>
                           <Input type="password" placeholder="••••••••" {...field} />
                         </FormControl>
@@ -215,10 +217,10 @@ export default function AuthPage() {
                     {registerMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registrazione in corso...
+                        {t('auth.registering')}
                       </>
                     ) : (
-                      "Crea Account"
+                      t('auth.createAccount')
                     )}
                   </Button>
                 </form>
@@ -237,23 +239,22 @@ export default function AuthPage() {
       >
         <div className="h-full w-full p-12 flex flex-col justify-end bg-black bg-opacity-40">
           <div className="text-white">
-            <h2 className="text-4xl font-bold mb-4">Join ByeBro Today</h2>
+            <h2 className="text-4xl font-bold mb-4">{t('auth.sideTitle')}</h2>
             <p className="mb-6 text-lg">
-              Plan your ultimate bachelor party experience with personalized itineraries,
-              exclusive destinations, and premium features.
+              {t('auth.sideDesc')}
             </p>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
-                <span className="mr-2 text-white font-bold">✓</span> AI-Generated Itineraries
+                <span className="mr-2 text-white font-bold">✓</span> {t('auth.featureItineraries')}
               </div>
               <div className="flex items-center">
-                <span className="mr-2 text-white font-bold">✓</span> Expense Sharing
+                <span className="mr-2 text-white font-bold">✓</span> {t('auth.featureExpenses')}
               </div>
               <div className="flex items-center">
-                <span className="mr-2 text-white font-bold">✓</span> Exclusive Destinations
+                <span className="mr-2 text-white font-bold">✓</span> {t('auth.featureDestinations')}
               </div>
               <div className="flex items-center">
-                <span className="mr-2 text-white font-bold">✓</span> Custom Merchandise
+                <span className="mr-2 text-white font-bold">✓</span> {t('auth.featureMerch')}
               </div>
             </div>
           </div>

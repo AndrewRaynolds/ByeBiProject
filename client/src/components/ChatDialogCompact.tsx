@@ -261,7 +261,7 @@ export default function ChatDialogCompact({
                 if (jsonData.tool_call) {
                   // Show loading message based on tool type
                   if (jsonData.tool_call.name === 'search_flights') {
-                    setLoadingMessage('Searching for the best flights...');
+                    setLoadingMessage('Preparing checkout...');
                   } else if (jsonData.tool_call.name === 'search_hotels') {
                     setLoadingMessage('Finding hotels for you...');
                   } else if (jsonData.tool_call.name === 'select_flight') {
@@ -650,27 +650,37 @@ export default function ChatDialogCompact({
           passengers || currentState.tripDetails.people || 2;
 
         if (searchOrigin && searchDestination && searchDepartDate) {
-          (async () => {
-            try {
-              const params = new URLSearchParams({
-                origin: searchOrigin,
-                destination: searchDestination,
-                departDate: searchDepartDate,
-                returnDate: searchReturnDate || searchDepartDate,
-                passengers: String(searchPassengers),
-              });
-              console.log("✈️ Searching flights with params:", Object.fromEntries(params));
-              const res = await fetch(`/api/flights/search?${params}`);
-              const data = await res.json();
-              if (data.flights && Array.isArray(data.flights)) {
-                console.log("✈️ Flight search results:", data.flights);
-                setFlights(data.flights);
-                flightsRef.current = data.flights;
-              }
-            } catch (err) {
-              console.error("Flight search failed:", err);
-            }
-          })();
+          const originIata = getCityIata(searchOrigin) || "FCO";
+          const destIata = getCityIata(searchDestination);
+          const aviasalesUrl = buildAviasalesUrl({
+            originIata,
+            destinationIata: destIata || searchDestination.substring(0, 3).toUpperCase(),
+            departDate: searchDepartDate,
+            returnDate: searchReturnDate || searchDepartDate,
+            adults: searchPassengers,
+          });
+          const dateStr = formatDateRange(searchDepartDate, searchReturnDate || searchDepartDate);
+
+          localStorage.setItem("currentItinerary", JSON.stringify({
+            destination: searchDestination,
+            origin: searchOrigin,
+            dates: dateStr,
+            people: searchPassengers,
+            startDate: searchDepartDate,
+            endDate: searchReturnDate || searchDepartDate,
+            days: calculateTripDays(searchDepartDate, searchReturnDate || searchDepartDate),
+            partyType: currentState.partyType,
+            originCity: searchOrigin,
+            aviasalesCheckoutUrl: aviasalesUrl || "",
+            flightLabel: `${searchOrigin} → ${searchDestination}`,
+            flights: [],
+            cars: [],
+            activities: [],
+            checkoutApproved: true,
+          }));
+          setShowGenerateButton(true);
+          onOpenChange(false);
+          setLocation("/checkout");
         }
         break;
       }
@@ -821,7 +831,7 @@ export default function ChatDialogCompact({
               data-testid="button-generate-itinerary"
             >
               <Sparkles className="w-5 h-5 mr-2" />
-              Genera Itinerario Completo
+              Vai al Checkout
             </Button>
           )}
 

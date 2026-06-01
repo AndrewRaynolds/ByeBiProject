@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Utensils, Wine, Music, Compass, Sparkles } from "lucide-react";
 import { trackEvent } from "@/lib/track";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const CATEGORY_ORDER: ExperienceCategory[] = ["restaurants", "bars", "nightlife", "activities"];
 
@@ -27,6 +28,7 @@ const CATEGORY_ICONS: Record<ExperienceCategory, JSX.Element> = {
 };
 
 function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: number }) {
+  const { t } = useTranslation();
   const handleClick = () => {
     trackEvent("city_experience_click", {
       itemName: item.name,
@@ -52,7 +54,7 @@ function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: 
           {item.isAffiliate && (
             <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] flex-shrink-0">
               <Sparkles className="w-3 h-3 mr-1" />
-              Affiliato
+              {t('experiences.affiliate')}
             </Badge>
           )}
         </div>
@@ -63,7 +65,7 @@ function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: 
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           data-testid={`button-open-experience-${item.category}-${index}`}
         >
-          {item.source === "getyourguide" ? "Prenota su GetYourGuide" : "Apri su Google Maps"}
+          {item.source === "getyourguide" ? t('experiences.bookGyg') : t('experiences.openMaps')}
           <ExternalLink className="w-3.5 h-3.5 ml-2" />
         </Button>
       </div>
@@ -72,6 +74,7 @@ function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: 
 }
 
 export default function ExperiencesPage() {
+  const { t } = useTranslation();
   const cities = useMemo(() => getAllCityExperiences(), []);
   const [selectedCityKey, setSelectedCityKey] = useState<string>(cities[0]?.cityKey ?? "");
   const [activeCategory, setActiveCategory] = useState<ExperienceCategory>("restaurants");
@@ -89,9 +92,9 @@ export default function ExperiencesPage() {
         <section className="py-16 bg-black">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h1 className="text-4xl md:text-5xl font-bold font-poppins mb-4 text-white">Experience Types</h1>
+              <h1 className="text-4xl md:text-5xl font-bold font-poppins mb-4 text-white">{t('experiences.title')}</h1>
               <p className="text-gray-300 max-w-3xl mx-auto">
-                Choose the perfect vibe for your bachelor party. From adrenaline-pumping adventures to refined experiences, we've got you covered.
+                {t('experiences.subtitle')}
               </p>
             </div>
           </div>
@@ -103,10 +106,10 @@ export default function ExperiencesPage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-                Esplora per città
+                {t('experiences.byCityTitle')}
               </h2>
               <p className="text-white/70 max-w-2xl mx-auto">
-                Le Top 10 di ristoranti, bar, locali notturni e attività per ogni destinazione. Selezionata una città, scegli la categoria che ti interessa.
+                {t('experiences.byCityDesc')}
               </p>
             </div>
 
@@ -160,13 +163,16 @@ export default function ExperiencesPage() {
                             {CATEGORY_LABELS[cat]} a {selectedCity.displayName}
                           </h3>
                           <span className="text-white/50 text-sm">
-                            {items.length} {items.length === 1 ? "risultato" : "risultati"}
+                            {t('experiences.resultsCount', {
+                              count: items.length,
+                              label: items.length === 1 ? t('common.result') : t('common.results'),
+                            })}
                           </span>
                         </div>
 
                         {items.length === 0 ? (
                           <div className="text-center py-10 text-white/60">
-                            Nessun contenuto ancora per questa categoria. Stiamo lavorando per aggiungerlo!
+                            {t('experiences.emptyCategory')}
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

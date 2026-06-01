@@ -1022,8 +1022,14 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       });
     } catch (err: any) {
       console.error("Amadeus hotel search error:", err.response?.data || err.message);
-      return res.status(500).json({
-        error: "Hotel search failed",
+      return res.status(200).json({
+        cityCode: req.query.cityCode,
+        checkInDate: req.query.checkInDate,
+        checkOutDate: req.query.checkOutDate,
+        adults: req.query.adults,
+        currency: req.query.currency || "EUR",
+        hotels: [],
+        fallbackReason: "Hotel search failed",
         details: err.response?.data || err.message,
       });
     }

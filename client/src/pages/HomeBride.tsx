@@ -4,7 +4,6 @@ import HowItWorks from "@/components/HowItWorks";
 import FeaturedDestinations from "@/components/FeaturedDestinations";
 import ExperienceTypes from "@/components/ExperienceTypes";
 import SecretBlog from "@/components/SecretBlog";
-import PremiumFeatures from "@/components/PremiumFeatures";
 import Testimonials from "@/components/Testimonials";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
@@ -20,7 +19,6 @@ export default function HomeBride() {
         <FeaturedDestinations brand="bride" />
         <ExperienceTypes brand="bride" />
         <SecretBlog brand="bride" />
-        <PremiumFeatures brand="bride" />
         <Testimonials brand="bride" />
         <Newsletter />
       </main>

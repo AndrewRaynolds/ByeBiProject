@@ -57,6 +57,7 @@ function Router() {
       <Route path="/secret-blog/:id" component={SecretBlogPostPage} />
       <Route path="/secret-blog" component={SecretBlogPage} />
       <Route path="/merchandise" component={MerchandisePage} />
+      <Route path="/itinerary/:id">{() => <Redirect to="/checkout" />}</Route>
       <Route path="/itinerary">{() => <Redirect to="/checkout" />}</Route>
       <Route path="/checkout" component={Checkout} />
       <Route path="/splitta-bro" component={SplittaPage} />
