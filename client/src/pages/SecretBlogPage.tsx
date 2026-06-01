@@ -72,20 +72,19 @@ function PostGridSkeleton() {
   );
 }
 
-type CategoryFilter = 'sex' | 'drink' | 'weird' | null;
+type CategoryFilter = 'drink' | 'weird' | null;
 
 const CATEGORY_FILTERS: { value: CategoryFilter; icon: string; label: string }[] = [
-  { value: null, icon: '', label: 'Tutte' },
-  { value: 'sex', icon: '🔞', label: 'Sex' },
-  { value: 'drink', icon: '🍺', label: 'Drink' },
-  { value: 'weird', icon: '🤪', label: 'Weird' },
+  { value: null, icon: '', label: 'secretBlog.filters.all' },
+  { value: 'drink', icon: '🍺', label: 'secretBlog.filters.drink' },
+  { value: 'weird', icon: '🤪', label: 'secretBlog.filters.weird' },
 ];
 
 interface PostGridProps {
   posts: BlogPost[];
   isPremium: boolean;
   brand: Brand;
-  t: (k: string) => string;
+  t: (k: string, params?: Record<string, string | number>) => string;
   filterLocation: string | null;
   filterCategory: CategoryFilter;
 }
@@ -104,8 +103,8 @@ function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }
   if (filtered.length === 0) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500 text-lg">Nessuna storia trovata per questi filtri.</p>
-        <p className="text-gray-600 text-sm mt-1">Prova a selezionare un'altra combinazione.</p>
+        <p className="text-gray-500 text-lg">{t('secretBlog.emptyFilteredTitle')}</p>
+        <p className="text-gray-600 text-sm mt-1">{t('secretBlog.emptyFilteredDesc')}</p>
       </div>
     );
   }
@@ -120,22 +119,19 @@ function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }
 }
 
 interface StoryFormProps {
-  isPremium: boolean;
   isAuthenticated: boolean;
   brand: Brand;
-  t: (k: string) => string;
-  onScrollToPremium: () => void;
+  t: (k: string, params?: Record<string, string | number>) => string;
 }
 
-type Category = 'sex' | 'drink' | 'weird';
+type Category = 'drink' | 'weird';
 
 const CATEGORY_OPTIONS: { value: Category; icon: string; label: string; desc: string }[] = [
-  { value: 'sex', icon: '🔞', label: 'Sex', desc: 'Racconto a sfondo erotico' },
-  { value: 'drink', icon: '🍺', label: 'Drink', desc: 'Racconto a sfondo alcolico' },
-  { value: 'weird', icon: '🤪', label: 'Weird', desc: 'Racconto strano, assurdo o nonsense' },
+  { value: 'drink', icon: '🍺', label: 'secretBlog.category.drink', desc: 'secretBlog.category.drinkDesc' },
+  { value: 'weird', icon: '🤪', label: 'secretBlog.category.weird', desc: 'secretBlog.category.weirdDesc' },
 ];
 
-function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: StoryFormProps) {
+function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
@@ -151,8 +147,8 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
   const autoTitle = useMemo(() => {
     const tagsText = selectedTags.length > 0 ? ` ${selectedTags.join(' ')}` : '';
-    return `${selectedDestination}: La storia di ${alias}${tagsText}`;
-  }, [selectedDestination, alias, selectedTags]);
+    return t('secretBlog.autoTitle', { destination: selectedDestination, alias, tags: tagsText });
+  }, [selectedDestination, alias, selectedTags, t]);
 
   const resolvedTitle = customTitle.trim() !== '' ? customTitle.trim() : autoTitle;
 
@@ -190,21 +186,26 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/blog-posts"] });
       toast({
-        title: "Storia pubblicata! 🎉",
-        description: "La tua storia è ora visibile nella community.",
+        title: t('secretBlog.toastPublishedTitle'),
+        description: t('secretBlog.toastPublishedDesc'),
       });
       resetForm();
     },
     onError: () => {
       toast({
-        title: "Errore",
-        description: "Non è stato possibile pubblicare la storia. Riprova.",
+        title: t('common.error'),
+        description: t('secretBlog.toastPublishError'),
         variant: "destructive",
       });
     },
   });
 
-  const stepLabels = ["Destinazione", "La tua storia", "Categoria", "Tag"];
+  const stepLabels = [
+    t('secretBlog.stepDestination'),
+    t('secretBlog.stepStory'),
+    t('secretBlog.stepCategory'),
+    t('secretBlog.stepTags'),
+  ];
 
   if (!isAuthenticated) {
     return (
@@ -212,13 +213,13 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
         <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-gray-900 border border-gray-700 flex items-center justify-center">
           <LogIn className={`w-6 h-6 ${accentText}`} />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Accedi per condividere la tua storia</h3>
+        <h3 className="text-xl font-bold text-white mb-2">{t('secretBlog.authTitle')}</h3>
         <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
-          Crea un account gratuito o accedi per condividere la tua storia in modo anonimo con la community.
+          {t('secretBlog.authDesc')}
         </p>
         <Link href="/auth">
           <Button className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-8 py-2.5 rounded-xl`}>
-            Accedi o Registrati
+            {t('secretBlog.authCta')}
           </Button>
         </Link>
       </div>
@@ -228,8 +229,8 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
   return (
     <div className={`rounded-2xl border ${borderAccent} bg-gray-950 overflow-hidden`}>
       <div className={`bg-gradient-to-r ${accentColor} p-5`}>
-        <h2 className="text-xl font-bold text-white mb-1">Racconta la tua storia</h2>
-        <p className="text-white/70 text-sm">In modo completamente anonimo</p>
+        <h2 className="text-xl font-bold text-white mb-1">{t('secretBlog.formTitle')}</h2>
+        <p className="text-white/70 text-sm">{t('secretBlog.formSubtitle')}</p>
       </div>
 
       <div className="p-6">
@@ -252,7 +253,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
         {step === 1 && (
           <div>
-            <p className="text-gray-300 text-sm mb-4">Dove è successa questa storia epica?</p>
+            <p className="text-gray-300 text-sm mb-4">{t('secretBlog.destinationQuestion')}</p>
             <div className="flex flex-wrap gap-2 mb-6">
               {DESTINATIONS.map((dest) => (
                 <button
@@ -272,7 +273,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
               disabled={!selectedDestination}
               onClick={() => setStep(2)}
             >
-              Avanti <ChevronRight className="w-4 h-4 ml-1" />
+              {t('common.continue')} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
         )}
@@ -280,7 +281,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
         {step === 2 && (
           <div>
             <p className="text-gray-300 text-sm mb-3">
-              Racconta cosa è successo a <span className={`font-semibold ${accentText}`}>{selectedDestination}</span>. Nessun nome, nessun dettaglio identificativo.
+              {t('secretBlog.storyQuestionPrefix')} <span className={`font-semibold ${accentText}`}>{selectedDestination}</span>. {t('secretBlog.storyPrivacyHint')}
             </p>
             <Textarea
               placeholder=""
@@ -290,7 +291,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
             />
             <div className="mb-4">
               <label className="block text-gray-400 text-xs font-medium mb-1.5">
-                Titolo personalizzato <span className="text-gray-600">(facoltativo)</span>
+                {t('secretBlog.customTitle')} <span className="text-gray-600">({t('secretBlog.optional')})</span>
               </label>
               <Input
                 placeholder={autoTitle}
@@ -299,18 +300,18 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                 onChange={(e) => setCustomTitle(e.target.value)}
                 maxLength={100}
               />
-              <p className="text-gray-600 text-[11px] mt-1">Se vuoto, verrà usato il titolo generato automaticamente.</p>
+              <p className="text-gray-600 text-[11px] mt-1">{t('secretBlog.autoTitleHint')}</p>
             </div>
             <div className="flex gap-3">
               <Button variant="ghost" className="text-gray-400" onClick={() => setStep(1)}>
-                <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+                <ChevronLeft className="w-4 h-4 mr-1" /> {t('common.back')}
               </Button>
               <Button
                 className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
                 disabled={storyContent.trim().length < 20}
                 onClick={() => setStep(3)}
               >
-                Avanti <ChevronRight className="w-4 h-4 ml-1" />
+                {t('common.continue')} <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
@@ -318,8 +319,8 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
         {step === 3 && (
           <div>
-            <p className="text-gray-300 text-sm mb-5">Che tipo di storia è questa?</p>
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            <p className="text-gray-300 text-sm mb-5">{t('secretBlog.categoryQuestion')}</p>
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {CATEGORY_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -330,21 +331,21 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                       : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500 hover:bg-gray-800'}`}
                 >
                   <span className="text-3xl">{opt.icon}</span>
-                  <span className="text-xs font-bold uppercase tracking-wide">{opt.label}</span>
-                  <span className="text-[10px] text-center opacity-70 leading-tight">{opt.desc}</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">{t(opt.label)}</span>
+                  <span className="text-[10px] text-center opacity-70 leading-tight">{t(opt.desc)}</span>
                 </button>
               ))}
             </div>
             <div className="flex gap-3">
               <Button variant="ghost" className="text-gray-400" onClick={() => setStep(2)}>
-                <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+                <ChevronLeft className="w-4 h-4 mr-1" /> {t('common.back')}
               </Button>
               <Button
                 className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
                 disabled={!selectedCategory}
                 onClick={() => setStep(4)}
               >
-                Avanti <ChevronRight className="w-4 h-4 ml-1" />
+                {t('common.continue')} <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
@@ -352,7 +353,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
         {step === 4 && (
           <div>
-            <p className="text-gray-300 text-sm mb-4">Scegli uno o più tag che descrivono la storia:</p>
+            <p className="text-gray-300 text-sm mb-4">{t('secretBlog.tagsQuestion')}</p>
             <div className="flex flex-wrap gap-2 mb-6">
               {STORY_TAGS.map((tag) => (
                 <button
@@ -370,14 +371,14 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
 
             <div className="flex gap-3 mb-6">
               <Button variant="ghost" className="text-gray-400" onClick={() => setStep(3)}>
-                <ChevronLeft className="w-4 h-4 mr-1" /> Indietro
+                <ChevronLeft className="w-4 h-4 mr-1" /> {t('common.back')}
               </Button>
               <Button
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                 onClick={() => setShowPreview(!showPreview)}
               >
                 <Eye className="w-4 h-4 mr-2" />
-                {showPreview ? "Nascondi anteprima" : "Vedi anteprima"}
+                {showPreview ? t('secretBlog.hidePreview') : t('secretBlog.showPreview')}
               </Button>
               <Button
                 className={`bg-gradient-to-r ${accentColor} hover:opacity-90 text-white font-bold px-6 rounded-xl`}
@@ -385,7 +386,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                 onClick={() => submitMutation.mutate()}
               >
                 <Send className="w-4 h-4 mr-2" />
-                {submitMutation.isPending ? "Pubblicazione..." : "Pubblica in forma anonima"}
+                {submitMutation.isPending ? t('secretBlog.publishing') : t('secretBlog.publishAnonymous')}
               </Button>
             </div>
 
@@ -395,13 +396,13 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                   <span className="text-4xl opacity-40">✨</span>
                   {selectedCategory && (
                     <div className="absolute top-3 right-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-base">
-                      {selectedCategory === 'sex' ? '🔞' : selectedCategory === 'drink' ? '🍺' : '🤪'}
+                      {selectedCategory === 'drink' ? '🍺' : '🤪'}
                     </div>
                   )}
                 </div>
                 <div className="p-4">
                   <div className="flex gap-2 mb-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isBride ? 'bg-pink-500' : 'bg-emerald-500'} text-white`}>Nuova storia</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isBride ? 'bg-pink-500' : 'bg-emerald-500'} text-white`}>{t('secretBlog.newStory')}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-black/50 text-gray-300 border border-white/10">
                       {selectedDestination && DESTINATIONS.find(d => d.value === selectedDestination)?.label}
                     </span>
@@ -421,7 +422,7 @@ function StoryForm({ isPremium, isAuthenticated, brand, t, onScrollToPremium }: 
                     </div>
                     <div>
                       <p className="text-gray-300 text-xs font-medium">{alias}</p>
-                      <p className="text-gray-600 text-[10px]">Anonimo</p>
+                      <p className="text-gray-600 text-[10px]">{t('common.anonymous')}</p>
                     </div>
                   </div>
                 </div>
@@ -501,19 +502,19 @@ export default function SecretBlogPage() {
           <div className="container mx-auto px-4 text-center relative">
             <div className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest ${accentText} mb-4`}>
               <Flame className="w-3.5 h-3.5" />
-              <span>{isBride ? '👑 Secret Diary' : '🔥 Secret Blog'}</span>
+              <span>{isBride ? t('secretBlog.heroEyebrowBride') : t('secretBlog.heroEyebrowBro')}</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold font-poppins text-white mb-4 leading-tight">
-              {isBride ? "Storie Segrete" : "Confessioni Anonime"}
+              {isBride ? t('secretBlog.heroTitleBride') : t('secretBlog.heroTitleBro')}
             </h1>
             <p className={`max-w-2xl mx-auto text-base leading-relaxed mb-6 ${isBride ? 'text-purple-200/60' : 'text-gray-400'}`}>
               {isBride
-                ? "Storie vere e anonime da addii al nubilato in tutta Europa. Impara dalle esperienze altrui e condividi le tue."
-                : "Storie vere e anonime da addii al celibato in tutta Europa. Impara dagli errori altrui. Aggiungine di tuoi."}
+                ? t('secretBlog.heroSubtitleBride')
+                : t('secretBlog.heroSubtitleBro')}
             </p>
             <div className={`flex items-center justify-center gap-1.5 text-sm font-medium mb-8 ${isBride ? 'text-pink-400/70' : 'text-red-500/70'}`}>
               <Flame className="w-4 h-4" />
-              <span>Oltre {totalStories} storie anonime condivise</span>
+              <span>{t('blog.storyCount', { count: totalStories })}</span>
             </div>
           </div>
         </section>
@@ -528,7 +529,7 @@ export default function SecretBlogPage() {
                     ? 'data-[state=active]:text-purple-300 data-[state=active]:bg-gray-800'
                     : 'data-[state=active]:text-red-400 data-[state=active]:bg-gray-800'}
                 >
-                  <Star className="mr-2 h-4 w-4" /> Più Popolari
+                  <Star className="mr-2 h-4 w-4" /> {t('secretBlog.popular')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="newest"
@@ -536,7 +537,7 @@ export default function SecretBlogPage() {
                     ? 'data-[state=active]:text-purple-300 data-[state=active]:bg-gray-800'
                     : 'data-[state=active]:text-red-400 data-[state=active]:bg-gray-800'}
                 >
-                  <Clock className="mr-2 h-4 w-4" /> Più Recenti
+                  <Clock className="mr-2 h-4 w-4" /> {t('secretBlog.newest')}
                 </TabsTrigger>
               </TabsList>
 
@@ -552,7 +553,7 @@ export default function SecretBlogPage() {
                         ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
                         : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
                   >
-                    Tutte
+                    {t('secretBlog.filters.all')}
                   </button>
                   {availableLocations.map(loc => {
                     const destObj = DESTINATIONS.find(d => d.value === loc);
@@ -583,7 +584,7 @@ export default function SecretBlogPage() {
                         : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
                   >
                     {cat.icon && <span>{cat.icon}</span>}
-                    <span>{cat.label}</span>
+                    <span>{t(cat.label)}</span>
                   </button>
                 ))}
               </div>
@@ -594,7 +595,7 @@ export default function SecretBlogPage() {
                 <PostGridSkeleton />
               ) : error ? (
                 <div className="text-center py-10">
-                  <p className="text-red-500">Errore nel caricamento delle storie. Riprova più tardi.</p>
+                  <p className="text-red-500">{t('secretBlog.errorLoading')}</p>
                 </div>
               ) : (
                 <PostGrid
@@ -613,7 +614,7 @@ export default function SecretBlogPage() {
                 <PostGridSkeleton />
               ) : error ? (
                 <div className="text-center py-10">
-                  <p className="text-red-500">Errore nel caricamento delle storie. Riprova più tardi.</p>
+                  <p className="text-red-500">{t('secretBlog.errorLoading')}</p>
                 </div>
               ) : (
                 <PostGrid
@@ -631,18 +632,16 @@ export default function SecretBlogPage() {
           <div className="mt-16">
             <div className="mb-8 text-center">
               <h2 className={`text-2xl font-bold text-white mb-2`}>
-                {isBride ? "Racconta la tua storia 💌" : "Racconta la tua storia 🔥"}
+                {isBride ? t('secretBlog.shareTitleBride') : t('secretBlog.shareTitleBro')}
               </h2>
               <p className={`text-sm ${isBride ? 'text-purple-200/50' : 'text-gray-500'}`}>
-                Completamente anonimo. Solo la community ti vedrà.
+                {t('secretBlog.shareSubtitle')}
               </p>
             </div>
             <StoryForm
-              isPremium={true}
               isAuthenticated={isAuthenticated}
               brand={brand}
               t={t}
-              onScrollToPremium={() => {}}
             />
           </div>
         </div>

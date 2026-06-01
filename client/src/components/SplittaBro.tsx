@@ -8,13 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Users, Receipt, DollarSign, User, Trash2, Edit, Calculator, ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
+import { Plus, Users, Receipt, DollarSign, User, Trash2, Calculator, ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 interface ExpenseGroup {
   id: number;
@@ -44,19 +44,24 @@ interface Settlement {
   amount: number;
 }
 
+interface MemberBalance {
+  member: string;
+  balance: number;
+}
+
 const createGroupSchema = z.object({
-  name: z.string().min(1, 'Nome gruppo richiesto'),
+  name: z.string().min(1, 'splittabro.validation.groupName'),
   description: z.string().optional(),
-  members: z.array(z.string()).min(1, 'Almeno un membro richiesto'),
+  members: z.array(z.string()).min(1, 'splittabro.validation.members'),
 });
 
 const createExpenseSchema = z.object({
-  description: z.string().min(1, 'Descrizione richiesta'),
-  amount: z.number().min(0.01, 'Importo deve essere maggiore di 0'),
-  paidBy: z.string().min(1, 'Chi ha pagato è richiesto'),
-  splitBetween: z.array(z.string()).min(1, 'Seleziona almeno una persona'),
-  category: z.string().min(1, 'Categoria richiesta'),
-  date: z.string().min(1, 'Data richiesta'),
+  description: z.string().min(1, 'splittabro.validation.description'),
+  amount: z.number().min(0.01, 'splittabro.validation.amount'),
+  paidBy: z.string().min(1, 'splittabro.validation.paidBy'),
+  splitBetween: z.array(z.string()).min(1, 'splittabro.validation.splitBetween'),
+  category: z.string().min(1, 'splittabro.validation.category'),
+  date: z.string().min(1, 'splittabro.validation.date'),
   splitEqually: z.boolean().optional(),
 });
 
@@ -72,7 +77,17 @@ export function SplittaBro() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const { toast } = useToast();
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
+  const { t, locale } = useTranslation();
+
+  const formatCurrency = (amountInCents: number) =>
+    new Intl.NumberFormat(locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(amountInCents / 100);
+
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString(locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT');
 
   const groupForm = useForm<CreateGroupFormValues>({
     resolver: zodResolver(createGroupSchema),
@@ -116,7 +131,7 @@ export function SplittaBro() {
         setGroups(groupsData);
       }
     } catch (error) {
-      console.error('Errore caricamento gruppi:', error);
+      console.error('Error loading expense groups:', error);
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +145,7 @@ export function SplittaBro() {
         setExpenses(expensesData);
       }
     } catch (error) {
-      console.error('Errore caricamento spese:', error);
+      console.error('Error loading expenses:', error);
     }
   };
 
@@ -166,20 +181,20 @@ export function SplittaBro() {
         setSelectedGroup(newGroup);
         
         toast({
-          title: "✅ Gruppo creato con successo!",
-          description: `${newGroup.name} è stato creato. Ora puoi aggiungere le spese.`,
+          title: t('splittabro.toast.groupCreatedTitle'),
+          description: t('splittabro.toast.groupCreatedDesc', { name: newGroup.name }),
         });
       } else {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Errore nella creazione del gruppo');
+        throw new Error(errorData.message || t('splittabro.toast.groupCreateErrorFallback'));
       }
     } catch (error) {
-      console.error('Errore creazione gruppo:', error);
+      console.error('Error creating expense group:', error);
       toast({
-        title: "❌ Impossibile creare il gruppo",
+        title: t('splittabro.toast.groupCreateErrorTitle'),
         description: error instanceof Error 
           ? error.message 
-          : "Si è verificato un errore. Controlla la connessione e riprova più tardi.",
+          : t('splittabro.toast.genericRetry'),
         variant: "destructive",
       });
     } finally {
@@ -244,27 +259,25 @@ export function SplittaBro() {
         ));
         
         toast({
-          title: "Spesa aggiunta!",
-          description: "La spesa è stata registrata con successo.",
+          title: t('splittabro.toast.expenseAddedTitle'),
+          description: t('splittabro.toast.expenseAddedDesc'),
         });
       } else {
         const errorData = await response.json();
-        console.error('Errore validazione:', errorData);
-        throw new Error('Errore nella creazione della spesa');
+        console.error('Expense validation error:', errorData);
+        throw new Error(t('splittabro.toast.expenseCreateErrorFallback'));
       }
     } catch (error) {
-      console.error('Errore creazione spesa:', error);
+      console.error('Error creating expense:', error);
       toast({
-        title: "Errore",
-        description: "Impossibile aggiungere la spesa. Riprova.",
+        title: t('common.error'),
+        description: t('splittabro.toast.expenseCreateErrorTitle'),
         variant: "destructive",
       });
     }
   };
 
-  const calculateSettlements = (group: ExpenseGroup, expenses: Expense[]): Settlement[] => {
-    if (!group || expenses.length === 0) return [];
-
+  const calculateBalances = (group: ExpenseGroup, expenses: Expense[]): MemberBalance[] => {
     const balances: { [member: string]: number } = {};
     
     group.members.forEach(member => {
@@ -272,34 +285,55 @@ export function SplittaBro() {
     });
 
     expenses.forEach(expense => {
+      if (!expense.splitBetween.length) return;
       const amountPerPerson = expense.amount / expense.splitBetween.length;
-      balances[expense.paidBy] += expense.amount;
+      balances[expense.paidBy] = (balances[expense.paidBy] || 0) + expense.amount;
       expense.splitBetween.forEach(member => {
-        balances[member] -= amountPerPerson;
+        balances[member] = (balances[member] || 0) - amountPerPerson;
       });
     });
 
+    return Object.entries(balances)
+      .map(([member, balance]) => ({ member, balance: Math.round(balance) }))
+      .sort((a, b) => b.balance - a.balance);
+  };
+
+  const calculateSettlements = (group: ExpenseGroup, expenses: Expense[]): Settlement[] => {
+    if (!group || expenses.length === 0) return [];
+
+    const balances = calculateBalances(group, expenses);
     const settlements: Settlement[] = [];
-    const creditors = Object.entries(balances).filter(([_, amount]) => amount > 0);
-    const debtors = Object.entries(balances).filter(([_, amount]) => amount < 0);
+    const creditors = balances
+      .filter(({ balance }) => balance > 0)
+      .map(({ member, balance }) => ({ member, amount: balance }));
+    const debtors = balances
+      .filter(({ balance }) => balance < 0)
+      .map(({ member, balance }) => ({ member, amount: Math.abs(balance) }));
 
-    creditors.forEach(([creditor, creditAmount]) => {
-      debtors.forEach(([debtor, debtAmount]) => {
-        if (Math.abs(debtAmount) > 0.01 && creditAmount > 0.01) {
-          const settlementAmount = Math.min(creditAmount, Math.abs(debtAmount));
-          settlements.push({
-            from: debtor,
-            to: creditor,
-            amount: settlementAmount,
-          });
-          
-          balances[creditor] -= settlementAmount;
-          balances[debtor] += settlementAmount;
-        }
-      });
-    });
+    let creditorIndex = 0;
+    let debtorIndex = 0;
 
-    return settlements.filter(s => s.amount > 0.01);
+    while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+      const creditor = creditors[creditorIndex];
+      const debtor = debtors[debtorIndex];
+      const amount = Math.min(creditor.amount, debtor.amount);
+
+      if (amount > 0) {
+        settlements.push({
+          from: debtor.member,
+          to: creditor.member,
+          amount,
+        });
+      }
+
+      creditor.amount -= amount;
+      debtor.amount -= amount;
+
+      if (creditor.amount <= 0) creditorIndex += 1;
+      if (debtor.amount <= 0) debtorIndex += 1;
+    }
+
+    return settlements.filter(s => s.amount > 0);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -314,6 +348,8 @@ export function SplittaBro() {
     return icons[category] || '📋';
   };
 
+  const getCategoryLabel = (category: string) => t(`splittabro.category.${category}`);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
@@ -322,7 +358,7 @@ export function SplittaBro() {
             <div className="absolute inset-0 rounded-full border-4 border-red-600/30"></div>
             <div className="absolute inset-0 rounded-full border-4 border-red-600 border-t-transparent animate-spin"></div>
           </div>
-          <p className="text-white text-lg">Caricamento SplittaBro...</p>
+          <p className="text-white text-lg">{t('splittabro.loading')}</p>
         </div>
       </div>
     );
@@ -348,7 +384,7 @@ export function SplittaBro() {
               </h1>
               <Sparkles className="w-8 h-8 text-red-500" />
             </div>
-            <p className="text-gray-400 text-sm md:text-base">Dividi le spese del tuo addio al celibato</p>
+            <p className="text-gray-400 text-sm md:text-base">{t('splittabro.subtitle')}</p>
           </div>
           <div className="w-20 hidden md:block"></div>
         </div>
@@ -358,7 +394,7 @@ export function SplittaBro() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                I tuoi gruppi
+                {t('splittabro.yourGroups')}
               </h2>
               <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
                 <DialogTrigger asChild>
@@ -367,19 +403,23 @@ export function SplittaBro() {
                     data-testid="button-create-group"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Nuovo Gruppo
+                    {t('splittabro.newGroup')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-red-500/20 text-white max-w-md">
+                <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-red-500/20 text-white max-w-md max-h-[88vh] overflow-hidden p-0 gap-0">
                   <DialogHeader>
-                    <DialogTitle className="text-white text-xl">Crea Nuovo Gruppo</DialogTitle>
-                    <DialogDescription className="text-gray-400">
-                      Crea un nuovo gruppo per dividere le spese del tuo addio al celibato
-                    </DialogDescription>
+                    <div className="px-6 pt-6 pb-4 border-b border-white/10">
+                      <DialogTitle className="text-white text-xl">{t('splittabro.createGroupTitle')}</DialogTitle>
+                      <DialogDescription className="text-gray-400 mt-1">
+                      {t('splittabro.createGroupDesc')}
+                      </DialogDescription>
+                    </div>
                   </DialogHeader>
-                  <form onSubmit={groupForm.handleSubmit(onCreateGroup)} className="space-y-4">
+                  <form onSubmit={groupForm.handleSubmit(onCreateGroup)} className="flex min-h-0 flex-col">
+                    <ScrollArea className="max-h-[calc(88vh-150px)] px-6 py-4">
+                      <div className="space-y-4 pr-3">
                     <div>
-                      <Label htmlFor="name" className="text-white">Nome Gruppo</Label>
+                      <Label htmlFor="name" className="text-white">{t('splittabro.groupName')}</Label>
                       <Input
                         id="name"
                         {...groupForm.register('name')}
@@ -389,13 +429,13 @@ export function SplittaBro() {
                       />
                       {groupForm.formState.errors.name && (
                         <p className="text-red-400 text-sm mt-1">
-                          {groupForm.formState.errors.name.message}
+                          {t(String(groupForm.formState.errors.name.message))}
                         </p>
                       )}
                     </div>
                     
                     <div>
-                      <Label htmlFor="description" className="text-white">Descrizione (opzionale)</Label>
+                      <Label htmlFor="description" className="text-white">{t('splittabro.descriptionOptional')}</Label>
                       <Textarea
                         id="description"
                         {...groupForm.register('description')}
@@ -406,7 +446,7 @@ export function SplittaBro() {
                     </div>
                     
                     <div>
-                      <Label className="text-white">Membri</Label>
+                      <Label className="text-white">{t('splittabro.members')}</Label>
                       <div className="space-y-2 mt-2">
                         <div className="flex gap-2">
                           <Input
@@ -431,15 +471,15 @@ export function SplittaBro() {
                             <Plus className="h-4 w-4" />
                           </Button>
                         </div>
-                        <ScrollArea className="max-h-32">
-                          <div className="space-y-1">
+                        <ScrollArea className="h-56 rounded-lg border border-white/10 bg-black/20">
+                          <div className="space-y-2 p-2">
                             {groupForm.watch('members')?.map((member, index) => (
                               <div 
                                 key={index} 
-                                className="flex items-center justify-between bg-gradient-to-r from-red-500/10 to-red-600/10 px-3 py-2 rounded-lg border border-red-500/30"
+                                className="flex min-h-11 items-center justify-between gap-3 bg-gradient-to-r from-red-500/10 to-red-600/10 px-3 py-2 rounded-lg border border-red-500/30"
                                 data-testid={`member-${index}`}
                               >
-                                <span className="text-white text-sm font-medium">{member}</span>
+                                <span className="text-white text-sm font-medium min-w-0 flex-1 truncate">{member}</span>
                                 <Button
                                   type="button"
                                   onClick={() => removeMember(member)}
@@ -456,13 +496,15 @@ export function SplittaBro() {
                         </ScrollArea>
                         {groupForm.formState.errors.members && (
                           <p className="text-red-400 text-sm">
-                            {groupForm.formState.errors.members.message}
+                            {t(String(groupForm.formState.errors.members.message))}
                           </p>
                         )}
                       </div>
                     </div>
+                      </div>
+                    </ScrollArea>
                     
-                    <DialogFooter>
+                    <DialogFooter className="border-t border-white/10 bg-black/30 px-6 py-4">
                       <Button 
                         type="submit" 
                         disabled={isCreatingGroup}
@@ -472,10 +514,10 @@ export function SplittaBro() {
                         {isCreatingGroup ? (
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Creazione in corso...
+                            {t('splittabro.creating')}
                           </div>
                         ) : (
-                          "Crea Gruppo"
+                          t('splittabro.createGroup')
                         )}
                       </Button>
                     </DialogFooter>
@@ -490,15 +532,15 @@ export function SplittaBro() {
                   <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="h-10 w-10 text-red-400" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Nessun gruppo ancora</h3>
-                  <p className="text-gray-400 mb-6 max-w-md mx-auto">Crea il tuo primo gruppo per iniziare a dividere le spese del tuo addio al celibato!</p>
+                  <h3 className="text-2xl font-bold text-white mb-2">{t('splittabro.noGroupsTitle')}</h3>
+                  <p className="text-gray-400 mb-6 max-w-md mx-auto">{t('splittabro.noGroupsDesc')}</p>
                   <Button
                     onClick={() => setShowCreateGroup(true)}
                     className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg shadow-red-500/30"
                     data-testid="button-create-first-group"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Crea il primo gruppo
+                    {t('splittabro.createFirstGroup')}
                   </Button>
                 </CardContent>
               </Card>
@@ -522,14 +564,14 @@ export function SplittaBro() {
                           )}
                         </div>
                         <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 px-3 py-1 rounded-lg border border-red-500/30">
-                          <p className="text-red-400 font-bold text-sm">€{(group.totalAmount || 0).toFixed(2)}</p>
+                          <p className="text-red-400 font-bold text-sm">{formatCurrency(Math.round((group.totalAmount || 0) * 100))}</p>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center text-gray-400 text-sm mb-3">
                         <Users className="h-4 w-4 mr-2 text-red-400" />
-                        {group.members.length} membri
+                        {t('splittabro.membersCount', { count: group.members.length })}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {group.members.slice(0, 3).map((member) => (
@@ -559,7 +601,7 @@ export function SplittaBro() {
                   className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white w-full sm:w-auto"
                   data-testid="button-back-to-groups"
                 >
-                  ← Torna ai gruppi
+                  {t('splittabro.backToGroups')}
                 </Button>
                 <div>
                   <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
@@ -567,7 +609,7 @@ export function SplittaBro() {
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
                     <TrendingUp className="w-4 h-4 text-red-400" />
-                    <p className="text-gray-400">Totale: <span className="text-red-400 font-bold">€{(selectedGroup.totalAmount || 0).toFixed(2)}</span></p>
+                    <p className="text-gray-400">{t('splittabro.total')}: <span className="text-red-400 font-bold">{formatCurrency(Math.round((selectedGroup.totalAmount || 0) * 100))}</span></p>
                   </div>
                 </div>
               </div>
@@ -578,19 +620,19 @@ export function SplittaBro() {
                     data-testid="button-add-expense"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Aggiungi Spesa
+                    {t('splittabro.addExpense')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-red-500/20 text-white max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-white text-xl">Aggiungi Nuova Spesa</DialogTitle>
+                    <DialogTitle className="text-white text-xl">{t('splittabro.addExpenseTitle')}</DialogTitle>
                     <DialogDescription className="text-gray-400">
-                      Registra una nuova spesa per il gruppo e seleziona chi deve partecipare alla divisione
+                      {t('splittabro.addExpenseDesc')}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={expenseForm.handleSubmit(onCreateExpense)} className="space-y-4">
                     <div>
-                      <Label htmlFor="description" className="text-white">Descrizione</Label>
+                      <Label htmlFor="description" className="text-white">{t('splittabro.expenseDescription')}</Label>
                       <Input
                         id="description"
                         {...expenseForm.register('description')}
@@ -598,10 +640,15 @@ export function SplittaBro() {
                         className="bg-gray-800/50 border-gray-700 text-white mt-1"
                         data-testid="input-expense-description"
                       />
+                      {expenseForm.formState.errors.description && (
+                        <p className="text-red-400 text-sm mt-1">
+                          {t(String(expenseForm.formState.errors.description.message))}
+                        </p>
+                      )}
                     </div>
                     
                     <div>
-                      <Label htmlFor="amount" className="text-white">Importo (€)</Label>
+                      <Label htmlFor="amount" className="text-white">{t('splittabro.amount')}</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -611,13 +658,18 @@ export function SplittaBro() {
                         className="bg-gray-800/50 border-gray-700 text-white mt-1"
                         data-testid="input-expense-amount"
                       />
+                      {expenseForm.formState.errors.amount && (
+                        <p className="text-red-400 text-sm mt-1">
+                          {t(String(expenseForm.formState.errors.amount.message))}
+                        </p>
+                      )}
                     </div>
                     
                     <div>
-                      <Label htmlFor="paidBy" className="text-white">Chi ha pagato</Label>
+                      <Label htmlFor="paidBy" className="text-white">{t('splittabro.paidBy')}</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('paidBy', value)}>
                         <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white mt-1" data-testid="select-paid-by">
-                          <SelectValue placeholder="Seleziona chi ha pagato" className="text-white" />
+                          <SelectValue placeholder={t('splittabro.selectPaidBy')} className="text-white" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
                           {selectedGroup.members.map((member) => (
@@ -627,10 +679,15 @@ export function SplittaBro() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {expenseForm.formState.errors.paidBy && (
+                        <p className="text-red-400 text-sm mt-1">
+                          {t(String(expenseForm.formState.errors.paidBy.message))}
+                        </p>
+                      )}
                     </div>
                     
                     <div>
-                      <Label className="text-white">Dividi tra</Label>
+                      <Label className="text-white">{t('splittabro.splitBetween')}</Label>
                       <div className="space-y-2 mt-2">
                         <label className="flex items-center space-x-2 text-white p-2 rounded-lg bg-red-500/10 border border-red-500/30 cursor-pointer hover:bg-red-500/20 transition-colors">
                           <input
@@ -646,7 +703,7 @@ export function SplittaBro() {
                             className="rounded border-gray-600"
                             data-testid="checkbox-split-equally"
                           />
-                          <span className="text-sm font-medium">Dividi equamente tra tutti</span>
+                          <span className="text-sm font-medium">{t('splittabro.splitEqually')}</span>
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           {selectedGroup.members.map((member, idx) => (
@@ -673,28 +730,38 @@ export function SplittaBro() {
                             </label>
                           ))}
                         </div>
+                        {expenseForm.formState.errors.splitBetween && (
+                          <p className="text-red-400 text-sm">
+                            {t(String(expenseForm.formState.errors.splitBetween.message))}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
                     <div>
-                      <Label htmlFor="category" className="text-white">Categoria</Label>
+                      <Label htmlFor="category" className="text-white">{t('splittabro.category')}</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('category', value)} defaultValue="food">
                         <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white mt-1" data-testid="select-category">
-                          <SelectValue placeholder="Seleziona categoria" className="text-white" />
+                          <SelectValue placeholder={t('splittabro.selectCategory')} className="text-white" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                          <SelectItem value="food" className="text-white focus:text-white">🍽️ Cibo</SelectItem>
-                          <SelectItem value="transport" className="text-white focus:text-white">🚗 Trasporti</SelectItem>
-                          <SelectItem value="accommodation" className="text-white focus:text-white">🏨 Alloggio</SelectItem>
-                          <SelectItem value="entertainment" className="text-white focus:text-white">🎉 Divertimento</SelectItem>
-                          <SelectItem value="shopping" className="text-white focus:text-white">🛍️ Shopping</SelectItem>
-                          <SelectItem value="other" className="text-white focus:text-white">📋 Altro</SelectItem>
+                          <SelectItem value="food" className="text-white focus:text-white">🍽️ {getCategoryLabel('food')}</SelectItem>
+                          <SelectItem value="transport" className="text-white focus:text-white">🚗 {getCategoryLabel('transport')}</SelectItem>
+                          <SelectItem value="accommodation" className="text-white focus:text-white">🏨 {getCategoryLabel('accommodation')}</SelectItem>
+                          <SelectItem value="entertainment" className="text-white focus:text-white">🎉 {getCategoryLabel('entertainment')}</SelectItem>
+                          <SelectItem value="shopping" className="text-white focus:text-white">🛍️ {getCategoryLabel('shopping')}</SelectItem>
+                          <SelectItem value="other" className="text-white focus:text-white">📋 {getCategoryLabel('other')}</SelectItem>
                         </SelectContent>
                       </Select>
+                      {expenseForm.formState.errors.category && (
+                        <p className="text-red-400 text-sm mt-1">
+                          {t(String(expenseForm.formState.errors.category.message))}
+                        </p>
+                      )}
                     </div>
                     
                     <div>
-                      <Label htmlFor="date" className="text-white">Data</Label>
+                      <Label htmlFor="date" className="text-white">{t('splittabro.date')}</Label>
                       <Input
                         id="date"
                         type="date"
@@ -702,6 +769,11 @@ export function SplittaBro() {
                         className="bg-gray-800/50 border-gray-700 text-white mt-1"
                         data-testid="input-expense-date"
                       />
+                      {expenseForm.formState.errors.date && (
+                        <p className="text-red-400 text-sm mt-1">
+                          {t(String(expenseForm.formState.errors.date.message))}
+                        </p>
+                      )}
                     </div>
                     
                     <DialogFooter>
@@ -710,7 +782,7 @@ export function SplittaBro() {
                         className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 w-full"
                         data-testid="button-submit-expense"
                       >
-                        Aggiungi Spesa
+                        {t('splittabro.addExpense')}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -727,7 +799,7 @@ export function SplittaBro() {
                       <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-2 rounded-lg mr-3">
                         <Receipt className="h-5 w-5 text-red-400" />
                       </div>
-                      Spese ({expenses.length})
+                      {t('splittabro.expensesCount', { count: expenses.length })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -736,7 +808,7 @@ export function SplittaBro() {
                         <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Receipt className="h-8 w-8 text-red-400" />
                         </div>
-                        <p className="text-gray-400">Nessuna spesa ancora registrata</p>
+                        <p className="text-gray-400">{t('splittabro.noExpenses')}</p>
                       </div>
                     ) : (
                       <ScrollArea className="h-[500px] pr-4">
@@ -757,21 +829,21 @@ export function SplittaBro() {
                                       {expense.description}
                                     </h4>
                                     <p className="text-sm text-gray-400 mt-1">
-                                      Pagato da <span className="text-red-400 font-medium">{expense.paidBy}</span>
+                                      {t('splittabro.paidByInline')} <span className="text-red-400 font-medium">{expense.paidBy}</span>
                                     </p>
                                   </div>
                                 </div>
                                 <div className="text-right ml-4">
                                   <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 px-3 py-1 rounded-lg border border-red-500/30">
-                                    <p className="font-bold text-red-400">€{(expense.amount / 100).toFixed(2)}</p>
+                                    <p className="font-bold text-red-400">{formatCurrency(expense.amount)}</p>
                                   </div>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    {new Date(expense.date).toLocaleDateString('it-IT')}
+                                    {formatDate(expense.date)}
                                   </p>
                                 </div>
                               </div>
                               <div className="flex flex-wrap gap-1.5 items-center">
-                                <span className="text-xs text-gray-500">Diviso tra:</span>
+                                <span className="text-xs text-gray-500">{t('splittabro.splitBetweenInline')}:</span>
                                 {expense.splitBetween.map((member) => (
                                   <Badge 
                                     key={member} 
@@ -800,7 +872,7 @@ export function SplittaBro() {
                       <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-2 rounded-lg mr-3">
                         <Calculator className="h-5 w-5 text-red-400" />
                       </div>
-                      Regolamenti
+                      {t('splittabro.settlements')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -811,7 +883,7 @@ export function SplittaBro() {
                           <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                             <DollarSign className="h-8 w-8 text-green-400" />
                           </div>
-                          <p className="text-gray-400 font-medium">Tutti i conti sono in pari!</p>
+                          <p className="text-gray-400 font-medium">{t('splittabro.allSettled')}</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -830,7 +902,7 @@ export function SplittaBro() {
                                 </div>
                                 <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 px-2 py-1 rounded border border-red-500/30 flex-shrink-0">
                                   <span className="font-bold text-red-400 text-sm whitespace-nowrap">
-                                    €{(settlement.amount / 100).toFixed(2)}
+                                    {formatCurrency(settlement.amount)}
                                   </span>
                                 </div>
                               </div>
@@ -842,6 +914,39 @@ export function SplittaBro() {
                   </CardContent>
                 </Card>
 
+                {/* Saldi */}
+                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-gray-700 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center text-lg">
+                      <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-2 rounded-lg mr-3">
+                        <TrendingUp className="h-5 w-5 text-red-400" />
+                      </div>
+                      {t('splittabro.balances')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {calculateBalances(selectedGroup, expenses).map(({ member, balance }, idx) => {
+                        const statusKey = balance > 0 ? 'splittabro.getsBack' : balance < 0 ? 'splittabro.owes' : 'splittabro.even';
+                        const statusColor = balance > 0 ? 'text-green-400' : balance < 0 ? 'text-red-400' : 'text-gray-400';
+                        return (
+                          <div
+                            key={member}
+                            className="flex items-center justify-between gap-3 p-3 bg-gradient-to-r from-gray-800/50 to-gray-700/30 rounded-lg border border-gray-700"
+                            data-testid={`member-balance-${idx}`}
+                          >
+                            <span className="text-white font-medium truncate">{member}</span>
+                            <div className="text-right">
+                              <p className={`text-sm font-semibold ${statusColor}`}>{t(statusKey)}</p>
+                              <p className={`text-sm ${statusColor}`}>{formatCurrency(Math.abs(balance))}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Membri del gruppo */}
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-gray-700 backdrop-blur-sm">
                   <CardHeader>
@@ -849,7 +954,7 @@ export function SplittaBro() {
                       <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-2 rounded-lg mr-3">
                         <Users className="h-5 w-5 text-red-400" />
                       </div>
-                      Membri ({selectedGroup.members.length})
+                      {t('splittabro.membersCount', { count: selectedGroup.members.length })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

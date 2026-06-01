@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Destination, Experience } from "@shared/schema";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Star, StarHalf, ExternalLink, Compass } from "lucide-react";
 import Header from "@/components/Header";
@@ -8,8 +7,10 @@ import Footer from "@/components/Footer";
 import ReactCountryFlag from "react-country-flag";
 import { getGetYourGuideCityLink } from "@/lib/getyourguide";
 import { trackEvent } from "@/lib/track";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function DestinationsPage() {
+  const { t } = useTranslation();
   const { data: destinations, isLoading: isLoadingDestinations } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
@@ -287,7 +288,7 @@ export default function DestinationsPage() {
                         </div>
                         {cardClickable && (
                           <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600 group-hover:underline">
-                            Scopri attività
+                            {t('destinations.discoverActivities')}
                             <ExternalLink className="w-3.5 h-3.5" />
                           </span>
                         )}
