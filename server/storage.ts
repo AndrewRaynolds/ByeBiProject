@@ -430,7 +430,7 @@ export class MemStorage implements IStorage {
       {
         name: "Cracovia",
         country: "Poland",
-        image: "https://images.unsplash.com/photo-1598970434795-0c54fe7c0648?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
+        image: "https://images.unsplash.com/photo-1674246145742-c6e4563d94cb?ixlib=rb-4.1.0&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Città storica con prezzi accessibili e vita notturna vivace nel cuore della Polonia.",
         tags: ["Storia", "Prezzi bassi", "Vita notturna"],
         rating: "4.5",
@@ -466,7 +466,7 @@ export class MemStorage implements IStorage {
       {
         name: "Palma de Mallorca",
         country: "Spain",
-        image: "https://images.unsplash.com/photo-1562883676-8c7feb83f09b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500&q=90",
+        image: "https://images.unsplash.com/photo-1729253980006-c961754ef578?ixlib=rb-4.1.0&auto=format&fit=crop&w=800&h=500&q=90",
         description: "Isola balearica con spiagge cristalline, beach club e vita notturna mediterranea.",
         tags: ["Spiagge", "Beach club", "Isola"],
         rating: "4.6",
