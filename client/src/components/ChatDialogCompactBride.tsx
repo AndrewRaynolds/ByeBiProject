@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
 import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -69,11 +70,12 @@ interface ChatDialogCompactBrideProps {
 }
 
 export default function ChatDialogCompactBride({ open, onOpenChange, initialMessage }: ChatDialogCompactBrideProps) {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: '1',
-      content: 'Ciao! 💕 Dove vuoi andare per il tuo addio al nubilato? Dimmi la città e ti creo un pacchetto personalizzato perfetto per te e le tue amiche!',
+      content: t('chat.brideWelcome'),
       sender: 'assistant',
       timestamp: new Date(),
     },
@@ -282,7 +284,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: "Mi dispiace, c'è stato un problema. Riprova!",
+        content: t('chat.genericError'),
         sender: 'assistant',
         timestamp: new Date()
       };
@@ -746,7 +748,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
             <Input
               {...form.register('message')}
-              placeholder="Type your message..."
+              placeholder={t('chat.messagePlaceholder')}
               className="flex-1"
               disabled={isLoading}
               data-testid="input-chat-message-bride"

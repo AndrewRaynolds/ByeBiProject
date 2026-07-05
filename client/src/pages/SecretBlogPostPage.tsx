@@ -12,6 +12,7 @@ import {
   getAvatarEmoji,
   DESTINATIONS_MAP,
 } from "@/components/SecretBlog";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 function getBrand(): Brand {
   try {
@@ -22,16 +23,10 @@ function getBrand(): Brand {
   }
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  sex: "🔞 Sex",
-  drink: "🍺 Drink",
-  weird: "🤪 Weird",
-};
-
-function formatDate(date: string | Date | null | undefined): string {
+function formatDate(date: string | Date | null | undefined, locale: string): string {
   if (!date) return "";
   const d = new Date(date);
-  return d.toLocaleDateString("it-IT", {
+  return d.toLocaleDateString(locale === "en" ? "en-US" : locale === "es" ? "es-ES" : "it-IT", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -72,6 +67,7 @@ function PostSkeleton({ isBride }: { isBride: boolean }) {
 }
 
 export default function SecretBlogPostPage() {
+  const { t, locale } = useTranslation();
   const params = useParams<{ id: string }>();
   const id = params.id;
   const brand = getBrand();
@@ -99,14 +95,14 @@ export default function SecretBlogPostPage() {
         <Header />
         <main className="flex-grow container mx-auto px-4 py-20 max-w-2xl text-center">
           <div className="text-5xl mb-6">🤐</div>
-          <h1 className="text-2xl font-bold text-white mb-3">Storia non trovata</h1>
+          <h1 className="text-2xl font-bold text-white mb-3">{t('secretBlog.notFoundTitle')}</h1>
           <p className={`${textMuted} mb-8`}>
-            Questa storia potrebbe essere stata rimossa o non esiste.
+            {t('secretBlog.notFoundDesc')}
           </p>
           <Link href="/secret-blog">
             <Button className={`bg-gradient-to-r ${accentColor} text-white font-bold px-6 rounded-xl`}>
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Torna alle storie
+              {t('secretBlog.backToStories')}
             </Button>
           </Link>
         </main>
@@ -129,7 +125,7 @@ export default function SecretBlogPostPage() {
         <Link href="/secret-blog">
           <button className={`flex items-center gap-1 text-sm font-medium ${textMuted} hover:text-white transition-colors mb-8`}>
             <ChevronLeft className="w-4 h-4" />
-            Torna alle storie
+            {t('secretBlog.backToStories')}
           </button>
         </Link>
 
@@ -141,7 +137,7 @@ export default function SecretBlogPostPage() {
             <div className="flex flex-wrap items-center gap-2 mb-6">
               {post.category && (
                 <span className={`text-sm px-3 py-1 rounded-full font-semibold bg-gradient-to-r ${accentColor} text-white`}>
-                  {CATEGORY_LABEL[post.category] ?? post.category}
+                  {t(`secretBlog.category.${post.category}`)}
                 </span>
               )}
               {locationLabel && (
@@ -186,12 +182,12 @@ export default function SecretBlogPostPage() {
               </div>
               <div>
                 <p className="text-white text-sm font-semibold">{alias}</p>
-                <p className={`${textMuted} text-xs`}>Racconto anonimo</p>
+                <p className={`${textMuted} text-xs`}>{t('secretBlog.anonymousStory')}</p>
               </div>
               {post.createdAt && (
                 <div className={`ml-auto flex items-center gap-1 text-xs ${textMuted}`}>
                   <Calendar className="w-3 h-3" />
-                  {formatDate(post.createdAt)}
+                  {formatDate(post.createdAt, locale)}
                 </div>
               )}
             </div>
@@ -199,7 +195,7 @@ export default function SecretBlogPostPage() {
             <div className={`${borderTop} pt-6`}>
               <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest ${accentText} mb-4`}>
                 <Flame className="w-3 h-3" />
-                <span>La storia</span>
+                <span>{t('secretBlog.storyLabel')}</span>
               </div>
               <p className={`${textMuted} text-base leading-relaxed whitespace-pre-wrap`}>
                 {post.content}

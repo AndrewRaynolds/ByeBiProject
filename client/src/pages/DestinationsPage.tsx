@@ -8,9 +8,11 @@ import ReactCountryFlag from "react-country-flag";
 import { getGetYourGuideCityLink } from "@/lib/getyourguide";
 import { trackEvent } from "@/lib/track";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { localizeDestination } from "@/lib/localizeDestination";
 
 export default function DestinationsPage() {
   const { t } = useTranslation();
+  const isBride = localStorage.getItem("selectedBrand") === "byebride";
   const { data: destinations, isLoading: isLoadingDestinations } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
@@ -173,14 +175,15 @@ export default function DestinationsPage() {
   return (
     <>
       <Header />
-      <main className="bg-gray-100">
-        <section className="bg-black text-white py-20">
+      <main className={isBride ? "bg-pink-50" : "bg-gray-100"}>
+        <section className={`${isBride ? "bg-gradient-to-r from-purple-950 to-pink-900" : "bg-black"} text-white py-20`}>
           <div className="container mx-auto px-4">
             <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">Bachelor Party Destinations</h1>
+              <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                {t(isBride ? "destinations.heroTitleBride" : "destinations.heroTitleBro")}
+              </h1>
               <p className="text-xl max-w-3xl mx-auto">
-                Discover the perfect city for your group's last adventure together. 
-                From wild nightlife to thrilling adventures, we've got the ideal spot for every team.
+                {t(isBride ? "destinations.heroSubtitleBride" : "destinations.heroSubtitleBro")}
               </p>
             </div>
           </div>
@@ -189,14 +192,15 @@ export default function DestinationsPage() {
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="mb-12">
-              <h2 className="text-3xl font-bold mb-4">All Destinations</h2>
+              <h2 className="text-3xl font-bold mb-4">{t("destinations.allTitle")}</h2>
               <p className="text-gray-600">
-                Each destination is tagged with the experiences that match its vibe best. Look for the colored badges!
+                {t("destinations.allSubtitle")}
               </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {destinations?.map((destination) => {
+                const localizedDestination = localizeDestination(destination, t);
                 const recommendedExperiences = getDestinationExperiences(destination);
                 const gygUrl = getGetYourGuideCityLink(destination.name);
                 const handleCardClick = () => {
@@ -215,7 +219,7 @@ export default function DestinationsPage() {
                     key={destination.id}
                     role={cardClickable ? "link" : undefined}
                     tabIndex={cardClickable ? 0 : undefined}
-                    aria-label={cardClickable ? `Esplora esperienze a ${destination.name} su GetYourGuide` : undefined}
+                    aria-label={cardClickable ? t("destinations.cardAria", { city: localizedDestination.name }) : undefined}
                     onClick={cardClickable ? handleCardClick : undefined}
                     onKeyDown={(e) => {
                       if (cardClickable && (e.key === "Enter" || e.key === " ")) {
@@ -229,7 +233,7 @@ export default function DestinationsPage() {
                     <div className="relative h-64 overflow-hidden">
                       <img 
                         src={destination.image} 
-                        alt={`${destination.name} - ${destination.country}`} 
+                        alt={`${localizedDestination.name} - ${localizedDestination.country}`}
                         className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
                       />
                       <div className="absolute top-4 left-4 flex items-center space-x-2">
@@ -252,8 +256,8 @@ export default function DestinationsPage() {
                         </div>
                       )}
                       <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black to-transparent">
-                        <h3 className="text-white text-xl font-bold">{destination.name}</h3>
-                        <p className="text-white text-sm">{destination.country}</p>
+                        <h3 className="text-white text-xl font-bold">{localizedDestination.name}</h3>
+                        <p className="text-white text-sm">{localizedDestination.country}</p>
                       </div>
                     </div>
                     
@@ -267,7 +271,7 @@ export default function DestinationsPage() {
                             {expName}
                           </span>
                         ))}
-                        {destination.tags?.map((tag, i) => (
+                        {localizedDestination.tags?.map((tag, i) => (
                           <span 
                             key={`tag-${i}`} 
                             className="bg-gray-200 text-gray-800 text-xs px-3 py-1 rounded-full"
@@ -277,7 +281,7 @@ export default function DestinationsPage() {
                         ))}
                       </div>
                       
-                      <p className="text-gray-700 mb-4">{destination.description}</p>
+                      <p className="text-gray-700 mb-4">{localizedDestination.description}</p>
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">

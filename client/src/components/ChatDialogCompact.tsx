@@ -22,6 +22,7 @@ import {
   formatDateRangeIT,
 } from "@shared/dateUtils";
 import { buildAviasalesUrl, getCityIata } from "@/lib/aviasales";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -85,6 +86,7 @@ export default function ChatDialogCompact({
   onOpenChange,
   initialMessage,
 }: ChatDialogCompactProps) {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -325,7 +327,7 @@ export default function ChatDialogCompact({
 
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: "Mi dispiace, c'è stato un problema. Riprova!",
+        content: t('chat.genericError'),
         sender: "assistant",
         timestamp: new Date(),
       };
@@ -838,7 +840,7 @@ export default function ChatDialogCompact({
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
             <Input
               {...form.register("message")}
-              placeholder="Type your message..."
+              placeholder={t('chat.messagePlaceholder')}
               className="flex-1 bg-[#fafafa]"
               disabled={isLoading}
               data-testid="input-chat-message"

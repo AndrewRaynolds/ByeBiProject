@@ -5,15 +5,17 @@ import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function Footer() {
   const { t } = useTranslation();
+  const isBride = localStorage.getItem("selectedBrand") === "byebride";
+  const accentClass = isBride ? "text-pink-500" : "text-primary";
   return (
     <footer className="bg-dark text-gray-300 py-12">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <Link href="/" className="text-white font-poppins font-bold text-2xl mb-4 block">
-              <span className="text-white">Bye</span><span className="text-primary">Bro</span>
+              <span className="text-white">Bye</span><span className={accentClass}>{isBride ? "Bride" : "Bro"}</span>
             </Link>
-            <p className="text-gray-400 mb-4">{t('footer.tagline')}</p>
+            <p className="text-gray-400 mb-4">{t(isBride ? 'footer.taglineBride' : 'footer.taglineBro')}</p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition">
                 <FaFacebookF />
@@ -96,23 +98,23 @@ export default function Footer() {
             <h4 className="text-white font-bold text-lg mb-4">{t('footer.contact')}</h4>
             <ul className="space-y-2">
               <li className="flex items-start">
-                <Mail className="text-primary mt-1 mr-3 h-4 w-4" />
-                <span>support@byebro.com</span>
+                <Mail className={`${accentClass} mt-1 mr-3 h-4 w-4`} />
+                <span>{isBride ? "support@byebride.com" : "support@byebro.com"}</span>
               </li>
               <li className="flex items-start">
-                <Phone className="text-primary mt-1 mr-3 h-4 w-4" />
+                <Phone className={`${accentClass} mt-1 mr-3 h-4 w-4`} />
                 <span>+1 (888) 123-4567</span>
               </li>
               <li className="flex items-start">
-                <MapPin className="text-primary mt-1 mr-3 h-4 w-4" />
-                <span>123 Party Street, Amsterdam, Netherlands</span>
+                <MapPin className={`${accentClass} mt-1 mr-3 h-4 w-4`} />
+                <span>{t('footer.address')}</span>
               </li>
             </ul>
           </div>
         </div>
         
         <div className="border-t border-gray-800 mt-12 pt-8 text-center">
-          <p className="text-gray-500">{t('footer.copyright', { year: new Date().getFullYear().toString() })}</p>
+          <p className="text-gray-500">{t(isBride ? 'footer.copyrightBride' : 'footer.copyrightBro', { year: new Date().getFullYear().toString() })}</p>
         </div>
       </div>
     </footer>

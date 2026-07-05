@@ -7,12 +7,16 @@ import { Link } from "wouter";
 import { memo, useCallback } from "react";
 import OptimizedImage from "@/components/ui/optimized-image";
 import { throttle } from "@/lib/performance";
+import { useTranslation } from "@/contexts/LanguageContext";
+import { localizeDestination } from "@/lib/localizeDestination";
 
 // Ottimizzati i singoli componenti per evitare re-rendering
 const DestinationCard = memo(({ destination, onExplore }: { 
   destination: Destination, 
   onExplore: (id: number) => void 
 }) => {
+  const { t } = useTranslation();
+  const localizedDestination = localizeDestination(destination, t);
   // Memorizziamo la funzione di callback
   const handleExplore = useCallback(() => {
     onExplore(destination.id);
@@ -41,20 +45,20 @@ const DestinationCard = memo(({ destination, onExplore }: {
       <div className="relative h-64 overflow-hidden">
         <OptimizedImage 
           src={destination.image} 
-          alt={`${destination.name} - ${destination.country}`} 
+          alt={`${localizedDestination.name} - ${localizedDestination.country}`}
           width={400}
           height={300}
           className="w-full h-full object-cover transition duration-500 group-hover:scale-110"
           loadingMode="lazy"
         />
         <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 to-transparent">
-          <h3 className="text-white text-xl font-bold font-poppins">{destination.name}</h3>
-          <p className="text-white text-sm">{destination.country}</p>
+          <h3 className="text-white text-xl font-bold font-poppins">{localizedDestination.name}</h3>
+          <p className="text-white text-sm">{localizedDestination.country}</p>
         </div>
       </div>
       <div className="p-4">
         <div className="flex items-center mb-2">
-          {destination.tags?.map((tag, index) => (
+          {localizedDestination.tags?.map((tag, index) => (
             <span 
               key={index} 
               className={`${
@@ -67,7 +71,7 @@ const DestinationCard = memo(({ destination, onExplore }: {
             </span>
           ))}
         </div>
-        <p className="text-gray-300 text-sm mb-4 line-clamp-2">{destination.description}</p>
+        <p className="text-gray-300 text-sm mb-4 line-clamp-2">{localizedDestination.description}</p>
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             <div className="text-yellow-400 flex">
@@ -80,7 +84,7 @@ const DestinationCard = memo(({ destination, onExplore }: {
             className="text-red-600 hover:text-red-700 font-medium"
             onClick={handleExplore}
           >
-            Explore
+            {t("destinations.explore")}
           </Button>
         </div>
       </div>
@@ -96,22 +100,12 @@ interface FeaturedDestinationsProps {
   brand?: Brand;
 }
 
-const COPY = {
-  bro: {
-    subtitle: "Top picks for your unforgettable bachelor party"
-  },
-  bride: {
-    subtitle: "Top picks for your unforgettable bachelorette party"
-  }
-};
-
 // Componente principale ottimizzato
 const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' }: FeaturedDestinationsProps) {
+  const { t } = useTranslation();
   const { data: destinations, isLoading, error } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
-  
-  const copy = COPY[brand];
   
   // Throttle della funzione di navigazione
   const handleExplore = useCallback(throttle(() => {
@@ -154,8 +148,8 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">Popular Destinations</h2>
-            <p className="text-red-500">Error loading destinations. Please try again later.</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">{t("destinations.popularTitle")}</h2>
+            <p className="text-red-500">{t("destinations.errorLoading")}</p>
           </div>
         </div>
       </section>
@@ -167,11 +161,11 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">Popular Destinations</h2>
-            <p className="text-gray-300 mt-2">{copy.subtitle}</p>
+            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">{t("destinations.popularTitle")}</h2>
+            <p className="text-gray-300 mt-2">{t(brand === "bride" ? "destinations.popularSubtitleBride" : "destinations.popularSubtitleBro")}</p>
           </div>
           <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
-            View all destinations
+            {t("destinations.viewAll")}
           </Link>
         </div>
         
@@ -187,7 +181,7 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
         
         <div className="mt-8 text-center md:hidden">
           <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium">
-            View all destinations
+            {t("destinations.viewAll")}
           </Link>
         </div>
       </div>

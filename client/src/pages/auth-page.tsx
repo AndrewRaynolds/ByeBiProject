@@ -38,6 +38,7 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const { t } = useTranslation();
+  const isBride = localStorage.getItem("selectedBrand") === "byebride";
 
   useEffect(() => {
     if (user) {
@@ -88,10 +89,10 @@ export default function AuthPage() {
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h2 className="mt-6 text-3xl font-bold text-white">
-              {t('auth.welcomeTo')} <span className="text-red-600">Bye</span>Bro
+              {t('auth.welcomeTo')} <span className={isBride ? "text-pink-600" : "text-red-600"}>Bye</span>{isBride ? "Bride" : "Bro"}
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              One more Night, no more rights!
+              {t(isBride ? 'hero.bride.title' : 'hero.bro.title')}
             </p>
           </div>
 
@@ -109,7 +110,7 @@ export default function AuthPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>{t('auth.email')}</FormLabel>
                         <FormControl>
                           <Input type="email" placeholder="you@example.com" {...field} />
                         </FormControl>
@@ -158,7 +159,7 @@ export default function AuthPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>{t('auth.email')}</FormLabel>
                         <FormControl>
                           <Input type="email" placeholder="you@example.com" {...field} />
                         </FormControl>

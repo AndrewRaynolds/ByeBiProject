@@ -42,6 +42,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 // Schema per il form di input
 const messageSchema = z.object({
@@ -74,6 +75,7 @@ interface PackageItem {
 }
 
 export default function OneClickAssistant() {
+  const { t, locale } = useTranslation();
   const [brand, setBrand] = useState<"byebro" | "byebride">("byebro");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -382,6 +384,15 @@ export default function OneClickAssistant() {
     destinationName: string,
     destinationKey: string,
   ) => {
+    if (locale !== 'it') {
+      const keyMap: Record<string, string> = {
+        amsterdam: 'amsterdam', praga: 'prague', budapest: 'budapest',
+        barcellona: 'barcelona', berlino: 'berlin', roma: 'rome',
+        lisbona: 'lisbon', 'palma de mallorca': 'palma', cracovia: 'krakow', ibiza: 'ibiza',
+      };
+      const localizedName = t(`destinations.city.${keyMap[destinationKey] ?? 'rome'}.name`);
+      return t(brand === 'byebride' ? 'oneClick.destinationResponseBride' : 'oneClick.destinationResponseBro', { destination: localizedName });
+    }
     const responses = {
       amsterdam: [
         "Amsterdam! Fantastica scelta! 🍺 Canali romantici di giorno, follia totale di notte! Quanti siete? E per quanto tempo volete conquistare la città?",
@@ -509,6 +520,10 @@ export default function OneClickAssistant() {
     }
 
     // Varied final responses
+    if (locale !== 'it') {
+      return t(brand === 'byebride' ? 'oneClick.morePreferencesBride' : 'oneClick.morePreferencesBro');
+    }
+
     const finalResponses = [
       "Grazie per queste informazioni! Hai altre preferenze o richieste particolari per il tuo addio al celibato?",
       "Perfetto! C'è qualcos'altro che vorresti aggiungere per rendere questo viaggio indimenticabile?",
@@ -834,8 +849,7 @@ export default function OneClickAssistant() {
       // Aggiungi messaggio di conferma
       const confirmMessage: ChatMessage = {
         id: (Date.now() + 3).toString(),
-        content:
-          "Perfetto! Ho generato un pacchetto personalizzato per te. Puoi vedere tutti i dettagli e personalizzare le opzioni. Quando sei pronto, puoi procedere con il checkout.",
+        content: t('oneClick.packageGeneratedMessage'),
         sender: "assistant",
         timestamp: new Date(),
       };
@@ -858,7 +872,7 @@ export default function OneClickAssistant() {
 
     const checkoutMessage: ChatMessage = {
       id: (Date.now() + 4).toString(),
-      content: `Ottimo! Il tuo pacchetto costa in totale €${totalPrice.toFixed(2)}. Procediamo con il pagamento.`,
+      content: t('oneClick.checkoutMessage', { total: totalPrice.toFixed(2) }),
       sender: "assistant",
       timestamp: new Date(),
     };
@@ -872,8 +886,7 @@ export default function OneClickAssistant() {
 
     const paymentMessage: ChatMessage = {
       id: (Date.now() + 5).toString(),
-      content:
-        "Fantastico! Il pagamento è stato completato con successo. Riceverai tutte le conferme di prenotazione via email. Buon viaggio!",
+      content: t('oneClick.paymentMessage'),
       sender: "assistant",
       timestamp: new Date(),
     };
@@ -881,8 +894,8 @@ export default function OneClickAssistant() {
     setMessages((prev) => [...prev, paymentMessage]);
 
     toast({
-      title: "Pagamento completato!",
-      description: "Il tuo pacchetto è stato prenotato con successo.",
+      title: t('merch.paymentComplete'),
+      description: t('oneClick.packageBooked'),
     });
   };
 
@@ -895,9 +908,8 @@ export default function OneClickAssistant() {
       !tripDetails.adventureType
     ) {
       toast({
-        title: "Dati mancanti",
-        description:
-          "Completa tutte le informazioni richieste prima di generare l'itinerario.",
+        title: t('oneClick.missingData'),
+        description: t('oneClick.missingDataDesc'),
         variant: "destructive",
       });
       return;
@@ -922,8 +934,8 @@ export default function OneClickAssistant() {
       const itinerary = await response.json();
 
       toast({
-        title: "Itinerario generato!",
-        description: "Il tuo itinerario personalizzato è pronto.",
+        title: t('oneClick.itineraryGenerated'),
+        description: t('oneClick.itineraryReady'),
       });
 
       localStorage.setItem("currentItinerary", JSON.stringify({
@@ -941,9 +953,8 @@ export default function OneClickAssistant() {
     } catch (error) {
       console.error("Error generating itinerary:", error);
       toast({
-        title: "Errore",
-        description:
-          "Si è verificato un errore durante la generazione dell'itinerario. Riprova.",
+        title: t('common.error'),
+        description: t('oneClick.itineraryError'),
         variant: "destructive",
       });
     } finally {
@@ -958,9 +969,8 @@ export default function OneClickAssistant() {
   };
 
   const brandName = brand === "byebro" ? "ByeBro" : "ByeBride";
-  const eventType =
-    brand === "byebro" ? "addio al celibato" : "addio al nubilato";
-
+  const packageItemTitle = (item: PackageItem) => locale === 'it' ? item.title : t(`oneClick.packageType.${item.type}`);
+  const packageItemDescription = (item: PackageItem) => locale === 'it' ? item.description : t('oneClick.packageItemDescription', { type: t(`oneClick.packageType.${item.type}`) });
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
@@ -974,10 +984,10 @@ export default function OneClickAssistant() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                One Click Assistant
+                {t('oneClick.assistantTitle')}
               </h1>
               <p className="text-sm text-gray-500">
-                Il tuo assistente personale per l'{eventType} perfetto
+                {t(brand === 'byebride' ? 'oneClick.assistantSubtitleBride' : 'oneClick.assistantSubtitleBro')}
               </p>
             </div>
           </div>
@@ -990,12 +1000,12 @@ export default function OneClickAssistant() {
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              {brandName} Chat Assistant
+              {t('oneClick.chatAssistant', { brand: brandName })}
             </CardTitle>
             <CardDescription className="text-sm">
               {selectedDestination === "ibiza"
-                ? `Ibiza - ${tripDetails.people > 0 ? `${tripDetails.people} persone` : "Raccolta info"} ${tripDetails.days > 0 ? `• ${tripDetails.days} giorni` : ""} ${tripDetails.adventureType ? `• ${tripDetails.adventureType}` : ""}`
-                : "Dimmi dove vuoi andare per il tuo addio al celibato!"}
+                ? `Ibiza - ${tripDetails.people > 0 ? t('oneClick.peopleCount', { count: tripDetails.people }) : t('oneClick.collectingInfo')} ${tripDetails.days > 0 ? `• ${t('oneClick.daysCount', { count: tripDetails.days })}` : ""} ${tripDetails.adventureType ? `• ${tripDetails.adventureType}` : ""}`
+                : t(brand === 'byebride' ? 'oneClick.destinationPromptBride' : 'oneClick.destinationPromptBro')}
             </CardDescription>
           </CardHeader>
 
@@ -1038,7 +1048,7 @@ export default function OneClickAssistant() {
                           {message.content}
                         </p>
                         <p className="text-xs mt-1 opacity-70">
-                          {message.timestamp.toLocaleTimeString("it-IT", {
+                          {message.timestamp.toLocaleTimeString(locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT', {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
@@ -1062,7 +1072,7 @@ export default function OneClickAssistant() {
                         <div className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin" />
                           <span className="text-sm text-gray-600">
-                            Sto scrivendo...
+                            {t('oneClick.typing')}
                           </span>
                         </div>
                       </div>
@@ -1087,12 +1097,12 @@ export default function OneClickAssistant() {
                     {isGeneratingPackage ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generazione in corso...
+                        {t('oneClick.generating')}
                       </>
                     ) : (
                       <>
                         <Calendar className="w-4 h-4 mr-2" />
-                        Genera Itinerario Completo
+                        {t('oneClick.generateItinerary')}
                       </>
                     )}
                   </Button>
@@ -1104,7 +1114,7 @@ export default function OneClickAssistant() {
               >
                 <Input
                   {...form.register("message")}
-                  placeholder="Scrivi qui il tuo messaggio..."
+                  placeholder={t('chat.messagePlaceholder')}
                   className="flex-1"
                   disabled={isLoading}
                 />
@@ -1125,9 +1135,9 @@ export default function OneClickAssistant() {
       <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Il tuo pacchetto personalizzato</DialogTitle>
+            <DialogTitle>{t('oneClick.customPackage')}</DialogTitle>
             <DialogDescription>
-              Seleziona i servizi che desideri includere nel tuo pacchetto
+              {t('oneClick.selectServices')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1144,9 +1154,9 @@ export default function OneClickAssistant() {
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-semibold">{item.title}</h3>
+                          <h3 className="font-semibold">{packageItemTitle(item)}</h3>
                           <p className="text-sm text-gray-600 mt-1">
-                            {item.description}
+                            {packageItemDescription(item)}
                           </p>
                           {item.location && (
                             <p className="text-xs text-gray-500 mt-1">
@@ -1188,11 +1198,11 @@ export default function OneClickAssistant() {
 
           <DialogFooter className="flex items-center justify-between">
             <div className="text-lg font-bold">
-              Totale: €{totalPrice.toFixed(2)}
+              {t('merch.total')}: €{totalPrice.toFixed(2)}
             </div>
             <Button onClick={handleCheckout} disabled={totalPrice === 0}>
               <ShoppingCart className="w-4 h-4 mr-2" />
-              Procedi al Checkout
+              {t('oneClick.proceedCheckout')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1202,15 +1212,15 @@ export default function OneClickAssistant() {
       <Dialog open={checkoutDialogOpen} onOpenChange={setCheckoutDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Checkout</DialogTitle>
+            <DialogTitle>{t('oneClick.checkoutTitle')}</DialogTitle>
             <DialogDescription>
-              Conferma il tuo ordine e procedi al pagamento
+              {t('oneClick.checkoutDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="border rounded-lg p-4">
-              <h3 className="font-semibold mb-2">Riepilogo ordine</h3>
+              <h3 className="font-semibold mb-2">{t('oneClick.orderSummary')}</h3>
               {packageItems
                 .filter((item) => item.selected)
                 .map((item) => (
@@ -1218,13 +1228,13 @@ export default function OneClickAssistant() {
                     key={item.id}
                     className="flex justify-between text-sm py-1"
                   >
-                    <span>{item.title}</span>
+                    <span>{packageItemTitle(item)}</span>
                     <span>€{item.price}</span>
                   </div>
                 ))}
               <Separator className="my-2" />
               <div className="flex justify-between font-bold">
-                <span>Totale</span>
+                <span>{t('merch.total')}</span>
                 <span>€{totalPrice.toFixed(2)}</span>
               </div>
             </div>
@@ -1235,11 +1245,11 @@ export default function OneClickAssistant() {
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               onClick={() => setCheckoutDialogOpen(false)}
             >
-              Annulla
+              {t('common.cancel')}
             </Button>
             <Button onClick={handlePayment}>
               <Gift className="w-4 h-4 mr-2" />
-              Paga Ora
+              {t('oneClick.payNow')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1250,10 +1260,10 @@ export default function OneClickAssistant() {
         <DialogContent className="max-w-6xl h-[90vh]">
           <DialogHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-t-lg -m-6 mb-4">
             <DialogTitle className="text-2xl font-bold">
-              {itineraryData?.title || "Il Vostro Itinerario"}
+              {itineraryData?.title || t('oneClick.yourItinerary')}
             </DialogTitle>
             <DialogDescription className="text-red-100 text-lg">
-              {itineraryData?.subtitle || "Addio al celibato personalizzato"}
+              {itineraryData?.subtitle || t(brand === 'byebride' ? 'oneClick.customEventBride' : 'oneClick.customEventBro')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1314,12 +1324,12 @@ export default function OneClickAssistant() {
                               className="ml-auto"
                             >
                               {activity.type === "restaurant"
-                                ? "Ristorante"
+                                ? t('experiences.category.restaurants')
                                 : activity.type === "nightlife"
-                                  ? "Vita Notturna"
+                                  ? t('experiences.category.nightlife')
                                   : activity.type === "activity"
-                                    ? "Attività"
-                                    : "Arrivo"}
+                                    ? t('experiences.category.activities')
+                                    : t('oneClick.arrival')}
                             </Badge>
                           </div>
 
@@ -1335,23 +1345,23 @@ export default function OneClickAssistant() {
 
               <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 rounded-xl">
                 <h3 className="text-xl font-bold mb-3">
-                  Consigli Extra per Ibiza
+                  {t('oneClick.ibizaTips')}
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <h4 className="font-semibold mb-2">Prima di partire:</h4>
+                    <h4 className="font-semibold mb-2">{t('oneClick.beforeLeaving')}</h4>
                     <ul className="space-y-1 text-red-100">
-                      <li>• Prenota ristoranti top in anticipo</li>
-                      <li>• Compra biglietti club online (-€10-20)</li>
-                      <li>• Scarica app taxi locali</li>
+                      <li>• {t('oneClick.tipBookRestaurants')}</li>
+                      <li>• {t('oneClick.tipClubTickets')}</li>
+                      <li>• {t('oneClick.tipTaxiApps')}</li>
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Durante il viaggio:</h4>
+                    <h4 className="font-semibold mb-2">{t('oneClick.duringTrip')}</h4>
                     <ul className="space-y-1 text-red-100">
-                      <li>• Pre-drink prima dei club</li>
-                      <li>• Usa guest list quando disponibile</li>
-                      <li>• Goditi i tramonti di San Antonio</li>
+                      <li>• {t('oneClick.tipPreDrink')}</li>
+                      <li>• {t('oneClick.tipGuestList')}</li>
+                      <li>• {t('oneClick.tipSunsets')}</li>
                     </ul>
                   </div>
                 </div>
@@ -1364,7 +1374,7 @@ export default function OneClickAssistant() {
               className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
               onClick={() => setShowItineraryDialog(false)}
             >
-              Chiudi
+              {t('common.close')}
             </Button>
             <Button className="bg-red-600 hover:bg-red-700">
               <Calendar className="w-4 h-4 mr-2" />

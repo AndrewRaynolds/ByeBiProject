@@ -47,6 +47,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const { loginMutation, registerMutation } = useAuth();
   const { t } = useTranslation();
+  const isBride = localStorage.getItem("selectedBrand") === "byebride";
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -90,7 +91,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            {activeTab === "login" ? t("auth.welcomeBack") : t("auth.joinByebro")}
+            {activeTab === "login" ? t("auth.welcomeBack") : t(isBride ? "auth.joinByebride" : "auth.joinByebro")}
           </DialogTitle>
         </DialogHeader>
 
@@ -108,7 +109,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t('auth.email')}</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="your@email.com" {...field} />
                       </FormControl>
@@ -161,7 +162,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
             <div className="mt-6 flex items-center justify-center">
               <Separator className="flex-grow" />
-              <span className="mx-4 text-sm text-gray-500">OR</span>
+              <span className="mx-4 text-sm text-gray-500">{t('common.or')}</span>
               <Separator className="flex-grow" />
             </div>
 

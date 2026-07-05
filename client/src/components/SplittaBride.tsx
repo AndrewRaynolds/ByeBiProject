@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 interface ExpenseGroup {
   id: number;
@@ -64,6 +65,7 @@ type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
 type CreateExpenseFormValues = z.infer<typeof createExpenseSchema>;
 
 export function SplittaBride() {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<ExpenseGroup[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ExpenseGroup | null>(null);
@@ -166,7 +168,7 @@ export function SplittaBride() {
         setSelectedGroup(newGroup);
         
         toast({
-          title: "✅ Gruppo creato con successo!",
+          title: t('splittabro.toast.groupCreatedTitle'),
           description: `${newGroup.name} è stato creato. Ora puoi aggiungere le spese.`,
         });
       } else {
@@ -176,7 +178,7 @@ export function SplittaBride() {
     } catch (error) {
       console.error('Errore creazione gruppo:', error);
       toast({
-        title: "❌ Impossibile creare il gruppo",
+        title: t('splittabro.toast.groupCreateErrorTitle'),
         description: error instanceof Error 
           ? error.message 
           : "Si è verificato un errore. Controlla la connessione e riprova più tardi.",
@@ -244,8 +246,8 @@ export function SplittaBride() {
         ));
         
         toast({
-          title: "Spesa aggiunta!",
-          description: "La spesa è stata registrata con successo.",
+          title: t('splittabro.toast.expenseAddedTitle'),
+          description: t('splittabro.toast.expenseAddedDesc'),
         });
       } else {
         const errorData = await response.json();
@@ -255,8 +257,8 @@ export function SplittaBride() {
     } catch (error) {
       console.error('Errore creazione spesa:', error);
       toast({
-        title: "Errore",
-        description: "Impossibile aggiungere la spesa. Riprova.",
+        title: t('common.error'),
+        description: t('splittabro.toast.expenseCreateErrorTitle'),
         variant: "destructive",
       });
     }
@@ -322,7 +324,7 @@ export function SplittaBride() {
             <div className="absolute inset-0 rounded-full border-4 border-pink-600/30"></div>
             <div className="absolute inset-0 rounded-full border-4 border-pink-600 border-t-transparent animate-spin"></div>
           </div>
-          <p className="text-white text-lg">Caricamento SplittaBride...</p>
+          <p className="text-white text-lg">{t('splittabride.loading')}</p>
         </div>
       </div>
     );
@@ -348,7 +350,7 @@ export function SplittaBride() {
               </h1>
               <Sparkles className="w-8 h-8 text-pink-500" />
             </div>
-            <p className="text-gray-400 text-sm md:text-base">Dividi le spese del tuo addio al nubilato</p>
+            <p className="text-gray-400 text-sm md:text-base">{t('splittabride.subtitle')}</p>
           </div>
           <div className="w-20 hidden md:block"></div>
         </div>
@@ -372,14 +374,14 @@ export function SplittaBride() {
                 </DialogTrigger>
                 <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-pink-500/20 text-white max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="text-white text-xl">Crea Nuovo Gruppo</DialogTitle>
+                    <DialogTitle className="text-white text-xl">{t('splittabro.createGroupTitle')}</DialogTitle>
                     <DialogDescription className="text-gray-400">
                       Crea un nuovo gruppo per dividere le spese del tuo addio al nubilato
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={groupForm.handleSubmit(onCreateGroup)} className="space-y-4">
                     <div>
-                      <Label htmlFor="name" className="text-white">Nome Gruppo</Label>
+                      <Label htmlFor="name" className="text-white">{t('splittabro.groupName')}</Label>
                       <Input
                         id="name"
                         {...groupForm.register('name')}
@@ -395,7 +397,7 @@ export function SplittaBride() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="description" className="text-white">Descrizione (opzionale)</Label>
+                      <Label htmlFor="description" className="text-white">{t('splittabro.descriptionOptional')}</Label>
                       <Textarea
                         id="description"
                         {...groupForm.register('description')}
@@ -406,7 +408,7 @@ export function SplittaBride() {
                     </div>
                     
                     <div>
-                      <Label className="text-white">Membri</Label>
+                      <Label className="text-white">{t('splittabro.members')}</Label>
                       <div className="space-y-2 mt-2">
                         <div className="flex gap-2">
                           <Input
@@ -490,8 +492,8 @@ export function SplittaBride() {
                   <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="h-10 w-10 text-pink-400" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Nessun gruppo ancora</h3>
-                  <p className="text-gray-400 mb-6 max-w-md mx-auto">Crea il tuo primo gruppo per iniziare a dividere le spese del tuo addio al nubilato!</p>
+                  <h3 className="text-2xl font-bold text-white mb-2">{t('splittabro.noGroupsTitle')}</h3>
+                  <p className="text-gray-400 mb-6 max-w-md mx-auto">{t('splittabride.noGroupsDesc')}</p>
                   <Button
                     onClick={() => setShowCreateGroup(true)}
                     className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 shadow-lg shadow-pink-500/30"
@@ -567,7 +569,7 @@ export function SplittaBride() {
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
                     <TrendingUp className="w-4 h-4 text-pink-400" />
-                    <p className="text-gray-400">Totale: <span className="text-pink-400 font-bold">€{(selectedGroup.totalAmount || 0).toFixed(2)}</span></p>
+                    <p className="text-gray-400">{t('splittabro.total')}: <span className="text-pink-400 font-bold">€{(selectedGroup.totalAmount || 0).toFixed(2)}</span></p>
                   </div>
                 </div>
               </div>
@@ -583,14 +585,14 @@ export function SplittaBride() {
                 </DialogTrigger>
                 <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-pink-500/20 text-white max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-white text-xl">Aggiungi Nuova Spesa</DialogTitle>
+                    <DialogTitle className="text-white text-xl">{t('splittabro.addExpenseTitle')}</DialogTitle>
                     <DialogDescription className="text-gray-400">
                       Registra una nuova spesa per il gruppo e seleziona chi deve partecipare alla divisione
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={expenseForm.handleSubmit(onCreateExpense)} className="space-y-4">
                     <div>
-                      <Label htmlFor="description" className="text-white">Descrizione</Label>
+                      <Label htmlFor="description" className="text-white">{t('splittabro.expenseDescription')}</Label>
                       <Input
                         id="description"
                         {...expenseForm.register('description')}
@@ -601,7 +603,7 @@ export function SplittaBride() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="amount" className="text-white">Importo (€)</Label>
+                      <Label htmlFor="amount" className="text-white">{t('splittabro.amount')}</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -614,10 +616,10 @@ export function SplittaBride() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="paidBy" className="text-white">Chi ha pagato</Label>
+                      <Label htmlFor="paidBy" className="text-white">{t('splittabro.paidBy')}</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('paidBy', value)}>
                         <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white mt-1" data-testid="select-paid-by">
-                          <SelectValue placeholder="Seleziona chi ha pagato" className="text-white" />
+                          <SelectValue placeholder={t('splittabro.selectPaidBy')} className="text-white" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
                           {selectedGroup.members.map((member) => (
@@ -630,7 +632,7 @@ export function SplittaBride() {
                     </div>
                     
                     <div>
-                      <Label className="text-white">Dividi tra</Label>
+                      <Label className="text-white">{t('splittabro.splitBetween')}</Label>
                       <div className="space-y-2 mt-2">
                         <label className="flex items-center space-x-2 text-white p-2 rounded-lg bg-pink-500/10 border border-pink-500/30 cursor-pointer hover:bg-pink-500/20 transition-colors">
                           <input
@@ -646,7 +648,7 @@ export function SplittaBride() {
                             className="rounded border-gray-600"
                             data-testid="checkbox-split-equally"
                           />
-                          <span className="text-sm font-medium">Dividi equamente tra tutte</span>
+                          <span className="text-sm font-medium">{t('splittabride.splitEqually')}</span>
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           {selectedGroup.members.map((member, idx) => (
@@ -677,24 +679,24 @@ export function SplittaBride() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="category" className="text-white">Categoria</Label>
+                      <Label htmlFor="category" className="text-white">{t('splittabro.category')}</Label>
                       <Select onValueChange={(value) => expenseForm.setValue('category', value)} defaultValue="food">
                         <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white mt-1" data-testid="select-category">
-                          <SelectValue placeholder="Seleziona categoria" className="text-white" />
+                          <SelectValue placeholder={t('splittabro.selectCategory')} className="text-white" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                          <SelectItem value="food" className="text-white focus:text-white">🍽️ Cibo</SelectItem>
-                          <SelectItem value="transport" className="text-white focus:text-white">🚗 Trasporti</SelectItem>
-                          <SelectItem value="accommodation" className="text-white focus:text-white">🏨 Alloggio</SelectItem>
-                          <SelectItem value="entertainment" className="text-white focus:text-white">🎉 Divertimento</SelectItem>
-                          <SelectItem value="shopping" className="text-white focus:text-white">🛍️ Shopping</SelectItem>
-                          <SelectItem value="other" className="text-white focus:text-white">📋 Altro</SelectItem>
+                          <SelectItem value="food" className="text-white focus:text-white">🍽️ {t('splittabro.category.food')}</SelectItem>
+                          <SelectItem value="transport" className="text-white focus:text-white">🚗 {t('splittabro.category.transport')}</SelectItem>
+                          <SelectItem value="accommodation" className="text-white focus:text-white">🏨 {t('splittabro.category.accommodation')}</SelectItem>
+                          <SelectItem value="entertainment" className="text-white focus:text-white">🎉 {t('splittabro.category.entertainment')}</SelectItem>
+                          <SelectItem value="shopping" className="text-white focus:text-white">🛍️ {t('splittabro.category.shopping')}</SelectItem>
+                          <SelectItem value="other" className="text-white focus:text-white">📋 {t('splittabro.category.other')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     
                     <div>
-                      <Label htmlFor="date" className="text-white">Data</Label>
+                      <Label htmlFor="date" className="text-white">{t('splittabro.date')}</Label>
                       <Input
                         id="date"
                         type="date"
@@ -736,7 +738,7 @@ export function SplittaBride() {
                         <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Receipt className="h-8 w-8 text-pink-400" />
                         </div>
-                        <p className="text-gray-400">Nessuna spesa ancora registrata</p>
+                        <p className="text-gray-400">{t('splittabro.noExpenses')}</p>
                       </div>
                     ) : (
                       <ScrollArea className="h-[500px] pr-4">
@@ -771,7 +773,7 @@ export function SplittaBride() {
                                 </div>
                               </div>
                               <div className="flex flex-wrap gap-1.5 items-center">
-                                <span className="text-xs text-gray-500">Diviso tra:</span>
+                                <span className="text-xs text-gray-500">{t('splittabro.splitBetweenInline')}:</span>
                                 {expense.splitBetween.map((member) => (
                                   <Badge 
                                     key={member} 
@@ -811,7 +813,7 @@ export function SplittaBride() {
                           <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                             <DollarSign className="h-8 w-8 text-green-400" />
                           </div>
-                          <p className="text-gray-400 font-medium">Tutti i conti sono in pari!</p>
+                          <p className="text-gray-400 font-medium">{t('splittabro.allSettled')}</p>
                         </div>
                       ) : (
                         <div className="space-y-3">

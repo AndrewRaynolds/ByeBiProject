@@ -65,23 +65,23 @@ export default function MerchandisePage() {
             setCart([]);
           } else {
             toast({
-              title: "Pagamento in attesa",
-              description: "Il pagamento non è ancora stato confermato.",
+              title: t('merch.paymentPending'),
+              description: t('merch.paymentPendingDesc'),
             });
           }
         })
         .catch(() => {
           toast({
-            title: "Errore verifica",
-            description: "Impossibile verificare il pagamento. Contattaci se hai completato il pagamento.",
+            title: t('merch.verificationError'),
+            description: t('merch.verificationErrorDesc'),
             variant: "destructive",
           });
         });
       window.history.replaceState({}, "", "/merchandise");
     } else if (params.get("payment") === "cancelled") {
       toast({
-        title: "Pagamento annullato",
-        description: "Il pagamento è stato annullato. I tuoi articoli sono ancora nel carrello.",
+        title: t('merch.paymentCancelled'),
+        description: t('merch.paymentCancelledDesc'),
         variant: "destructive",
       });
       window.history.replaceState({}, "", "/merchandise");
@@ -118,7 +118,7 @@ export default function MerchandisePage() {
 
     toast({
       title: t('merch.addedToCartTitle'),
-      description: `${variant.name} aggiunto al carrello`,
+      description: t('merch.itemAdded', { item: variant.name }),
     });
   };
 
@@ -173,7 +173,7 @@ export default function MerchandisePage() {
               onClick={() => setShowCart(true)}
             >
               <ShoppingCart className="h-5 w-5 mr-2" />
-              <span>Carrello</span>
+              <span>{t('merch.cart')}</span>
               {cartItemCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
                   {cartItemCount}
@@ -199,7 +199,7 @@ export default function MerchandisePage() {
             <div className="text-center py-16">
               <Package className="h-16 w-16 mx-auto text-gray-500 mb-4" />
               <p className="text-red-400 text-lg mb-2">{t('merch.errorLoading')}</p>
-              <p className="text-gray-500 text-sm">Controlla la configurazione dell'API Printful</p>
+              <p className="text-gray-500 text-sm">{t('merch.checkPrintful')}</p>
             </div>
           ) : products && products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -219,7 +219,7 @@ export default function MerchandisePage() {
                       className="w-full h-full object-contain transition duration-500 group-hover:scale-105 p-2"
                     />
                     <Badge className="absolute top-3 left-3 bg-red-600 text-white">
-                      {product.variantCount} varianti
+                      {t('merch.variants', { count: product.variantCount })}
                     </Badge>
                   </div>
                   <CardContent className="p-4">
@@ -238,7 +238,7 @@ export default function MerchandisePage() {
                       }}
                     >
                       <ShoppingBag className="mr-2 h-4 w-4" />
-                      Vedi Dettagli
+                      {t('merch.viewDetails')}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -247,8 +247,8 @@ export default function MerchandisePage() {
           ) : (
             <div className="text-center py-16">
               <Package className="h-16 w-16 mx-auto text-gray-500 mb-4" />
-              <p className="text-gray-400 text-lg">Nessun prodotto trovato nel tuo store Printful.</p>
-              <p className="text-gray-500 text-sm mt-2">Aggiungi prodotti al tuo store Printful per vederli qui.</p>
+              <p className="text-gray-400 text-lg">{t('merch.noProducts')}</p>
+              <p className="text-gray-500 text-sm mt-2">{t('merch.noProductsDesc')}</p>
             </div>
           )}
         </div>
@@ -285,11 +285,11 @@ export default function MerchandisePage() {
                   {selectedProduct.variants.length > 0 && (
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Seleziona variante (taglia/colore)
+                        {t('merch.selectVariant')}
                       </label>
                       <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
                         <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                          <SelectValue placeholder="Seleziona..." />
+                          <SelectValue placeholder={t('common.select')} />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-600">
                           {selectedProduct.variants.map(variant => (
@@ -334,13 +334,13 @@ export default function MerchandisePage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
-              Carrello ({cartItemCount} articoli)
+              {t('merch.cartItems', { count: cartItemCount })}
             </DialogTitle>
           </DialogHeader>
           {cart.length === 0 ? (
             <div className="text-center py-8">
               <ShoppingCart className="h-12 w-12 mx-auto text-gray-500 mb-3" />
-              <p className="text-gray-400">Il carrello è vuoto</p>
+              <p className="text-gray-400">{t('merch.emptyCart')}</p>
             </div>
           ) : (
             <div className="space-y-4 mt-4">
@@ -386,7 +386,7 @@ export default function MerchandisePage() {
                 </div>
               ))}
               <div className="border-t border-gray-700 pt-4 flex justify-between items-center">
-                <span className="text-lg font-bold">Totale:</span>
+                <span className="text-lg font-bold">{t('merch.total')}:</span>
                 <span className="text-2xl font-bold text-red-400">€{cartTotal.toFixed(2)}</span>
               </div>
               <Button
@@ -407,8 +407,8 @@ export default function MerchandisePage() {
                   } catch (error: any) {
                     console.error("Checkout error:", error);
                     toast({
-                      title: "Errore checkout",
-                      description: "Si è verificato un errore. Riprova.",
+                      title: t('merch.checkoutError'),
+                      description: t('merch.checkoutErrorDesc'),
                       variant: "destructive",
                     });
                     setIsCheckingOut(false);
@@ -420,10 +420,10 @@ export default function MerchandisePage() {
                 ) : (
                   <CreditCard className="mr-2 h-5 w-5" />
                 )}
-                {isCheckingOut ? "Reindirizzamento..." : "Procedi al Pagamento"}
+                {isCheckingOut ? t('merch.redirecting') : t('merch.checkout')}
               </Button>
               <p className="text-xs text-gray-500 text-center">
-                Pagamento sicuro tramite Stripe. Le spese di spedizione verranno calcolate al checkout.
+                {t('merch.securePayment')}
               </p>
             </div>
           )}
@@ -434,18 +434,18 @@ export default function MerchandisePage() {
         <DialogContent className="max-w-md bg-gray-900 border-gray-700 text-white text-center">
           <div className="py-6">
             <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Pagamento completato!</h2>
+            <h2 className="text-2xl font-bold mb-2">{t('merch.paymentComplete')}</h2>
             <p className="text-gray-400 mb-4">
-              Il tuo ordine è stato ricevuto. I prodotti saranno stampati e spediti al tuo indirizzo.
+              {t('merch.orderReceived')}
             </p>
             <p className="text-gray-500 text-sm">
-              Riceverai una email di conferma con i dettagli della spedizione.
+              {t('merch.confirmationEmail')}
             </p>
             <Button
               className="mt-6 bg-red-600 hover:bg-red-700"
               onClick={() => setPaymentSuccess(false)}
             >
-              Continua a fare shopping
+              {t('merch.continueShopping')}
             </Button>
           </div>
         </DialogContent>

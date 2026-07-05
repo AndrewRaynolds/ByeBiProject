@@ -6,8 +6,6 @@ import Header from "@/components/Header";
 import {
   getAllCityExperiences,
   getItemsByCategory,
-  CATEGORY_LABELS,
-  CATEGORY_SHORT_LABELS,
   type ExperienceCategory,
   type CityExperienceItem,
 } from "@/lib/cityExperiences";
@@ -19,6 +17,7 @@ import { trackEvent } from "@/lib/track";
 import { useTranslation } from "@/contexts/LanguageContext";
 
 const CATEGORY_ORDER: ExperienceCategory[] = ["restaurants", "bars", "nightlife", "activities"];
+const cityTranslationKey = (cityKey: string) => cityKey === "palma-de-mallorca" ? "palma" : cityKey;
 
 const CATEGORY_ICONS: Record<ExperienceCategory, JSX.Element> = {
   restaurants: <Utensils className="w-4 h-4" />,
@@ -27,8 +26,8 @@ const CATEGORY_ICONS: Record<ExperienceCategory, JSX.Element> = {
   activities: <Compass className="w-4 h-4" />,
 };
 
-function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: number }) {
-  const { t } = useTranslation();
+function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceItem; index: number; cityName: string }) {
+  const { t, locale } = useTranslation();
   const handleClick = () => {
     trackEvent("city_experience_click", {
       itemName: item.name,
@@ -58,7 +57,9 @@ function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: 
             </Badge>
           )}
         </div>
-        <p className="text-white/60 text-sm mb-3">{item.description}</p>
+        <p className="text-white/60 text-sm mb-3">
+          {locale === "it" ? item.description : t(`experiences.itemDescription.${item.category}`, { name: item.name, city: cityName })}
+        </p>
         <Button
           onClick={handleClick}
           size="sm"
@@ -75,6 +76,7 @@ function ExperienceItemCard({ item, index }: { item: CityExperienceItem; index: 
 
 export default function ExperiencesPage() {
   const { t } = useTranslation();
+  const isBride = localStorage.getItem("selectedBrand") === "byebride";
   const cities = useMemo(() => getAllCityExperiences(), []);
   const [selectedCityKey, setSelectedCityKey] = useState<string>(cities[0]?.cityKey ?? "");
   const [activeCategory, setActiveCategory] = useState<ExperienceCategory>("restaurants");
@@ -100,7 +102,7 @@ export default function ExperiencesPage() {
           </div>
         </section>
 
-        <ExperienceTypes />
+        <ExperienceTypes brand={isBride ? "bride" : "bro"} />
 
         <section className="py-16 bg-gradient-to-b from-black via-zinc-950 to-black">
           <div className="container mx-auto px-4">
@@ -130,7 +132,7 @@ export default function ExperiencesPage() {
                           : "bg-white/5 text-white/70 hover:bg-white/10 border border-white/10"
                       }`}
                     >
-                      {city.displayName}
+                      {t(`destinations.city.${cityTranslationKey(city.cityKey)}.name`)}
                     </button>
                   ))}
                 </div>
@@ -149,7 +151,7 @@ export default function ExperiencesPage() {
                         className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-600 data-[state=active]:text-white bg-white/5 text-white/70 border border-white/10 py-3 flex items-center gap-2"
                       >
                         {CATEGORY_ICONS[cat]}
-                        <span>{CATEGORY_SHORT_LABELS[cat]}</span>
+                        <span>{t(`experiences.category.${cat}`)}</span>
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -160,7 +162,10 @@ export default function ExperiencesPage() {
                       <TabsContent key={cat} value={cat} className="mt-0">
                         <div className="mb-6 flex items-center justify-between flex-wrap gap-2">
                           <h3 className="text-2xl font-bold text-white">
-                            {CATEGORY_LABELS[cat]} a {selectedCity.displayName}
+                            {t('experiences.categoryInCity', {
+                              category: t(`experiences.category.${cat}`),
+                              city: t(`destinations.city.${cityTranslationKey(selectedCity.cityKey)}.name`),
+                            })}
                           </h3>
                           <span className="text-white/50 text-sm">
                             {t('experiences.resultsCount', {
@@ -177,7 +182,12 @@ export default function ExperiencesPage() {
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {items.map((item, idx) => (
-                              <ExperienceItemCard key={`${item.name}-${idx}`} item={item} index={idx} />
+                              <ExperienceItemCard
+                                key={`${item.name}-${idx}`}
+                                item={item}
+                                index={idx}
+                                cityName={t(`destinations.city.${cityTranslationKey(selectedCity.cityKey)}.name`)}
+                              />
                             ))}
                           </div>
                         )}
