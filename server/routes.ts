@@ -20,6 +20,7 @@ import { getStoreProducts, getProductDetail, getShippingRates } from "./services
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
+import { readOwnedTripItineraries } from "./tripItineraries";
 
 
 const premiumStatusMap = new Map<string, boolean>();
@@ -284,59 +285,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trips/:id/itineraries", async (req: Request, res: Response) => {
+  app.get("/api/trips/:id/itineraries", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const tripId = parseInt(req.params.id);
-      const trip = await storage.getTrip(tripId);
-      
-      if (!trip) {
-        return res.status(404).json({ message: "Trip not found" });
-      }
-      
-      // Mock itineraries - SOLO in development
-      if (process.env.NODE_ENV === "production") {
-        return res.status(501).json({ message: "Real itinerary generation not implemented yet" });
-      }
-      
-      const mockItinerary1 = {
-        tripId,
-        name: "Amsterdam Adventure",
-        description: "Experience the best of Amsterdam's nightlife and culture",
-        duration: "3 Nights, 4 Days",
-        price: 650,
-        image: "https://images.unsplash.com/photo-1534570122623-99e8378a9aa7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=400&q=80",
-        rating: "4.5",
-        highlights: [
-          "Red Light District night tour with local guide",
-          "Heineken Experience with beer tasting",
-          "Canal cruise with open bar",
-          "VIP access to top nightclubs"
-        ],
-        includes: ["Flights", "Accommodation", "Activities", "Custom Merch"]
-      };
-      
-      const mockItinerary2 = {
-        tripId,
-        name: "Prague Party",
-        description: "Historic sites by day, epic parties by night",
-        duration: "4 Nights, 5 Days",
-        price: 580,
-        image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=400&q=80",
-        rating: "4.0",
-        highlights: [
-          "Beer spa experience with unlimited beer",
-          "Pub crawl through historic Old Town",
-          "Traditional Czech dinner with folk show",
-          "Party boat cruise on Vltava River"
-        ],
-        includes: ["Flights", "Accommodation", "Activities", "Custom Merch"]
-      };
-      
-      // Create the itineraries
-      const itinerary1 = await storage.createItinerary(mockItinerary1);
-      const itinerary2 = await storage.createItinerary(mockItinerary2);
-      
-      return res.status(200).json([itinerary1, itinerary2]);
+      const result = await readOwnedTripItineraries(
+        req.params.id,
+        req.supabaseUser!.id,
+        storage,
+      );
+      return res.status(result.status).json(result.body);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
     }
