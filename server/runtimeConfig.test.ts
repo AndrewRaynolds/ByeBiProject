@@ -8,6 +8,8 @@ const validProductionEnvironment = {
   CRITICAL_DATA_PERSISTENCE: "database",
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_SERVICE_ROLE_KEY: "service-role-placeholder",
+  OPENAI_API_KEY: "openai-key-placeholder",
+  AVIASALES_PARTNER_ID: "partner_123",
   PORT: "5000",
   HOST: "0.0.0.0",
 };
@@ -29,7 +31,7 @@ describe("runtime environment validation", () => {
     expect(() =>
       validateRuntimeEnvironment({ NODE_ENV: "production" }),
     ).toThrow(
-      /APP_BASE_URL is required; DATABASE_URL is required; SUPABASE_URL is required; SUPABASE_SERVICE_ROLE_KEY is required; CRITICAL_DATA_PERSISTENCE must be database/,
+      /APP_BASE_URL is required; DATABASE_URL is required; SUPABASE_URL is required; SUPABASE_SERVICE_ROLE_KEY is required; OPENAI_API_KEY is required; AVIASALES_PARTNER_ID is required; CRITICAL_DATA_PERSISTENCE must be database/,
     );
   });
 
@@ -49,6 +51,15 @@ describe("runtime environment validation", () => {
         SUPABASE_URL: "http://project.supabase.co",
       }),
     ).toThrow("SUPABASE_URL must be an HTTPS URL");
+  });
+
+  it("rejects invalid Aviasales partner identifiers", () => {
+    expect(() =>
+      validateRuntimeEnvironment({
+        ...validProductionEnvironment,
+        AVIASALES_PARTNER_ID: "partner id with spaces",
+      }),
+    ).toThrow("AVIASALES_PARTNER_ID has an invalid format");
   });
 
   it("rejects invalid ports and empty hosts", () => {

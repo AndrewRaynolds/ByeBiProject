@@ -21,6 +21,8 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     "DATABASE_URL",
     "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
+    "OPENAI_API_KEY",
+    "AVIASALES_PARTNER_ID",
   ] as const;
 
   for (const variable of requiredVariables) {
@@ -49,6 +51,13 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
 
   if (env.SUPABASE_URL && !isAbsoluteUrl(env.SUPABASE_URL, ["https:"])) {
     errors.push("SUPABASE_URL must be an HTTPS URL");
+  }
+
+  if (
+    env.AVIASALES_PARTNER_ID &&
+    !/^[A-Za-z0-9_-]{1,64}$/.test(env.AVIASALES_PARTNER_ID)
+  ) {
+    errors.push("AVIASALES_PARTNER_ID has an invalid format");
   }
 
   if (env.PORT) {
