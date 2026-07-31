@@ -25,6 +25,7 @@ import { buildAviasalesUrl, flightSearchQuerySchema } from "@shared/flightSchema
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
+import { parsePositiveIntegerParam } from "./routeParams";
 
 
 const checkoutItemSchema = z.object({
@@ -35,7 +36,6 @@ const checkoutItemSchema = z.object({
 const checkoutSchema = z.object({
   items: z.array(checkoutItemSchema).min(1).max(20),
 }).strict();
-const printfulProductIdSchema = z.coerce.number().int().positive();
 const printfulShippingSchema = z
   .object({
     countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
@@ -326,8 +326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/blog-posts/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) return res.status(400).json({ message: "ID non valido" });
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) return res.status(400).json({ message: "ID non valido" });
       const blogPost = await storage.getBlogPost(id);
       if (!blogPost) return res.status(404).json({ message: "Storia non trovata" });
       return res.status(200).json(blogPost);
@@ -361,13 +361,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/printful/products/:id", async (req: Request, res: Response) => {
-    const parsedProductId = printfulProductIdSchema.safeParse(req.params.id);
-    if (!parsedProductId.success) {
+    const productId = parsePositiveIntegerParam(req.params.id);
+    if (productId === null) {
       return res.status(400).json({ message: "Invalid product ID" });
     }
 
     try {
-      const product = await getProductDetail(parsedProductId.data);
+      const product = await getProductDetail(productId);
       return res.status(200).json(product);
     } catch (error: unknown) {
       console.error("Error fetching Printful product detail", getSafeErrorMetadata(error));
@@ -414,7 +414,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/trips/:tripId/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const tripId = parseInt(req.params.tripId);
+      const tripId = parsePositiveIntegerParam(req.params.tripId);
+      if (tripId === null) {
+        return res.status(400).json({ message: "Invalid trip ID" });
+      }
       const trip = await storage.getTrip(tripId);
       
       if (!trip) {
@@ -448,7 +451,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/expense-groups/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense group ID" });
+      }
       if (!(await requireOwnedExpenseGroup(req, res, id))) return;
       const group = await storage.getExpenseGroup(id);
       
@@ -479,7 +485,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/expense-groups/:groupId/expenses", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parsePositiveIntegerParam(req.params.groupId);
+      if (groupId === null) {
+        return res.status(400).json({ message: "Invalid expense group ID" });
+      }
       if (!(await requireOwnedExpenseGroup(req, res, groupId))) return;
       const group = await storage.getExpenseGroup(groupId);
       
@@ -496,7 +505,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
       const expense = await storage.getExpense(id);
       
       if (!expense) {
@@ -512,7 +524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
       const expense = await storage.getExpense(id);
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
@@ -537,7 +552,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
       const expense = await storage.getExpense(id);
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
