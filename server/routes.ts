@@ -588,7 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         interests: requestData.interessi,
         experiences: requestData.esperienze,
         timestamp: new Date().toISOString(),
-        source: "ByeBro OneClick Assistant"
+        source: "ByeBi itinerary API"
       };
       
       // Invia i dati a Zapier webhook (se configurato)

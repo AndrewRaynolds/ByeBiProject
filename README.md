@@ -46,7 +46,7 @@ The chat assistant implements a conversational flight-planning flow:
 
 The server-generated checkout URL is authoritative; the frontend never navigates from an unverified tool request.
 
-**Real Flow Architecture (December 2024 refactor):**
+**Current booking flow:**
 The booking flow uses a unified TripContext data contract stored in localStorage under 'currentItinerary':
 ```typescript
 interface TripContext {
@@ -60,15 +60,15 @@ interface TripContext {
 }
 ```
 - **Chatbot** → writes TripContext to localStorage
-- **Itinerary.tsx** (/itinerary) → reads TripContext, shows trip summary, Aviasales link, continue to checkout
 - **Checkout.tsx** (/checkout) → reads TripContext, shows Aviasales button + real Amadeus hotel search
+- Legacy `/itinerary` URLs redirect to `/checkout`
 
 **Flight prices are NEVER shown** - users book flights directly via Aviasales partner links.
 **Date handling**: All dates use string-only formatters (formatDateRangeIT, normalizeFutureTripDate) - NO Date() constructor to avoid timezone issues.
 
-**Entry points** (all unified, December 2024):
-- TripPlanningForm.tsx → saves currentItinerary → navigates to /itinerary
-- ChatDialogCompact.tsx / ChatDialogCompactBride.tsx → saves currentItinerary → navigates to /itinerary
+**Entry points:**
+- `ChatDialogCompact.tsx` and `ChatDialogCompactBride.tsx` save the verified
+  trip context and navigate directly to `/checkout`.
 
 The hero section of each brand features a centered chat assistant ("The Chat Bro" for ByeBro, "The Chat Bride" for ByeBride) as the primary entry point for trip planning. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
 
@@ -98,7 +98,8 @@ Complete internationalization system supporting Italian (default), English, and 
 
 **Language selector**: Flag dropdown in Header navbar (🇮🇹/🇬🇧/🇪🇸), persisted to localStorage under `byebi_locale`
 
-**Refactored components**: Header, Footer, BrandSelection, HeroSection, HeroSectionBride, Testimonials, Newsletter, SecretBlog, CustomMerchandise, PremiumFeatures, AuthModal, Itinerary, Checkout, GetYourGuideCta, not-found
+Shared navigation, landing-page, chatbot, checkout, blog, merchandise and
+error-page content uses the same translation context.
 
 **Note**: Italian locale is loaded synchronously (bundled) for instant first render. EN/ES are lazy-loaded on demand. Chat responses are handled separately by AI language detection.
 
@@ -127,7 +128,7 @@ Orders are created only after a verified Stripe Checkout webhook.
 Payment processing for merchandise via Stripe Checkout (connector: Stripe).
 
 **Files**:
-- `server/stripeClient.ts` - Stripe client with Replit connector credentials
+- `server/stripeClient.ts` - Stripe client using environment credentials, with an optional Replit connector fallback
 - `server/webhookHandlers.ts` - Stripe webhook processing via stripe-replit-sync
 - `server/index.ts` - Stripe initialization (migrations, webhook, sync) and webhook route (BEFORE express.json())
 - `server/routes.ts` - Checkout session and payment routes under `/api/stripe/*`
@@ -139,4 +140,3 @@ Payment processing for merchandise via Stripe Checkout (connector: Stripe).
 
 **Flow**: Cart → Stripe Checkout (with shipping address collection) → Payment → Success page
 **Database**: stripe-replit-sync manages `stripe` schema automatically via PostgreSQL
-```
