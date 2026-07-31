@@ -9,21 +9,7 @@ import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 import { getCityCode } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest } from '@/lib/queryClient';
-
-/**
- * TripContext - The ONLY data structure used by the real flow
- * Populated by chatbot/form, read directly by Checkout
- */
-interface TripContext {
-  origin: string;
-  destination: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
-  people: number;
-  aviasalesCheckoutUrl: string;
-  flightLabel?: string;
-  originCity?: string; // Legacy compatibility
-}
+import { parseStoredTripContext, type TripContext } from '@/lib/tripContext';
 
 interface HotelData {
   hotelId: string;
@@ -58,37 +44,15 @@ export default function Checkout() {
       return;
     }
     
-    try {
-      const parsed = JSON.parse(data);
-      
-      // Build TripContext from saved data
-      const context: TripContext = {
-        origin: parsed.origin || parsed.originCity || '',
-        destination: parsed.destination,
-        startDate: parsed.startDate,
-        endDate: parsed.endDate,
-        people: parsed.people,
-        aviasalesCheckoutUrl: parsed.aviasalesCheckoutUrl || parsed.aviasalesUrl || '',
-        flightLabel: parsed.flightLabel || parsed.selectedFlight?.label || `${parsed.origin || parsed.originCity || 'Italia'} → ${parsed.destination}`,
-        originCity: parsed.originCity
-      };
-      
-      // Debug log for Aviasales URL (temporary - remove after verification)
-      console.log('🔍 DEBUG Checkout - TripContext dates:', {
-        startDate: context.startDate,
-        endDate: context.endDate,
-        aviasalesCheckoutUrl: context.aviasalesCheckoutUrl
-      });
-      
-      setTripContext(context);
-      
-      if (context.destination && context.startDate && context.endDate && context.people) {
-        fetchHotels(context);
-      }
-    } catch (err) {
-      console.error('Error parsing TripContext:', err);
+    const context = parseStoredTripContext(data);
+    if (!context) {
       setLocation('/');
+      setIsLoading(false);
+      return;
     }
+
+    setTripContext(context);
+    fetchHotels(context);
     
     setIsLoading(false);
   }, []);

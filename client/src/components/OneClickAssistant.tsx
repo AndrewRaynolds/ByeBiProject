@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
+import { createTripContext } from "@/lib/tripContext";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -904,12 +905,7 @@ export default function OneClickAssistant() {
       return;
     }
 
-    toast({
-      title: t('oneClick.itineraryGenerated'),
-      description: t('oneClick.itineraryReady'),
-    });
-
-    localStorage.setItem("currentItinerary", JSON.stringify({
+    const context = createTripContext({
       destination: selectedDestination,
       origin: "Italia",
       startDate: tripDetails.startDate,
@@ -917,7 +913,23 @@ export default function OneClickAssistant() {
       people: tripDetails.people,
       aviasalesCheckoutUrl: "",
       flightLabel: `Italia → ${selectedDestination}`,
-    }));
+    });
+
+    if (!context) {
+      toast({
+        title: t('oneClick.missingData'),
+        description: t('oneClick.missingDataDesc'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: t('oneClick.itineraryGenerated'),
+      description: t('oneClick.itineraryReady'),
+    });
+
+    localStorage.setItem("currentItinerary", JSON.stringify(context));
 
     window.location.href = "/checkout";
   };
