@@ -7,7 +7,6 @@ vi.mock('./storage', () => ({
     getAllDestinations: vi.fn().mockResolvedValue([]),
     getAllExperiences: vi.fn().mockResolvedValue([]),
     getAllBlogPosts: vi.fn().mockResolvedValue([]),
-    getFreeBlogPosts: vi.fn().mockResolvedValue([]),
     getAllExpenseGroups: vi.fn().mockResolvedValue([]),
   },
 }));
@@ -21,10 +20,6 @@ vi.mock('./supabase', () => ({
   supabase: {
     auth: {
       getUser: vi.fn(),
-      admin: {
-        getUserById: vi.fn(),
-        updateUserById: vi.fn(),
-      },
     },
   },
 }));

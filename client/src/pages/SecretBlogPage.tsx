@@ -82,14 +82,13 @@ const CATEGORY_FILTERS: { value: CategoryFilter; icon: string; label: string }[]
 
 interface PostGridProps {
   posts: BlogPost[];
-  isPremium: boolean;
   brand: Brand;
   t: (k: string, params?: Record<string, string | number>) => string;
   filterLocation: string | null;
   filterCategory: CategoryFilter;
 }
 
-function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }: PostGridProps) {
+function PostGrid({ posts, brand, t, filterLocation, filterCategory }: PostGridProps) {
   const filtered = posts.filter(p => {
     const locationMatch = filterLocation ? p.location === filterLocation : true;
     const categoryMatch = filterCategory
@@ -112,7 +111,7 @@ function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {filtered.map((post) => (
-        <CardComponent key={post.id} post={post} isPremium={isPremium} t={t} />
+        <CardComponent key={post.id} post={post} t={t} />
       ))}
     </div>
   );
@@ -615,7 +614,6 @@ export default function SecretBlogPage() {
               ) : (
                 <PostGrid
                   posts={popularPosts}
-                  isPremium={true}
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}
@@ -634,7 +632,6 @@ export default function SecretBlogPage() {
               ) : (
                 <PostGrid
                   posts={newestPosts}
-                  isPremium={true}
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}

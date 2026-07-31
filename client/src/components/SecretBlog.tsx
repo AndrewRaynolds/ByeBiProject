@@ -89,7 +89,7 @@ export function extractLocation(title: string): string | null {
   return null;
 }
 
-export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
+export function BroCard({ post, t }: { post: BlogPost; t: (k: string) => string }) {
   const alias = getAnonymousAlias(post.id, 'bro');
   const emoji = getAvatarEmoji(post.id, 'bro');
   const locationLabel = post.location
@@ -158,7 +158,7 @@ export function BroCard({ post, isPremium, t }: { post: BlogPost; isPremium: boo
   );
 }
 
-export function BrideCard({ post, isPremium, t }: { post: BlogPost; isPremium: boolean; t: (k: string) => string }) {
+export function BrideCard({ post, t }: { post: BlogPost; t: (k: string) => string }) {
   const alias = getAnonymousAlias(post.id, 'bride');
   const emoji = getAvatarEmoji(post.id, 'bride');
   const locationLabel = post.location
@@ -333,7 +333,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {visiblePosts.slice(0, 3).map((post) => (
-            <CardComponent key={post.id} post={post} isPremium={true} t={t} />
+            <CardComponent key={post.id} post={post} t={t} />
           ))}
         </div>
 

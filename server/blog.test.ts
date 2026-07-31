@@ -10,7 +10,7 @@ const validSubmission = {
 };
 
 describe("public Secret Blog submissions", () => {
-  it("builds a safe, non-premium post", () => {
+  it("builds a safe public post", () => {
     const post = buildPublicBlogPost({
       ...validSubmission,
       image: "https://attacker.example/tracker.png",
@@ -19,8 +19,8 @@ describe("public Secret Blog submissions", () => {
 
     expect(post).toMatchObject({
       ...validSubmission,
-      isPremium: false,
     });
+    expect(post).not.toHaveProperty("isPremium");
     expect(post.image).toMatch(/^https:\/\/images\.unsplash\.com\//);
     expect(post.image).not.toContain("attacker.example");
   });

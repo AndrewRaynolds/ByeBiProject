@@ -24,7 +24,6 @@ export interface IStorage {
 
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
-  getFreeBlogPosts(): Promise<BlogPost[]>;
   getAllBlogPosts(): Promise<BlogPost[]>;
   createBlogPost(blogPost: InsertBlogPost): Promise<BlogPost>;
 
@@ -138,10 +137,6 @@ export class MemStorage implements IStorage {
     return this.blogPosts.get(id);
   }
 
-  async getFreeBlogPosts(): Promise<BlogPost[]> {
-    return Array.from(this.blogPosts.values()).filter(post => !post.isPremium);
-  }
-
   async getAllBlogPosts(): Promise<BlogPost[]> {
     return Array.from(this.blogPosts.values());
   }
@@ -154,7 +149,6 @@ export class MemStorage implements IStorage {
     const blogPost: BlogPost = { 
       id: this.blogPostId++, 
       ...insertBlogPost,
-      isPremium: insertBlogPost.isPremium ?? false,
       location: insertBlogPost.location ?? null,
       createdAt: new Date(),
     };
@@ -414,7 +408,6 @@ export class MemStorage implements IStorage {
         title: "Roma: The Night We Can't Remember",
         content: "From Trastevere's wine bars to Testaccio's underground clubs, Rome offers an incredible nightlife scene. We started at a rooftop aperitivo with views of the Colosseum, then ended up in a basement club at 5am. The bachelor had no idea what hit him.",
         image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: false,
         location: "Roma",
         category: "drink" as const
       },
@@ -422,7 +415,6 @@ export class MemStorage implements IStorage {
         title: "Ibiza Uncovered: The Ultimate Party Guide",
         content: "From Amnesia to Pacha, we break down the best clubs, when to go, and how to do it right. We got VIP access to three clubs in one night, watched the sunrise from a yacht, and somehow everyone made the flight home. Barely.",
         image: "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: true,
         location: "Ibiza",
         category: "weird" as const
       },
@@ -430,7 +422,6 @@ export class MemStorage implements IStorage {
         title: "Cracovia: Eastern Europe's Hidden Gem",
         content: "Affordable prices, incredible architecture, and a nightlife scene that rivals any major European city. We spent four days exploring the Old Town by day and the underground clubs by night. The vodka was cheaper than water and twice as dangerous.",
         image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: false,
         location: "Cracovia",
         category: "drink" as const
       }
@@ -489,14 +480,6 @@ export class DatabaseStorage extends MemStorage {
       .where(eq(blogPostsTable.id, id))
       .limit(1);
     return post;
-  }
-
-  override async getFreeBlogPosts(): Promise<BlogPost[]> {
-    return this.db
-      .select()
-      .from(blogPostsTable)
-      .where(eq(blogPostsTable.isPremium, false))
-      .orderBy(desc(blogPostsTable.createdAt), desc(blogPostsTable.id));
   }
 
   override async getAllBlogPosts(): Promise<BlogPost[]> {

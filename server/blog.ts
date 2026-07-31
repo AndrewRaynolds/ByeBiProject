@@ -24,6 +24,5 @@ export function buildPublicBlogPost(input: unknown): InsertBlogPost {
   return {
     ...submission,
     image: CATEGORY_IMAGES[submission.category],
-    isPremium: false,
   };
 }

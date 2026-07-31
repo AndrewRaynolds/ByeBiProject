@@ -45,7 +45,6 @@ export const blogPosts = pgTable("blog_posts", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   image: text("image").notNull(),
-  isPremium: boolean("is_premium").default(false),
   location: text("location"),
   category: text("category").notNull(),
   createdAt: timestamp("created_at").defaultNow()
@@ -55,7 +54,6 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
   title: true,
   content: true,
   image: true,
-  isPremium: true,
   location: true,
   category: true,
 }).extend({

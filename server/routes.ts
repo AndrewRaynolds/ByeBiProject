@@ -251,36 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: meta.username || user.email?.split("@")[0],
       firstName: meta.firstName || meta.first_name,
       lastName: meta.lastName || meta.last_name,
-      isPremium: meta.isPremium ?? false,
     });
-  });
-
-  app.post("/api/users/:id/premium", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
-    try {
-      const requestedId = req.params.id;
-
-      const { isPremium } = req.body;
-      if (typeof isPremium !== "boolean") {
-        return res.status(400).json({ message: "isPremium must be a boolean" });
-      }
-
-      const { data: targetData, error: targetError } =
-        await supabase.auth.admin.getUserById(requestedId);
-      if (targetError || !targetData.user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      await supabase.auth.admin.updateUserById(requestedId, {
-        user_metadata: { ...targetData.user.user_metadata, isPremium },
-      });
-
-      return res.status(200).json({
-        id: requestedId,
-        isPremium,
-      });
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
-    }
   });
 
   // Trip routes

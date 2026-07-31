@@ -10,7 +10,6 @@ export type AuthUser = {
   username: string;
   firstName?: string;
   lastName?: string;
-  isPremium: boolean;
 };
 
 type LoginData = { email: string; password: string };
@@ -40,7 +39,6 @@ function mapSupabaseUser(supabaseUser: SupabaseUser): AuthUser {
     username: meta.username || supabaseUser.email?.split("@")[0] || "user",
     firstName: meta.firstName || meta.first_name,
     lastName: meta.lastName || meta.last_name,
-    isPremium: meta.isPremium || false,
   };
 }
 
@@ -103,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             username: username || email.split("@")[0],
             firstName: fullName?.split(" ")[0] || "",
             lastName: fullName?.split(" ").slice(1).join(" ") || "",
-            isPremium: false,
           },
         },
       });
