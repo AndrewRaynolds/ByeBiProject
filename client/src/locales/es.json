@@ -430,7 +430,7 @@
   "checkout.noHotels": "Hoteles no disponibles",
   "checkout.noHotelsForDates": "No hay hoteles disponibles para las fechas seleccionadas. Intenta cambiar las fechas del viaje.",
   "checkout.unsupportedDest": "El destino \"{{destination}}\" no está soportado. Destinos disponibles: Roma, Barcelona, Ibiza, Praga, Budapest, Cracovia, Ámsterdam, Berlín, Lisboa, Palma de Mallorca.",
-  "checkout.hotelLoadError": "No se pudieron cargar los hoteles: {{error}}. Las APIs pueden estar temporalmente no disponibles.",
+  "checkout.hotelLoadError": "No se pueden cargar los hoteles en este momento. Inténtalo de nuevo más tarde.",
   "checkout.hotelSearchError": "Error en la búsqueda de hotel",
   "checkout.bookOnBooking": "Reservar Hotel en Booking.com",
   "checkout.searchHotelsBooking": "Buscar hoteles en Booking.com",

@@ -21,6 +21,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
+import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
 
 
 const checkoutItemSchema = z.object({
@@ -879,21 +880,21 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
   // Amadeus Hotels - search endpoint
   app.get("/api/hotels/search", async (req: Request, res: Response) => {
-    try {
-      const { cityCode, checkInDate, checkOutDate, adults, currency } = req.query;
+    const parsedQuery = hotelSearchQuerySchema.safeParse(req.query);
 
-      if (!cityCode || !checkInDate || !checkOutDate || !adults) {
-        return res.status(400).json({
-          error: "cityCode, checkInDate, checkOutDate and adults are required",
-        });
-      }
+    if (!parsedQuery.success) {
+      return res.status(400).json({ error: "Invalid hotel search parameters" });
+    }
+
+    try {
+      const { cityCode, checkInDate, checkOutDate, adults, currency } = parsedQuery.data;
 
       const hotels = await searchHotels({
-        cityCode: String(cityCode),
-        checkInDate: String(checkInDate),
-        checkOutDate: String(checkOutDate),
-        adults: Number(adults),
-        currency: currency ? String(currency) : "EUR",
+        cityCode,
+        checkInDate,
+        checkOutDate,
+        adults,
+        currency,
       });
 
       return res.json({
@@ -901,21 +902,15 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         checkInDate,
         checkOutDate,
         adults,
-        currency: currency || "EUR",
+        currency,
         hotels,
       });
-    } catch (err: any) {
-      console.error("Amadeus hotel search error:", err.response?.data || err.message);
-      return res.status(200).json({
-        cityCode: req.query.cityCode,
-        checkInDate: req.query.checkInDate,
-        checkOutDate: req.query.checkOutDate,
-        adults: req.query.adults,
-        currency: req.query.currency || "EUR",
-        hotels: [],
-        fallbackReason: "Hotel search failed",
-        details: err.response?.data || err.message,
-      });
+    } catch (error: unknown) {
+      console.error(
+        "Amadeus hotel search error:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      return res.status(502).json({ error: "Hotel service temporarily unavailable" });
     }
   });
 

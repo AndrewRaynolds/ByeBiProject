@@ -10,28 +10,15 @@ import { getCityCode } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest } from '@/lib/queryClient';
 import { parseStoredTripContext, type TripContext } from '@/lib/tripContext';
-
-interface HotelData {
-  hotelId: string;
-  name: string;
-  stars?: string;
-  priceTotal: number;
-  currency: string;
-  offerId: string;
-  bookingFlow: 'IN_APP' | 'REDIRECT';
-  paymentPolicy: string;
-  checkInDate: string;
-  checkOutDate: string;
-  roomDescription?: string;
-}
+import { hotelSearchResponseSchema, type HotelResult } from '@shared/hotelSchemas';
 
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { t } = useTranslation();
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
-  const [hotels, setHotels] = useState<HotelData[]>([]);
-  const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
+  const [hotels, setHotels] = useState<HotelResult[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [loadingHotels, setLoadingHotels] = useState(true);
   const [hotelError, setHotelError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,12 +39,14 @@ export default function Checkout() {
     }
 
     setTripContext(context);
-    fetchHotels(context);
+    const controller = new AbortController();
+    fetchHotels(context, controller.signal);
     
     setIsLoading(false);
+    return () => controller.abort();
   }, []);
 
-  const fetchHotels = async (context: TripContext) => {
+  const fetchHotels = async (context: TripContext, signal: AbortSignal) => {
     setLoadingHotels(true);
     setHotelError(null);
     
@@ -95,36 +84,40 @@ export default function Checkout() {
         'GET',
         `/api/hotels/search?${params}`,
         undefined,
-        { timeoutMs: 30_000 },
+        { signal, timeoutMs: 30_000 },
       );
 
-      const result = await response.json();
+      const result = hotelSearchResponseSchema.safeParse(await response.json());
+      if (!result.success) {
+        throw new Error('Invalid hotel search response');
+      }
       
       if (import.meta.env.DEV) {
         console.log('[HOTEL-SEARCH] Response:', {
-          count: result.hotels?.length || 0,
-          top3: result.hotels?.slice(0, 3).map((h: any) => h.name) || [],
-          priceRange: result.hotels?.length ? {
-            min: Math.min(...result.hotels.map((h: any) => h.priceTotal)),
-            max: Math.max(...result.hotels.map((h: any) => h.priceTotal))
+          count: result.data.hotels.length,
+          top3: result.data.hotels.slice(0, 3).map((hotel) => hotel.name),
+          priceRange: result.data.hotels.length ? {
+            min: Math.min(...result.data.hotels.map((hotel) => hotel.priceTotal)),
+            max: Math.max(...result.data.hotels.map((hotel) => hotel.priceTotal))
           } : null
         });
       }
       
-      if (result.hotels && result.hotels.length > 0) {
-        setHotels(result.hotels.slice(0, 5));
+      if (result.data.hotels.length > 0) {
+        setHotels(result.data.hotels.slice(0, 5));
       } else {
-        setHotelError(result.fallbackReason || t('checkout.noHotelsForDates'));
+        setHotelError(t('checkout.noHotelsForDates'));
       }
-    } catch (error: any) {
-      console.error('Hotel fetch error:', error);
-      setHotelError(t('checkout.hotelLoadError', { error: error.message }));
+    } catch (error: unknown) {
+      if (signal.aborted) return;
+      if (import.meta.env.DEV) console.error('Hotel fetch error:', error);
+      setHotelError(t('checkout.hotelLoadError'));
     } finally {
-      setLoadingHotels(false);
+      if (!signal.aborted) setLoadingHotels(false);
     }
   };
 
-  const getHotelBookingUrl = (hotel: HotelData): string => {
+  const getHotelBookingUrl = (hotel: HotelResult): string => {
     const hotelName = encodeURIComponent(hotel.name);
     const city = encodeURIComponent(tripContext?.destination || '');
     return `https://www.booking.com/searchresults.html?ss=${hotelName}+${city}&checkin=${hotel.checkInDate}&checkout=${hotel.checkOutDate}&group_adults=${tripContext?.people || 2}`;
@@ -134,6 +127,12 @@ export default function Checkout() {
     const city = encodeURIComponent(tripContext?.destination || '');
     return `https://www.booking.com/searchresults.html?ss=${city}&checkin=${tripContext?.startDate || ''}&checkout=${tripContext?.endDate || ''}&group_adults=${tripContext?.people || 2}`;
   };
+
+  const formatHotelPrice = (hotel: HotelResult): string =>
+    new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: hotel.currency,
+    }).format(hotel.priceTotal);
 
   if (isLoading) {
     return (
@@ -318,7 +317,7 @@ export default function Checkout() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-red-400 text-xl">€{hotel.priceTotal}</p>
+                        <p className="font-bold text-red-400 text-xl">{formatHotelPrice(hotel)}</p>
                         <p className="text-xs text-white/60">{t('common.totalStay')}</p>
                       </div>
                     </div>
@@ -330,7 +329,7 @@ export default function Checkout() {
             {selectedHotel && (
               <Button 
                 className="w-full mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-                onClick={() => window.open(getHotelBookingUrl(selectedHotel), '_blank')}
+                onClick={() => window.open(getHotelBookingUrl(selectedHotel), '_blank', 'noopener,noreferrer')}
                 data-testid="button-book-hotel"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
@@ -347,7 +346,7 @@ export default function Checkout() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-white/80">
                   <span>{t('checkout.hotelNights', { nights: String(tripDays) })}</span>
-                  <span className="font-semibold text-white">€{selectedHotel.priceTotal}</span>
+                  <span className="font-semibold text-white">{formatHotelPrice(selectedHotel)}</span>
                 </div>
               </div>
               <p className="text-center text-white/50 text-xs mt-4">
