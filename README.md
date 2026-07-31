@@ -10,7 +10,7 @@ ByeBi is an AI-powered dual-brand travel platform featuring **ByeBro** for bache
 - Focus: Conversational approach over dropdown menus for user interaction
 
 ## System Architecture
-The platform is built with React and TypeScript for the frontend, utilizing Shadcn components with Tailwind CSS for a modern UI/UX featuring dark gradients, glassmorphism, and responsive design. Wouter handles client-side routing. The backend is an Express.js server with in-memory storage.
+The platform is built with React and TypeScript for the frontend, utilizing Shadcn components with Tailwind CSS for a modern UI/UX featuring dark gradients, glassmorphism, and responsive design. Wouter handles client-side routing. The backend is an Express.js server backed by PostgreSQL in production; in-memory storage is limited to local development.
 
 **Authentication: Supabase Auth** (migrated from Passport.js, March 2025)
 - All auth is handled by Supabase. Users appear in the Supabase Authentication dashboard.
@@ -20,6 +20,21 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 - Premium status tracked server-side in a `Map<string, boolean>` keyed by Supabase UUID.
 - Trip `userId` is now `text` (Supabase UUID) — changed from `integer`. Trip creation/retrieval enforces ownership against the JWT-verified user.
 - Auth page (`/auth`) uses email + password (not username).
+
+## Database migrations
+
+- `supabase/migrations/` is the canonical database history used by the
+  Supabase GitHub integration.
+- `supabase/seed.sql` contains local/preview test content and is not deployed
+  to production by the GitHub integration.
+- The integration working directory is `.` because `supabase/` is located at
+  the repository root.
+- Production deploys are triggered from `main`. Require the Supabase status
+  check before merging database changes.
+- Files under `migrations/manual/` are historical records only and must not be
+  applied again.
+- Do not make schema changes directly in the production Dashboard. Add a new
+  timestamped SQL migration and let the integration apply it.
 
 Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.
 

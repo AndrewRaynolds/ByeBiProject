@@ -1,6 +1,15 @@
-# Manual production migration
+# Archived manual migrations
 
-Apply the migrations in filename order:
+These files record the migrations that were applied manually before the
+Supabase GitHub integration was configured. Do not apply them again.
+
+The canonical migration history now lives in `supabase/migrations/`. The
+remote schema was captured as an applied baseline, so future database changes
+must be added there and deployed through the GitHub integration.
+
+## Historical application order
+
+The migrations were applied in filename order:
 
 1. `20260731_critical_data_persistence.sql` prepares durable storage for
    Splitta groups and expenses, generated itineraries, and processed Stripe
@@ -9,8 +18,7 @@ Apply the migrations in filename order:
    validates categories, adds the listing index, and inserts the three default
    stories idempotently.
 
-Apply it to a database backup or staging database first. After validating the
-application, set:
+After validating the application, production must use:
 
 ```env
 CRITICAL_DATA_PERSISTENCE=database
