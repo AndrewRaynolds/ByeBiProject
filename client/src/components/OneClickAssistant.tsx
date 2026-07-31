@@ -48,7 +48,7 @@ import { consumeJsonSse } from "@/lib/sse";
 
 // Schema per il form di input
 const messageSchema = z.object({
-  message: z.string().min(1, "Il messaggio non può essere vuoto"),
+  message: z.string().min(1, "Il messaggio non può essere vuoto").max(2_000),
 });
 
 type MessageFormValues = z.infer<typeof messageSchema>;
@@ -184,7 +184,7 @@ export default function OneClickAssistant() {
     // Create conversation history for GROQ (last 6 messages)
     const conversationHistory = messages.slice(-6).map((msg) => ({
       role: msg.sender === "user" ? "user" : "assistant",
-      content: msg.content,
+      content: msg.content.slice(0, 8_000),
     }));
 
     try {
@@ -196,8 +196,6 @@ export default function OneClickAssistant() {
         conversationHistory,
         partyType: brand === "byebro" ? "bachelor" : "bachelorette",
       };
-      console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
-
       const response = await apiRequest(
         "POST",
         "/api/chat/openai-stream",
@@ -252,8 +250,6 @@ export default function OneClickAssistant() {
         return;
       }
       // Fallback to local response generation
-      console.log("GROQ not available, using fallback:", error);
-      
       const assistantResponse = generateResponse(data.message);
 
       const assistantMessage: ChatMessage = {

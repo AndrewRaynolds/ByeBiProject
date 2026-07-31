@@ -27,7 +27,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 
 const messageSchema = z.object({
-  message: z.string().min(1, "Message cannot be empty"),
+  message: z.string().min(1, "Message cannot be empty").max(2_000),
 });
 
 type MessageFormValues = z.infer<typeof messageSchema>;
@@ -218,9 +218,9 @@ export default function ChatDialogCompact({
     let assistantMessageId: string | null = null;
 
     try {
-      const conversationHistory = messagesRef.current.map((msg) => ({
+      const conversationHistory = messagesRef.current.slice(-12).map((msg) => ({
         role: msg.sender === "user" ? "user" : "assistant",
-        content: msg.content,
+        content: msg.content.slice(0, 8_000),
       }));
 
       const currentState = conversationStateRef.current;
@@ -233,8 +233,6 @@ export default function ChatDialogCompact({
         originCity: originCityRef.current,
         flights: flightsRef.current,
       };
-      console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
-
       const response = await apiRequest(
         "POST",
         "/api/chat/openai-stream",

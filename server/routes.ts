@@ -13,7 +13,7 @@ import { generateItinerary } from "./services/openai";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
 import { searchFlights } from "./services/amadeus-flights";
-import { cityToIata, iataToCity, resolveIataCode } from "./services/cityMapping";
+import { iataToCity, resolveIataCode } from "./services/cityMapping";
 import { searchHotels } from "./services/amadeus-hotels";
 import { getStoreProducts, getProductDetail, getShippingRates } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -24,6 +24,7 @@ import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
 import { buildAviasalesUrl, flightSearchQuerySchema } from "@shared/flightSchemas";
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { getSafeErrorMetadata } from "./safeError";
+import { chatStreamRequestSchema } from "@shared/chatSchemas";
 
 
 const checkoutItemSchema = z.object({
@@ -714,8 +715,21 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
   // OpenAI Streaming Chat endpoint (with tool calls support)
   app.post("/api/chat/openai-stream", async (req: Request, res: Response) => {
+    const parsedRequest = chatStreamRequestSchema.safeParse(req.body);
+    if (!parsedRequest.success) {
+      return res.status(400).json({ error: "Invalid chat request" });
+    }
+
     try {
-      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity, flights } = req.body;
+      const {
+        message,
+        selectedDestination,
+        tripDetails,
+        conversationHistory,
+        partyType,
+        originCity,
+        flights,
+      } = parsedRequest.data;
 
       if (!process.env.OPENAI_API_KEY) {
         return res.status(503).json({
@@ -728,22 +742,13 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const originIata = originCity ? (cityToIata(originCity) || "") : "";
+      const originIata = resolveIataCode(originCity) || "";
       const originCityName = originIata ? iataToCity(originIata) : "";
 
       const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
-      interface RawFlight {
-        flightId?: string; id?: string | number;
-        airline?: string;
-        departure_at?: string; departureAt?: string;
-        return_at?: string; returnAt?: string;
-        flight_number?: number; flightNumber?: number | string;
-        origin?: string; destination?: string;
-        checkoutUrl?: string;
-      }
-      const normalizedFlights = Array.isArray(flights)
-        ? (flights as RawFlight[]).flatMap((f) => {
+      const normalizedFlights = flights
+        ? flights.flatMap((f) => {
             const departureAt = f.departure_at || f.departureAt;
             const returnAt = f.return_at || f.returnAt;
             const flightNumber =
@@ -776,7 +781,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // Use the new tool-loop streaming function that properly executes tools
       // and feeds results back to OpenAI for natural conversation continuation
-      for await (const chunk of streamOpenAIChatCompletionWithTools(message, context, conversationHistory || [])) {
+      for await (const chunk of streamOpenAIChatCompletionWithTools(message, context, conversationHistory)) {
         if (chunk.type === "content") {
           res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
         } else if (chunk.type === "tool_call") {
