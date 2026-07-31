@@ -109,7 +109,6 @@ Complete internationalization system supporting Italian (default), English, and 
 ## External Dependencies
 - **GROQ API**: Primary AI engine (llama-3.3-70b-versatile) for ultra-fast streaming chat responses (Server-Sent Events) and structured JSON generation for activity ideas.
 - **OpenAI API**: Backup AI engine.
-- **Pexels API**: Used for dynamic destination image search, with a fallback to Unsplash.
 - **Zapier**: Integrated via webhooks for AI-powered itinerary generation, allowing structured data exchange for ChatGPT processing.
 - **GetYourGuide**: Affiliate links for city-based experiences (10 destinations supported).
 - **Printful API**: Print-on-demand merchandise integration for travel gadgets (t-shirts, caps). Uses Bearer token auth via `PRINTFUL_API_KEY` secret.

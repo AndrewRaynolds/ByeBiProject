@@ -88,7 +88,6 @@ app.use("/api/stripe", commerceLimiter);
 app.use("/api/printful", commerceLimiter);
 app.use("/api/hotels", externalApiLimiter);
 app.use("/api/flights", externalApiLimiter);
-app.use("/api/images", externalApiLimiter);
 
 app.use((req, res, next) => {
   const start = Date.now();

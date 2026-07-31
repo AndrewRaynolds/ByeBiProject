@@ -43,15 +43,6 @@ vi.mock('./services/openai', () => ({
   streamOpenAIChatCompletion: vi.fn(),
 }));
 
-// Mock image search service
-vi.mock('./services/image-search', () => ({
-  imageSearchService: {
-    searchImages: vi.fn().mockResolvedValue({ images: [] }),
-    searchDestinationImages: vi.fn().mockResolvedValue({ images: [] }),
-    searchBarcelonaImages: vi.fn().mockResolvedValue({ images: [] }),
-  },
-}));
-
 // Mock amadeus-hotels service
 vi.mock('./services/amadeus-hotels', () => ({
   searchHotels: vi.fn().mockResolvedValue([]),
