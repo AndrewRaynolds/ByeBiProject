@@ -13,6 +13,7 @@ import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest } from '@/lib/queryClient';
 import { consumeJsonSse } from '@/lib/sse';
+import { createChatCheckoutContext } from '@/lib/chatCheckout';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(2_000),
@@ -95,6 +96,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   const [selectedFlight, setSelectedFlight] = useState<SelectedFlightData | null>(null);
   const [pendingFlightSelection, setPendingFlightSelection] = useState<number | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
+  const pendingFlightSearchRef = useRef<Record<string, unknown> | null>(null);
   const conversationStateRef = useRef<ConversationState>({
     selectedDestination: '',
     tripDetails: {
@@ -163,6 +165,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     if (!open) {
       streamAbortRef.current?.abort();
       streamAbortRef.current = null;
+      pendingFlightSearchRef.current = null;
       setIsLoading(false);
       setLoadingMessage(null);
     }
@@ -240,7 +243,21 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             handleToolCall(jsonData.tool_call);
           }
 
-          if (jsonData.tool_result) setLoadingMessage(null);
+          if (jsonData.tool_result) {
+            if (jsonData.tool_result.name === 'search_flights') {
+              const checkoutContext = createChatCheckoutContext(
+                pendingFlightSearchRef.current,
+                jsonData.tool_result.result,
+              );
+              pendingFlightSearchRef.current = null;
+              if (checkoutContext) {
+                localStorage.setItem('currentItinerary', JSON.stringify(checkoutContext));
+                onOpenChange(false);
+                setLocation('/checkout');
+              }
+            }
+            setLoadingMessage(null);
+          }
 
           if (jsonData.content) {
             accumulatedContent += jsonData.content;
@@ -509,9 +526,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           return_date,
           passengers,
         } = toolCall.arguments;
-        const currentState = conversationStateRef.current;
-        const currentOrigin = originCityRef.current;
-
         // Extract structured state from search_flights arguments
         if (destination) {
           setConversationState(prev => {
@@ -557,51 +571,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             return next;
           });
         }
-
-        // Use tool arguments or fall back to conversation state
-        const searchOrigin = origin || currentOrigin || "Rome";
-        const searchDestination =
-          destination || currentState.selectedDestination;
-        const searchDepartDate =
-          departure_date || currentState.tripDetails.startDate;
-        const searchReturnDate =
-          return_date || currentState.tripDetails.endDate;
-        const searchPassengers =
-          passengers || currentState.tripDetails.people || 2;
-
-        if (searchOrigin && searchDestination && searchDepartDate) {
-          const originIata = getCityIata(searchOrigin) || '';
-          const destIata = getCityIata(searchDestination);
-          const aviasalesUrl = buildAviasalesUrl({
-            originIata,
-            destinationIata: destIata || '',
-            departDate: searchDepartDate,
-            returnDate: searchReturnDate || searchDepartDate,
-            adults: searchPassengers,
-          });
-          const dateStr = formatDateRange(searchDepartDate, searchReturnDate || searchDepartDate);
-
-          localStorage.setItem('currentItinerary', JSON.stringify({
-            destination: searchDestination,
-            origin: searchOrigin,
-            dates: dateStr,
-            people: searchPassengers,
-            startDate: searchDepartDate,
-            endDate: searchReturnDate || searchDepartDate,
-            days: calculateTripDays(searchDepartDate, searchReturnDate || searchDepartDate),
-            partyType: currentState.partyType,
-            originCity: searchOrigin,
-            aviasalesCheckoutUrl: aviasalesUrl || '',
-            flightLabel: `${searchOrigin} → ${searchDestination}`,
-            flights: [],
-            cars: [],
-            activities: [],
-            checkoutApproved: true,
-          }));
-          setShowGenerateButton(true);
-          onOpenChange(false);
-          setLocation('/checkout');
-        }
+        pendingFlightSearchRef.current = toolCall.arguments;
         break;
       }
 

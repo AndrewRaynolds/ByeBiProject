@@ -815,10 +815,12 @@ function generateFollowUpMessage(
   return "Got it! Anything else you'd like to share?";
 }
 
-function detectUserLanguage(context: ChatContext, conversationHistory: ChatMessage[] = []): string {
+export function detectUserLanguage(
+  userMessage: string,
+  conversationHistory: ChatMessage[] = [],
+): string {
   const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === "user");
-  if (!lastUserMsg) return "en";
-  const text = lastUserMsg.content.toLowerCase();
+  const text = `${lastUserMsg?.content || ""} ${userMessage}`.toLowerCase();
   const itPatterns = /\b(ciao|voglio|andare|siamo|partiamo|dal|al|persone|voli|quando|dove|prenota|perfetto|procedi)\b/;
   const esPatterns = /\b(hola|quiero|somos|salimos|del|personas|vuelos|cuando|donde|reservar|perfecto)\b/;
   if (itPatterns.test(text)) return "it";
@@ -842,7 +844,7 @@ interface LocalStrings {
 
 const STRINGS: Record<string, LocalStrings> = {
   it: {
-    noFlightsError: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
+    noFlightsError: (o, d) => `Non sono riuscito a preparare il collegamento da ${o} a ${d}. Controlla città e date, poi riprova.`,
     noFlights: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
     flightsHeader: (o, d) => `Ecco i migliori voli da **${o}** a **${d}**:\n\n`,
     direct: "diretto",
@@ -855,7 +857,7 @@ const STRINGS: Record<string, LocalStrings> = {
     checkout: "Ottimo! Ti porto al checkout per completare la prenotazione.",
   },
   en: {
-    noFlightsError: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
+    noFlightsError: (o, d) => `I couldn't prepare the connection from ${o} to ${d}. Check the cities and dates, then try again.`,
     noFlights: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
     flightsHeader: (o, d) => `Here are the best flights from **${o}** to **${d}**:\n\n`,
     direct: "direct",
@@ -868,7 +870,7 @@ const STRINGS: Record<string, LocalStrings> = {
     checkout: "Taking you to checkout to complete the booking.",
   },
   es: {
-    noFlightsError: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
+    noFlightsError: (o, d) => `No pude preparar la conexión de ${o} a ${d}. Comprueba las ciudades y las fechas e inténtalo de nuevo.`,
     noFlights: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
     flightsHeader: (o, d) => `Aquí están los mejores vuelos de **${o}** a **${d}**:\n\n`,
     direct: "directo",
@@ -885,9 +887,10 @@ const STRINGS: Record<string, LocalStrings> = {
 function generateLocalToolResponse(
   toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }>,
   context: ChatContext,
+  userMessage: string,
   conversationHistory: ChatMessage[] = [],
 ): string | null {
-  const lang = detectUserLanguage(context, conversationHistory);
+  const lang = detectUserLanguage(userMessage, conversationHistory);
   const s = STRINGS[lang] || STRINGS.en;
 
   for (const { name, result, args } of toolResults) {
@@ -1088,7 +1091,12 @@ export async function* streamOpenAIChatCompletionWithTools(
       const allToolsAreSimple = canShortCircuit && toolResults.every(t => searchToolNames.has(t.name));
 
       if (allToolsAreSimple && toolResults.length > 0) {
-        const localResponse = generateLocalToolResponse(toolResults, context, conversationHistory);
+        const localResponse = generateLocalToolResponse(
+          toolResults,
+          context,
+          userMessage,
+          conversationHistory,
+        );
         if (localResponse) {
           console.log(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);
           yield { type: "content", content: localResponse };

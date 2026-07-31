@@ -17,7 +17,6 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 - Frontend: `useAuth()` hook (`client/src/hooks/use-auth.tsx`) wraps Supabase `signInWithPassword`, `signUp`, `signOut`, and `onAuthStateChange`. `AuthUser` type has UUID `id`. Frontend uses `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`.
 - Backend: `server/supabase.ts` creates a Supabase client using server-only secrets `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (throws on startup if missing — no fallbacks). The `isAuthenticated` middleware in `routes.ts` verifies Bearer JWT tokens via `supabase.auth.getUser(token)` and attaches the verified `User` to `req.supabaseUser` (typed via Express namespace in `server/types.ts`).
 - `queryClient.ts` automatically attaches `Authorization: Bearer <token>` headers to all API requests.
-- Premium status is persisted in Supabase user metadata and updated only by the authenticated admin endpoint.
 - Trip `userId` is now `text` (Supabase UUID) — changed from `integer`. Trip creation/retrieval enforces ownership against the JWT-verified user.
 - Auth page (`/auth`) uses email + password (not username).
 
@@ -38,17 +37,14 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 
 Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.
 
-The OneClick Assistant implements a strict, step-by-step conversational flow with origin city selection and real flight integration:
-1. User specifies destination → AI asks for origin city (Italian airports)
-2. User provides origin city → [SET_ORIGIN:CityName] directive emitted
-3. User provides dates and participants
-4. Backend fetches real flights via Aviasales API from origin to destination
-5. AI presents 3 flight options with real prices
-6. User selects flight (1, 2, or 3) → [SELECT_FLIGHT:X] directive emitted
-7. User selects experiences from 4 options
-8. Itinerary generated with selected flight details propagated to checkout
+The chat assistant implements a conversational flight-planning flow:
+1. The user describes the trip naturally.
+2. The assistant asks only for missing origin, destination, dates, or passenger count.
+3. Once the required data is complete, OpenAI calls the validated `search_flights` tool.
+4. The backend maps cities to IATA codes and creates the Aviasales checkout link.
+5. The frontend waits for the successful tool result, stores the shared `TripContext`, and opens checkout.
 
-AI responses are parsed for structured commands (SET_DESTINATION, SET_ORIGIN, SET_DATES, SET_PARTICIPANTS, SELECT_FLIGHT, SHOW_EXPERIENCES, UNLOCK_ITINERARY_BUTTON) to automatically update frontend state. The city-to-IATA mapping covers 17 Italian airports and 10 European destinations.
+The server-generated checkout URL is authoritative; the frontend never navigates from an unverified tool request.
 
 **Real Flow Architecture (December 2024 refactor):**
 The booking flow uses a unified TripContext data contract stored in localStorage under 'currentItinerary':
@@ -107,8 +103,7 @@ Complete internationalization system supporting Italian (default), English, and 
 **Note**: Italian locale is loaded synchronously (bundled) for instant first render. EN/ES are lazy-loaded on demand. Chat responses are handled separately by AI language detection.
 
 ## External Dependencies
-- **GROQ API**: Primary AI engine (llama-3.3-70b-versatile) for ultra-fast streaming chat responses (Server-Sent Events) and structured JSON generation for activity ideas.
-- **OpenAI API**: Backup AI engine.
+- **OpenAI API**: Primary engine for streaming chat responses and validated travel tool calls.
 - **Zapier**: Integrated via webhooks for AI-powered itinerary generation, allowing structured data exchange for ChatGPT processing.
 - **GetYourGuide**: Affiliate links for city-based experiences (10 destinations supported).
 - **Printful API**: Print-on-demand merchandise integration for travel gadgets (t-shirts, caps). Uses Bearer token auth via `PRINTFUL_API_KEY` secret.

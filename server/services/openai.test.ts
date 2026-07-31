@@ -59,7 +59,17 @@ vi.mock('./cityMapping', () => ({
 }));
 
 // Import after mocks are set up
-import { executeToolCall } from './openai';
+import { detectUserLanguage, executeToolCall } from './openai';
+
+describe('detectUserLanguage', () => {
+  it.each([
+    ['Voglio partire da Roma per sei persone', 'it'],
+    ['Quiero salir de Madrid para seis personas', 'es'],
+    ['I want to leave from London for six people', 'en'],
+  ])('detects the current message language', (message, expected) => {
+    expect(detectUserLanguage(message)).toBe(expected);
+  });
+});
 
 describe('executeToolCall', () => {
   beforeEach(() => {
