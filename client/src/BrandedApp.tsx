@@ -21,7 +21,6 @@ const SplittaBroPage = lazy(() => import("@/pages/SplittaBroPage"));
 const SplittaBridePage = lazy(() => import("@/pages/SplittaBridePage"));
 const DestinationsPage = lazy(() => import("@/pages/DestinationsPage"));
 const ExperiencesPage = lazy(() => import("@/pages/ExperiencesPage"));
-const OneClickPackagePage = lazy(() => import("@/pages/OneClickPackagePage"));
 const ZapierWebhooksPage = lazy(() => import("@/pages/ZapierWebhooksPage"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
 
@@ -48,7 +47,6 @@ function Router({ selectedBrand }: BrandedAppProps) {
       <Route path="/checkout" component={Checkout} />
       <ProtectedRoute path="/splitta-bro" component={SplittaPage} />
       <ProtectedRoute path="/splitta-bride" component={SplittaPage} />
-      <Route path="/one-click-package" component={OneClickPackagePage} />
       <ProtectedRoute path="/zapier-webhooks" component={ZapierWebhooksPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
