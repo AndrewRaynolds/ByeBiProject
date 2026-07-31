@@ -52,11 +52,6 @@ vi.mock('./services/image-search', () => ({
   },
 }));
 
-// Mock aviasales service
-vi.mock('./services/aviasales', () => ({
-  searchCheapestFlights: vi.fn().mockResolvedValue({ data: {} }),
-}));
-
 // Mock amadeus-hotels service
 vi.mock('./services/amadeus-hotels', () => ({
   searchHotels: vi.fn().mockResolvedValue([]),

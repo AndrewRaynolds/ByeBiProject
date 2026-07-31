@@ -18,7 +18,6 @@ import { createHttpSecurityMiddleware } from "./httpSecurity";
 import { validateRuntimeEnvironment } from "./runtimeConfig";
 
 const app = express();
-import aviasalesRouter from "./routes/aviasales";
 
 let isShuttingDown = false;
 
@@ -90,9 +89,7 @@ app.use("/api/stripe", commerceLimiter);
 app.use("/api/printful", commerceLimiter);
 app.use("/api/hotels", externalApiLimiter);
 app.use("/api/flights", externalApiLimiter);
-app.use("/api/aviasales", externalApiLimiter);
 app.use("/api/images", externalApiLimiter);
-app.use("/api/aviasales", aviasalesRouter);
 app.use("/api/amadeus", amadeusDebugRoute);
 
 app.use((req, res, next) => {
