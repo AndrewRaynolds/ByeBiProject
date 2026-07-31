@@ -296,6 +296,48 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     expect(toolCallChunks).toHaveLength(0);
   });
 
+  it('does not call OpenAI when the request is already aborted', async () => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const controller = new AbortController();
+    controller.abort();
+
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools(
+      'Plan my trip',
+      {},
+      [],
+      controller.signal,
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual([]);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('forwards the cancellation signal to the OpenAI SDK', async () => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const controller = new AbortController();
+    mockCreate.mockResolvedValueOnce(createMockStream([
+      { content: 'Ready to help.' },
+      { finish: 'stop' },
+    ]));
+
+    for await (const _chunk of streamOpenAIChatCompletionWithTools(
+      'Plan my trip',
+      {},
+      [],
+      controller.signal,
+    )) {
+      // Consume the stream.
+    }
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      { signal: controller.signal },
+    );
+  });
+
   it('handles unlock_checkout tool', async () => {
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');
 

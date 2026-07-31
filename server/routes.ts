@@ -720,6 +720,21 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       return res.status(400).json({ error: "Invalid chat request" });
     }
 
+    const controller = new AbortController();
+    let clientDisconnected = false;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 45_000);
+    const handleClose = () => {
+      if (!res.writableEnded) {
+        clientDisconnected = true;
+        controller.abort();
+      }
+    };
+    res.on("close", handleClose);
+
     try {
       const {
         message,
@@ -781,7 +796,14 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // Use the new tool-loop streaming function that properly executes tools
       // and feeds results back to OpenAI for natural conversation continuation
-      for await (const chunk of streamOpenAIChatCompletionWithTools(message, context, conversationHistory)) {
+      for await (const chunk of streamOpenAIChatCompletionWithTools(
+        message,
+        context,
+        conversationHistory,
+        controller.signal,
+      )) {
+        if (controller.signal.aborted) break;
+
         if (chunk.type === "content") {
           res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
         } else if (chunk.type === "tool_call") {
@@ -792,13 +814,22 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         }
       }
 
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      if (clientDisconnected) return;
+      if (timedOut) {
+        res.write(`data: ${JSON.stringify({ error: "Assistant request timed out" })}\n\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      }
       res.end();
 
     } catch (error: unknown) {
+      if (controller.signal.aborted || res.writableEnded) return;
       console.error('OpenAI streaming failed', getSafeErrorMetadata(error));
       res.write(`data: ${JSON.stringify({ error: "Assistant temporarily unavailable" })}\n\n`);
       res.end();
+    } finally {
+      clearTimeout(timeout);
+      res.off("close", handleClose);
     }
   });
 

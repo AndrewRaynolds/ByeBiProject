@@ -920,7 +920,10 @@ export async function* streamOpenAIChatCompletionWithTools(
   userMessage: string,
   context: ChatContext,
   conversationHistory: ChatMessage[] = [],
+  signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk, void, unknown> {
+  if (signal?.aborted) return;
+
   const totalStart = Date.now();
   try {
     const contextualPrompt = buildContextualPrompt(context);
@@ -941,19 +944,24 @@ export async function* streamOpenAIChatCompletionWithTools(
     console.log(`⏱️ [STREAM] Start | system_prompt=${systemPromptLength} chars | history=${historyLength} msgs | total_chars=${totalChars}`);
 
     // Tool loop: keep calling OpenAI until we get a response without tool calls
-    let iteration = 0;
-    while (true) {
-      iteration++;
+    const maxToolIterations = 4;
+    let completed = false;
+    for (let iteration = 1; iteration <= maxToolIterations; iteration++) {
+      if (signal?.aborted) return;
+
       const apiStart = Date.now();
       console.log(`⏱️ [STREAM] OpenAI API call #${iteration} starting...`);
 
-      const stream = await openai.chat.completions.create({
-        messages,
-        model: "gpt-4o-mini",
-        stream: true,
-        tools: TRIP_TOOLS,
-        tool_choice: "auto",
-      });
+      const stream = await openai.chat.completions.create(
+        {
+          messages,
+          model: "gpt-4o-mini",
+          stream: true,
+          tools: TRIP_TOOLS,
+          tool_choice: "auto",
+        },
+        { signal },
+      );
 
       const firstChunkStart = Date.now();
       console.log(`⏱️ [STREAM] Stream created in ${firstChunkStart - apiStart}ms, waiting for first chunk...`);
@@ -966,6 +974,8 @@ export async function* streamOpenAIChatCompletionWithTools(
       const contentBuffer: string[] = [];
 
       for await (const chunk of stream) {
+        if (signal?.aborted) return;
+
         if (!firstChunkReceived) {
           console.log(`⏱️ [STREAM] First chunk received in ${Date.now() - firstChunkStart}ms (total since API call: ${Date.now() - apiStart}ms)`);
           firstChunkReceived = true;
@@ -1016,6 +1026,7 @@ export async function* streamOpenAIChatCompletionWithTools(
       // If no tool calls, we're done - exit the loop
       if (toolCalls.length === 0) {
         console.log(`⏱️ [STREAM] No tool calls, done. Total: ${Date.now() - totalStart}ms`);
+        completed = true;
         break;
       }
 
@@ -1035,6 +1046,8 @@ export async function* streamOpenAIChatCompletionWithTools(
       const toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }> = [];
 
       for (const toolCall of toolCalls) {
+        if (signal?.aborted) return;
+
         let args: Record<string, unknown>;
         try {
           args = JSON.parse(toolCall.arguments || "{}");
@@ -1057,6 +1070,7 @@ export async function* streamOpenAIChatCompletionWithTools(
 
         const toolStart = Date.now();
         const result = await executeToolCall(toolCall.name, args, context);
+        if (signal?.aborted) return;
         console.log(`⏱️ [STREAM] Tool "${toolCall.name}" executed in ${Date.now() - toolStart}ms`);
 
         yield { type: "tool_result", name: toolCall.name, result };
@@ -1078,13 +1092,22 @@ export async function* streamOpenAIChatCompletionWithTools(
         if (localResponse) {
           console.log(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);
           yield { type: "content", content: localResponse };
+          completed = true;
           break;
         }
       }
 
       console.log(`⏱️ [STREAM] Needs followup via OpenAI. Elapsed: ${Date.now() - totalStart}ms`);
     }
+
+    if (!completed && !signal?.aborted) {
+      yield {
+        type: "content",
+        content: "Sorry, I couldn't complete the request. Please try again.",
+      };
+    }
   } catch (error) {
+    if (signal?.aborted) return;
     console.error("OpenAI streaming error", getSafeErrorMetadata(error));
     yield {
       type: "content",
