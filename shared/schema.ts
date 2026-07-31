@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -23,22 +23,26 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 // Trip model
-export const trips = pgTable("trips", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  name: text("name").notNull(),
-  participants: integer("participants").notNull(),
-  startDate: text("start_date").notNull(),
-  endDate: text("end_date").notNull(),
-  departureCity: text("departure_city").notNull(),
-  destinations: text("destinations").array(),
-  experienceType: text("experience_type").notNull(),
-  budget: integer("budget").notNull(),
-  activities: text("activities").array(),
-  specialRequests: text("special_requests"),
-  includeMerch: boolean("include_merch").default(false),
-  createdAt: timestamp("created_at").defaultNow()
-});
+export const trips = pgTable(
+  "trips",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    participants: integer("participants").notNull(),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+    departureCity: text("departure_city").notNull(),
+    destinations: text("destinations").array(),
+    experienceType: text("experience_type").notNull(),
+    budget: integer("budget").notNull(),
+    activities: text("activities").array(),
+    specialRequests: text("special_requests"),
+    includeMerch: boolean("include_merch").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("trips_user_id_idx").on(table.userId)],
+);
 
 export const insertTripSchema = createInsertSchema(trips).pick({
   userId: true,
@@ -161,17 +165,27 @@ export const insertExperienceSchema = createInsertSchema(experiences).pick({
 });
 
 // Expense Group model (for SplittaBro feature)
-export const expenseGroups = pgTable("expense_groups", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  members: json("members").notNull(),
-  totalAmount: integer("total_amount").default(0),
-  currency: text("currency").default("EUR"),
-  createdAt: timestamp("created_at").defaultNow()
-});
+export const expenseGroups = pgTable(
+  "expense_groups",
+  {
+    id: serial("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    tripId: integer("trip_id").references(() => trips.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    members: json("members").notNull(),
+    totalAmount: integer("total_amount").default(0),
+    currency: text("currency").default("EUR"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("expense_groups_owner_id_idx").on(table.ownerId),
+    index("expense_groups_trip_id_idx").on(table.tripId),
+  ],
+);
 
 export const insertExpenseGroupSchema = createInsertSchema(expenseGroups).pick({
+  tripId: true,
   name: true,
   description: true,
   members: true,
@@ -179,17 +193,23 @@ export const insertExpenseGroupSchema = createInsertSchema(expenseGroups).pick({
 });
 
 // Expense model (for SplittaBro feature)
-export const expenses = pgTable("expenses", {
-  id: serial("id").primaryKey(),
-  groupId: integer("group_id").notNull(),
-  description: text("description").notNull(),
-  amount: integer("amount").notNull(),
-  paidBy: text("paid_by").notNull(),
-  splitBetween: json("split_between").notNull(),
-  category: text("category").notNull(),
-  date: text("date").notNull(),
-  createdAt: timestamp("created_at").defaultNow()
-});
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => expenseGroups.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    amount: integer("amount").notNull(),
+    paidBy: text("paid_by").notNull(),
+    splitBetween: json("split_between").notNull(),
+    category: text("category").notNull(),
+    date: text("date").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("expenses_group_id_idx").on(table.groupId)],
+);
 
 export const insertExpenseSchema = createInsertSchema(expenses).pick({
   groupId: true,
@@ -230,21 +250,33 @@ export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 // Generated Itinerary model (for OneClick Assistant)
-export const generatedItineraries = pgTable("generated_itineraries", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id"),
-  destination: text("destination").notNull(),
-  startDate: text("start_date").notNull(),
-  endDate: text("end_date").notNull(),
-  participants: integer("participants").notNull(),
-  eventType: text("event_type").notNull(),
-  selectedExperiences: text("selected_experiences").array(),
-  flights: json("flights"),
-  hotel: json("hotel"),
-  dailyActivities: json("daily_activities"),
-  totalPrice: integer("total_price").notNull(),
-  status: text("status").default("draft"),
-  createdAt: timestamp("created_at").defaultNow()
+export const generatedItineraries = pgTable(
+  "generated_itineraries",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    destination: text("destination").notNull(),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+    participants: integer("participants").notNull(),
+    eventType: text("event_type").notNull(),
+    selectedExperiences: text("selected_experiences").array(),
+    flights: json("flights"),
+    hotel: json("hotel"),
+    dailyActivities: json("daily_activities"),
+    totalPrice: integer("total_price").notNull(),
+    status: text("status").default("draft"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("generated_itineraries_user_id_idx").on(table.userId),
+  ],
+);
+
+export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
+  eventId: text("event_id").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  processedAt: timestamp("processed_at").defaultNow().notNull(),
 });
 
 export const insertGeneratedItinerarySchema = createInsertSchema(generatedItineraries).pick({

@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { consumeJsonSse } from "@/lib/sse";
 
 // Schema per il form di input
 const messageSchema = z.object({
@@ -111,6 +112,11 @@ export default function OneClickAssistant() {
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => streamAbortRef.current?.abort();
+  }, []);
 
   // Detect current brand from localStorage
   useEffect(() => {
@@ -149,10 +155,11 @@ export default function OneClickAssistant() {
     if (initialMessage) {
       localStorage.removeItem("byebro-initial-message");
       // Wait a bit for the component to mount
-      setTimeout(() => {
+      const timeout = window.setTimeout(() => {
         form.setValue("message", initialMessage);
         form.handleSubmit(onSubmit)();
       }, 500);
+      return () => window.clearTimeout(timeout);
     }
   }, []);
 
@@ -168,6 +175,10 @@ export default function OneClickAssistant() {
     setMessages((prev) => [...prev, userMessage]);
     form.reset();
     setIsLoading(true);
+    const controller = new AbortController();
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = controller;
+    let assistantMessageId: string | null = null;
 
     // Create conversation history for GROQ (last 6 messages)
     const conversationHistory = messages.slice(-6).map((msg) => ({
@@ -186,20 +197,15 @@ export default function OneClickAssistant() {
       };
       console.log("🔍 OPENAI STREAM PAYLOAD:", payload);
 
-      const response = await fetch("/api/chat/openai-stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error("OPENAI streaming not available");
-      }
+      const response = await apiRequest(
+        "POST",
+        "/api/chat/openai-stream",
+        payload,
+        { signal: controller.signal, timeoutMs: 30_000 },
+      );
 
       // Create a placeholder message for streaming
-      const assistantMessageId = (Date.now() + 1).toString();
+      assistantMessageId = (Date.now() + 1).toString();
       const assistantMessage: ChatMessage = {
         id: assistantMessageId,
         content: "",
@@ -210,59 +216,40 @@ export default function OneClickAssistant() {
       setMessages((prev) => [...prev, assistantMessage]);
       setIsLoading(false);
 
-      // Read the stream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
       let accumulatedContent = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const jsonData = JSON.parse(line.slice(6));
-
-              if (jsonData.error) {
-                throw new Error(jsonData.error);
-              }
-
-              if (jsonData.tool_call) {
-                handleToolCall(jsonData.tool_call);
-              }
-
-              if (jsonData.done) {
-                // Streaming complete
-                break;
-              }
-
-              if (jsonData.content) {
-                accumulatedContent += jsonData.content;
-
-                // Update message in real-time
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: accumulatedContent }
-                      : msg,
-                  ),
-                );
-              }
-            } catch (parseError) {
-              console.error("Error parsing SSE data:", parseError);
-            }
+      await consumeJsonSse(response, {
+        onEvent: (jsonData: any) => {
+          if (jsonData.tool_call) {
+            handleToolCall(jsonData.tool_call);
           }
-        }
-      }
+
+          if (jsonData.content) {
+            accumulatedContent += jsonData.content;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: accumulatedContent }
+                  : msg,
+              ),
+            );
+          }
+        },
+      });
 
       // Extract trip details from response if needed
       extractTripDetails(data.message);
     } catch (error) {
+      setMessages((prev) =>
+        prev.filter(
+          (msg) => msg.id !== assistantMessageId && msg.content !== "",
+        ),
+      );
+
+      if (controller.signal.aborted) {
+        setIsLoading(false);
+        return;
+      }
       // Fallback to local response generation
       console.log("GROQ not available, using fallback:", error);
       
@@ -276,11 +263,13 @@ export default function OneClickAssistant() {
       };
 
       setMessages((prev) => {
-        // Remove any empty streaming message
-        const filtered = prev.filter((msg) => msg.content !== "");
-        return [...filtered, assistantMessage];
+        return [...prev, assistantMessage];
       });
       setIsLoading(false);
+    } finally {
+      if (streamAbortRef.current === controller) {
+        streamAbortRef.current = null;
+      }
     }
   };
 

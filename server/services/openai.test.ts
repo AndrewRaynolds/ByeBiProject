@@ -53,103 +53,19 @@ describe('executeToolCall', () => {
     vi.clearAllMocks();
   });
 
-  describe('set_destination tool', () => {
-    it('returns success with the destination city', async () => {
-      const result = await executeToolCall('set_destination', { city: 'Barcelona' }, {});
-      expect(result).toEqual({ success: true, destination: 'Barcelona' });
-    });
-
-    it('handles empty city gracefully', async () => {
-      const result = await executeToolCall('set_destination', { city: '' }, {});
-      expect(result).toEqual({ success: true, destination: '' });
-    });
-  });
-
-  describe('set_origin tool', () => {
-    it('returns success with the origin city', async () => {
-      const result = await executeToolCall('set_origin', { city: 'Rome' }, {});
-      expect(result).toEqual({ success: true, origin: 'Rome' });
-    });
-
-    it('handles different cities', async () => {
-      const result = await executeToolCall('set_origin', { city: 'Milan' }, {});
-      expect(result).toEqual({ success: true, origin: 'Milan' });
-    });
-  });
-
-  describe('set_dates tool', () => {
-    it('returns success with departure and return dates', async () => {
-      const result = await executeToolCall('set_dates', {
-        departure_date: '2025-06-15',
-        return_date: '2025-06-20'
-      }, {});
-      expect(result).toEqual({
-        success: true,
-        departure_date: '2025-06-15',
-        return_date: '2025-06-20'
-      });
-    });
-
-    it('handles dates close together', async () => {
-      const result = await executeToolCall('set_dates', {
-        departure_date: '2025-07-01',
-        return_date: '2025-07-02'
-      }, {});
-      expect(result).toEqual({
-        success: true,
-        departure_date: '2025-07-01',
-        return_date: '2025-07-02'
-      });
-    });
-  });
-
-  describe('set_participants tool', () => {
-    it('returns success with participant count', async () => {
-      const result = await executeToolCall('set_participants', { count: 5 }, {});
-      expect(result).toEqual({ success: true, participants: 5 });
-    });
-
-    it('handles single participant', async () => {
-      const result = await executeToolCall('set_participants', { count: 1 }, {});
-      expect(result).toEqual({ success: true, participants: 1 });
-    });
-
-    it('handles large groups', async () => {
-      const result = await executeToolCall('set_participants', { count: 20 }, {});
-      expect(result).toEqual({ success: true, participants: 20 });
-    });
+  describe('removed legacy tools', () => {
+    it.each(['set_destination', 'set_origin', 'set_dates', 'set_participants'])(
+      'rejects the obsolete %s tool',
+      async (name) => {
+        await expect(executeToolCall(name, {}, {})).resolves.toEqual({
+          error: `Unknown tool: ${name}`,
+        });
+      },
+    );
   });
 
   describe('search_flights tool', () => {
-    it('calls Amadeus API with correct IATA codes and generates checkoutUrl', async () => {
-      const { searchFlights } = await import('./amadeus-flights');
-      vi.mocked(searchFlights).mockResolvedValue([
-        {
-          id: '1',
-          price: 150,
-          currency: 'EUR',
-          outbound: [{
-            departure: { iataCode: 'ROM', at: '2025-06-15T10:00:00' },
-            arrival: { iataCode: 'BCN', at: '2025-06-15T12:30:00' },
-            carrierCode: 'IB',
-            carrierName: 'Iberia',
-            flightNumber: '123',
-            duration: 'PT2H30M'
-          }],
-          inbound: [{
-            departure: { iataCode: 'BCN', at: '2025-06-20T18:00:00' },
-            arrival: { iataCode: 'ROM', at: '2025-06-20T20:30:00' },
-            carrierCode: 'IB',
-            carrierName: 'Iberia',
-            flightNumber: '456',
-            duration: 'PT2H30M'
-          }],
-          airlines: ['Iberia'],
-          totalDuration: 'PT2H30M',
-          stops: 0
-        }
-      ]);
-
+    it('generates a checkout URL with mapped IATA codes', async () => {
       const result = await executeToolCall('search_flights', {
         origin: 'Rome',
         destination: 'Barcelona',
@@ -158,94 +74,18 @@ describe('executeToolCall', () => {
         passengers: 5
       }, {});
 
-      expect(searchFlights).toHaveBeenCalledWith({
-        originCode: 'ROM',
-        destinationCode: 'BCN',
-        departureDate: '2025-06-15',
-        returnDate: '2025-06-20',
-        adults: 5,
-        currency: 'EUR'
+      expect(result).toMatchObject({
+        checkoutReady: true,
+        origin: 'ROM',
+        destination: 'BCN',
       });
-
-      expect(result.flights).toHaveLength(1);
-      const flight = (result.flights as any[])[0];
-      expect(flight.airline).toBe('Iberia');
-      expect(flight.price).toBe(150);
-      // Verify checkoutUrl is generated with correct format
-      expect(flight.checkoutUrl).toContain('https://www.aviasales.com/search/ROM1506BCN2006');
-      expect(flight.checkoutUrl).toContain('5'); // passengers
-    });
-
-    it('handles multiple flight results', async () => {
-      const { searchFlights } = await import('./amadeus-flights');
-      vi.mocked(searchFlights).mockResolvedValue([
-        {
-          id: '1', price: 150, currency: 'EUR',
-          outbound: [{ departure: { iataCode: 'ROM', at: '2025-06-15T10:00:00' }, arrival: { iataCode: 'BCN', at: '2025-06-15T12:30:00' }, carrierCode: 'IB', flightNumber: '123', duration: 'PT2H30M' }],
-          inbound: [{ departure: { iataCode: 'BCN', at: '2025-06-20T18:00:00' }, arrival: { iataCode: 'ROM', at: '2025-06-20T20:30:00' }, carrierCode: 'IB', flightNumber: '456', duration: 'PT2H30M' }],
-          airlines: ['Iberia'], totalDuration: 'PT2H30M', stops: 0
-        },
-        {
-          id: '2', price: 180, currency: 'EUR',
-          outbound: [{ departure: { iataCode: 'ROM', at: '2025-06-15T14:00:00' }, arrival: { iataCode: 'BCN', at: '2025-06-15T16:30:00' }, carrierCode: 'VY', flightNumber: '789', duration: 'PT2H30M' }],
-          inbound: [{ departure: { iataCode: 'BCN', at: '2025-06-20T20:00:00' }, arrival: { iataCode: 'ROM', at: '2025-06-20T22:30:00' }, carrierCode: 'VY', flightNumber: '012', duration: 'PT2H30M' }],
-          airlines: ['Vueling'], totalDuration: 'PT2H30M', stops: 0
-        },
-        {
-          id: '3', price: 200, currency: 'EUR',
-          outbound: [{ departure: { iataCode: 'ROM', at: '2025-06-15T08:00:00' }, arrival: { iataCode: 'BCN', at: '2025-06-15T10:30:00' }, carrierCode: 'AZ', flightNumber: '345', duration: 'PT2H30M' }],
-          inbound: [{ departure: { iataCode: 'BCN', at: '2025-06-20T16:00:00' }, arrival: { iataCode: 'ROM', at: '2025-06-20T18:30:00' }, carrierCode: 'AZ', flightNumber: '678', duration: 'PT2H30M' }],
-          airlines: ['ITA Airways'], totalDuration: 'PT2H30M', stops: 0
-        }
-      ]);
-
-      const result = await executeToolCall('search_flights', {
-        origin: 'Rome',
-        destination: 'Barcelona',
-        departure_date: '2025-06-15',
-        return_date: '2025-06-20',
-        passengers: 2
-      }, {});
-
-      expect(result.flights).toHaveLength(3);
-    });
-
-    it('handles empty flight results', async () => {
-      const { searchFlights } = await import('./amadeus-flights');
-      vi.mocked(searchFlights).mockResolvedValue([]);
-
-      const result = await executeToolCall('search_flights', {
-        origin: 'Rome',
-        destination: 'Barcelona',
-        departure_date: '2025-06-15',
-        return_date: '2025-06-20',
-        passengers: 2
-      }, {});
-
-      expect(result.flights).toEqual([]);
-    });
-
-    it('handles API errors gracefully', async () => {
-      const { searchFlights } = await import('./amadeus-flights');
-      vi.mocked(searchFlights).mockRejectedValue(new Error('API Error'));
-
-      const result = await executeToolCall('search_flights', {
-        origin: 'Rome',
-        destination: 'Barcelona',
-        departure_date: '2025-06-15',
-        return_date: '2025-06-20',
-        passengers: 2
-      }, {});
-
-      expect(result.error).toBeDefined();
-      expect(result.flights).toEqual([]);
+      expect(result.checkoutUrl).toBe(
+        'https://www.aviasales.com/search/ROM1506BCN20065?marker=byebi',
+      );
     });
 
     it('uses city substring for unknown cities', async () => {
-      const { searchFlights } = await import('./amadeus-flights');
-      vi.mocked(searchFlights).mockResolvedValue([]);
-
-      await executeToolCall('search_flights', {
+      const result = await executeToolCall('search_flights', {
         origin: 'UnknownCity',
         destination: 'AnotherCity',
         departure_date: '2025-06-15',
@@ -253,21 +93,14 @@ describe('executeToolCall', () => {
         passengers: 2
       }, {});
 
-      expect(searchFlights).toHaveBeenCalledWith({
-        originCode: 'UNK',
-        destinationCode: 'ANO',
-        departureDate: '2025-06-15',
-        returnDate: '2025-06-20',
-        adults: 2,
-        currency: 'EUR'
+      expect(result).toMatchObject({
+        origin: 'UNK',
+        destination: 'ANO',
       });
     });
 
     it('extracts IATA code from parentheses format like "Fiumicino (FCO)"', async () => {
-      const { searchFlights } = await import('./amadeus-flights');
-      vi.mocked(searchFlights).mockResolvedValue([]);
-
-      await executeToolCall('search_flights', {
+      const result = await executeToolCall('search_flights', {
         origin: 'Fiumicino (FCO)',
         destination: 'Barcelona (BCN)',
         departure_date: '2025-06-15',
@@ -275,13 +108,9 @@ describe('executeToolCall', () => {
         passengers: 3
       }, {});
 
-      expect(searchFlights).toHaveBeenCalledWith({
-        originCode: 'FCO',
-        destinationCode: 'BCN',
-        departureDate: '2025-06-15',
-        returnDate: '2025-06-20',
-        adults: 3,
-        currency: 'EUR'
+      expect(result).toMatchObject({
+        origin: 'FCO',
+        destination: 'BCN',
       });
     });
   });

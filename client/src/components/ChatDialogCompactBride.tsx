@@ -11,6 +11,8 @@ import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
 import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { apiRequest } from '@/lib/queryClient';
+import { consumeJsonSse } from '@/lib/sse';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
@@ -92,6 +94,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   const originCityRef = useRef<string>('');
   const [selectedFlight, setSelectedFlight] = useState<SelectedFlightData | null>(null);
   const [pendingFlightSelection, setPendingFlightSelection] = useState<number | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const conversationStateRef = useRef<ConversationState>({
     selectedDestination: '',
     tripDetails: {
@@ -156,6 +159,17 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     conversationStateRef.current = conversationState;
   }, [conversationState]);
 
+  useEffect(() => {
+    if (!open) {
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+      setIsLoading(false);
+      setLoadingMessage(null);
+    }
+
+    return () => streamAbortRef.current?.abort();
+  }, [open]);
+
   const sendChatRequest = async (message: string, addUserMessage: boolean) => {
     if (isLoading) return;
     const trimmedMessage = message.trim();
@@ -172,6 +186,10 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     }
 
     setIsLoading(true);
+    const controller = new AbortController();
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = controller;
+    let assistantMessageId: string | null = null;
 
     try {
       const conversationHistory = messagesRef.current.map((msg) => ({
@@ -190,19 +208,14 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       };
       console.log('🔍 OPENAI STREAM PAYLOAD:', payload);
 
-      const response = await fetch('/api/chat/openai-stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+      const response = await apiRequest(
+        'POST',
+        '/api/chat/openai-stream',
+        payload,
+        { signal: controller.signal, timeoutMs: 30_000 },
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const assistantMessageId = (Date.now() + 1).toString();
+      assistantMessageId = (Date.now() + 1).toString();
       const placeholderMessage: ChatMessage = {
         id: assistantMessageId,
         content: '',
@@ -212,75 +225,53 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
       setMessages((prev) => [...prev, placeholderMessage]);
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
       let accumulatedContent = '';
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const jsonData = JSON.parse(line.slice(6));
-
-                if (jsonData.error) {
-                  throw new Error(jsonData.error);
-                }
-
-                if (jsonData.tool_call) {
-                  // Show loading message for long-running tools
-                  if (jsonData.tool_call.name === 'search_flights') {
-                    setLoadingMessage('Preparing checkout...');
-                  } else if (jsonData.tool_call.name === 'search_hotels') {
-                    setLoadingMessage('Searching for hotels...');
-                  } else if (jsonData.tool_call.name === 'select_flight') {
-                    setLoadingMessage('Selecting your flight...');
-                  } else if (jsonData.tool_call.name === 'unlock_checkout') {
-                    setLoadingMessage('Preparing checkout...');
-                  }
-                  handleToolCall(jsonData.tool_call);
-                }
-
-                if (jsonData.tool_result) {
-                  // Clear loading message when tool completes
-                  setLoadingMessage(null);
-                }
-
-                if (jsonData.done) {
-                  break;
-                }
-
-                if (jsonData.content) {
-                  accumulatedContent += jsonData.content;
-
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
-                        : msg
-                    )
-                  );
-                }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e);
-              }
+      await consumeJsonSse(response, {
+        onEvent: (jsonData: any) => {
+          if (jsonData.tool_call) {
+            if (jsonData.tool_call.name === 'search_flights') {
+              setLoadingMessage('Preparing checkout...');
+            } else if (jsonData.tool_call.name === 'search_hotels') {
+              setLoadingMessage('Searching for hotels...');
+            } else if (jsonData.tool_call.name === 'select_flight') {
+              setLoadingMessage('Selecting your flight...');
+            } else if (jsonData.tool_call.name === 'unlock_checkout') {
+              setLoadingMessage('Preparing checkout...');
             }
+            handleToolCall(jsonData.tool_call);
           }
-        }
-      }
+
+          if (jsonData.tool_result) setLoadingMessage(null);
+
+          if (jsonData.content) {
+            accumulatedContent += jsonData.content;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: accumulatedContent }
+                  : msg,
+              ),
+            );
+          }
+        },
+      });
 
       setIsLoading(false);
       setLoadingMessage(null);
     } catch (error) {
-      console.error('Chat error:', error);
+      setMessages((prev) =>
+        prev.filter(
+          (msg) => msg.id !== assistantMessageId && msg.content !== '',
+        ),
+      );
 
-      setMessages((prev) => prev.filter((msg) => msg.content !== ''));
+      if (controller.signal.aborted) {
+        setIsLoading(false);
+        setLoadingMessage(null);
+        return;
+      }
+      console.error('Chat error:', error);
 
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -292,6 +283,10 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       setMessages((prev) => [...prev, errorMessage]);
       setLoadingMessage(null);
       setIsLoading(false);
+    } finally {
+      if (streamAbortRef.current === controller) {
+        streamAbortRef.current = null;
+      }
     }
   };
 

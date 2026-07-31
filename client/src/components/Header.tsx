@@ -75,6 +75,12 @@ const Header = memo(function Header() {
 
   return (
     <header className={`bg-white sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md py-1' : 'py-2'}`}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-black focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+      >
+        {t('header.skipToContent')}
+      </a>
       <div className="container mx-auto px-4 py-2 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Link href="/" className="font-poppins font-bold text-2xl transform transition-transform hover:scale-105">
@@ -148,7 +154,12 @@ const Header = memo(function Header() {
         <div className="flex items-center space-x-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-sm gap-1 px-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-sm gap-1 px-2"
+                aria-label={`Lingua: ${FLAG_LABELS[locale].label}`}
+              >
                 <span>{FLAG_LABELS[locale].flag}</span>
                 <Globe className="w-3.5 h-3.5 text-gray-500" />
               </Button>
@@ -227,6 +238,9 @@ const Header = memo(function Header() {
             size="icon"
             onClick={toggleMobileMenu}
             className="md:hidden"
+            aria-label={mobileMenuOpen ? "Chiudi menu di navigazione" : "Apri menu di navigazione"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
           >
             {mobileMenuOpen ? <X /> : <Menu />}
           </Button>
@@ -235,7 +249,11 @@ const Header = memo(function Header() {
       
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div ref={menuRef} className="md:hidden bg-white border-t border-gray-200 p-4">
+        <div
+          id="mobile-navigation"
+          ref={menuRef}
+          className="md:hidden bg-white border-t border-gray-200 p-4"
+        >
           <div className="flex flex-col space-y-3">
             <Button
               variant="ghost"

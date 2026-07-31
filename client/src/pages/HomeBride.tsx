@@ -13,7 +13,7 @@ export default function HomeBride() {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-grow">
+      <main id="main-content" tabIndex={-1} className="flex-grow">
         <HeroSectionBride />
         <HowItWorks brand="bride" />
         <FeaturedDestinations brand="bride" />

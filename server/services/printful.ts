@@ -209,11 +209,13 @@ export async function getShippingRates(
 export async function createOrder(
   recipient: PrintfulRecipient,
   items: PrintfulOrderItem[],
-  isDraft: boolean = true
+  isDraft: boolean = true,
+  externalId?: string,
 ) {
   const data = await printfulFetch("/orders", {
     method: "POST",
     body: JSON.stringify({
+      ...(externalId ? { external_id: externalId } : {}),
       recipient,
       items: items.map((item) => ({
         sync_variant_id: item.sync_variant_id,

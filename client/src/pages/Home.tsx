@@ -13,7 +13,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-grow">
+      <main id="main-content" tabIndex={-1} className="flex-grow">
         {/* Hero Section with Integrated Activity Ideas & Chat */}
         <HeroSection />
         

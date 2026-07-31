@@ -25,6 +25,13 @@
   "common.results": "risultati",
   "common.result": "risultato",
 
+  "meta.titleBase": "ByeBi - Viaggi di gruppo indimenticabili",
+  "meta.titleBro": "ByeBro - Addii al celibato indimenticabili",
+  "meta.titleBride": "ByeBride - Addii al nubilato indimenticabili",
+  "meta.descriptionBase": "Organizza viaggi di gruppo, addii al celibato e addii al nubilato personalizzati con ByeBi.",
+  "meta.descriptionBro": "Organizza un addio al celibato personalizzato con itinerari, attività e consigli di viaggio ByeBro.",
+  "meta.descriptionBride": "Organizza un addio al nubilato personalizzato con itinerari, esperienze e consigli di viaggio ByeBride.",
+
   "brand.changeBrand": "Cambia brand",
   "brand.subtitle": "La tua esperienza di pianificazione party definitiva",
   "brand.footer": "AI-Powered • Personalizzato • Indimenticabile",
@@ -43,6 +50,7 @@
   "header.logout": "Esci",
   "header.loggingOut": "Disconnessione...",
   "header.dashboard": "Dashboard",
+  "header.skipToContent": "Vai al contenuto principale",
 
   "hero.bro.title": "One more Night, no more rights!",
   "hero.bro.subtitle": "Crea ricordi indimenticabili con viaggi personalizzati, attività e gear per l'ultima avventura dello sposo.",
@@ -272,6 +280,8 @@
   "auth.createAccount": "Crea Account",
   "auth.sideTitle": "Unisciti a ByeBro oggi",
   "auth.sideDesc": "Pianifica il tuo addio al celibato definitivo con itinerari personalizzati, guide destinazione e gestione spese.",
+  "auth.sideTitleBride": "Unisciti a ByeBride oggi",
+  "auth.sideDescBride": "Pianifica il tuo addio al nubilato ideale con itinerari personalizzati, guide destinazione e gestione spese.",
   "auth.featureItineraries": "Itinerari generati con AI",
   "auth.featureExpenses": "Divisione spese",
   "auth.featureDestinations": "Destinazioni selezionate",
@@ -511,5 +521,11 @@
   "gyg.cta": "Vedi esperienze su GetYourGuide",
 
   "notFound.title": "404 Pagina Non Trovata",
-  "notFound.desc": "La pagina che cerchi non esiste."
+  "notFound.desc": "La pagina che cerchi non esiste.",
+  "notFound.backHome": "Torna alla home",
+  "errorBoundary.title": "Qualcosa è andato storto",
+  "errorBoundary.description": "Non siamo riusciti a mostrare questa pagina. Puoi riprovare oppure tornare alla home.",
+  "errorBoundary.details": "Dettagli tecnici",
+  "errorBoundary.retry": "Riprova",
+  "errorBoundary.backHome": "Torna alla home"
 }

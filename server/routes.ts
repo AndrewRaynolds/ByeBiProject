@@ -3,7 +3,6 @@ import express, { type Express, Request, Response, NextFunction } from "express"
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
-  insertUserSchema, 
   insertTripSchema, 
   insertExpenseGroupSchema, 
   insertExpenseSchema,
@@ -17,12 +16,24 @@ import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
 import { searchFlights } from "./services/amadeus-flights";
 import { cityToIata, iataToCity } from "./services/cityMapping";
-import { searchHotels, bookHotel } from "./services/amadeus-hotels";
-import { getStoreProducts, getProductDetail, getShippingRates, createOrder } from "./services/printful";
+import { searchHotels } from "./services/amadeus-hotels";
+import { getStoreProducts, getProductDetail, getShippingRates } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
 
 const premiumStatusMap = new Map<string, boolean>();
+const checkoutItemSchema = z.object({
+  productId: z.number().int().positive(),
+  variantId: z.number().int().positive(),
+  quantity: z.number().int().min(1).max(10),
+}).strict();
+const checkoutSchema = z.object({
+  items: z.array(checkoutItemSchema).min(1).max(20),
+}).strict();
+const updateExpenseSchema = insertExpenseSchema
+  .omit({ groupId: true })
+  .partial()
+  .strict();
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -39,16 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/stripe/checkout", async (req: Request, res: Response) => {
     try {
-      const { items } = req.body;
+      const { items } = checkoutSchema.parse(req.body);
 
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "Items are required" });
-      }
-
-      const productIds = Array.from(new Set(items.map((item: any) => item.productId))).filter(Boolean);
-      if (productIds.length === 0) {
-        return res.status(400).json({ message: "All items must have a valid productId" });
-      }
+      const productIds = Array.from(new Set(items.map((item) => item.productId)));
 
       const verifiedVariants = new Map<number, { name: string; price: string; currency: string; imageUrl: string; productName: string }>();
 
@@ -65,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const unverifiedItems = items.filter((item: any) => !verifiedVariants.has(item.variantId));
+      const unverifiedItems = items.filter((item) => !verifiedVariants.has(item.variantId));
       if (unverifiedItems.length > 0) {
         return res.status(400).json({
           message: "Some items could not be verified",
@@ -75,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const stripe = await getUncachableStripeClient();
 
-      const lineItems = items.map((item: any) => {
+      const lineItems = items.map((item) => {
         const verified = verifiedVariants.get(item.variantId)!;
 
         return {
@@ -92,7 +96,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      const baseUrl = `https://${req.get("host")}`;
+      const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/+$/, "");
+      if (process.env.NODE_ENV === "production" && !configuredBaseUrl) {
+        return res.status(500).json({ message: "Checkout base URL is not configured" });
+      }
+      const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get("host")}`;
 
       const sessionParams: any = {
         payment_method_types: ["card"],
@@ -104,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           allowed_countries: ["IT", "DE", "FR", "ES", "NL", "BE", "AT", "PT", "GR", "PL", "CZ", "HU", "HR", "RO", "BG", "SE", "DK", "FI", "IE", "GB", "US"],
         },
         metadata: {
-          printful_items: JSON.stringify(items.map((item: any) => ({
+          printful_items: JSON.stringify(items.map((item) => ({
             sync_variant_id: item.variantId,
             quantity: item.quantity,
           }))),
@@ -115,8 +123,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({ url: session.url, sessionId: session.id });
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid checkout items" });
+      }
       console.error("Error creating Stripe checkout session:", error);
-      return res.status(500).json({ message: "Failed to create checkout session", error: error.message });
+      return res.status(500).json({ message: "Failed to create checkout session" });
     }
   });
 
@@ -126,8 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
       return res.json({
         status: session.payment_status,
-        customerEmail: session.customer_details?.email,
-        shippingAddress: (session as any).shipping_details,
         amountTotal: session.amount_total,
         currency: session.currency,
       });
@@ -155,6 +164,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (req.supabaseUser?.app_metadata?.role !== "admin") {
+      return res.status(403).json({ message: "Administrator access required" });
+    }
+    next();
+  };
+
+  const requireOwnedExpenseGroup = async (
+    req: Request,
+    res: Response,
+    groupId: number,
+  ): Promise<boolean> => {
+    const userId = req.supabaseUser?.id;
+    if (!userId) {
+      res.status(401).json({ message: "Authentication required" });
+      return false;
+    }
+    if (!Number.isInteger(groupId)) {
+      res.status(400).json({ message: "Invalid expense group ID" });
+      return false;
+    }
+    if (!(await storage.isExpenseGroupOwner(groupId, userId))) {
+      res.status(404).json({ message: "Expense group not found" });
+      return false;
+    }
+    return true;
+  };
+
   // Get current user from Supabase JWT
   app.get("/api/user", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
@@ -177,38 +214,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.post("/api/users/:id/premium", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/users/:id/premium", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
-      const supabaseUser = req.supabaseUser;
-      if (!supabaseUser) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
       const requestedId = req.params.id;
-
-      // Enforce that users can only modify their own premium status
-      if (requestedId !== supabaseUser.id) {
-        return res.status(403).json({ message: "Forbidden: cannot modify another user's premium status" });
-      }
 
       const { isPremium } = req.body;
       if (typeof isPremium !== "boolean") {
         return res.status(400).json({ message: "isPremium must be a boolean" });
       }
 
-      premiumStatusMap.set(supabaseUser.id, isPremium);
+      const { data: targetData, error: targetError } =
+        await supabase.auth.admin.getUserById(requestedId);
+      if (targetError || !targetData.user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
-      // Persist premium status to Supabase user_metadata so it survives page reloads
-      await supabase.auth.admin.updateUserById(supabaseUser.id, {
-        user_metadata: { ...supabaseUser.user_metadata, isPremium },
+      premiumStatusMap.set(requestedId, isPremium);
+      await supabase.auth.admin.updateUserById(requestedId, {
+        user_metadata: { ...targetData.user.user_metadata, isPremium },
       });
 
-      const meta = supabaseUser.user_metadata || {};
       return res.status(200).json({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        username: meta.username || supabaseUser.email?.split("@")[0],
-        firstName: meta.firstName,
-        lastName: meta.lastName,
+        id: requestedId,
         isPremium,
       });
     } catch (error) {
@@ -356,7 +383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/blog-posts", async (req: Request, res: Response) => {
+  app.post("/api/blog-posts", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
       const validatedData = insertBlogPostSchema.parse(req.body);
       const blogPost = await storage.createBlogPost(validatedData);
@@ -405,18 +432,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/printful/orders", async (req: Request, res: Response) => {
-    try {
-      const { recipient, items, confirm } = req.body;
-      if (!recipient || !items || !Array.isArray(items)) {
-        return res.status(400).json({ message: "recipient and items array are required" });
-      }
-      const order = await createOrder(recipient, items, !confirm);
-      return res.status(201).json(order);
-    } catch (error: any) {
-      console.error("Error creating Printful order:", error);
-      return res.status(500).json({ message: "Failed to create order", error: error.message });
-    }
+  app.post("/api/printful/orders", (_req: Request, res: Response) => {
+    return res.status(410).json({
+      message: "Direct order creation is disabled. Orders are created from verified Stripe webhooks.",
+    });
   });
 
   // Legacy merchandise route (fallback to in-memory data)
@@ -438,10 +457,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SplittaBro - Expense Group routes
-  app.post("/api/expense-groups", async (req: Request, res: Response) => {
+  app.post("/api/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const userId = req.supabaseUser!.id;
       const groupData = insertExpenseGroupSchema.parse(req.body);
-      const group = await storage.createExpenseGroup(groupData);
+      if (groupData.tripId) {
+        const trip = await storage.getTrip(groupData.tripId);
+        if (!trip || trip.userId !== userId) {
+          return res.status(404).json({ message: "Trip not found" });
+        }
+      }
+      const group = await storage.createExpenseGroup(groupData, userId);
       return res.status(201).json(group);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -451,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trips/:tripId/expense-groups", async (req: Request, res: Response) => {
+  app.get("/api/trips/:tripId/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const tripId = parseInt(req.params.tripId);
       const trip = await storage.getTrip(tripId);
@@ -459,8 +485,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!trip) {
         return res.status(404).json({ message: "Trip not found" });
       }
+      if (trip.userId !== req.supabaseUser!.id) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
       
-      const expenseGroups = await storage.getExpenseGroupsByTripId(tripId);
+      const expenseGroups = await storage.getExpenseGroupsByTripId(
+        tripId,
+        req.supabaseUser!.id,
+      );
       return res.status(200).json(expenseGroups);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
@@ -468,10 +500,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all expense groups (for SplittaBro standalone use)
-  app.get("/api/expense-groups", async (req: Request, res: Response) => {
+  app.get("/api/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
       // Get all expense groups
-      const allGroups = await storage.getAllExpenseGroups();
+      const allGroups = await storage.getAllExpenseGroups(req.supabaseUser!.id);
       return res.status(200).json(allGroups);
     } catch (error) {
       console.error("Error fetching expense groups:", error);
@@ -479,9 +511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expense-groups/:id", async (req: Request, res: Response) => {
+  app.get("/api/expense-groups/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      if (!(await requireOwnedExpenseGroup(req, res, id))) return;
       const group = await storage.getExpenseGroup(id);
       
       if (!group) {
@@ -495,9 +528,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SplittaBro - Expense routes
-  app.post("/api/expenses", async (req: Request, res: Response) => {
+  app.post("/api/expenses", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const expenseData = insertExpenseSchema.parse(req.body);
+      if (!(await requireOwnedExpenseGroup(req, res, expenseData.groupId))) return;
       const expense = await storage.createExpense(expenseData);
       return res.status(201).json(expense);
     } catch (error) {
@@ -508,9 +542,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expense-groups/:groupId/expenses", async (req: Request, res: Response) => {
+  app.get("/api/expense-groups/:groupId/expenses", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const groupId = parseInt(req.params.groupId);
+      if (!(await requireOwnedExpenseGroup(req, res, groupId))) return;
       const group = await storage.getExpenseGroup(groupId);
       
       if (!group) {
@@ -524,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expenses/:id", async (req: Request, res: Response) => {
+  app.get("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const expense = await storage.getExpense(id);
@@ -532,6 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
       }
+      if (!(await requireOwnedExpenseGroup(req, res, expense.groupId))) return;
       
       return res.status(200).json(expense);
     } catch (error) {
@@ -539,10 +575,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/expenses/:id", async (req: Request, res: Response) => {
+  app.put("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updateData = req.body;
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      if (!(await requireOwnedExpenseGroup(req, res, expense.groupId))) return;
+      const updateData = updateExpenseSchema.parse(req.body);
       
       const updatedExpense = await storage.updateExpense(id, updateData);
       
@@ -552,13 +593,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(200).json(updatedExpense);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });
+      }
       return res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
+  app.delete("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      if (!(await requireOwnedExpenseGroup(req, res, expense.groupId))) return;
       const result = await storage.deleteExpense(id);
       
       if (!result) {
@@ -696,7 +745,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   // Generated Itinerary routes (OneClick Assistant)
   // Usa la mappatura centralizzata da cityMapping.ts (importata via aviasales.ts)
 
-  app.post("/api/generated-itineraries", async (req: Request, res: Response) => {
+  app.post("/api/generated-itineraries", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { destination, startDate, endDate, participants, eventType, selectedExperiences } = req.body;
       
@@ -704,13 +753,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      // Get user ID if authenticated (via Supabase JWT)
-      const authHeader = req.headers.authorization;
-      let userId: string | undefined;
-      if (authHeader?.startsWith("Bearer ")) {
-        const { data: { user: supaUser } } = await supabase.auth.getUser(authHeader.split(" ")[1]);
-        userId = supaUser?.id;
-      }
+      const userId = req.supabaseUser!.id;
 
       // Map destination to IATA code for flight search (using centralized mapping)
       const destIATA = cityToIata(destination);
@@ -791,12 +834,15 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
-  app.get("/api/generated-itineraries/:id", async (req: Request, res: Response) => {
+  app.get("/api/generated-itineraries/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const itinerary = await storage.getGeneratedItinerary(id);
       
       if (!itinerary) {
+        return res.status(404).json({ error: "Itinerary not found" });
+      }
+      if (itinerary.userId !== req.supabaseUser!.id) {
         return res.status(404).json({ error: "Itinerary not found" });
       }
 
@@ -808,7 +854,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   });
 
   // Register Zapier integration routes
-  registerZapierRoutes(app);
+  registerZapierRoutes(app, isAuthenticated, isAdmin);
 
   // Image Search API routes
   app.get("/api/images/search", async (req: Request, res: Response) => {
@@ -902,16 +948,26 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         checkoutUrl?: string;
       }
       const normalizedFlights = Array.isArray(flights)
-        ? (flights as RawFlight[]).map((f) => ({
-            id: f.flightId || f.id,
-            airline: f.airline,
-            departure_at: f.departure_at || f.departureAt,
-            return_at: f.return_at || f.returnAt,
-            flight_number: f.flight_number || (typeof f.flightNumber === "number" ? f.flightNumber : undefined),
-            origin: f.origin,
-            destination: f.destination,
-            checkoutUrl: f.checkoutUrl,
-          }))
+        ? (flights as RawFlight[]).flatMap((f) => {
+            const departureAt = f.departure_at || f.departureAt;
+            const returnAt = f.return_at || f.returnAt;
+            const flightNumber =
+              f.flight_number ||
+              (typeof f.flightNumber === "number" ? f.flightNumber : undefined);
+            if (!f.airline || !departureAt || !returnAt || !flightNumber) {
+              return [];
+            }
+            return [{
+              id: typeof f.id === "number" ? f.id : undefined,
+              airline: f.airline,
+              departure_at: departureAt,
+              return_at: returnAt,
+              flight_number: flightNumber,
+              origin: f.origin,
+              destination: f.destination,
+              checkoutUrl: f.checkoutUrl,
+            }];
+          })
         : undefined;
 
       const context = {
@@ -1036,30 +1092,10 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
   });
 
   // Amadeus Hotels - booking endpoint (solo IN_APP)
-  app.post("/api/hotels/book", async (req: Request, res: Response) => {
-    try {
-      const { offerId, guest } = req.body;
-
-      if (!offerId || !guest?.firstName || !guest?.lastName || !guest?.email) {
-        return res.status(400).json({
-          error: "offerId, guest.firstName, guest.lastName, guest.email sono obbligatori",
-        });
-      }
-
-      const result = await bookHotel({ offerId, guest });
-
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      return res.json(result);
-    } catch (err: any) {
-      console.error("Hotel booking error:", err.response?.data || err.message);
-      return res.status(500).json({
-        error: "Booking failed",
-        details: err.message,
-      });
-    }
+  app.post("/api/hotels/book", (_req: Request, res: Response) => {
+    return res.status(410).json({
+      message: "Direct hotel booking is disabled. Use the verified external booking flow.",
+    });
   });
 
   // Flights search endpoint con checkoutUrl reali

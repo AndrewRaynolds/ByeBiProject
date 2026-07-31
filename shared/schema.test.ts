@@ -63,7 +63,7 @@ describe('insertUserSchema', () => {
 
 describe('insertTripSchema', () => {
   const validTrip = {
-    userId: 1,
+    userId: 'user-1',
     name: 'Summer Vacation',
     participants: 4,
     startDate: '2026-07-01',
@@ -85,7 +85,7 @@ describe('insertTripSchema', () => {
 
     it('accepts trip without optional fields', () => {
       const minimalTrip = {
-        userId: 1,
+        userId: 'user-1',
         name: 'Summer Vacation',
         participants: 4,
         startDate: '2026-07-01',

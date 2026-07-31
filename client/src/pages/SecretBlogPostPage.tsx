@@ -39,7 +39,7 @@ function PostSkeleton({ isBride }: { isBride: boolean }) {
   return (
     <div className={`min-h-screen flex flex-col ${bg}`}>
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-12 max-w-2xl">
+      <main id="main-content" tabIndex={-1} className="flex-grow container mx-auto px-4 py-12 max-w-2xl">
         <Skeleton className="h-5 w-28 mb-8" />
         <div className={`rounded-2xl ${cardBg} p-8`}>
           <div className="flex gap-2 mb-6">
@@ -93,7 +93,7 @@ export default function SecretBlogPostPage() {
     return (
       <div className={`min-h-screen flex flex-col ${bg}`}>
         <Header />
-        <main className="flex-grow container mx-auto px-4 py-20 max-w-2xl text-center">
+        <main id="main-content" tabIndex={-1} className="flex-grow container mx-auto px-4 py-20 max-w-2xl text-center">
           <div className="text-5xl mb-6">🤐</div>
           <h1 className="text-2xl font-bold text-white mb-3">{t('secretBlog.notFoundTitle')}</h1>
           <p className={`${textMuted} mb-8`}>
@@ -121,7 +121,7 @@ export default function SecretBlogPostPage() {
     <div className={`min-h-screen flex flex-col ${bg}`}>
       <Header />
 
-      <main className="flex-grow container mx-auto px-4 py-10 max-w-2xl">
+      <main id="main-content" tabIndex={-1} className="flex-grow container mx-auto px-4 py-10 max-w-2xl">
         <Link href="/secret-blog">
           <button className={`flex items-center gap-1 text-sm font-medium ${textMuted} hover:text-white transition-colors mb-8`}>
             <ChevronLeft className="w-4 h-4" />

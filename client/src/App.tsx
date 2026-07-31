@@ -1,93 +1,69 @@
-import { Switch, Route, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-import Home from "@/pages/Home";
-import HomeBride from "@/pages/HomeBride";
-import Dashboard from "@/pages/Dashboard";
-import SecretBlogPage from "@/pages/SecretBlogPage";
-import SecretBlogPostPage from "@/pages/SecretBlogPostPage";
-import MerchandisePage from "@/pages/MerchandisePage";
-import Checkout from "@/pages/Checkout";
-import SplittaBroPage from "@/pages/SplittaBroPage";
-import SplittaBridePage from "@/pages/SplittaBridePage";
-import DestinationsPage from "@/pages/DestinationsPage";
-import ExperiencesPage from "@/pages/ExperiencesPage";
-import OneClickPackagePage from "@/pages/OneClickPackagePage";
-import ZapierWebhooksPage from "@/pages/ZapierWebhooksPage";
-import AuthPage from "@/pages/auth-page";
-import { AuthProvider } from "@/hooks/use-auth";
-import { ProtectedRoute } from "@/lib/protected-route";
-import { Suspense, useState, useEffect } from "react";
-import PerformanceOptimizer from "@/lib/performance-optimizer";
+import { lazy, Suspense, useEffect, useState } from "react";
 import BrandSelection from "@/components/BrandSelection";
-import { LanguageProvider } from "@/contexts/LanguageContext";
+import RouteLoadingFallback from "@/components/RouteLoadingFallback";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
+import {
+  LanguageProvider,
+  useTranslation,
+} from "@/contexts/LanguageContext";
 
-function Router() {
-  const [selectedBrand, setSelectedBrand] = useState<'byebro' | 'byebride' | null>(null);
+const BrandedApp = lazy(() => import("@/BrandedApp"));
+
+function DocumentMetadata({
+  selectedBrand,
+}: {
+  selectedBrand: "byebro" | "byebride" | null;
+}) {
+  const { t } = useTranslation();
+  const suffix =
+    selectedBrand === "byebride"
+      ? "Bride"
+      : selectedBrand === "byebro"
+        ? "Bro"
+        : "Base";
+  const title = t(`meta.title${suffix}`);
+  const description = t(`meta.description${suffix}`);
 
   useEffect(() => {
-    const savedBrand = localStorage.getItem('selectedBrand') as 'byebro' | 'byebride' | null;
-    if (savedBrand) {
-      setSelectedBrand(savedBrand);
-    }
-  }, []);
+    document.title = title;
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute("content", description);
+  }, [description, title]);
 
-  const handleBrandSelection = (brand: 'byebro' | 'byebride') => {
-    setSelectedBrand(brand);
-    localStorage.setItem('selectedBrand', brand);
-  };
+  return null;
+}
 
-  if (!selectedBrand) {
-    return <BrandSelection onSelectBrand={handleBrandSelection} />;
-  }
-
-  const HomePage = selectedBrand === 'byebride' ? HomeBride : Home;
-  const SplittaPage = selectedBrand === 'byebride' ? SplittaBridePage : SplittaBroPage;
-
-  return (
-    <Switch>
-      <Route path="/" component={HomePage} />
-      <ProtectedRoute path="/dashboard" component={Dashboard} />
-      <Route path="/destinations" component={DestinationsPage} />
-      <Route path="/experiences" component={ExperiencesPage} />
-      <Route path="/secret-blog/:id" component={SecretBlogPostPage} />
-      <Route path="/secret-blog" component={SecretBlogPage} />
-      <Route path="/merchandise" component={MerchandisePage} />
-      <Route path="/itinerary/:id">{() => <Redirect to="/checkout" />}</Route>
-      <Route path="/itinerary">{() => <Redirect to="/checkout" />}</Route>
-      <Route path="/checkout" component={Checkout} />
-      <Route path="/splitta-bro" component={SplittaPage} />
-      <Route path="/splitta-bride" component={SplittaPage} />
-      <Route path="/one-click-package" component={OneClickPackagePage} />
-      <Route path="/zapier-webhooks" component={ZapierWebhooksPage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route component={NotFound} />
-    </Switch>
-  );
+function getSavedBrand(): "byebro" | "byebride" | null {
+  const savedBrand = localStorage.getItem("selectedBrand");
+  return savedBrand === "byebro" || savedBrand === "byebride"
+    ? savedBrand
+    : null;
 }
 
 function App() {
+  const [selectedBrand, setSelectedBrand] = useState<
+    "byebro" | "byebride" | null
+  >(getSavedBrand);
+
+  const handleBrandSelection = (brand: "byebro" | "byebride") => {
+    setSelectedBrand(brand);
+    localStorage.setItem("selectedBrand", brand);
+  };
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LanguageProvider>
-          <TooltipProvider>
-            <Toaster />
-            <PerformanceOptimizer />
-            <Suspense fallback={
-              <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-pulse text-xl font-semibold">Loading...</div>
-              </div>
-            }>
-              <Router />
-            </Suspense>
-          </TooltipProvider>
-        </LanguageProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <LanguageProvider>
+      <AppErrorBoundary>
+        <DocumentMetadata selectedBrand={selectedBrand} />
+        {!selectedBrand ? (
+          <BrandSelection onSelectBrand={handleBrandSelection} />
+        ) : (
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <BrandedApp selectedBrand={selectedBrand} />
+          </Suspense>
+        )}
+      </AppErrorBoundary>
+    </LanguageProvider>
   );
 }
 

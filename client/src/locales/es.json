@@ -25,6 +25,13 @@
   "common.results": "resultados",
   "common.result": "resultado",
 
+  "meta.titleBase": "ByeBi - Viajes de grupo inolvidables",
+  "meta.titleBro": "ByeBro - Despedidas de soltero inolvidables",
+  "meta.titleBride": "ByeBride - Despedidas de soltera inolvidables",
+  "meta.descriptionBase": "Organiza viajes de grupo y despedidas personalizadas con ByeBi.",
+  "meta.descriptionBro": "Organiza una despedida de soltero personalizada con itinerarios, actividades y consejos de viaje ByeBro.",
+  "meta.descriptionBride": "Organiza una despedida de soltera personalizada con itinerarios, experiencias y consejos de viaje ByeBride.",
+
   "brand.changeBrand": "Cambiar marca",
   "brand.subtitle": "Tu Experiencia Definitiva de Planificación de Fiestas",
   "brand.footer": "IA • Personalizado • Inolvidable",
@@ -43,6 +50,7 @@
   "header.logout": "Cerrar Sesión",
   "header.loggingOut": "Cerrando sesión...",
   "header.dashboard": "Panel",
+  "header.skipToContent": "Ir al contenido principal",
 
   "hero.bro.title": "One more Night, no more rights!",
   "hero.bro.subtitle": "Crea recuerdos inolvidables con viajes personalizados, actividades y equipamiento para la última aventura del novio.",
@@ -269,6 +277,8 @@
   "auth.createAccount": "Crear cuenta",
   "auth.sideTitle": "Únete a ByeBro hoy",
   "auth.sideDesc": "Planifica tu despedida de soltero definitiva con itinerarios personalizados, guías de destino y reparto de gastos.",
+  "auth.sideTitleBride": "Únete a ByeBride hoy",
+  "auth.sideDescBride": "Planifica tu despedida de soltera definitiva con itinerarios personalizados, guías de destino y reparto de gastos.",
   "auth.featureItineraries": "Itinerarios generados con IA",
   "auth.featureExpenses": "Reparto de gastos",
   "auth.featureDestinations": "Destinos seleccionados",
@@ -501,5 +511,11 @@
   "gyg.cta": "Ver experiencias en GetYourGuide",
 
   "notFound.title": "404 Página No Encontrada",
-  "notFound.desc": "La página que buscas no existe."
+  "notFound.desc": "La página que buscas no existe.",
+  "notFound.backHome": "Volver al inicio",
+  "errorBoundary.title": "Algo salió mal",
+  "errorBoundary.description": "No pudimos mostrar esta página. Puedes intentarlo de nuevo o volver al inicio.",
+  "errorBoundary.details": "Detalles técnicos",
+  "errorBoundary.retry": "Intentar de nuevo",
+  "errorBoundary.backHome": "Volver al inicio"
 }

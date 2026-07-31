@@ -19,6 +19,18 @@ vi.mock('./auth', () => ({
   setupAuth: vi.fn(),
 }));
 
+vi.mock('./supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: vi.fn(),
+      admin: {
+        getUserById: vi.fn(),
+        updateUserById: vi.fn(),
+      },
+    },
+  },
+}));
+
 // Mock zapier integration
 vi.mock('./zapier-integration', () => ({
   registerZapierRoutes: vi.fn(),

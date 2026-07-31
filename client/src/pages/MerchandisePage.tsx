@@ -57,7 +57,10 @@ export default function MerchandisePage() {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     if (params.get("payment") === "success" && sessionId) {
-      fetch(`/api/stripe/session/${sessionId}`)
+      const controller = new AbortController();
+      apiRequest("GET", `/api/stripe/session/${sessionId}`, undefined, {
+        signal: controller.signal,
+      })
         .then(res => res.json())
         .then(data => {
           if (data.status === "paid") {
@@ -70,7 +73,8 @@ export default function MerchandisePage() {
             });
           }
         })
-        .catch(() => {
+        .catch(error => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
           toast({
             title: t('merch.verificationError'),
             description: t('merch.verificationErrorDesc'),
@@ -78,6 +82,7 @@ export default function MerchandisePage() {
           });
         });
       window.history.replaceState({}, "", "/merchandise");
+      return () => controller.abort();
     } else if (params.get("payment") === "cancelled") {
       toast({
         title: t('merch.paymentCancelled'),
@@ -154,7 +159,7 @@ export default function MerchandisePage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       <Header />
 
-      <main className="flex-grow">
+      <main id="main-content" tabIndex={-1} className="flex-grow">
         <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-800 text-white py-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-5xl font-bold font-poppins mb-4">

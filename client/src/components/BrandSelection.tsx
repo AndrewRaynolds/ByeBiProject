@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
 import byebiLogo from "@assets/Bb logo_1763313858570.png";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -34,10 +34,12 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
         {/* Brand Selection Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* ByeBro Card */}
-          <Card 
-            className="group cursor-pointer overflow-hidden border-2 border-red-500/20 bg-gradient-to-br from-black to-red-950 hover:border-red-500 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/50"
+          <button
+            type="button"
+            className="group w-full cursor-pointer overflow-hidden rounded-lg border-2 border-red-500/20 bg-gradient-to-br from-black to-red-950 text-left text-card-foreground shadow-sm transition-all duration-300 hover:scale-105 hover:border-red-500 hover:shadow-2xl hover:shadow-red-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
             onClick={() => onSelectBrand('byebro')}
             data-testid="button-select-byebro"
+            aria-label="Scegli ByeBro per organizzare un addio al celibato"
           >
             <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -58,13 +60,15 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
                 <div className="h-px flex-1 bg-gradient-to-r from-red-500 to-transparent"></div>
               </div>
             </CardContent>
-          </Card>
+          </button>
 
           {/* ByeBride Card */}
-          <Card 
-            className="group cursor-pointer overflow-hidden border-2 border-pink-500/20 bg-gradient-to-br from-black to-pink-950 hover:border-pink-500 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-pink-500/50"
+          <button
+            type="button"
+            className="group w-full cursor-pointer overflow-hidden rounded-lg border-2 border-pink-500/20 bg-gradient-to-br from-black to-pink-950 text-left text-card-foreground shadow-sm transition-all duration-300 hover:scale-105 hover:border-pink-500 hover:shadow-2xl hover:shadow-pink-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
             onClick={() => onSelectBrand('byebride')}
             data-testid="button-select-byebride"
+            aria-label="Scegli ByeBride per organizzare un addio al nubilato"
           >
             <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -85,7 +89,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
                 <div className="h-px flex-1 bg-gradient-to-r from-pink-500 to-transparent"></div>
               </div>
             </CardContent>
-          </Card>
+          </button>
         </div>
 
         {/* Footer */}

@@ -8,6 +8,7 @@ import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 import { getCityCode } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { apiRequest } from '@/lib/queryClient';
 
 /**
  * TripContext - The ONLY data structure used by the real flow
@@ -126,12 +127,12 @@ export default function Checkout() {
         currency: 'EUR'
       });
       
-      const response = await fetch(`/api/hotels/search?${params}`);
-
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        throw new Error(errBody.error || t('checkout.hotelSearchError'));
-      }
+      const response = await apiRequest(
+        'GET',
+        `/api/hotels/search?${params}`,
+        undefined,
+        { timeoutMs: 30_000 },
+      );
 
       const result = await response.json();
       
@@ -183,7 +184,7 @@ export default function Checkout() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
         <Header />
-        <div className="container mx-auto px-4 py-16 max-w-2xl">
+        <main id="main-content" tabIndex={-1} className="container mx-auto px-4 py-16 max-w-2xl">
           <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-red-500/50">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 p-4 bg-red-500/20 rounded-full w-fit">
@@ -204,7 +205,7 @@ export default function Checkout() {
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </main>
       </div>
     );
   }
@@ -216,9 +217,9 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
       <Header />
-      
-      {/* Hero Header */}
-      <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
+      <main id="main-content" tabIndex={-1}>
+        {/* Hero Header */}
+        <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
@@ -243,9 +244,9 @@ export default function Checkout() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
+        <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
         
         {/* Flight Section - Uses aviasalesCheckoutUrl directly */}
         <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-green-500 shadow-xl">
@@ -408,7 +409,8 @@ export default function Checkout() {
             {t('checkout.backToHome')}
           </Button>
         </div>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

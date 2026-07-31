@@ -103,15 +103,15 @@ ${zapierWebhookUrl ?
     
     // Calcola prezzo basato su budget e destinazione
     const calculatePrice = (budget: string, destination: string, people: number) => {
-      const basePrices = {
+      const basePrices: Record<string, Record<string, number>> = {
         'economico': { roma: 250, ibiza: 350, barcellona: 280 },
         'medio': { roma: 450, ibiza: 650, barcellona: 480 },
         'alto': { roma: 750, ibiza: 1200, barcellona: 850 }
       };
       
-      const destinationKey = destination.toLowerCase() as keyof typeof basePrices[typeof budget];
-      const basePrice = basePrices[budget as keyof typeof basePrices]?.[destinationKey] || 
-                       basePrices[budget as keyof typeof basePrices]?.roma || 400;
+      const destinationKey = destination.toLowerCase();
+      const priceTier = basePrices[budget];
+      const basePrice = priceTier?.[destinationKey] || priceTier?.roma || 400;
       
       return Math.round(basePrice * Math.min(people * 0.15 + 0.85, 1.5));
     };
