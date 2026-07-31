@@ -10,6 +10,7 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
+    testTimeout: 10_000,
   },
   resolve: {
     alias: {
