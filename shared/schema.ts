@@ -196,50 +196,8 @@ export type InsertExpenseGroup = z.infer<typeof insertExpenseGroupSchema>;
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
-// Generated Itinerary model (for OneClick Assistant)
-export const generatedItineraries = pgTable(
-  "generated_itineraries",
-  {
-    id: serial("id").primaryKey(),
-    userId: text("user_id").notNull(),
-    destination: text("destination").notNull(),
-    startDate: text("start_date").notNull(),
-    endDate: text("end_date").notNull(),
-    participants: integer("participants").notNull(),
-    eventType: text("event_type").notNull(),
-    selectedExperiences: text("selected_experiences").array(),
-    flights: json("flights"),
-    hotel: json("hotel"),
-    dailyActivities: json("daily_activities"),
-    totalPrice: integer("total_price").notNull(),
-    status: text("status").default("draft"),
-    createdAt: timestamp("created_at").defaultNow(),
-  },
-  (table) => [
-    index("generated_itineraries_user_id_idx").on(table.userId),
-  ],
-);
-
 export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
   eventId: text("event_id").primaryKey(),
   sessionId: text("session_id").notNull(),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
 });
-
-export const insertGeneratedItinerarySchema = createInsertSchema(generatedItineraries).pick({
-  userId: true,
-  destination: true,
-  startDate: true,
-  endDate: true,
-  participants: true,
-  eventType: true,
-  selectedExperiences: true,
-  flights: true,
-  hotel: true,
-  dailyActivities: true,
-  totalPrice: true,
-  status: true,
-});
-
-export type GeneratedItinerary = typeof generatedItineraries.$inferSelect;
-export type InsertGeneratedItinerary = z.infer<typeof insertGeneratedItinerarySchema>;

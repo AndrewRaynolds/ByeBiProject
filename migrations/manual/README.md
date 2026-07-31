@@ -12,8 +12,8 @@ must be added there and deployed through the GitHub integration.
 The migrations were applied in filename order:
 
 1. `20260731_critical_data_persistence.sql` prepares durable storage for
-   Splitta groups and expenses, generated itineraries, and processed Stripe
-   webhook events.
+   Splitta groups and expenses, and processed Stripe webhook events. The
+   generated itineraries table created at that time was later removed unused.
 2. `20260731_secret_blog_persistence.sql` enables durable Secret Blog posts,
    validates categories, adds the listing index, and inserts the three default
    stories idempotently.

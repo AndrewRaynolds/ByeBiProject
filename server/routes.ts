@@ -21,10 +21,6 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
-import {
-  generatedItineraryRequestSchema,
-  getTripDurationDays,
-} from "./generatedItinerary";
 
 
 const checkoutItemSchema = z.object({
@@ -648,8 +644,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 ⏰ L'itinerario dettagliato arriverà a breve!`;
       }
       
-      // This public preview is intentionally not persisted. Authenticated,
-      // durable itineraries use /api/generated-itineraries.
+      // This public preview is intentionally not persisted. Checkout performs
+      // its own live searches using the trip context selected by the user.
       const itineraryPreview = buildItineraryPreview({
         city: requestData.citta,
         startDate: requestData.date.startDate,
@@ -682,136 +678,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         message: "Failed to generate itinerary",
         error: error.message || String(error)
       });
-    }
-  });
-
-  // Generated Itinerary routes (OneClick Assistant)
-  // Usa la mappatura centralizzata da cityMapping.ts (importata via aviasales.ts)
-
-  app.post("/api/generated-itineraries", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const {
-        destination,
-        startDate,
-        endDate,
-        participants,
-        eventType,
-        selectedExperiences,
-      } = generatedItineraryRequestSchema.parse(req.body);
-
-      const userId = req.supabaseUser!.id;
-      const durationDays = getTripDurationDays(startDate, endDate);
-
-      // Map destination to IATA code for flight search (using centralized mapping)
-      const destIATA = cityToIata(destination);
-      
-      // Search for flights (assuming origin is always Rome for now)
-      let flights = null;
-      if (destIATA) {
-        try {
-          const { searchCheapestFlights } = await import("./services/aviasales");
-          const flightData = await searchCheapestFlights({
-            origin: 'ROM',
-            destination: destIATA,
-            departDate: startDate,
-            currency: 'EUR'
-          });
-          
-          // Parse flight data
-          const destCode = Object.keys(flightData.data)[0];
-          const offersObj = flightData.data[destCode] || {};
-          const offers = Object.values(offersObj as any)
-            .sort((a: any, b: any) => a.price - b.price)
-            .slice(0, 3)
-            .map((o: any) => ({
-              airline: o.airline,
-              price: o.price,
-              departureAt: o.departure_at,
-              returnAt: o.return_at,
-              flightNumber: o.flight_number
-            }));
-          
-          flights = offers.length > 0 ? offers[0] : null;
-        } catch (error) {
-          console.error("Flight search failed:", error);
-        }
-      }
-
-      // Generate hotel recommendation (Mock hotel data)
-      const hotel = {
-        name: `Hotel Premium ${destination}`,
-        rating: 4.5,
-        pricePerNight: participants > 4 ? 150 : 100,
-        address: `Centro ${destination}` 
-      };
-
-      // Generate daily activities based on selected experiences (Mock)
-  
-      const activityChoices = selectedExperiences.length > 0
-        ? selectedExperiences.slice(0, 2)
-        : ['Esplorazione città', 'Vita notturna'];
-      const dailyActivities = Array.from({ length: durationDays }, (_, i) => ({
-        day: i + 1,
-        activities: activityChoices,
-      }));
-
-      // Calculate total price (using mock prices)
-      const unitFlightPrice = flights ? Number(flights.price) : 200;
-      const flightPrice = Number.isFinite(unitFlightPrice)
-        ? unitFlightPrice * participants
-        : 200 * participants;
-      const hotelPrice = hotel.pricePerNight * dailyActivities.length;
-      const activitiesPrice = dailyActivities.length * 150 * participants;
-      const totalPrice = Math.round(flightPrice + hotelPrice + activitiesPrice);
-
-      // Save itinerary
-      const itinerary = await storage.createGeneratedItinerary({
-        userId,
-        destination,
-        startDate,
-        endDate,
-        participants,
-        eventType,
-        selectedExperiences,
-        flights,
-        hotel,
-        dailyActivities,
-        totalPrice,
-        status: "draft"
-      });
-
-      res.json(itinerary);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          error: "Invalid itinerary parameters",
-          details: fromZodError(error).message,
-        });
-      }
-      console.error("Error creating itinerary:", error);
-      return res.status(500).json({ error: "Failed to create itinerary" });
-    }
-  });
-
-  app.get("/api/generated-itineraries/:id", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      if (!Number.isInteger(id) || id <= 0) {
-        return res.status(400).json({ error: "Invalid itinerary ID" });
-      }
-      const itinerary = await storage.getGeneratedItinerary(id);
-      
-      if (!itinerary) {
-        return res.status(404).json({ error: "Itinerary not found" });
-      }
-      if (itinerary.userId !== req.supabaseUser!.id) {
-        return res.status(404).json({ error: "Itinerary not found" });
-      }
-
-      res.json(itinerary);
-    } catch (error) {
-      console.error("Error fetching itinerary:", error);
-      res.status(500).json({ error: "Failed to fetch itinerary" });
     }
   });
 

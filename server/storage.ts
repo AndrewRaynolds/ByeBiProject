@@ -3,10 +3,9 @@ import {
   Trip, BlogPost, Merchandise, Destination, Experience,
   InsertTrip, InsertBlogPost, InsertMerchandise,
   InsertDestination, InsertExperience, ExpenseGroup, Expense,
-  InsertExpenseGroup, InsertExpense, GeneratedItinerary, InsertGeneratedItinerary,
+  InsertExpenseGroup, InsertExpense,
   expenseGroups as expenseGroupsTable,
   expenses as expensesTable,
-  generatedItineraries as generatedItinerariesTable,
   blogPosts as blogPostsTable,
   stripeWebhookEvents,
   trips as tripsTable,
@@ -59,12 +58,6 @@ export interface IStorage {
   updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
   deleteExpense(id: number): Promise<boolean>;
   
-  // Generated Itinerary operations (OneClick Assistant)
-  getGeneratedItinerary(id: number): Promise<GeneratedItinerary | undefined>;
-  getGeneratedItinerariesByUserId(userId: string): Promise<GeneratedItinerary[]>;
-  createGeneratedItinerary(itinerary: InsertGeneratedItinerary): Promise<GeneratedItinerary>;
-  updateGeneratedItinerary(id: number, itinerary: Partial<InsertGeneratedItinerary>): Promise<GeneratedItinerary | undefined>;
-
   // Stripe webhook idempotency
   hasProcessedStripeEvent(eventId: string): Promise<boolean>;
   markStripeEventProcessed(eventId: string, sessionId: string): Promise<void>;
@@ -78,7 +71,6 @@ export class MemStorage implements IStorage {
   private experiences: Map<number, Experience>;
   private expenseGroups: Map<number, ExpenseGroup>;
   private expenseItems: Map<number, Expense>;
-  private generatedItineraries: Map<number, GeneratedItinerary>;
   private processedStripeEventIds: Set<string>;
 
   private tripId: number;
@@ -88,7 +80,6 @@ export class MemStorage implements IStorage {
   private experienceId: number;
   private expenseGroupId: number;
   private expenseId: number;
-  private generatedItineraryId: number;
 
   constructor() {
     this.trips = new Map();
@@ -98,7 +89,6 @@ export class MemStorage implements IStorage {
     this.experiences = new Map();
     this.expenseGroups = new Map();
     this.expenseItems = new Map();
-    this.generatedItineraries = new Map();
     this.processedStripeEventIds = new Set();
 
     this.tripId = 1;
@@ -108,7 +98,6 @@ export class MemStorage implements IStorage {
     this.experienceId = 1;
     this.expenseGroupId = 1;
     this.expenseId = 1;
-    this.generatedItineraryId = 1;
 
     // Initialize with sample data
     this.initializeDestinations();
@@ -314,44 +303,6 @@ export class MemStorage implements IStorage {
 
   async deleteExpense(id: number): Promise<boolean> {
     return this.expenseItems.delete(id);
-  }
-
-  // Generated Itinerary operations (OneClick Assistant)
-  async getGeneratedItinerary(id: number): Promise<GeneratedItinerary | undefined> {
-    return this.generatedItineraries.get(id);
-  }
-
-  async getGeneratedItinerariesByUserId(userId: string): Promise<GeneratedItinerary[]> {
-    return Array.from(this.generatedItineraries.values()).filter(
-      itinerary => itinerary.userId === userId
-    );
-  }
-
-  async createGeneratedItinerary(insertItinerary: InsertGeneratedItinerary): Promise<GeneratedItinerary> {
-    const itinerary: GeneratedItinerary = { 
-      id: this.generatedItineraryId++, 
-      ...insertItinerary,
-      selectedExperiences: insertItinerary.selectedExperiences ?? null,
-      flights: insertItinerary.flights ?? null,
-      hotel: insertItinerary.hotel ?? null,
-      dailyActivities: insertItinerary.dailyActivities ?? null,
-      status: insertItinerary.status || "draft",
-      createdAt: new Date()
-    };
-    this.generatedItineraries.set(itinerary.id, itinerary);
-    return itinerary;
-  }
-
-  async updateGeneratedItinerary(id: number, updates: Partial<InsertGeneratedItinerary>): Promise<GeneratedItinerary | undefined> {
-    const itinerary = this.generatedItineraries.get(id);
-    if (!itinerary) return undefined;
-    
-    const updatedItinerary: GeneratedItinerary = {
-      ...itinerary,
-      ...updates
-    };
-    this.generatedItineraries.set(id, updatedItinerary);
-    return updatedItinerary;
   }
 
   async hasProcessedStripeEvent(eventId: string): Promise<boolean> {
@@ -733,48 +684,6 @@ export class DatabaseStorage extends MemStorage {
       .where(eq(expensesTable.id, id))
       .returning({ id: expensesTable.id });
     return deleted.length > 0;
-  }
-
-  override async getGeneratedItinerary(
-    id: number,
-  ): Promise<GeneratedItinerary | undefined> {
-    const [itinerary] = await this.db
-      .select()
-      .from(generatedItinerariesTable)
-      .where(eq(generatedItinerariesTable.id, id))
-      .limit(1);
-    return itinerary;
-  }
-
-  override async getGeneratedItinerariesByUserId(
-    userId: string,
-  ): Promise<GeneratedItinerary[]> {
-    return this.db
-      .select()
-      .from(generatedItinerariesTable)
-      .where(eq(generatedItinerariesTable.userId, userId));
-  }
-
-  override async createGeneratedItinerary(
-    insertItinerary: InsertGeneratedItinerary,
-  ): Promise<GeneratedItinerary> {
-    const [itinerary] = await this.db
-      .insert(generatedItinerariesTable)
-      .values(insertItinerary)
-      .returning();
-    return itinerary;
-  }
-
-  override async updateGeneratedItinerary(
-    id: number,
-    updates: Partial<InsertGeneratedItinerary>,
-  ): Promise<GeneratedItinerary | undefined> {
-    const [itinerary] = await this.db
-      .update(generatedItinerariesTable)
-      .set(updates)
-      .where(eq(generatedItinerariesTable.id, id))
-      .returning();
-    return itinerary;
   }
 
   override async hasProcessedStripeEvent(eventId: string): Promise<boolean> {

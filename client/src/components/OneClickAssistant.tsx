@@ -888,7 +888,7 @@ export default function OneClickAssistant() {
     });
   };
 
-  const handleGenerateItinerary = async () => {
+  const handleGenerateItinerary = () => {
     if (
       !selectedDestination ||
       !tripDetails.startDate ||
@@ -904,51 +904,22 @@ export default function OneClickAssistant() {
       return;
     }
 
-    setIsGeneratingPackage(true);
+    toast({
+      title: t('oneClick.itineraryGenerated'),
+      description: t('oneClick.itineraryReady'),
+    });
 
-    try {
-      const response = await apiRequest("POST", "/api/generated-itineraries", {
-        destination: selectedDestination,
-        startDate: tripDetails.startDate,
-        endDate: tripDetails.endDate,
-        participants: tripDetails.people,
-        eventType: tripDetails.adventureType,
-        selectedExperiences: tripDetails.interests,
-      });
+    localStorage.setItem("currentItinerary", JSON.stringify({
+      destination: selectedDestination,
+      origin: "Italia",
+      startDate: tripDetails.startDate,
+      endDate: tripDetails.endDate,
+      people: tripDetails.people,
+      aviasalesCheckoutUrl: "",
+      flightLabel: `Italia → ${selectedDestination}`,
+    }));
 
-      if (!response.ok) {
-        throw new Error("Failed to generate itinerary");
-      }
-
-      const itinerary = await response.json();
-
-      toast({
-        title: t('oneClick.itineraryGenerated'),
-        description: t('oneClick.itineraryReady'),
-      });
-
-      localStorage.setItem("currentItinerary", JSON.stringify({
-        destination: selectedDestination,
-        origin: "Italia",
-        startDate: tripDetails.startDate,
-        endDate: tripDetails.endDate,
-        people: tripDetails.people,
-        aviasalesCheckoutUrl: "",
-        flightLabel: `Italia → ${selectedDestination}`,
-        itineraryData: itinerary,
-      }));
-
-      window.location.href = "/checkout";
-    } catch (error) {
-      console.error("Error generating itinerary:", error);
-      toast({
-        title: t('common.error'),
-        description: t('oneClick.itineraryError'),
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingPackage(false);
-    }
+    window.location.href = "/checkout";
   };
 
   const brandColors = {
