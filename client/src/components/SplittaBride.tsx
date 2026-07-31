@@ -16,6 +16,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ExpenseGroup {
   id: number;
@@ -112,7 +113,7 @@ export function SplittaBride() {
 
   const loadGroups = async () => {
     try {
-      const response = await fetch('/api/expense-groups');
+      const response = await apiRequest('GET', '/api/expense-groups');
       if (response.ok) {
         const groupsData = await response.json();
         setGroups(groupsData);
@@ -126,7 +127,7 @@ export function SplittaBride() {
 
   const loadExpenses = async (groupId: number) => {
     try {
-      const response = await fetch(`/api/expense-groups/${groupId}/expenses`);
+      const response = await apiRequest('GET', `/api/expense-groups/${groupId}/expenses`);
       if (response.ok) {
         const expensesData = await response.json();
         setExpenses(expensesData);
@@ -140,17 +141,11 @@ export function SplittaBride() {
     setIsCreatingGroup(true);
     
     try {
-      const response = await fetch('/api/expense-groups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: data.name,
-          description: data.description,
-          members: data.members,
-          currency: 'EUR',
-        }),
+      const response = await apiRequest('POST', '/api/expense-groups', {
+        name: data.name,
+        description: data.description,
+        members: data.members,
+        currency: 'EUR',
       });
 
       if (response.ok) {
@@ -210,20 +205,14 @@ export function SplittaBride() {
     try {
       const splitBetween = data.splitEqually ? selectedGroup.members : data.splitBetween;
       
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          groupId: selectedGroup.id,
-          description: data.description,
-          amount: Math.round(data.amount * 100),
-          paidBy: data.paidBy,
-          splitBetween: splitBetween,
-          category: data.category,
-          date: data.date,
-        }),
+      const response = await apiRequest('POST', '/api/expenses', {
+        groupId: selectedGroup.id,
+        description: data.description,
+        amount: Math.round(data.amount * 100),
+        paidBy: data.paidBy,
+        splitBetween: splitBetween,
+        category: data.category,
+        date: data.date,
       });
 
       if (response.ok) {

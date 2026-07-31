@@ -2,18 +2,34 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import amadeusDebugRoute from "./routes/amadeus-debug";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync, hasStripeCredentials } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import {
+  aiConcurrencyLimiter,
+  aiLimiter,
+  apiLimiter,
+  commerceLimiter,
+  externalApiLimiter,
+  webhookLimiter,
+} from "./security";
+import { storage } from "./storage";
+import { createHttpSecurityMiddleware } from "./httpSecurity";
+import { validateRuntimeEnvironment } from "./runtimeConfig";
 
 const app = express();
-import aviasalesRouter from "./routes/aviasales";
+
+let isShuttingDown = false;
+
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(createHttpSecurityMiddleware());
 
 // Stripe webhook route MUST be registered BEFORE express.json()
 // Stripe integration (connector: Stripe)
 app.post(
   '/api/stripe/webhook',
+  webhookLimiter,
   express.raw({ type: 'application/json' }),
   async (req, res) => {
     const signature = req.headers['stripe-signature'];
@@ -37,35 +53,51 @@ app.post(
 );
 
 // Now apply JSON middleware for all other routes
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use("/api/aviasales", aviasalesRouter);
-app.use("/api/amadeus", amadeusDebugRoute);
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: false, limit: "100kb" }));
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
+app.get("/api/ready", async (_req, res) => {
+  if (isShuttingDown) {
+    return res.status(503).json({ status: "shutting_down" });
+  }
+
+  try {
+    await storage.healthCheck();
+    res.status(200).json({
+      status: "ready",
+      persistence:
+        process.env.CRITICAL_DATA_PERSISTENCE === "database"
+          ? "database"
+          : "memory",
+    });
+  } catch (error) {
+    console.error("Readiness check failed:", error);
+    res.status(503).json({ status: "unavailable" });
+  }
+});
+
+app.use("/api", apiLimiter);
+app.use("/api/chat", aiConcurrencyLimiter, aiLimiter);
+app.use("/api/generate-itinerary", aiLimiter);
+app.use("/api/stripe", commerceLimiter);
+app.use("/api/printful", commerceLimiter);
+app.use("/api/hotels", externalApiLimiter);
+app.use("/api/flights", externalApiLimiter);
 
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
 
@@ -116,17 +148,23 @@ async function initStripe() {
   }
 }
 
-(async () => {
+async function startServer() {
+  validateRuntimeEnvironment(process.env);
   await initStripe();
 
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const message =
+      status >= 500 && app.get("env") === "production"
+        ? "Internal Server Error"
+        : err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    console.error("Unhandled request error:", err);
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   if (app.get("env") === "development") {
@@ -143,7 +181,61 @@ async function initStripe() {
     listenOptions.reusePort = true;
   }
 
-  server.listen(listenOptions, () => {
-    log(`serving on port ${port}`);
+  await new Promise<void>((resolve, reject) => {
+    const handleStartupError = (error: Error) => {
+      server.off("error", handleStartupError);
+      reject(error);
+    };
+
+    server.once("error", handleStartupError);
+    server.listen(listenOptions, () => {
+      server.off("error", handleStartupError);
+      resolve();
+    });
   });
-})();
+
+  log(`serving on port ${port}`);
+
+  const shutdown = (signal: NodeJS.Signals) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    log(`${signal} received, shutting down`);
+
+    const forceShutdownTimer = setTimeout(() => {
+      console.error("Graceful shutdown timed out");
+      process.exit(1);
+    }, 10_000);
+    forceShutdownTimer.unref();
+
+    server.close(async (serverError) => {
+      let exitCode = serverError ? 1 : 0;
+
+      if (serverError) {
+        console.error("HTTP server shutdown failed:", serverError);
+      }
+
+      try {
+        await storage.close();
+      } catch (databaseError) {
+        exitCode = 1;
+        console.error("Database shutdown failed:", databaseError);
+      } finally {
+        clearTimeout(forceShutdownTimer);
+        process.exit(exitCode);
+      }
+    });
+  };
+
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
+}
+
+startServer().catch(async (error) => {
+  console.error("Server startup failed:", error);
+  try {
+    await storage.close();
+  } catch (databaseError) {
+    console.error("Database cleanup after startup failure failed:", databaseError);
+  }
+  process.exitCode = 1;
+});

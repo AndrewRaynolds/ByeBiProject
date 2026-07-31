@@ -25,6 +25,13 @@
   "common.results": "results",
   "common.result": "result",
 
+  "meta.titleBase": "ByeBi - Unforgettable group trips",
+  "meta.titleBro": "ByeBro - Unforgettable bachelor parties",
+  "meta.titleBride": "ByeBride - Unforgettable bachelorette parties",
+  "meta.descriptionBase": "Plan personalized group trips, bachelor parties, and bachelorette parties with ByeBi.",
+  "meta.descriptionBro": "Plan a personalized bachelor party with ByeBro itineraries, activities, and travel tips.",
+  "meta.descriptionBride": "Plan a personalized bachelorette party with ByeBride itineraries, experiences, and travel tips.",
+
   "brand.changeBrand": "Change brand",
   "brand.subtitle": "Your Ultimate Party Planning Experience",
   "brand.footer": "AI-Powered • Personalized • Unforgettable",
@@ -43,6 +50,7 @@
   "header.logout": "Logout",
   "header.loggingOut": "Logging out...",
   "header.dashboard": "Dashboard",
+  "header.skipToContent": "Skip to main content",
 
   "hero.bro.title": "One more Night, no more rights!",
   "hero.bro.subtitle": "Create unforgettable memories with personalized trips, activities, and gear for the groom's last adventure.",
@@ -269,6 +277,8 @@
   "auth.createAccount": "Create Account",
   "auth.sideTitle": "Join ByeBro Today",
   "auth.sideDesc": "Plan your ultimate bachelor party experience with personalized itineraries, destination guides, and expense sharing.",
+  "auth.sideTitleBride": "Join ByeBride Today",
+  "auth.sideDescBride": "Plan your ultimate bachelorette party experience with personalized itineraries, destination guides, and expense sharing.",
   "auth.featureItineraries": "AI-generated itineraries",
   "auth.featureExpenses": "Expense sharing",
   "auth.featureDestinations": "Curated destinations",
@@ -420,7 +430,7 @@
   "checkout.noHotels": "Hotels unavailable",
   "checkout.noHotelsForDates": "No hotels available for the selected dates. Try changing your trip dates.",
   "checkout.unsupportedDest": "The destination \"{{destination}}\" is not supported. Available destinations: Rome, Barcelona, Ibiza, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca.",
-  "checkout.hotelLoadError": "Unable to load hotels: {{error}}. APIs may be temporarily unavailable.",
+  "checkout.hotelLoadError": "Unable to load hotels right now. Please try again later.",
   "checkout.hotelSearchError": "Hotel search error",
   "checkout.bookOnBooking": "Book Hotel on Booking.com",
   "checkout.searchHotelsBooking": "Search hotels on Booking.com",
@@ -501,5 +511,11 @@
   "gyg.cta": "See experiences on GetYourGuide",
 
   "notFound.title": "404 Page Not Found",
-  "notFound.desc": "The page you're looking for doesn't exist."
+  "notFound.desc": "The page you're looking for doesn't exist.",
+  "notFound.backHome": "Back to home",
+  "errorBoundary.title": "Something went wrong",
+  "errorBoundary.description": "We couldn't display this page. You can try again or return to the home page.",
+  "errorBoundary.details": "Technical details",
+  "errorBoundary.retry": "Try again",
+  "errorBoundary.backHome": "Back to home"
 }

@@ -2,8 +2,70 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
+import App from './App';
+
+vi.mock('@/components/BrandSelection', () => ({
+  default: ({ onSelectBrand }: { onSelectBrand: (brand: 'byebro' | 'byebride') => void }) => (
+    <div data-testid="brand-selection">
+      <button onClick={() => onSelectBrand('byebro')}>Choose ByeBro</button>
+      <button onClick={() => onSelectBrand('byebride')}>Choose ByeBride</button>
+    </div>
+  ),
+}));
+
+vi.mock('@/BrandedApp', () => ({
+  default: ({ selectedBrand }: { selectedBrand: string }) => (
+    <div data-testid="branded-app">{selectedBrand}</div>
+  ),
+}));
+
+vi.mock('@/contexts/LanguageContext', () => ({
+  LanguageProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+describe('App brand loading', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.head.innerHTML = '<meta name="description" content="">';
+  });
+
+  it('defers the full application until a brand is selected', () => {
+    render(<App />);
+
+    expect(screen.getByTestId('brand-selection')).toBeInTheDocument();
+    expect(screen.queryByTestId('branded-app')).not.toBeInTheDocument();
+  });
+
+  it('uses neutral metadata before a brand is selected', async () => {
+    const description = document.querySelector('meta[name="description"]');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(document.title).toBe('meta.titleBase');
+      expect(description).toHaveAttribute('content', 'meta.descriptionBase');
+    });
+  });
+
+  it('loads the saved brand without showing the selection screen', async () => {
+    localStorage.setItem('selectedBrand', 'byebride');
+    render(<App />);
+
+    expect(await screen.findByTestId('branded-app')).toHaveTextContent('byebride');
+    expect(screen.queryByTestId('brand-selection')).not.toBeInTheDocument();
+    await waitFor(() => expect(document.title).toBe('meta.titleBride'));
+  });
+
+  it('persists a new selection and loads the application', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Choose ByeBro' }));
+
+    expect(await screen.findByTestId('branded-app')).toHaveTextContent('byebro');
+    expect(localStorage.getItem('selectedBrand')).toBe('byebro');
+  });
+});
 
 describe('App smoke tests', () => {
   describe('React basics', () => {

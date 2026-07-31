@@ -3,26 +3,78 @@ import express, { type Express, Request, Response, NextFunction } from "express"
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
-  insertUserSchema, 
   insertTripSchema, 
   insertExpenseGroupSchema, 
   insertExpenseSchema,
-  insertBlogPostSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateItinerary } from "./services/openai";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
-import { imageSearchService } from "./services/image-search";
 import { searchFlights } from "./services/amadeus-flights";
-import { cityToIata, iataToCity } from "./services/cityMapping";
-import { searchHotels, bookHotel } from "./services/amadeus-hotels";
-import { getStoreProducts, getProductDetail, getShippingRates, createOrder } from "./services/printful";
+import { iataToCity, resolveIataCode } from "./services/cityMapping";
+import { searchHotels } from "./services/amadeus-hotels";
+import { getStoreProducts, getProductDetail, getShippingRates } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { buildPublicBlogPost } from "./blog";
+import { blogSubmissionLimiter } from "./security";
+import { buildItineraryPreview } from "./itineraryPreview";
+import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
+import { buildAviasalesUrl, flightSearchQuerySchema } from "@shared/flightSchemas";
+import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
+import { getSafeErrorMetadata } from "./safeError";
+import { chatStreamRequestSchema } from "@shared/chatSchemas";
+import { parsePositiveIntegerParam } from "./routeParams";
 
 
-const premiumStatusMap = new Map<string, boolean>();
+const checkoutItemSchema = z.object({
+  productId: z.number().int().positive(),
+  variantId: z.number().int().positive(),
+  quantity: z.number().int().min(1).max(10),
+}).strict();
+const checkoutSchema = z.object({
+  items: z.array(checkoutItemSchema).min(1).max(20),
+}).strict();
+const printfulShippingSchema = z
+  .object({
+    countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
+    items: z.array(z.object({
+      sync_variant_id: z.number().int().positive(),
+      quantity: z.number().int().min(1).max(10),
+    }).strict()).min(1).max(20),
+  })
+  .strict();
+const itineraryDateSchema = z.string().refine(
+  (value) => normalizeTripDate(value) === value,
+  "Invalid date",
+);
+const zapierItinerarySchema = z
+  .object({
+    citta: z.string().trim().min(1).max(100),
+    date: z.object({
+      startDate: itineraryDateSchema,
+      endDate: itineraryDateSchema,
+    }).strict(),
+    persone: z.number().int().min(1).max(50),
+    interessi: z.array(z.string().trim().min(1).max(100)).max(20).optional().default([]),
+    budget: z.enum(["economico", "medio", "alto"]).optional().default("medio"),
+    esperienze: z.array(z.string().trim().min(1).max(100)).max(20).optional().default([]),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      isValidDateRange(value.date.startDate, value.date.endDate) &&
+      calculateTripDays(value.date.startDate, value.date.endDate) <= 30,
+    { path: ["date", "endDate"], message: "Invalid itinerary date range" },
+  );
+const zapierItineraryResponseSchema = z
+  .object({ itinerary: z.string().trim().min(1).max(20_000) })
+  .passthrough();
+const updateExpenseSchema = insertExpenseSchema
+  .omit({ groupId: true })
+  .partial()
+  .strict();
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -39,16 +91,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/stripe/checkout", async (req: Request, res: Response) => {
     try {
-      const { items } = req.body;
+      const { items } = checkoutSchema.parse(req.body);
 
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "Items are required" });
-      }
-
-      const productIds = Array.from(new Set(items.map((item: any) => item.productId))).filter(Boolean);
-      if (productIds.length === 0) {
-        return res.status(400).json({ message: "All items must have a valid productId" });
-      }
+      const productIds = Array.from(new Set(items.map((item) => item.productId)));
 
       const verifiedVariants = new Map<number, { name: string; price: string; currency: string; imageUrl: string; productName: string }>();
 
@@ -65,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const unverifiedItems = items.filter((item: any) => !verifiedVariants.has(item.variantId));
+      const unverifiedItems = items.filter((item) => !verifiedVariants.has(item.variantId));
       if (unverifiedItems.length > 0) {
         return res.status(400).json({
           message: "Some items could not be verified",
@@ -75,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const stripe = await getUncachableStripeClient();
 
-      const lineItems = items.map((item: any) => {
+      const lineItems = items.map((item) => {
         const verified = verifiedVariants.get(item.variantId)!;
 
         return {
@@ -92,7 +137,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      const baseUrl = `https://${req.get("host")}`;
+      const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/+$/, "");
+      if (process.env.NODE_ENV === "production" && !configuredBaseUrl) {
+        return res.status(500).json({ message: "Checkout base URL is not configured" });
+      }
+      const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get("host")}`;
 
       const sessionParams: any = {
         payment_method_types: ["card"],
@@ -104,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           allowed_countries: ["IT", "DE", "FR", "ES", "NL", "BE", "AT", "PT", "GR", "PL", "CZ", "HU", "HR", "RO", "BG", "SE", "DK", "FI", "IE", "GB", "US"],
         },
         metadata: {
-          printful_items: JSON.stringify(items.map((item: any) => ({
+          printful_items: JSON.stringify(items.map((item) => ({
             sync_variant_id: item.variantId,
             quantity: item.quantity,
           }))),
@@ -115,8 +164,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({ url: session.url, sessionId: session.id });
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid checkout items" });
+      }
       console.error("Error creating Stripe checkout session:", error);
-      return res.status(500).json({ message: "Failed to create checkout session", error: error.message });
+      return res.status(500).json({ message: "Failed to create checkout session" });
     }
   });
 
@@ -126,8 +178,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
       return res.json({
         status: session.payment_status,
-        customerEmail: session.customer_details?.email,
-        shippingAddress: (session as any).shipping_details,
         amountTotal: session.amount_total,
         currency: session.currency,
       });
@@ -155,6 +205,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (req.supabaseUser?.app_metadata?.role !== "admin") {
+      return res.status(403).json({ message: "Administrator access required" });
+    }
+    next();
+  };
+
+  const requireOwnedExpenseGroup = async (
+    req: Request,
+    res: Response,
+    groupId: number,
+  ): Promise<boolean> => {
+    const userId = req.supabaseUser?.id;
+    if (!userId) {
+      res.status(401).json({ message: "Authentication required" });
+      return false;
+    }
+    if (!Number.isInteger(groupId)) {
+      res.status(400).json({ message: "Invalid expense group ID" });
+      return false;
+    }
+    if (!(await storage.isExpenseGroupOwner(groupId, userId))) {
+      res.status(404).json({ message: "Expense group not found" });
+      return false;
+    }
+    return true;
+  };
+
   // Get current user from Supabase JWT
   app.get("/api/user", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
@@ -173,47 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: meta.username || user.email?.split("@")[0],
       firstName: meta.firstName || meta.first_name,
       lastName: meta.lastName || meta.last_name,
-      isPremium: premiumStatusMap.get(user.id) ?? meta.isPremium ?? false,
     });
-  });
-
-  app.post("/api/users/:id/premium", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const supabaseUser = req.supabaseUser;
-      if (!supabaseUser) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-      const requestedId = req.params.id;
-
-      // Enforce that users can only modify their own premium status
-      if (requestedId !== supabaseUser.id) {
-        return res.status(403).json({ message: "Forbidden: cannot modify another user's premium status" });
-      }
-
-      const { isPremium } = req.body;
-      if (typeof isPremium !== "boolean") {
-        return res.status(400).json({ message: "isPremium must be a boolean" });
-      }
-
-      premiumStatusMap.set(supabaseUser.id, isPremium);
-
-      // Persist premium status to Supabase user_metadata so it survives page reloads
-      await supabase.auth.admin.updateUserById(supabaseUser.id, {
-        user_metadata: { ...supabaseUser.user_metadata, isPremium },
-      });
-
-      const meta = supabaseUser.user_metadata || {};
-      return res.status(200).json({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        username: meta.username || supabaseUser.email?.split("@")[0],
-        firstName: meta.firstName,
-        lastName: meta.lastName,
-        isPremium,
-      });
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
-    }
   });
 
   // Trip routes
@@ -256,64 +294,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trips/:id/itineraries", async (req: Request, res: Response) => {
-    try {
-      const tripId = parseInt(req.params.id);
-      const trip = await storage.getTrip(tripId);
-      
-      if (!trip) {
-        return res.status(404).json({ message: "Trip not found" });
-      }
-      
-      // Mock itineraries - SOLO in development
-      if (process.env.NODE_ENV === "production") {
-        return res.status(501).json({ message: "Real itinerary generation not implemented yet" });
-      }
-      
-      const mockItinerary1 = {
-        tripId,
-        name: "Amsterdam Adventure",
-        description: "Experience the best of Amsterdam's nightlife and culture",
-        duration: "3 Nights, 4 Days",
-        price: 650,
-        image: "https://images.unsplash.com/photo-1534570122623-99e8378a9aa7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=400&q=80",
-        rating: "4.5",
-        highlights: [
-          "Red Light District night tour with local guide",
-          "Heineken Experience with beer tasting",
-          "Canal cruise with open bar",
-          "VIP access to top nightclubs"
-        ],
-        includes: ["Flights", "Accommodation", "Activities", "Custom Merch"]
-      };
-      
-      const mockItinerary2 = {
-        tripId,
-        name: "Prague Party",
-        description: "Historic sites by day, epic parties by night",
-        duration: "4 Nights, 5 Days",
-        price: 580,
-        image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=400&q=80",
-        rating: "4.0",
-        highlights: [
-          "Beer spa experience with unlimited beer",
-          "Pub crawl through historic Old Town",
-          "Traditional Czech dinner with folk show",
-          "Party boat cruise on Vltava River"
-        ],
-        includes: ["Flights", "Accommodation", "Activities", "Custom Merch"]
-      };
-      
-      // Create the itineraries
-      const itinerary1 = await storage.createItinerary(mockItinerary1);
-      const itinerary2 = await storage.createItinerary(mockItinerary2);
-      
-      return res.status(200).json([itinerary1, itinerary2]);
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
-    }
-  });
-
   // Destination routes
   app.get("/api/destinations", async (req: Request, res: Response) => {
     try {
@@ -346,8 +326,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/blog-posts/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) return res.status(400).json({ message: "ID non valido" });
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) return res.status(400).json({ message: "ID non valido" });
       const blogPost = await storage.getBlogPost(id);
       if (!blogPost) return res.status(404).json({ message: "Storia non trovata" });
       return res.status(200).json(blogPost);
@@ -356,9 +336,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/blog-posts", async (req: Request, res: Response) => {
+  app.post("/api/blog-posts", blogSubmissionLimiter, isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const validatedData = insertBlogPostSchema.parse(req.body);
+      const validatedData = buildPublicBlogPost(req.body);
       const blogPost = await storage.createBlogPost(validatedData);
       return res.status(201).json(blogPost);
     } catch (error) {
@@ -374,74 +354,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const products = await getStoreProducts();
       return res.status(200).json(products);
-    } catch (error: any) {
-      console.error("Error fetching Printful products:", error);
-      return res.status(500).json({ message: "Failed to fetch products from Printful", error: error.message });
+    } catch (error: unknown) {
+      console.error("Error fetching Printful products", getSafeErrorMetadata(error));
+      return res.status(502).json({ message: "Printful service temporarily unavailable" });
     }
   });
 
   app.get("/api/printful/products/:id", async (req: Request, res: Response) => {
+    const productId = parsePositiveIntegerParam(req.params.id);
+    if (productId === null) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
     try {
-      const productId = parseInt(req.params.id);
       const product = await getProductDetail(productId);
       return res.status(200).json(product);
-    } catch (error: any) {
-      console.error("Error fetching Printful product detail:", error);
-      return res.status(500).json({ message: "Failed to fetch product details", error: error.message });
+    } catch (error: unknown) {
+      console.error("Error fetching Printful product detail", getSafeErrorMetadata(error));
+      return res.status(502).json({ message: "Printful service temporarily unavailable" });
     }
   });
 
   app.post("/api/printful/shipping-rates", async (req: Request, res: Response) => {
+    const parsedShippingRequest = printfulShippingSchema.safeParse(req.body);
+    if (!parsedShippingRequest.success) {
+      return res.status(400).json({ message: "Invalid shipping request" });
+    }
+
     try {
-      const { countryCode, items } = req.body;
-      if (!countryCode || !items || !Array.isArray(items)) {
-        return res.status(400).json({ message: "countryCode and items array are required" });
-      }
+      const { countryCode, items } = parsedShippingRequest.data;
       const rates = await getShippingRates(countryCode, items);
       return res.status(200).json(rates);
-    } catch (error: any) {
-      console.error("Error fetching shipping rates:", error);
-      return res.status(500).json({ message: "Failed to fetch shipping rates", error: error.message });
-    }
-  });
-
-  app.post("/api/printful/orders", async (req: Request, res: Response) => {
-    try {
-      const { recipient, items, confirm } = req.body;
-      if (!recipient || !items || !Array.isArray(items)) {
-        return res.status(400).json({ message: "recipient and items array are required" });
-      }
-      const order = await createOrder(recipient, items, !confirm);
-      return res.status(201).json(order);
-    } catch (error: any) {
-      console.error("Error creating Printful order:", error);
-      return res.status(500).json({ message: "Failed to create order", error: error.message });
-    }
-  });
-
-  // Legacy merchandise route (fallback to in-memory data)
-  app.get("/api/merchandise", async (req: Request, res: Response) => {
-    try {
-      const { type } = req.query;
-      let merchandiseItems;
-      
-      if (type) {
-        merchandiseItems = await storage.getMerchandiseByType(type as string);
-      } else {
-        merchandiseItems = await storage.getAllMerchandise();
-      }
-      
-      return res.status(200).json(merchandiseItems);
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
+    } catch (error: unknown) {
+      console.error("Error fetching Printful shipping rates", getSafeErrorMetadata(error));
+      return res.status(502).json({ message: "Printful service temporarily unavailable" });
     }
   });
 
   // SplittaBro - Expense Group routes
-  app.post("/api/expense-groups", async (req: Request, res: Response) => {
+  app.post("/api/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const userId = req.supabaseUser!.id;
       const groupData = insertExpenseGroupSchema.parse(req.body);
-      const group = await storage.createExpenseGroup(groupData);
+      if (groupData.tripId) {
+        const trip = await storage.getTrip(groupData.tripId);
+        if (!trip || trip.userId !== userId) {
+          return res.status(404).json({ message: "Trip not found" });
+        }
+      }
+      const group = await storage.createExpenseGroup(groupData, userId);
       return res.status(201).json(group);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -451,16 +412,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/trips/:tripId/expense-groups", async (req: Request, res: Response) => {
+  app.get("/api/trips/:tripId/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const tripId = parseInt(req.params.tripId);
+      const tripId = parsePositiveIntegerParam(req.params.tripId);
+      if (tripId === null) {
+        return res.status(400).json({ message: "Invalid trip ID" });
+      }
       const trip = await storage.getTrip(tripId);
       
       if (!trip) {
         return res.status(404).json({ message: "Trip not found" });
       }
+      if (trip.userId !== req.supabaseUser!.id) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
       
-      const expenseGroups = await storage.getExpenseGroupsByTripId(tripId);
+      const expenseGroups = await storage.getExpenseGroupsByTripId(
+        tripId,
+        req.supabaseUser!.id,
+      );
       return res.status(200).json(expenseGroups);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
@@ -468,10 +438,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all expense groups (for SplittaBro standalone use)
-  app.get("/api/expense-groups", async (req: Request, res: Response) => {
+  app.get("/api/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
       // Get all expense groups
-      const allGroups = await storage.getAllExpenseGroups();
+      const allGroups = await storage.getAllExpenseGroups(req.supabaseUser!.id);
       return res.status(200).json(allGroups);
     } catch (error) {
       console.error("Error fetching expense groups:", error);
@@ -479,9 +449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expense-groups/:id", async (req: Request, res: Response) => {
+  app.get("/api/expense-groups/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense group ID" });
+      }
+      if (!(await requireOwnedExpenseGroup(req, res, id))) return;
       const group = await storage.getExpenseGroup(id);
       
       if (!group) {
@@ -495,9 +469,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SplittaBro - Expense routes
-  app.post("/api/expenses", async (req: Request, res: Response) => {
+  app.post("/api/expenses", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const expenseData = insertExpenseSchema.parse(req.body);
+      if (!(await requireOwnedExpenseGroup(req, res, expenseData.groupId))) return;
       const expense = await storage.createExpense(expenseData);
       return res.status(201).json(expense);
     } catch (error) {
@@ -508,9 +483,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expense-groups/:groupId/expenses", async (req: Request, res: Response) => {
+  app.get("/api/expense-groups/:groupId/expenses", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const groupId = parseInt(req.params.groupId);
+      const groupId = parsePositiveIntegerParam(req.params.groupId);
+      if (groupId === null) {
+        return res.status(400).json({ message: "Invalid expense group ID" });
+      }
+      if (!(await requireOwnedExpenseGroup(req, res, groupId))) return;
       const group = await storage.getExpenseGroup(groupId);
       
       if (!group) {
@@ -524,14 +503,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/expenses/:id", async (req: Request, res: Response) => {
+  app.get("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
       const expense = await storage.getExpense(id);
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
       }
+      if (!(await requireOwnedExpenseGroup(req, res, expense.groupId))) return;
       
       return res.status(200).json(expense);
     } catch (error) {
@@ -539,10 +522,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/expenses/:id", async (req: Request, res: Response) => {
+  app.put("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const updateData = req.body;
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      if (!(await requireOwnedExpenseGroup(req, res, expense.groupId))) return;
+      const updateData = updateExpenseSchema.parse(req.body);
       
       const updatedExpense = await storage.updateExpense(id, updateData);
       
@@ -552,13 +543,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.status(200).json(updatedExpense);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });
+      }
       return res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.delete("/api/expenses/:id", async (req: Request, res: Response) => {
+  app.delete("/api/expenses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) {
+        return res.status(400).json({ message: "Invalid expense ID" });
+      }
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      if (!(await requireOwnedExpenseGroup(req, res, expense.groupId))) return;
       const result = await storage.deleteExpense(id);
       
       if (!result) {
@@ -574,19 +576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier AI-powered itinerary generation
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
-      // Schema per validare i dati in arrivo dal frontend
-      const zapierItinerarySchema = z.object({
-        citta: z.string().min(1, "Città è richiesta"),
-        date: z.object({
-          startDate: z.string(),
-          endDate: z.string()
-        }),
-        persone: z.number().int().min(1, "Numero persone deve essere almeno 1"),
-        interessi: z.array(z.string()).optional().default([]),
-        budget: z.enum(["economico", "medio", "alto"]).optional().default("medio"),
-        esperienze: z.array(z.string()).optional().default([])
-      });
-      
       const requestData = zapierItinerarySchema.parse(req.body);
       
       // Prepara i dati per Zapier webhook
@@ -599,7 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         interests: requestData.interessi,
         experiences: requestData.esperienze,
         timestamp: new Date().toISOString(),
-        source: "ByeBro OneClick Assistant"
+        source: "ByeBi itinerary API"
       };
       
       // Invia i dati a Zapier webhook (se configurato)
@@ -608,24 +597,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (zapierWebhookUrl) {
         try {
-          console.log("Sending data to Zapier webhook:", zapierPayload);
-          
           const response = await fetch(zapierWebhookUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(zapierPayload)
+            body: JSON.stringify(zapierPayload),
+            signal: AbortSignal.timeout(10_000),
           });
           
           if (response.ok) {
-            zapierResponse = await response.json();
-            console.log("Zapier response received:", zapierResponse);
+            const parsedResponse = zapierItineraryResponseSchema.safeParse(await response.json());
+            zapierResponse = parsedResponse.success ? parsedResponse.data : null;
           } else {
-            console.error("Zapier webhook error:", response.status, response.statusText);
+            console.error("Zapier itinerary webhook failed", { status: response.status });
           }
         } catch (error) {
-          console.error("Error calling Zapier webhook:", error);
+          console.error("Zapier itinerary webhook failed", getSafeErrorMetadata(error));
         }
       }
       
@@ -653,31 +641,28 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 ⏰ L'itinerario dettagliato arriverà a breve!`;
       }
       
-      // Crea un itinerario nel storage per persistenza
-      const itineraryToSave = {
-        tripId: req.body.tripId || 0,
-        name: `Addio al Celibato a ${requestData.citta}`,
-        description: itineraryContent,
-        duration: `${Math.ceil((new Date(requestData.date.endDate).getTime() - new Date(requestData.date.startDate).getTime()) / (1000 * 60 * 60 * 24))} giorni`,
-        price: requestData.budget === "economico" ? 299 : requestData.budget === "medio" ? 499 : 799,
-        image: `https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80`,
-        rating: "5.0",
-        highlights: [`${requestData.persone} persone`, `Budget ${requestData.budget}`, `Destinazione: ${requestData.citta}`],
-        includes: ["Itinerario AI personalizzato", "Consigli locali", "Pianificazione ottimizzata"]
-      };
-      
-      const savedItinerary = await storage.createItinerary(itineraryToSave);
+      // This public preview is intentionally not persisted. Checkout performs
+      // its own live searches using the trip context selected by the user.
+      const itineraryPreview = buildItineraryPreview({
+        city: requestData.citta,
+        startDate: requestData.date.startDate,
+        endDate: requestData.date.endDate,
+        people: requestData.persone,
+        interests: requestData.interessi,
+        budget: requestData.budget,
+        content: itineraryContent,
+      });
       
       return res.status(200).json({
         success: true,
-        itinerary: savedItinerary,
+        itinerary: itineraryPreview,
         aiContent: itineraryContent,
         zapierProcessed: !!zapierResponse,
         message: zapierResponse ? "Itinerario generato con AI" : "Itinerario in elaborazione tramite Zapier"
       });
       
-    } catch (error: any) {
-      console.error("Error generating itinerary:", error);
+    } catch (error: unknown) {
+      console.error("Error generating itinerary", getSafeErrorMetadata(error));
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -686,195 +671,50 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         });
       }
       
-      return res.status(500).json({ 
-        message: "Failed to generate itinerary",
-        error: error.message || String(error)
-      });
-    }
-  });
-
-  // Generated Itinerary routes (OneClick Assistant)
-  // Usa la mappatura centralizzata da cityMapping.ts (importata via aviasales.ts)
-
-  app.post("/api/generated-itineraries", async (req: Request, res: Response) => {
-    try {
-      const { destination, startDate, endDate, participants, eventType, selectedExperiences } = req.body;
-      
-      if (!destination || !startDate || !endDate || !participants || !eventType) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Get user ID if authenticated (via Supabase JWT)
-      const authHeader = req.headers.authorization;
-      let userId: string | undefined;
-      if (authHeader?.startsWith("Bearer ")) {
-        const { data: { user: supaUser } } = await supabase.auth.getUser(authHeader.split(" ")[1]);
-        userId = supaUser?.id;
-      }
-
-      // Map destination to IATA code for flight search (using centralized mapping)
-      const destIATA = cityToIata(destination);
-      
-      // Search for flights (assuming origin is always Rome for now)
-      let flights = null;
-      if (destIATA) {
-        try {
-          const { searchCheapestFlights } = await import("./services/aviasales");
-          const flightData = await searchCheapestFlights({
-            origin: 'ROM',
-            destination: destIATA,
-            departDate: startDate,
-            currency: 'EUR'
-          });
-          
-          // Parse flight data
-          const destCode = Object.keys(flightData.data)[0];
-          const offersObj = flightData.data[destCode] || {};
-          const offers = Object.values(offersObj as any)
-            .sort((a: any, b: any) => a.price - b.price)
-            .slice(0, 3)
-            .map((o: any) => ({
-              airline: o.airline,
-              price: o.price,
-              departureAt: o.departure_at,
-              returnAt: o.return_at,
-              flightNumber: o.flight_number
-            }));
-          
-          flights = offers.length > 0 ? offers[0] : null;
-        } catch (error) {
-          console.error("Flight search failed:", error);
-        }
-      }
-
-      // Generate hotel recommendation (Mock hotel data)
-      const hotel = {
-        name: `Hotel Premium ${destination}`,
-        rating: 4.5,
-        pricePerNight: participants > 4 ? 150 : 100,
-        address: `Centro ${destination}` 
-      };
-
-      // Generate daily activities based on selected experiences (Mock)
-  
-      const dailyActivities = Array.from({ length: Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) }, (_, i) => ({
-        day: i + 1,
-        activities: selectedExperiences?.slice(0, 2) || ['Esplorazione città', 'Vita notturna']
-      }));
-
-      // Calculate total price (using mock prices)
-      const flightPrice = flights ? flights.price * participants : 200 * participants;
-      const hotelPrice = hotel.pricePerNight * dailyActivities.length;
-      const activitiesPrice = dailyActivities.length * 150 * participants;
-      const totalPrice = flightPrice + hotelPrice + activitiesPrice;
-
-      // Save itinerary
-      const itinerary = await storage.createGeneratedItinerary({
-        userId,
-        destination,
-        startDate,
-        endDate,
-        participants,
-        eventType,
-        selectedExperiences: selectedExperiences || [],
-        flights,
-        hotel,
-        dailyActivities,
-        totalPrice,
-        status: "draft"
-      });
-
-      res.json(itinerary);
-    } catch (error) {
-      console.error("Error creating itinerary:", error);
-      res.status(500).json({ error: "Failed to create itinerary" });
-    }
-  });
-
-  app.get("/api/generated-itineraries/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const itinerary = await storage.getGeneratedItinerary(id);
-      
-      if (!itinerary) {
-        return res.status(404).json({ error: "Itinerary not found" });
-      }
-
-      res.json(itinerary);
-    } catch (error) {
-      console.error("Error fetching itinerary:", error);
-      res.status(500).json({ error: "Failed to fetch itinerary" });
+      return res.status(500).json({ message: "Failed to generate itinerary" });
     }
   });
 
   // Register Zapier integration routes
-  registerZapierRoutes(app);
-
-  // Image Search API routes
-  app.get("/api/images/search", async (req: Request, res: Response) => {
-    try {
-      const query = req.query.query as string;
-      const limit = parseInt(req.query.limit as string) || 10;
-      
-      if (!query) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Query parameter is required" 
-        });
-      }
-
-      const result = await imageSearchService.searchImages(query, limit);
-      return res.status(200).json(result);
-    } catch (error) {
-      console.error("Error in image search:", error);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Internal server error" 
-      });
-    }
-  });
-
-  app.get("/api/images/destinations/:destination", async (req: Request, res: Response) => {
-    try {
-      const destination = req.params.destination;
-      const count = parseInt(req.query.count as string) || 10;
-      
-      const result = await imageSearchService.searchDestinationImages(destination, count);
-      return res.status(200).json(result);
-    } catch (error) {
-      console.error("Error in destination image search:", error);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Internal server error" 
-      });
-    }
-  });
-
-  app.get("/api/images/test", async (req: Request, res: Response) => {
-    try {
-      const result = await imageSearchService.searchBarcelonaImages();
-      return res.status(200).json({
-        test: "Barcelona aerial images",
-        ...result
-      });
-    } catch (error) {
-      console.error("Error in image test:", error);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Internal server error" 
-      });
-    }
-  });
+  registerZapierRoutes(app, isAuthenticated, isAdmin);
 
   // OpenAI Streaming Chat endpoint (with tool calls support)
   app.post("/api/chat/openai-stream", async (req: Request, res: Response) => {
+    const parsedRequest = chatStreamRequestSchema.safeParse(req.body);
+    if (!parsedRequest.success) {
+      return res.status(400).json({ error: "Invalid chat request" });
+    }
+
+    const controller = new AbortController();
+    let clientDisconnected = false;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 45_000);
+    const handleClose = () => {
+      if (!res.writableEnded) {
+        clientDisconnected = true;
+        controller.abort();
+      }
+    };
+    res.on("close", handleClose);
+
     try {
-      const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity, flights } = req.body;
+      const {
+        message,
+        selectedDestination,
+        tripDetails,
+        conversationHistory,
+        partyType,
+        originCity,
+        flights,
+      } = parsedRequest.data;
 
       if (!process.env.OPENAI_API_KEY) {
-        return res.status(400).json({ 
+        return res.status(503).json({
           success: false, 
-          error: "OpenAI API key not configured" 
+          error: "Assistant temporarily unavailable",
         });
       }
 
@@ -882,36 +722,32 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const originIata = originCity ? (cityToIata(originCity) || "") : "";
+      const originIata = resolveIataCode(originCity) || "";
       const originCityName = originIata ? iataToCity(originIata) : "";
-
-      // Debug log only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.log("🔍 OPENAI-STREAM:", { selectedDestination, partyType, originCity });
-      }
 
       const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
-      interface RawFlight {
-        flightId?: string; id?: string | number;
-        airline?: string;
-        departure_at?: string; departureAt?: string;
-        return_at?: string; returnAt?: string;
-        flight_number?: number; flightNumber?: number | string;
-        origin?: string; destination?: string;
-        checkoutUrl?: string;
-      }
-      const normalizedFlights = Array.isArray(flights)
-        ? (flights as RawFlight[]).map((f) => ({
-            id: f.flightId || f.id,
-            airline: f.airline,
-            departure_at: f.departure_at || f.departureAt,
-            return_at: f.return_at || f.returnAt,
-            flight_number: f.flight_number || (typeof f.flightNumber === "number" ? f.flightNumber : undefined),
-            origin: f.origin,
-            destination: f.destination,
-            checkoutUrl: f.checkoutUrl,
-          }))
+      const normalizedFlights = flights
+        ? flights.flatMap((f) => {
+            const departureAt = f.departure_at || f.departureAt;
+            const returnAt = f.return_at || f.returnAt;
+            const flightNumber =
+              f.flight_number ||
+              (typeof f.flightNumber === "number" ? f.flightNumber : undefined);
+            if (!f.airline || !departureAt || !returnAt || !flightNumber) {
+              return [];
+            }
+            return [{
+              id: typeof f.id === "number" ? f.id : undefined,
+              airline: f.airline,
+              departure_at: departureAt,
+              return_at: returnAt,
+              flight_number: flightNumber,
+              origin: f.origin,
+              destination: f.destination,
+              checkoutUrl: f.checkoutUrl,
+            }];
+          })
         : undefined;
 
       const context = {
@@ -925,7 +761,14 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // Use the new tool-loop streaming function that properly executes tools
       // and feeds results back to OpenAI for natural conversation continuation
-      for await (const chunk of streamOpenAIChatCompletionWithTools(message, context, conversationHistory || [])) {
+      for await (const chunk of streamOpenAIChatCompletionWithTools(
+        message,
+        context,
+        conversationHistory,
+        controller.signal,
+      )) {
+        if (controller.signal.aborted) break;
+
         if (chunk.type === "content") {
           res.write(`data: ${JSON.stringify({ content: chunk.content })}\n\n`);
         } else if (chunk.type === "tool_call") {
@@ -936,80 +779,42 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         }
       }
 
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
-
-    } catch (error: any) {
-      console.error('OpenAI Streaming Error:', error);
-      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-      res.end();
-    }
-  });
-
-  // OneClick Assistant chat endpoint (Fallback to OpenAI)
-  app.post("/api/chat/assistant", async (req: Request, res: Response) => {
-    try {
-      const { message, selectedDestination, tripDetails, conversationState } = req.body;
-      
-      if (!process.env.OPENAI_API_KEY) {
-        return res.json({ 
-          success: false, 
-          error: "OpenAI API key not configured" 
-        });
+      if (clientDisconnected) return;
+      if (timedOut) {
+        res.write(`data: ${JSON.stringify({ error: "Assistant request timed out" })}\n\n`);
+      } else {
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       }
+      res.end();
 
-      // Import OpenAI service
-      const { generateAssistantResponse } = await import('./services/openai');
-      
-      const result = await generateAssistantResponse({
-        userMessage: message,
-        selectedDestination,
-        tripDetails,
-        conversationState
-      });
-
-      res.json({
-        success: true,
-        response: result.response,
-        updatedTripDetails: result.updatedTripDetails,
-        updatedConversationState: result.updatedConversationState,
-        selectedDestination: result.selectedDestination
-      });
-
-    } catch (error: any) {
-      console.error('OpenAI Assistant Error:', error);
-      res.json({ 
-        success: false, 
-        error: error.message 
-      });
+    } catch (error: unknown) {
+      if (controller.signal.aborted || res.writableEnded) return;
+      console.error('OpenAI streaming failed', getSafeErrorMetadata(error));
+      res.write(`data: ${JSON.stringify({ error: "Assistant temporarily unavailable" })}\n\n`);
+      res.end();
+    } finally {
+      clearTimeout(timeout);
+      res.off("close", handleClose);
     }
-  });
-
-  // Amadeus Hotels - test ping endpoint (development only)
-  app.get("/api/hotels/test-ping", (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === "production") {
-      return res.status(403).json({ error: "Test endpoint disabled in production" });
-    }
-    res.json({ ok: true, message: "Hotels route is alive" });
   });
 
   // Amadeus Hotels - search endpoint
   app.get("/api/hotels/search", async (req: Request, res: Response) => {
-    try {
-      const { cityCode, checkInDate, checkOutDate, adults, currency } = req.query;
+    const parsedQuery = hotelSearchQuerySchema.safeParse(req.query);
 
-      if (!cityCode || !checkInDate || !checkOutDate || !adults) {
-        return res.status(400).json({
-          error: "cityCode, checkInDate, checkOutDate and adults are required",
-        });
-      }
+    if (!parsedQuery.success) {
+      return res.status(400).json({ error: "Invalid hotel search parameters" });
+    }
+
+    try {
+      const { cityCode, checkInDate, checkOutDate, adults, currency } = parsedQuery.data;
 
       const hotels = await searchHotels({
-        cityCode: String(cityCode),
-        checkInDate: String(checkInDate),
-        checkOutDate: String(checkOutDate),
-        adults: Number(adults),
-        currency: currency ? String(currency) : "EUR",
+        cityCode,
+        checkInDate,
+        checkOutDate,
+        adults,
+        currency,
       });
 
       return res.json({
@@ -1017,118 +822,58 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         checkInDate,
         checkOutDate,
         adults,
-        currency: currency || "EUR",
+        currency,
         hotels,
       });
-    } catch (err: any) {
-      console.error("Amadeus hotel search error:", err.response?.data || err.message);
-      return res.status(200).json({
-        cityCode: req.query.cityCode,
-        checkInDate: req.query.checkInDate,
-        checkOutDate: req.query.checkOutDate,
-        adults: req.query.adults,
-        currency: req.query.currency || "EUR",
-        hotels: [],
-        fallbackReason: "Hotel search failed",
-        details: err.response?.data || err.message,
-      });
-    }
-  });
-
-  // Amadeus Hotels - booking endpoint (solo IN_APP)
-  app.post("/api/hotels/book", async (req: Request, res: Response) => {
-    try {
-      const { offerId, guest } = req.body;
-
-      if (!offerId || !guest?.firstName || !guest?.lastName || !guest?.email) {
-        return res.status(400).json({
-          error: "offerId, guest.firstName, guest.lastName, guest.email sono obbligatori",
-        });
-      }
-
-      const result = await bookHotel({ offerId, guest });
-
-      if (!result.success) {
-        return res.status(400).json({ error: result.error });
-      }
-
-      return res.json(result);
-    } catch (err: any) {
-      console.error("Hotel booking error:", err.response?.data || err.message);
-      return res.status(500).json({
-        error: "Booking failed",
-        details: err.message,
-      });
+    } catch (error: unknown) {
+      console.error(
+        "Amadeus hotel search error:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      return res.status(502).json({ error: "Hotel service temporarily unavailable" });
     }
   });
 
   // Flights search endpoint con checkoutUrl reali
   app.get("/api/flights/search", async (req: Request, res: Response) => {
+    const parsedQuery = flightSearchQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      return res.status(400).json({ error: "Invalid flight search parameters" });
+    }
+
+    const { origin, destination, departDate, returnDate, passengers, currency } = parsedQuery.data;
+    const originIata = resolveIataCode(origin);
+    const destIata = resolveIataCode(destination);
+    if (!originIata || !destIata) {
+      return res.status(400).json({ error: "Unsupported origin or destination" });
+    }
+
+    const numAdults = passengers > 9 ? 1 : passengers;
+
     try {
-      const { origin, destination, departDate, returnDate, passengers, currency } = req.query;
-
-      console.log("🔍 /api/flights/search called with:", { origin, destination, departDate, returnDate, passengers });
-
-      if (!origin || !destination) {
-        return res.status(400).json({
-          error: "origin e destination sono obbligatori",
-        });
-      }
-
-      // Helper to extract IATA code from strings like "Fiumicino (FCO)" or just use cityToIata
-      const extractIata = (input: string): string => {
-        // First try to extract IATA from parentheses, e.g., "Fiumicino (FCO)" -> "FCO"
-        const parenMatch = input.match(/\(([A-Z]{3})\)/i);
-        if (parenMatch) {
-          return parenMatch[1].toUpperCase();
-        }
-        // Then try cityToIata lookup
-        const mapped = cityToIata(input);
-        if (mapped) {
-          return mapped;
-        }
-        // Finally, if it looks like a 3-letter code already, use it
-        if (/^[A-Z]{3}$/i.test(input.trim())) {
-          return input.trim().toUpperCase();
-        }
-        // Last resort: take first 3 characters
-        return input.substring(0, 3).toUpperCase();
-      };
-
-      const originIata = extractIata(String(origin));
-      const destIata = extractIata(String(destination));
-
-      console.log("✈️ Resolved IATA codes:", { originIata, destIata });
-
-      let numAdults = passengers ? parseInt(String(passengers), 10) : 1;
-      if (numAdults > 9) {
-        console.log(`👥 /api/flights/search: capping passengers ${numAdults} → 1 (Amadeus max 9)`);
-        numAdults = 1;
-      }
 
       const flightResults = await searchFlights({
         originCode: originIata,
         destinationCode: destIata,
-        departureDate: departDate ? String(departDate) : "",
-        returnDate: returnDate ? String(returnDate) : undefined,
+        departureDate: departDate,
+        returnDate,
         adults: numAdults,
-        currency: currency ? String(currency) : "EUR",
+        currency,
       });
-
-      console.log("📦 Amadeus returned", flightResults.length, "flights");
 
       // Transform to match expected client format + add Aviasales checkout URLs
       const flights = flightResults
         .slice(0, 5)
         .map((f, idx) => {
-          const depDate = f.outbound[0]?.departure.at?.slice(0, 10) || String(departDate);
-          const retDate = f.inbound?.[0]?.departure.at?.slice(0, 10) || String(returnDate) || depDate;
-          const depDay = depDate.slice(8, 10);
-          const depMonth = depDate.slice(5, 7);
-          const retDay = retDate.slice(8, 10);
-          const retMonth = retDate.slice(5, 7);
-
-          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numAdults}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+          const checkoutUrl = buildAviasalesUrl({
+            originIata,
+            destinationIata: destIata,
+            departDate,
+            returnDate,
+            adults: numAdults,
+            partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
+          });
+          if (!checkoutUrl) return null;
 
           return {
             flightId: `flight-${idx + 1}`,
@@ -1143,20 +888,24 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
             bookingFlow: "REDIRECT" as const,
             checkoutUrl,
           };
-        });
+        })
+        .filter((flight): flight is NonNullable<typeof flight> => flight !== null);
 
       return res.json({
         origin: originIata,
         destination: destIata,
         departDate,
+        returnDate,
+        passengers,
+        currency,
         flights,
       });
-    } catch (err: any) {
-      console.error("Flight search error:", err.response?.data || err.message);
-      return res.status(500).json({
-        error: "Flight search failed",
-        details: err.message,
-      });
+    } catch (error: unknown) {
+      console.error(
+        "Flight search error:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      return res.status(502).json({ error: "Flight service temporarily unavailable" });
     }
   });
 

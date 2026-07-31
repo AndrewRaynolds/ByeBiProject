@@ -35,8 +35,12 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [location, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState<"login" | "register">(() =>
+    new URLSearchParams(window.location.search).get("tab") === "register"
+      ? "register"
+      : "login",
+  );
   const { t } = useTranslation();
   const isBride = localStorage.getItem("selectedBrand") === "byebride";
 
@@ -45,6 +49,14 @@ export default function AuthPage() {
       navigate("/");
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    setActiveTab(
+      new URLSearchParams(window.location.search).get("tab") === "register"
+        ? "register"
+        : "login",
+    );
+  }, [location]);
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -240,9 +252,11 @@ export default function AuthPage() {
       >
         <div className="h-full w-full p-12 flex flex-col justify-end bg-black bg-opacity-40">
           <div className="text-white">
-            <h2 className="text-4xl font-bold mb-4">{t('auth.sideTitle')}</h2>
+            <h2 className="text-4xl font-bold mb-4">
+              {t(isBride ? 'auth.sideTitleBride' : 'auth.sideTitle')}
+            </h2>
             <p className="mb-6 text-lg">
-              {t('auth.sideDesc')}
+              {t(isBride ? 'auth.sideDescBride' : 'auth.sideDesc')}
             </p>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">

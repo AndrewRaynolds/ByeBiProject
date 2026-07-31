@@ -11,9 +11,12 @@ import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
 import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { apiRequest } from '@/lib/queryClient';
+import { consumeJsonSse } from '@/lib/sse';
+import { createChatCheckoutContext } from '@/lib/chatCheckout';
 
 const messageSchema = z.object({
-  message: z.string().min(1, "Message cannot be empty"),
+  message: z.string().min(1, "Message cannot be empty").max(2_000),
 });
 
 type MessageFormValues = z.infer<typeof messageSchema>;
@@ -92,6 +95,8 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   const originCityRef = useRef<string>('');
   const [selectedFlight, setSelectedFlight] = useState<SelectedFlightData | null>(null);
   const [pendingFlightSelection, setPendingFlightSelection] = useState<number | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
+  const pendingFlightSearchRef = useRef<Record<string, unknown> | null>(null);
   const conversationStateRef = useRef<ConversationState>({
     selectedDestination: '',
     tripDetails: {
@@ -156,6 +161,18 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     conversationStateRef.current = conversationState;
   }, [conversationState]);
 
+  useEffect(() => {
+    if (!open) {
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+      pendingFlightSearchRef.current = null;
+      setIsLoading(false);
+      setLoadingMessage(null);
+    }
+
+    return () => streamAbortRef.current?.abort();
+  }, [open]);
+
   const sendChatRequest = async (message: string, addUserMessage: boolean) => {
     if (isLoading) return;
     const trimmedMessage = message.trim();
@@ -172,11 +189,15 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     }
 
     setIsLoading(true);
+    const controller = new AbortController();
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = controller;
+    let assistantMessageId: string | null = null;
 
     try {
-      const conversationHistory = messagesRef.current.map((msg) => ({
+      const conversationHistory = messagesRef.current.slice(-12).map((msg) => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.content
+        content: msg.content.slice(0, 8_000)
       }));
 
       const currentState = conversationStateRef.current;
@@ -188,21 +209,14 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         partyType: currentState.partyType,
         originCity: originCityRef.current
       };
-      console.log('🔍 OPENAI STREAM PAYLOAD:', payload);
+      const response = await apiRequest(
+        'POST',
+        '/api/chat/openai-stream',
+        payload,
+        { signal: controller.signal, timeoutMs: 30_000 },
+      );
 
-      const response = await fetch('/api/chat/openai-stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const assistantMessageId = (Date.now() + 1).toString();
+      assistantMessageId = (Date.now() + 1).toString();
       const placeholderMessage: ChatMessage = {
         id: assistantMessageId,
         content: '',
@@ -212,75 +226,67 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
       setMessages((prev) => [...prev, placeholderMessage]);
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
       let accumulatedContent = '';
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      await consumeJsonSse(response, {
+        onEvent: (jsonData: any) => {
+          if (jsonData.tool_call) {
+            if (jsonData.tool_call.name === 'search_flights') {
+              setLoadingMessage('Preparing checkout...');
+            } else if (jsonData.tool_call.name === 'search_hotels') {
+              setLoadingMessage('Searching for hotels...');
+            } else if (jsonData.tool_call.name === 'select_flight') {
+              setLoadingMessage('Selecting your flight...');
+            } else if (jsonData.tool_call.name === 'unlock_checkout') {
+              setLoadingMessage('Preparing checkout...');
+            }
+            handleToolCall(jsonData.tool_call);
+          }
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const jsonData = JSON.parse(line.slice(6));
-
-                if (jsonData.error) {
-                  throw new Error(jsonData.error);
-                }
-
-                if (jsonData.tool_call) {
-                  // Show loading message for long-running tools
-                  if (jsonData.tool_call.name === 'search_flights') {
-                    setLoadingMessage('Preparing checkout...');
-                  } else if (jsonData.tool_call.name === 'search_hotels') {
-                    setLoadingMessage('Searching for hotels...');
-                  } else if (jsonData.tool_call.name === 'select_flight') {
-                    setLoadingMessage('Selecting your flight...');
-                  } else if (jsonData.tool_call.name === 'unlock_checkout') {
-                    setLoadingMessage('Preparing checkout...');
-                  }
-                  handleToolCall(jsonData.tool_call);
-                }
-
-                if (jsonData.tool_result) {
-                  // Clear loading message when tool completes
-                  setLoadingMessage(null);
-                }
-
-                if (jsonData.done) {
-                  break;
-                }
-
-                if (jsonData.content) {
-                  accumulatedContent += jsonData.content;
-
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
-                        : msg
-                    )
-                  );
-                }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e);
+          if (jsonData.tool_result) {
+            if (jsonData.tool_result.name === 'search_flights') {
+              const checkoutContext = createChatCheckoutContext(
+                pendingFlightSearchRef.current,
+                jsonData.tool_result.result,
+              );
+              pendingFlightSearchRef.current = null;
+              if (checkoutContext) {
+                localStorage.setItem('currentItinerary', JSON.stringify(checkoutContext));
+                onOpenChange(false);
+                setLocation('/checkout');
               }
             }
+            setLoadingMessage(null);
           }
-        }
-      }
+
+          if (jsonData.content) {
+            accumulatedContent += jsonData.content;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: accumulatedContent }
+                  : msg,
+              ),
+            );
+          }
+        },
+      });
 
       setIsLoading(false);
       setLoadingMessage(null);
     } catch (error) {
-      console.error('Chat error:', error);
+      setMessages((prev) =>
+        prev.filter(
+          (msg) => msg.id !== assistantMessageId && msg.content !== '',
+        ),
+      );
 
-      setMessages((prev) => prev.filter((msg) => msg.content !== ''));
+      if (controller.signal.aborted) {
+        setIsLoading(false);
+        setLoadingMessage(null);
+        return;
+      }
+      console.error('Chat error:', error);
 
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -292,6 +298,10 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
       setMessages((prev) => [...prev, errorMessage]);
       setLoadingMessage(null);
       setIsLoading(false);
+    } finally {
+      if (streamAbortRef.current === controller) {
+        streamAbortRef.current = null;
+      }
     }
   };
 
@@ -448,13 +458,13 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         ];
 
     // Build Aviasales URL using user's dates (not flight API dates)
-    const originIata = getCityIata(userOriginCity) || 'FCO';
+    const originIata = getCityIata(userOriginCity) || '';
     const destIata = getCityIata(selectedDestination);
     
     // Build URL with user dates, fallback to existing flight checkoutUrl if helper fails
     let aviasalesUrl = buildAviasalesUrl({
       originIata,
-      destinationIata: destIata || selectedDestination.substring(0, 3).toUpperCase(),
+      destinationIata: destIata || '',
       departDate: tripDetails.startDate,
       returnDate: tripDetails.endDate,
       adults: tripDetails.people || 2
@@ -516,9 +526,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           return_date,
           passengers,
         } = toolCall.arguments;
-        const currentState = conversationStateRef.current;
-        const currentOrigin = originCityRef.current;
-
         // Extract structured state from search_flights arguments
         if (destination) {
           setConversationState(prev => {
@@ -564,51 +571,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             return next;
           });
         }
-
-        // Use tool arguments or fall back to conversation state
-        const searchOrigin = origin || currentOrigin || "Rome";
-        const searchDestination =
-          destination || currentState.selectedDestination;
-        const searchDepartDate =
-          departure_date || currentState.tripDetails.startDate;
-        const searchReturnDate =
-          return_date || currentState.tripDetails.endDate;
-        const searchPassengers =
-          passengers || currentState.tripDetails.people || 2;
-
-        if (searchOrigin && searchDestination && searchDepartDate) {
-          const originIata = getCityIata(searchOrigin) || 'FCO';
-          const destIata = getCityIata(searchDestination);
-          const aviasalesUrl = buildAviasalesUrl({
-            originIata,
-            destinationIata: destIata || searchDestination.substring(0, 3).toUpperCase(),
-            departDate: searchDepartDate,
-            returnDate: searchReturnDate || searchDepartDate,
-            adults: searchPassengers,
-          });
-          const dateStr = formatDateRange(searchDepartDate, searchReturnDate || searchDepartDate);
-
-          localStorage.setItem('currentItinerary', JSON.stringify({
-            destination: searchDestination,
-            origin: searchOrigin,
-            dates: dateStr,
-            people: searchPassengers,
-            startDate: searchDepartDate,
-            endDate: searchReturnDate || searchDepartDate,
-            days: calculateTripDays(searchDepartDate, searchReturnDate || searchDepartDate),
-            partyType: currentState.partyType,
-            originCity: searchOrigin,
-            aviasalesCheckoutUrl: aviasalesUrl || '',
-            flightLabel: `${searchOrigin} → ${searchDestination}`,
-            flights: [],
-            cars: [],
-            activities: [],
-            checkoutApproved: true,
-          }));
-          setShowGenerateButton(true);
-          onOpenChange(false);
-          setLocation('/checkout');
-        }
+        pendingFlightSearchRef.current = toolCall.arguments;
         break;
       }
 

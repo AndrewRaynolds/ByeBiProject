@@ -8,43 +8,17 @@ import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 import { getCityCode } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
-
-/**
- * TripContext - The ONLY data structure used by the real flow
- * Populated by chatbot/form, read directly by Checkout
- */
-interface TripContext {
-  origin: string;
-  destination: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
-  people: number;
-  aviasalesCheckoutUrl: string;
-  flightLabel?: string;
-  originCity?: string; // Legacy compatibility
-}
-
-interface HotelData {
-  hotelId: string;
-  name: string;
-  stars?: string;
-  priceTotal: number;
-  currency: string;
-  offerId: string;
-  bookingFlow: 'IN_APP' | 'REDIRECT';
-  paymentPolicy: string;
-  checkInDate: string;
-  checkOutDate: string;
-  roomDescription?: string;
-}
+import { apiRequest } from '@/lib/queryClient';
+import { parseStoredTripContext, type TripContext } from '@/lib/tripContext';
+import { hotelSearchResponseSchema, type HotelResult } from '@shared/hotelSchemas';
 
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { t } = useTranslation();
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
-  const [hotels, setHotels] = useState<HotelData[]>([]);
-  const [selectedHotel, setSelectedHotel] = useState<HotelData | null>(null);
+  const [hotels, setHotels] = useState<HotelResult[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [loadingHotels, setLoadingHotels] = useState(true);
   const [hotelError, setHotelError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,42 +31,22 @@ export default function Checkout() {
       return;
     }
     
-    try {
-      const parsed = JSON.parse(data);
-      
-      // Build TripContext from saved data
-      const context: TripContext = {
-        origin: parsed.origin || parsed.originCity || '',
-        destination: parsed.destination,
-        startDate: parsed.startDate,
-        endDate: parsed.endDate,
-        people: parsed.people,
-        aviasalesCheckoutUrl: parsed.aviasalesCheckoutUrl || parsed.aviasalesUrl || '',
-        flightLabel: parsed.flightLabel || parsed.selectedFlight?.label || `${parsed.origin || parsed.originCity || 'Italia'} → ${parsed.destination}`,
-        originCity: parsed.originCity
-      };
-      
-      // Debug log for Aviasales URL (temporary - remove after verification)
-      console.log('🔍 DEBUG Checkout - TripContext dates:', {
-        startDate: context.startDate,
-        endDate: context.endDate,
-        aviasalesCheckoutUrl: context.aviasalesCheckoutUrl
-      });
-      
-      setTripContext(context);
-      
-      if (context.destination && context.startDate && context.endDate && context.people) {
-        fetchHotels(context);
-      }
-    } catch (err) {
-      console.error('Error parsing TripContext:', err);
+    const context = parseStoredTripContext(data);
+    if (!context) {
       setLocation('/');
+      setIsLoading(false);
+      return;
     }
+
+    setTripContext(context);
+    const controller = new AbortController();
+    fetchHotels(context, controller.signal);
     
     setIsLoading(false);
+    return () => controller.abort();
   }, []);
 
-  const fetchHotels = async (context: TripContext) => {
+  const fetchHotels = async (context: TripContext, signal: AbortSignal) => {
     setLoadingHotels(true);
     setHotelError(null);
     
@@ -126,40 +80,44 @@ export default function Checkout() {
         currency: 'EUR'
       });
       
-      const response = await fetch(`/api/hotels/search?${params}`);
+      const response = await apiRequest(
+        'GET',
+        `/api/hotels/search?${params}`,
+        undefined,
+        { signal, timeoutMs: 30_000 },
+      );
 
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        throw new Error(errBody.error || t('checkout.hotelSearchError'));
+      const result = hotelSearchResponseSchema.safeParse(await response.json());
+      if (!result.success) {
+        throw new Error('Invalid hotel search response');
       }
-
-      const result = await response.json();
       
       if (import.meta.env.DEV) {
         console.log('[HOTEL-SEARCH] Response:', {
-          count: result.hotels?.length || 0,
-          top3: result.hotels?.slice(0, 3).map((h: any) => h.name) || [],
-          priceRange: result.hotels?.length ? {
-            min: Math.min(...result.hotels.map((h: any) => h.priceTotal)),
-            max: Math.max(...result.hotels.map((h: any) => h.priceTotal))
+          count: result.data.hotels.length,
+          top3: result.data.hotels.slice(0, 3).map((hotel) => hotel.name),
+          priceRange: result.data.hotels.length ? {
+            min: Math.min(...result.data.hotels.map((hotel) => hotel.priceTotal)),
+            max: Math.max(...result.data.hotels.map((hotel) => hotel.priceTotal))
           } : null
         });
       }
       
-      if (result.hotels && result.hotels.length > 0) {
-        setHotels(result.hotels.slice(0, 5));
+      if (result.data.hotels.length > 0) {
+        setHotels(result.data.hotels.slice(0, 5));
       } else {
-        setHotelError(result.fallbackReason || t('checkout.noHotelsForDates'));
+        setHotelError(t('checkout.noHotelsForDates'));
       }
-    } catch (error: any) {
-      console.error('Hotel fetch error:', error);
-      setHotelError(t('checkout.hotelLoadError', { error: error.message }));
+    } catch (error: unknown) {
+      if (signal.aborted) return;
+      if (import.meta.env.DEV) console.error('Hotel fetch error:', error);
+      setHotelError(t('checkout.hotelLoadError'));
     } finally {
-      setLoadingHotels(false);
+      if (!signal.aborted) setLoadingHotels(false);
     }
   };
 
-  const getHotelBookingUrl = (hotel: HotelData): string => {
+  const getHotelBookingUrl = (hotel: HotelResult): string => {
     const hotelName = encodeURIComponent(hotel.name);
     const city = encodeURIComponent(tripContext?.destination || '');
     return `https://www.booking.com/searchresults.html?ss=${hotelName}+${city}&checkin=${hotel.checkInDate}&checkout=${hotel.checkOutDate}&group_adults=${tripContext?.people || 2}`;
@@ -169,6 +127,12 @@ export default function Checkout() {
     const city = encodeURIComponent(tripContext?.destination || '');
     return `https://www.booking.com/searchresults.html?ss=${city}&checkin=${tripContext?.startDate || ''}&checkout=${tripContext?.endDate || ''}&group_adults=${tripContext?.people || 2}`;
   };
+
+  const formatHotelPrice = (hotel: HotelResult): string =>
+    new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: hotel.currency,
+    }).format(hotel.priceTotal);
 
   if (isLoading) {
     return (
@@ -183,7 +147,7 @@ export default function Checkout() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
         <Header />
-        <div className="container mx-auto px-4 py-16 max-w-2xl">
+        <main id="main-content" tabIndex={-1} className="container mx-auto px-4 py-16 max-w-2xl">
           <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-red-500/50">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 p-4 bg-red-500/20 rounded-full w-fit">
@@ -204,7 +168,7 @@ export default function Checkout() {
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </main>
       </div>
     );
   }
@@ -216,9 +180,9 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
       <Header />
-      
-      {/* Hero Header */}
-      <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
+      <main id="main-content" tabIndex={-1}>
+        {/* Hero Header */}
+        <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-6">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
@@ -243,9 +207,9 @@ export default function Checkout() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
+        <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
         
         {/* Flight Section - Uses aviasalesCheckoutUrl directly */}
         <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-green-500 shadow-xl">
@@ -353,7 +317,7 @@ export default function Checkout() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-red-400 text-xl">€{hotel.priceTotal}</p>
+                        <p className="font-bold text-red-400 text-xl">{formatHotelPrice(hotel)}</p>
                         <p className="text-xs text-white/60">{t('common.totalStay')}</p>
                       </div>
                     </div>
@@ -365,7 +329,7 @@ export default function Checkout() {
             {selectedHotel && (
               <Button 
                 className="w-full mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-                onClick={() => window.open(getHotelBookingUrl(selectedHotel), '_blank')}
+                onClick={() => window.open(getHotelBookingUrl(selectedHotel), '_blank', 'noopener,noreferrer')}
                 data-testid="button-book-hotel"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
@@ -382,7 +346,7 @@ export default function Checkout() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-white/80">
                   <span>{t('checkout.hotelNights', { nights: String(tripDays) })}</span>
-                  <span className="font-semibold text-white">€{selectedHotel.priceTotal}</span>
+                  <span className="font-semibold text-white">{formatHotelPrice(selectedHotel)}</span>
                 </div>
               </div>
               <p className="text-center text-white/50 text-xs mt-4">
@@ -408,7 +372,8 @@ export default function Checkout() {
             {t('checkout.backToHome')}
           </Button>
         </div>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

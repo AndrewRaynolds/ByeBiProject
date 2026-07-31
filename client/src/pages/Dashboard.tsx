@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Calendar, Map, GlassWater, ListChecks, Shirt, User } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -39,7 +39,7 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col bg-light">
       <Header />
       
-      <main className="flex-grow py-10">
+      <main id="main-content" tabIndex={-1} className="flex-grow py-10">
         <div className="container mx-auto px-4">
           <div className="mb-8">
             <h1 className="text-3xl font-bold font-poppins mb-2">
@@ -112,12 +112,12 @@ export default function Dashboard() {
                         <div className="space-y-3">
                           <div className="flex items-center text-sm">
                             <Map className="mr-2 h-4 w-4 text-primary" />
-                            <span>{t('dashboard.destinations')}: {trip.destinations.join(", ")}</span>
+                            <span>{t('dashboard.destinations')}: {(trip.destinations ?? []).join(", ")}</span>
                           </div>
                           <div className="flex items-center text-sm">
                             <GlassWater className="mr-2 h-4 w-4 text-primary" />
-                            <span>{t('dashboard.activities')}: {trip.activities.slice(0, 2).join(", ")}
-                              {trip.activities.length > 2 ? ` and ${trip.activities.length - 2} more` : ""}
+                            <span>{t('dashboard.activities')}: {(trip.activities ?? []).slice(0, 2).join(", ")}
+                              {(trip.activities ?? []).length > 2 ? ` and ${(trip.activities ?? []).length - 2} more` : ""}
                             </span>
                           </div>
                           <div className="text-sm">

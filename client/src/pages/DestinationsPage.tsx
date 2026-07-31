@@ -140,7 +140,7 @@ export default function DestinationsPage() {
     return (
       <>
         <Header />
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <div className="container mx-auto px-4 py-12">
             <div className="text-center mb-12">
               <Skeleton className="h-12 w-64 mx-auto" />
@@ -175,7 +175,11 @@ export default function DestinationsPage() {
   return (
     <>
       <Header />
-      <main className={isBride ? "bg-pink-50" : "bg-gray-100"}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={isBride ? "bg-pink-50" : "bg-gray-100"}
+      >
         <section className={`${isBride ? "bg-gradient-to-r from-purple-950 to-pink-900" : "bg-black"} text-white py-20`}>
           <div className="container mx-auto px-4">
             <div className="text-center">

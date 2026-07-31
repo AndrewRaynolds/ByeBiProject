@@ -90,7 +90,7 @@ export default function ExperiencesPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-grow">
+      <main id="main-content" tabIndex={-1} className="flex-grow">
         <section className="py-16 bg-black">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">

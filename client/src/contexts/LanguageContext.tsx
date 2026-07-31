@@ -22,13 +22,12 @@ const translationCache: Record<Locale, TranslationMap | null> = {
 async function loadTranslations(locale: Locale): Promise<TranslationMap> {
   if (translationCache[locale]) return translationCache[locale]!;
 
-  const modules: Record<Locale, () => Promise<{ default: TranslationMap }>> = {
-    it: () => import('../locales/it.json'),
+  const modules: Record<Exclude<Locale, 'it'>, () => Promise<{ default: TranslationMap }>> = {
     en: () => import('../locales/en.json'),
     es: () => import('../locales/es.json'),
   };
 
-  const mod = await modules[locale]();
+  const mod = await modules[locale as Exclude<Locale, 'it'>]();
   translationCache[locale] = mod.default;
   return mod.default;
 }
@@ -52,6 +51,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadTranslations(locale).then(setTranslations);
+  }, [locale]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
   }, [locale]);
 
   const setLocale = useCallback((newLocale: Locale) => {

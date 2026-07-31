@@ -1,40 +1,31 @@
 // Updated storage with only the 10 specified destinations
-import { 
-  User, Trip, Itinerary, BlogPost, Merchandise, Destination, Experience, 
-  InsertUser, InsertTrip, InsertItinerary, InsertBlogPost, InsertMerchandise, 
-  InsertDestination, InsertExperience, ExpenseGroup, Expense, 
-  InsertExpenseGroup, InsertExpense, GeneratedItinerary, InsertGeneratedItinerary
+import {
+  Trip, BlogPost, Destination, Experience,
+  InsertTrip, InsertBlogPost,
+  InsertDestination, InsertExperience, ExpenseGroup, Expense,
+  InsertExpenseGroup, InsertExpense,
+  expenseGroups as expenseGroupsTable,
+  expenses as expensesTable,
+  blogPosts as blogPostsTable,
+  stripeWebhookEvents,
+  trips as tripsTable,
 } from "@shared/schema";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { createDatabase, type DatabaseConnection } from "./db";
 
 export interface IStorage {
-  // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUserPremiumStatus(id: number, isPremium: boolean): Promise<User | undefined>;
-  
+  healthCheck(): Promise<void>;
+  close(): Promise<void>;
+
   // Trip operations
   getTrip(id: number): Promise<Trip | undefined>;
   getTripsByUserId(userId: string): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
 
-  // Itinerary operations
-  getItinerary(id: number): Promise<Itinerary | undefined>;
-  getItinerariesByTripId(tripId: number): Promise<Itinerary[]>;
-  createItinerary(itinerary: InsertItinerary): Promise<Itinerary>;
-
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
-  getFreeBlogPosts(): Promise<BlogPost[]>;
   getAllBlogPosts(): Promise<BlogPost[]>;
   createBlogPost(blogPost: InsertBlogPost): Promise<BlogPost>;
-
-  // Merchandise operations
-  getMerchandise(id: number): Promise<Merchandise | undefined>;
-  getAllMerchandise(): Promise<Merchandise[]>;
-  getMerchandiseByType(type: string): Promise<Merchandise[]>;
-  createMerchandise(merchandise: InsertMerchandise): Promise<Merchandise>;
 
   // Destination operations
   getDestination(id: number): Promise<Destination | undefined>;
@@ -48,9 +39,10 @@ export interface IStorage {
   
   // Expense group operations (SplittaBro feature)
   getExpenseGroup(id: number): Promise<ExpenseGroup | undefined>;
-  getExpenseGroupsByTripId(tripId: number): Promise<ExpenseGroup[]>;
-  getAllExpenseGroups(): Promise<ExpenseGroup[]>;
-  createExpenseGroup(group: InsertExpenseGroup): Promise<ExpenseGroup>;
+  getExpenseGroupsByTripId(tripId: number, ownerId: string): Promise<ExpenseGroup[]>;
+  getAllExpenseGroups(ownerId: string): Promise<ExpenseGroup[]>;
+  createExpenseGroup(group: InsertExpenseGroup, ownerId: string): Promise<ExpenseGroup>;
+  isExpenseGroupOwner(groupId: number, ownerId: string): Promise<boolean>;
   
   // Expense operations (SplittaBro feature)
   getExpense(id: number): Promise<Expense | undefined>;
@@ -59,101 +51,55 @@ export interface IStorage {
   updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
   deleteExpense(id: number): Promise<boolean>;
   
-  // Generated Itinerary operations (OneClick Assistant)
-  getGeneratedItinerary(id: number): Promise<GeneratedItinerary | undefined>;
-  getGeneratedItinerariesByUserId(userId: number): Promise<GeneratedItinerary[]>;
-  createGeneratedItinerary(itinerary: InsertGeneratedItinerary): Promise<GeneratedItinerary>;
-  updateGeneratedItinerary(id: number, itinerary: Partial<InsertGeneratedItinerary>): Promise<GeneratedItinerary | undefined>;
+  // Stripe webhook idempotency
+  hasProcessedStripeEvent(eventId: string): Promise<boolean>;
+  markStripeEventProcessed(eventId: string, sessionId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User>;
   private trips: Map<number, Trip>;
-  private itineraries: Map<number, Itinerary>;
   private blogPosts: Map<number, BlogPost>;
-  private merchandiseItems: Map<number, Merchandise>;
   private destinations: Map<number, Destination>;
   private experiences: Map<number, Experience>;
   private expenseGroups: Map<number, ExpenseGroup>;
   private expenseItems: Map<number, Expense>;
-  private generatedItineraries: Map<number, GeneratedItinerary>;
+  private processedStripeEventIds: Set<string>;
 
-  private userId: number;
   private tripId: number;
-  private itineraryId: number;
   private blogPostId: number;
-  private merchandiseId: number;
   private destinationId: number;
   private experienceId: number;
   private expenseGroupId: number;
   private expenseId: number;
-  private generatedItineraryId: number;
 
   constructor() {
-    this.users = new Map();
     this.trips = new Map();
-    this.itineraries = new Map();
     this.blogPosts = new Map();
-    this.merchandiseItems = new Map();
     this.destinations = new Map();
     this.experiences = new Map();
     this.expenseGroups = new Map();
     this.expenseItems = new Map();
-    this.generatedItineraries = new Map();
+    this.processedStripeEventIds = new Set();
 
-    this.userId = 1;
     this.tripId = 1;
-    this.itineraryId = 1;
     this.blogPostId = 1;
-    this.merchandiseId = 1;
     this.destinationId = 1;
     this.experienceId = 1;
     this.expenseGroupId = 1;
     this.expenseId = 1;
-    this.generatedItineraryId = 1;
 
     // Initialize with sample data
     this.initializeDestinations();
     this.initializeExperiences();
     this.initializeBlogPosts();
-    this.initializeMerchandise();
   }
 
-  // User operations
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  async healthCheck(): Promise<void> {
+    return Promise.resolve();
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const user: User = { 
-      id: this.userId++, 
-      ...insertUser,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.users.set(user.id, user);
-    return user;
-  }
-
-  async updateUserPremiumStatus(id: number, isPremium: boolean): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser: User = {
-      ...user,
-      isPremium,
-      updatedAt: new Date()
-    };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+  async close(): Promise<void> {
+    return Promise.resolve();
   }
 
   // Trip operations
@@ -168,32 +114,22 @@ export class MemStorage implements IStorage {
   async createTrip(insertTrip: InsertTrip): Promise<Trip> {
     const trip: Trip = { 
       id: this.tripId++, 
-      ...insertTrip,
+      userId: insertTrip.userId,
+      name: insertTrip.name,
+      participants: insertTrip.participants,
+      startDate: insertTrip.startDate,
+      endDate: insertTrip.endDate,
+      departureCity: insertTrip.departureCity,
+      destinations: insertTrip.destinations ?? null,
+      experienceType: insertTrip.experienceType,
+      budget: insertTrip.budget,
+      activities: insertTrip.activities ?? null,
+      specialRequests: insertTrip.specialRequests ?? null,
+      includeMerch: insertTrip.includeMerch ?? false,
       createdAt: new Date(),
-      updatedAt: new Date()
     };
     this.trips.set(trip.id, trip);
     return trip;
-  }
-
-  // Itinerary operations
-  async getItinerary(id: number): Promise<Itinerary | undefined> {
-    return this.itineraries.get(id);
-  }
-
-  async getItinerariesByTripId(tripId: number): Promise<Itinerary[]> {
-    return Array.from(this.itineraries.values()).filter(itinerary => itinerary.tripId === tripId);
-  }
-
-  async createItinerary(insertItinerary: InsertItinerary): Promise<Itinerary> {
-    const itinerary: Itinerary = { 
-      id: this.itineraryId++, 
-      ...insertItinerary,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.itineraries.set(itinerary.id, itinerary);
-    return itinerary;
   }
 
   // Blog post operations
@@ -201,47 +137,23 @@ export class MemStorage implements IStorage {
     return this.blogPosts.get(id);
   }
 
-  async getFreeBlogPosts(): Promise<BlogPost[]> {
-    return Array.from(this.blogPosts.values()).filter(post => !post.isPremium);
-  }
-
   async getAllBlogPosts(): Promise<BlogPost[]> {
     return Array.from(this.blogPosts.values());
   }
 
   async createBlogPost(insertBlogPost: InsertBlogPost): Promise<BlogPost> {
+    return this.storeBlogPost(insertBlogPost);
+  }
+
+  private storeBlogPost(insertBlogPost: InsertBlogPost): BlogPost {
     const blogPost: BlogPost = { 
       id: this.blogPostId++, 
       ...insertBlogPost,
+      location: insertBlogPost.location ?? null,
       createdAt: new Date(),
-      updatedAt: new Date()
     };
     this.blogPosts.set(blogPost.id, blogPost);
     return blogPost;
-  }
-
-  // Merchandise operations
-  async getMerchandise(id: number): Promise<Merchandise | undefined> {
-    return this.merchandiseItems.get(id);
-  }
-
-  async getAllMerchandise(): Promise<Merchandise[]> {
-    return Array.from(this.merchandiseItems.values());
-  }
-
-  async getMerchandiseByType(type: string): Promise<Merchandise[]> {
-    return Array.from(this.merchandiseItems.values()).filter(item => item.type === type);
-  }
-
-  async createMerchandise(insertMerchandise: InsertMerchandise): Promise<Merchandise> {
-    const merchandise: Merchandise = { 
-      id: this.merchandiseId++, 
-      ...insertMerchandise,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.merchandiseItems.set(merchandise.id, merchandise);
-    return merchandise;
   }
 
   // Destination operations
@@ -257,8 +169,7 @@ export class MemStorage implements IStorage {
     const destination: Destination = { 
       id: this.destinationId++, 
       ...insertDestination,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      tags: insertDestination.tags ?? null,
     };
     this.destinations.set(destination.id, destination);
     return destination;
@@ -277,8 +188,6 @@ export class MemStorage implements IStorage {
     const experience: Experience = { 
       id: this.experienceId++, 
       ...insertExperience,
-      createdAt: new Date(),
-      updatedAt: new Date()
     };
     this.experiences.set(experience.id, experience);
     return experience;
@@ -289,23 +198,36 @@ export class MemStorage implements IStorage {
     return this.expenseGroups.get(id);
   }
 
-  async getExpenseGroupsByTripId(tripId: number): Promise<ExpenseGroup[]> {
-    return Array.from(this.expenseGroups.values()).filter(group => group.tripId === tripId);
+  async getExpenseGroupsByTripId(tripId: number, ownerId: string): Promise<ExpenseGroup[]> {
+    return Array.from(this.expenseGroups.values()).filter(
+      (group) => group.ownerId === ownerId && group.tripId === tripId,
+    );
   }
 
-  async getAllExpenseGroups(): Promise<ExpenseGroup[]> {
-    return Array.from(this.expenseGroups.values());
+  async getAllExpenseGroups(ownerId: string): Promise<ExpenseGroup[]> {
+    return Array.from(this.expenseGroups.values()).filter(
+      (group) => group.ownerId === ownerId,
+    );
   }
 
-  async createExpenseGroup(insertGroup: InsertExpenseGroup): Promise<ExpenseGroup> {
+  async createExpenseGroup(insertGroup: InsertExpenseGroup, ownerId: string): Promise<ExpenseGroup> {
     const group: ExpenseGroup = { 
       id: this.expenseGroupId++, 
-      ...insertGroup,
+      ownerId,
+      tripId: insertGroup.tripId ?? null,
+      name: insertGroup.name,
+      description: insertGroup.description ?? null,
+      members: insertGroup.members,
+      totalAmount: 0,
+      currency: insertGroup.currency ?? "EUR",
       createdAt: new Date(),
-      updatedAt: new Date()
     };
     this.expenseGroups.set(group.id, group);
     return group;
+  }
+
+  async isExpenseGroupOwner(groupId: number, ownerId: string): Promise<boolean> {
+    return this.expenseGroups.get(groupId)?.ownerId === ownerId;
   }
 
   // Expense operations
@@ -322,7 +244,6 @@ export class MemStorage implements IStorage {
       id: this.expenseId++, 
       ...insertExpense,
       createdAt: new Date(),
-      updatedAt: new Date()
     };
     this.expenseItems.set(expense.id, expense);
     return expense;
@@ -335,7 +256,6 @@ export class MemStorage implements IStorage {
     const updatedExpense: Expense = {
       ...expense,
       ...updateData,
-      updatedAt: new Date()
     };
     this.expenseItems.set(id, updatedExpense);
     return updatedExpense;
@@ -345,38 +265,12 @@ export class MemStorage implements IStorage {
     return this.expenseItems.delete(id);
   }
 
-  // Generated Itinerary operations (OneClick Assistant)
-  async getGeneratedItinerary(id: number): Promise<GeneratedItinerary | undefined> {
-    return this.generatedItineraries.get(id);
+  async hasProcessedStripeEvent(eventId: string): Promise<boolean> {
+    return this.processedStripeEventIds.has(eventId);
   }
 
-  async getGeneratedItinerariesByUserId(userId: number): Promise<GeneratedItinerary[]> {
-    return Array.from(this.generatedItineraries.values()).filter(
-      itinerary => itinerary.userId === userId
-    );
-  }
-
-  async createGeneratedItinerary(insertItinerary: InsertGeneratedItinerary): Promise<GeneratedItinerary> {
-    const itinerary: GeneratedItinerary = { 
-      id: this.generatedItineraryId++, 
-      ...insertItinerary,
-      status: insertItinerary.status || "draft",
-      createdAt: new Date()
-    };
-    this.generatedItineraries.set(itinerary.id, itinerary);
-    return itinerary;
-  }
-
-  async updateGeneratedItinerary(id: number, updates: Partial<InsertGeneratedItinerary>): Promise<GeneratedItinerary | undefined> {
-    const itinerary = this.generatedItineraries.get(id);
-    if (!itinerary) return undefined;
-    
-    const updatedItinerary: GeneratedItinerary = {
-      ...itinerary,
-      ...updates
-    };
-    this.generatedItineraries.set(id, updatedItinerary);
-    return updatedItinerary;
+  async markStripeEventProcessed(eventId: string, _sessionId: string): Promise<void> {
+    this.processedStripeEventIds.add(eventId);
   }
 
   // Initialize with only the 10 specified destinations
@@ -514,7 +408,6 @@ export class MemStorage implements IStorage {
         title: "Roma: The Night We Can't Remember",
         content: "From Trastevere's wine bars to Testaccio's underground clubs, Rome offers an incredible nightlife scene. We started at a rooftop aperitivo with views of the Colosseum, then ended up in a basement club at 5am. The bachelor had no idea what hit him.",
         image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: false,
         location: "Roma",
         category: "drink" as const
       },
@@ -522,7 +415,6 @@ export class MemStorage implements IStorage {
         title: "Ibiza Uncovered: The Ultimate Party Guide",
         content: "From Amnesia to Pacha, we break down the best clubs, when to go, and how to do it right. We got VIP access to three clubs in one night, watched the sunrise from a yacht, and somehow everyone made the flight home. Barely.",
         image: "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: true,
         location: "Ibiza",
         category: "weird" as const
       },
@@ -530,46 +422,231 @@ export class MemStorage implements IStorage {
         title: "Cracovia: Eastern Europe's Hidden Gem",
         content: "Affordable prices, incredible architecture, and a nightlife scene that rivals any major European city. We spent four days exploring the Old Town by day and the underground clubs by night. The vodka was cheaper than water and twice as dangerous.",
         image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: false,
         location: "Cracovia",
         category: "drink" as const
       }
     ];
     
-    blogPosts.forEach(post => {
-      this.createBlogPost(post);
-    });
+    blogPosts.forEach(post => this.storeBlogPost(post));
   }
 
-  private initializeMerchandise() {
-    const merchandise = [
-      {
-        name: "Custom T-Shirts",
-        description: "Personalized bachelor party t-shirts with your group's name and destination",
-        price: 25.99,
-        image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        type: "apparel"
-      },
-      {
-        name: "ByeBro Flask Set",
-        description: "Premium stainless steel flasks engraved with your bachelor party details",
-        price: 45.99,
-        image: "https://images.unsplash.com/photo-1544966503-7cc5ac882d5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        type: "accessories"
-      },
-      {
-        name: "Memory Book",
-        description: "Custom photo album to capture all your unforgettable moments",
-        price: 35.99,
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        type: "keepsakes"
-      }
-    ];
-    
-    merchandise.forEach(item => {
-      this.createMerchandise(item);
-    });
+}
+
+export class DatabaseStorage extends MemStorage {
+  constructor(private readonly connection: DatabaseConnection) {
+    super();
+  }
+
+  private get db() {
+    return this.connection.db;
+  }
+
+  override async healthCheck(): Promise<void> {
+    await this.db.execute(sql`select 1`);
+  }
+
+  override async close(): Promise<void> {
+    await this.connection.close();
+  }
+
+  override async getTrip(id: number): Promise<Trip | undefined> {
+    const [trip] = await this.db
+      .select()
+      .from(tripsTable)
+      .where(eq(tripsTable.id, id))
+      .limit(1);
+    return trip;
+  }
+
+  override async getTripsByUserId(userId: string): Promise<Trip[]> {
+    return this.db
+      .select()
+      .from(tripsTable)
+      .where(eq(tripsTable.userId, userId));
+  }
+
+  override async createTrip(insertTrip: InsertTrip): Promise<Trip> {
+    const [trip] = await this.db
+      .insert(tripsTable)
+      .values(insertTrip)
+      .returning();
+    return trip;
+  }
+
+  override async getBlogPost(id: number): Promise<BlogPost | undefined> {
+    const [post] = await this.db
+      .select()
+      .from(blogPostsTable)
+      .where(eq(blogPostsTable.id, id))
+      .limit(1);
+    return post;
+  }
+
+  override async getAllBlogPosts(): Promise<BlogPost[]> {
+    return this.db
+      .select()
+      .from(blogPostsTable)
+      .orderBy(desc(blogPostsTable.createdAt), desc(blogPostsTable.id));
+  }
+
+  override async createBlogPost(
+    insertBlogPost: InsertBlogPost,
+  ): Promise<BlogPost> {
+    const [post] = await this.db
+      .insert(blogPostsTable)
+      .values(insertBlogPost)
+      .returning();
+    return post;
+  }
+
+  override async getExpenseGroup(id: number): Promise<ExpenseGroup | undefined> {
+    const [group] = await this.db
+      .select()
+      .from(expenseGroupsTable)
+      .where(eq(expenseGroupsTable.id, id))
+      .limit(1);
+    return group;
+  }
+
+  override async getExpenseGroupsByTripId(
+    tripId: number,
+    ownerId: string,
+  ): Promise<ExpenseGroup[]> {
+    return this.db
+      .select()
+      .from(expenseGroupsTable)
+      .where(
+        and(
+          eq(expenseGroupsTable.tripId, tripId),
+          eq(expenseGroupsTable.ownerId, ownerId),
+        ),
+      );
+  }
+
+  override async getAllExpenseGroups(ownerId: string): Promise<ExpenseGroup[]> {
+    return this.db
+      .select()
+      .from(expenseGroupsTable)
+      .where(eq(expenseGroupsTable.ownerId, ownerId));
+  }
+
+  override async createExpenseGroup(
+    insertGroup: InsertExpenseGroup,
+    ownerId: string,
+  ): Promise<ExpenseGroup> {
+    const [group] = await this.db
+      .insert(expenseGroupsTable)
+      .values({
+        ...insertGroup,
+        tripId: insertGroup.tripId ?? null,
+        ownerId,
+      })
+      .returning();
+    return group;
+  }
+
+  override async isExpenseGroupOwner(
+    groupId: number,
+    ownerId: string,
+  ): Promise<boolean> {
+    const [group] = await this.db
+      .select({ id: expenseGroupsTable.id })
+      .from(expenseGroupsTable)
+      .where(
+        and(
+          eq(expenseGroupsTable.id, groupId),
+          eq(expenseGroupsTable.ownerId, ownerId),
+        ),
+      )
+      .limit(1);
+    return Boolean(group);
+  }
+
+  override async getExpense(id: number): Promise<Expense | undefined> {
+    const [expense] = await this.db
+      .select()
+      .from(expensesTable)
+      .where(eq(expensesTable.id, id))
+      .limit(1);
+    return expense;
+  }
+
+  override async getExpensesByGroupId(groupId: number): Promise<Expense[]> {
+    return this.db
+      .select()
+      .from(expensesTable)
+      .where(eq(expensesTable.groupId, groupId));
+  }
+
+  override async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const [expense] = await this.db
+      .insert(expensesTable)
+      .values(insertExpense)
+      .returning();
+    return expense;
+  }
+
+  override async updateExpense(
+    id: number,
+    updateData: Partial<InsertExpense>,
+  ): Promise<Expense | undefined> {
+    const [expense] = await this.db
+      .update(expensesTable)
+      .set(updateData)
+      .where(eq(expensesTable.id, id))
+      .returning();
+    return expense;
+  }
+
+  override async deleteExpense(id: number): Promise<boolean> {
+    const deleted = await this.db
+      .delete(expensesTable)
+      .where(eq(expensesTable.id, id))
+      .returning({ id: expensesTable.id });
+    return deleted.length > 0;
+  }
+
+  override async hasProcessedStripeEvent(eventId: string): Promise<boolean> {
+    const [event] = await this.db
+      .select({ eventId: stripeWebhookEvents.eventId })
+      .from(stripeWebhookEvents)
+      .where(eq(stripeWebhookEvents.eventId, eventId))
+      .limit(1);
+    return Boolean(event);
+  }
+
+  override async markStripeEventProcessed(
+    eventId: string,
+    sessionId: string,
+  ): Promise<void> {
+    await this.db
+      .insert(stripeWebhookEvents)
+      .values({ eventId, sessionId })
+      .onConflictDoNothing({ target: stripeWebhookEvents.eventId });
   }
 }
 
-export const storage = new MemStorage();
+export function createStorageFromEnvironment(): IStorage {
+  const persistenceMode = process.env.CRITICAL_DATA_PERSISTENCE;
+
+  if (process.env.NODE_ENV === "production" && persistenceMode !== "database") {
+    throw new Error(
+      "CRITICAL_DATA_PERSISTENCE=database is required in production",
+    );
+  }
+
+  if (persistenceMode !== "database") {
+    return new MemStorage();
+  }
+
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error(
+      "DATABASE_URL is required when CRITICAL_DATA_PERSISTENCE=database",
+    );
+  }
+
+  return new DatabaseStorage(createDatabase(databaseUrl));
+}
+
+export const storage = createStorageFromEnvironment();

@@ -1,3 +1,5 @@
+import { getSafeErrorMetadata } from "../safeError";
+
 const PRINTFUL_API_BASE = "https://api.printful.com";
 
 interface PrintfulSyncProduct {
@@ -112,9 +114,8 @@ async function printfulFetch(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Printful API error [${response.status}]: ${errorText}`);
-    throw new Error(`Printful API error: ${response.status} - ${errorText}`);
+    console.error("Printful API request failed", { status: response.status });
+    throw new Error("Printful API request failed");
   }
 
   return response.json();
@@ -130,8 +131,11 @@ export async function getStoreProducts(): Promise<PrintfulProduct[]> {
         try {
           const detail = await getProductDetail(product.id);
           return detail;
-        } catch (err) {
-          console.error(`Failed to fetch details for product ${product.id}:`, err);
+        } catch (error) {
+          console.error(
+            `Failed to fetch details for Printful product ${product.id}`,
+            getSafeErrorMetadata(error),
+          );
           return {
             id: product.id,
             name: product.name,
@@ -145,7 +149,7 @@ export async function getStoreProducts(): Promise<PrintfulProduct[]> {
 
     return detailedProducts;
   } catch (error) {
-    console.error("Error fetching Printful store products:", error);
+    console.error("Error fetching Printful store products", getSafeErrorMetadata(error));
     throw error;
   }
 }
@@ -209,11 +213,13 @@ export async function getShippingRates(
 export async function createOrder(
   recipient: PrintfulRecipient,
   items: PrintfulOrderItem[],
-  isDraft: boolean = true
+  isDraft: boolean = true,
+  externalId?: string,
 ) {
   const data = await printfulFetch("/orders", {
     method: "POST",
     body: JSON.stringify({
+      ...(externalId ? { external_id: externalId } : {}),
       recipient,
       items: items.map((item) => ({
         sync_variant_id: item.sync_variant_id,

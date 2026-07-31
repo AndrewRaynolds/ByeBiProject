@@ -7,9 +7,6 @@ vi.mock('./storage', () => ({
     getAllDestinations: vi.fn().mockResolvedValue([]),
     getAllExperiences: vi.fn().mockResolvedValue([]),
     getAllBlogPosts: vi.fn().mockResolvedValue([]),
-    getFreeBlogPosts: vi.fn().mockResolvedValue([]),
-    getAllMerchandise: vi.fn().mockResolvedValue([]),
-    getMerchandiseByType: vi.fn().mockResolvedValue([]),
     getAllExpenseGroups: vi.fn().mockResolvedValue([]),
   },
 }));
@@ -17,6 +14,14 @@ vi.mock('./storage', () => ({
 // Mock auth setup
 vi.mock('./auth', () => ({
   setupAuth: vi.fn(),
+}));
+
+vi.mock('./supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: vi.fn(),
+    },
+  },
 }));
 
 // Mock zapier integration
@@ -27,28 +32,18 @@ vi.mock('./zapier-integration', () => ({
 // Mock OpenAI service
 vi.mock('./services/openai', () => ({
   generateItinerary: vi.fn(),
-  generateAssistantResponse: vi.fn(),
   streamOpenAIChatCompletion: vi.fn(),
-}));
-
-// Mock image search service
-vi.mock('./services/image-search', () => ({
-  imageSearchService: {
-    searchImages: vi.fn().mockResolvedValue({ images: [] }),
-    searchDestinationImages: vi.fn().mockResolvedValue({ images: [] }),
-    searchBarcelonaImages: vi.fn().mockResolvedValue({ images: [] }),
-  },
-}));
-
-// Mock aviasales service
-vi.mock('./services/aviasales', () => ({
-  searchCheapestFlights: vi.fn().mockResolvedValue({ data: {} }),
 }));
 
 // Mock amadeus-hotels service
 vi.mock('./services/amadeus-hotels', () => ({
   searchHotels: vi.fn().mockResolvedValue([]),
   bookHotel: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+// Mock Amadeus flights to keep route imports independent from external credentials
+vi.mock('./services/amadeus-flights', () => ({
+  searchFlights: vi.fn().mockResolvedValue([]),
 }));
 
 describe('Express App', () => {

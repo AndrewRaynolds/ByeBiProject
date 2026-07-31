@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Star, Clock, Send, Flame, ChevronRight, ChevronLeft, Eye, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -82,14 +82,13 @@ const CATEGORY_FILTERS: { value: CategoryFilter; icon: string; label: string }[]
 
 interface PostGridProps {
   posts: BlogPost[];
-  isPremium: boolean;
   brand: Brand;
   t: (k: string, params?: Record<string, string | number>) => string;
   filterLocation: string | null;
   filterCategory: CategoryFilter;
 }
 
-function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }: PostGridProps) {
+function PostGrid({ posts, brand, t, filterLocation, filterCategory }: PostGridProps) {
   const filtered = posts.filter(p => {
     const locationMatch = filterLocation ? p.location === filterLocation : true;
     const categoryMatch = filterCategory
@@ -112,7 +111,7 @@ function PostGrid({ posts, isPremium, brand, t, filterLocation, filterCategory }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {filtered.map((post) => (
-        <CardComponent key={post.id} post={post} isPremium={isPremium} t={t} />
+        <CardComponent key={post.id} post={post} t={t} />
       ))}
     </div>
   );
@@ -131,7 +130,7 @@ const CATEGORY_OPTIONS: { value: Category; icon: string; label: string; desc: st
   { value: 'weird', icon: '🤪', label: 'secretBlog.category.weird', desc: 'secretBlog.category.weirdDesc' },
 ];
 
-function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
+export function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [selectedDestination, setSelectedDestination] = useState<string>("");
@@ -177,8 +176,6 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
       return apiRequest("POST", "/api/blog-posts", {
         title: resolvedTitle,
         content: storyContent,
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: false,
         location: selectedDestination,
         category: selectedCategory,
       });
@@ -234,9 +231,13 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
       </div>
 
       <div className="p-6">
-        <div className="flex items-center gap-2 mb-6">
+        <ol className="flex items-center gap-2 mb-6" aria-label={t('secretBlog.formTitle')}>
           {stepLabels.map((label, i) => (
-            <div key={i} className="flex items-center gap-2 flex-1">
+            <li
+              key={i}
+              className="flex items-center gap-2 flex-1"
+              aria-current={step === i + 1 ? 'step' : undefined}
+            >
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
                 ${step > i + 1 ? `bg-gradient-to-r ${accentColor} text-white` :
                   step === i + 1 ? `bg-gradient-to-r ${accentColor} text-white ring-2 ring-offset-2 ring-offset-gray-950 ${isBride ? 'ring-purple-500' : 'ring-red-500'}` :
@@ -247,18 +248,20 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
               {i < stepLabels.length - 1 && (
                 <div className={`flex-1 h-[1px] ${step > i + 1 ? `bg-gradient-to-r ${accentColor}` : 'bg-gray-800'}`} />
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
 
         {step === 1 && (
-          <div>
-            <p className="text-gray-300 text-sm mb-4">{t('secretBlog.destinationQuestion')}</p>
+          <fieldset>
+            <legend className="text-gray-300 text-sm mb-4">{t('secretBlog.destinationQuestion')}</legend>
             <div className="flex flex-wrap gap-2 mb-6">
               {DESTINATIONS.map((dest) => (
                 <button
+                  type="button"
                   key={dest.value}
                   onClick={() => setSelectedDestination(dest.value)}
+                  aria-pressed={selectedDestination === dest.value}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all
                     ${selectedDestination === dest.value
                       ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
@@ -275,32 +278,35 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
             >
               {t('common.continue')} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
-          </div>
+          </fieldset>
         )}
 
         {step === 2 && (
           <div>
-            <p className="text-gray-300 text-sm mb-3">
+            <label htmlFor="secret-blog-story" className="block text-gray-300 text-sm mb-3">
               {t('secretBlog.storyQuestionPrefix')} <span className={`font-semibold ${accentText}`}>{selectedDestination}</span>. {t('secretBlog.storyPrivacyHint')}
-            </p>
+            </label>
             <Textarea
+              id="secret-blog-story"
               placeholder=""
               className="min-h-[160px] mb-4 bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500 resize-none"
               value={storyContent}
               onChange={(e) => setStoryContent(e.target.value)}
             />
             <div className="mb-4">
-              <label className="block text-gray-400 text-xs font-medium mb-1.5">
+              <label htmlFor="secret-blog-title" className="block text-gray-400 text-xs font-medium mb-1.5">
                 {t('secretBlog.customTitle')} <span className="text-gray-600">({t('secretBlog.optional')})</span>
               </label>
               <Input
+                id="secret-blog-title"
                 placeholder={autoTitle}
                 className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
                 maxLength={100}
+                aria-describedby="secret-blog-title-hint"
               />
-              <p className="text-gray-600 text-[11px] mt-1">{t('secretBlog.autoTitleHint')}</p>
+              <p id="secret-blog-title-hint" className="text-gray-600 text-[11px] mt-1">{t('secretBlog.autoTitleHint')}</p>
             </div>
             <div className="flex gap-3">
               <Button variant="ghost" className="text-gray-400" onClick={() => setStep(1)}>
@@ -318,13 +324,15 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
         )}
 
         {step === 3 && (
-          <div>
-            <p className="text-gray-300 text-sm mb-5">{t('secretBlog.categoryQuestion')}</p>
+          <fieldset>
+            <legend className="text-gray-300 text-sm mb-5">{t('secretBlog.categoryQuestion')}</legend>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {CATEGORY_OPTIONS.map((opt) => (
                 <button
+                  type="button"
                   key={opt.value}
                   onClick={() => setSelectedCategory(opt.value)}
+                  aria-pressed={selectedCategory === opt.value}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all
                     ${selectedCategory === opt.value
                       ? `bg-gradient-to-br ${accentColor} border-transparent text-white shadow-lg scale-105`
@@ -348,26 +356,30 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
                 {t('common.continue')} <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
-          </div>
+          </fieldset>
         )}
 
         {step === 4 && (
           <div>
-            <p className="text-gray-300 text-sm mb-4">{t('secretBlog.tagsQuestion')}</p>
-            <div className="flex flex-wrap gap-2 mb-6">
-              {STORY_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-mono transition-all border
-                    ${selectedTags.includes(tag)
-                      ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
-                      : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
+            <fieldset>
+              <legend className="text-gray-300 text-sm mb-4">{t('secretBlog.tagsQuestion')}</legend>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {STORY_TAGS.map((tag) => (
+                  <button
+                    type="button"
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    aria-pressed={selectedTags.includes(tag)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-mono transition-all border
+                      ${selectedTags.includes(tag)
+                        ? `bg-gradient-to-r ${accentColor} text-white border-transparent`
+                        : 'bg-gray-900 text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
             <div className="flex gap-3 mb-6">
               <Button variant="ghost" className="text-gray-400" onClick={() => setStep(3)}>
@@ -376,6 +388,8 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
               <Button
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                 onClick={() => setShowPreview(!showPreview)}
+                aria-expanded={showPreview}
+                aria-controls="secret-blog-preview"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? t('secretBlog.hidePreview') : t('secretBlog.showPreview')}
@@ -391,7 +405,7 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
             </div>
 
             {showPreview && (
-              <div className={`rounded-xl border ${borderAccent} bg-gray-900 overflow-hidden`}>
+              <div id="secret-blog-preview" className={`rounded-xl border ${borderAccent} bg-gray-900 overflow-hidden`}>
                 <div className="h-24 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative">
                   <span className="text-4xl opacity-40">✨</span>
                   {selectedCategory && (
@@ -467,7 +481,7 @@ export default function SecretBlogPage() {
     return Array.from(locs);
   }, [blogPosts]);
 
-  const totalStories = (blogPosts?.length ?? 0) + 197;
+  const totalStories = blogPosts?.length ?? 0;
 
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';
@@ -476,7 +490,7 @@ export default function SecretBlogPage() {
     <div className="min-h-screen flex flex-col bg-black">
       <Header />
 
-      <main className="flex-grow">
+      <main id="main-content" tabIndex={-1} className="flex-grow">
         <section className="relative overflow-hidden py-28">
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -600,7 +614,6 @@ export default function SecretBlogPage() {
               ) : (
                 <PostGrid
                   posts={popularPosts}
-                  isPremium={true}
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}
@@ -619,7 +632,6 @@ export default function SecretBlogPage() {
               ) : (
                 <PostGrid
                   posts={newestPosts}
-                  isPremium={true}
                   brand={brand}
                   t={t}
                   filterLocation={filterLocation}

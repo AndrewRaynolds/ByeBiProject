@@ -1,5 +1,6 @@
 // server/services/amadeus-hotels.ts
 import axios from "axios";
+import { hotelResultSchema, type HotelResult } from "@shared/hotelSchemas";
 
 type SearchHotelsParams = {
   cityCode: string;      // es. "BCN"
@@ -12,21 +13,7 @@ type SearchHotelsParams = {
 export type BookingFlow = "IN_APP" | "REDIRECT";
 export type PaymentPolicy = "PAY_AT_HOTEL" | "PREPAY" | "DEPOSIT" | "UNKNOWN";
 
-export type HotelResult = {
-  hotelId: string;
-  name: string;
-  stars?: string;
-  latitude?: number;
-  longitude?: number;
-  priceTotal: number;
-  currency: string;
-  offerId: string;
-  bookingFlow: BookingFlow;
-  paymentPolicy: PaymentPolicy;
-  checkInDate: string;
-  checkOutDate: string;
-  roomDescription?: string;
-};
+export type { HotelResult } from "@shared/hotelSchemas";
 
 // In produzione: NODE_ENV è l'unica fonte di verità per mock/debug
 // AMADEUS_ENV serve solo per selezionare le credenziali API
@@ -202,14 +189,14 @@ export async function searchHotels(
   const nights = Math.max(1, Math.ceil((checkOutDateObj.getTime() - checkInDateObj.getTime()) / (1000 * 60 * 60 * 24)));
 
   const results: HotelResult[] = data
-    .map((item: any) => {
+    .map((item: any): HotelResult | null => {
       const offer = item.offers?.[0];
       if (!offer) return null;
 
       const paymentPolicy = determinePaymentPolicy(offer);
       const bookingFlow: BookingFlow = paymentPolicy === "PAY_AT_HOTEL" ? "IN_APP" : "REDIRECT";
 
-      return {
+      const parsed = hotelResultSchema.safeParse({
         hotelId: item.hotel?.hotelId ?? item.hotelId,
         name: item.hotel?.name ?? "Unknown hotel",
         stars: item.hotel?.rating,
@@ -223,9 +210,11 @@ export async function searchHotels(
         checkInDate: offer.checkInDate || checkInDate,
         checkOutDate: offer.checkOutDate || checkOutDate,
         roomDescription: offer.room?.description?.text || offer.room?.typeEstimated?.category,
-      } as HotelResult;
+      });
+
+      return parsed.success ? parsed.data : null;
     })
-    .filter((x: HotelResult | null) => x !== null && !Number.isNaN(x!.priceTotal) && x!.offerId);
+    .filter((hotel: HotelResult | null): hotel is HotelResult => hotel !== null);
 
   const filteredResults = results.filter((hotel) => {
     const pricePerNight = hotel.priceTotal / nights;

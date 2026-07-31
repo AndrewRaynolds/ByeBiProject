@@ -45,6 +45,10 @@ vi.mock('./amadeus-flights', () => ({
   ])
 }));
 
+vi.mock('./amadeus-hotels', () => ({
+  searchHotels: vi.fn().mockResolvedValue([]),
+}));
+
 // Mock cityMapping
 vi.mock('./cityMapping', () => ({
   cityToIata: vi.fn((city: string) => {
@@ -60,7 +64,14 @@ vi.mock('./cityMapping', () => ({
       'BCN': 'Barcelona'
     };
     return mapping[iata] || null;
-  })
+  }),
+  resolveIataCode: vi.fn((value: string) => {
+    const mapping: Record<string, string> = {
+      'Rome': 'ROM',
+      'Barcelona': 'BCN'
+    };
+    return mapping[value] || (/^[A-Z]{3}$/i.test(value) ? value.toUpperCase() : null);
+  }),
 }));
 
 // Helper to create mock async iterator for streaming
@@ -112,7 +123,7 @@ function createMockStream(events: Array<{
 
 describe('streamOpenAIChatCompletionWithTools integration', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockCreate.mockReset();
   });
 
   it('streams content without tool calls', async () => {
@@ -139,26 +150,18 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     expect(fullContent).toBe('Hello! How can I help you today?');
   });
 
-  it('handles single tool call and continues conversation', async () => {
+  it('executes a checkout tool and short-circuits with a local response', async () => {
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');
 
-    // First call: model returns tool call for set_destination
     mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'Barcelona sounds great! ' },
       {
         tool_call: {
           id: 'call_123',
-          name: 'set_destination',
-          arguments: '{"city":"Barcelona"}'
+          name: 'unlock_checkout',
+          arguments: '{}'
         }
       },
       { finish: 'tool_calls' }
-    ]));
-
-    // Second call: model responds naturally after receiving tool result
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'When would you like to travel?' },
-      { finish: 'stop' }
     ]));
 
     const chunks: StreamChunk[] = [];
@@ -170,25 +173,26 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       chunks.push(chunk);
     }
 
-    // Verify OpenAI was called twice (initial + after tool result)
-    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
 
     // Verify tool call was emitted
     const toolCallChunks = chunks.filter(c => c.type === 'tool_call');
     expect(toolCallChunks).toHaveLength(1);
-    expect((toolCallChunks[0] as any).toolCall.name).toBe('set_destination');
+    expect((toolCallChunks[0] as any).toolCall.name).toBe('unlock_checkout');
 
     // Verify tool result was emitted
     const toolResultChunks = chunks.filter(c => c.type === 'tool_result');
     expect(toolResultChunks).toHaveLength(1);
-    expect((toolResultChunks[0] as any).name).toBe('set_destination');
-    expect((toolResultChunks[0] as any).result).toEqual({ success: true, destination: 'Barcelona' });
+    expect((toolResultChunks[0] as any).name).toBe('unlock_checkout');
+    expect((toolResultChunks[0] as any).result).toEqual({
+      success: true,
+      checkout_unlocked: true,
+    });
 
     // Verify final content includes follow-up question
     const contentChunks = chunks.filter(c => c.type === 'content');
     const fullContent = contentChunks.map(c => (c as any).content).join('');
-    expect(fullContent).toContain('Barcelona');
-    expect(fullContent).toContain('travel');
+    expect(fullContent.length).toBeGreaterThan(0);
   });
 
   it('handles search_flights tool with API call', async () => {
@@ -213,12 +217,6 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       { finish: 'tool_calls' }
     ]));
 
-    // Second call: model presents flight options
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'I found a great flight with Vueling!' },
-      { finish: 'stop' }
-    ]));
-
     const chunks: StreamChunk[] = [];
     for await (const chunk of streamOpenAIChatCompletionWithTools(
       'Find flights from Rome to Barcelona June 15-20 for 2 people',
@@ -228,46 +226,36 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       chunks.push(chunk);
     }
 
-    // Verify tool result contains flight data
     const toolResultChunks = chunks.filter(c => c.type === 'tool_result');
     expect(toolResultChunks).toHaveLength(1);
 
     const flightResult = (toolResultChunks[0] as any).result;
-    expect(flightResult.flights).toBeDefined();
-    expect(flightResult.flights.length).toBeGreaterThan(0);
-    expect(flightResult.flights[0].airline).toBe('Vueling');
+    expect(flightResult.checkoutReady).toBe(true);
+    expect(flightResult.checkoutUrl).toContain('https://www.aviasales.com/search/');
+    expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('handles multiple tool calls in sequence', async () => {
+  it('continues when a tool requires an OpenAI follow-up', async () => {
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');
 
-    // First call: set_destination
     mockCreate.mockResolvedValueOnce(createMockStream([
       {
         tool_call: {
           id: 'call_1',
-          name: 'set_destination',
-          arguments: '{"city":"Barcelona"}'
+          name: 'search_hotels',
+          arguments: JSON.stringify({
+            destination: 'Barcelona',
+            check_in_date: '2027-06-15',
+            check_out_date: '2027-06-20',
+            guests: 2,
+          })
         }
       },
       { finish: 'tool_calls' }
     ]));
 
-    // Second call: set_origin
     mockCreate.mockResolvedValueOnce(createMockStream([
-      {
-        tool_call: {
-          id: 'call_2',
-          name: 'set_origin',
-          arguments: '{"city":"Rome"}'
-        }
-      },
-      { finish: 'tool_calls' }
-    ]));
-
-    // Third call: final response
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'When are you planning to travel?' },
+      { content: 'Here are the available hotels.' },
       { finish: 'stop' }
     ]));
 
@@ -280,14 +268,11 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       chunks.push(chunk);
     }
 
-    // Verify OpenAI was called 3 times
-    expect(mockCreate).toHaveBeenCalledTimes(3);
+    expect(mockCreate).toHaveBeenCalledTimes(2);
 
-    // Verify both tool calls were emitted
     const toolCallChunks = chunks.filter(c => c.type === 'tool_call');
-    expect(toolCallChunks).toHaveLength(2);
-    expect((toolCallChunks[0] as any).toolCall.name).toBe('set_destination');
-    expect((toolCallChunks[1] as any).toolCall.name).toBe('set_origin');
+    expect(toolCallChunks).toHaveLength(1);
+    expect((toolCallChunks[0] as any).toolCall.name).toBe('search_hotels');
   });
 
   it('stops loop when no tool calls are returned', async () => {
@@ -311,6 +296,48 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     expect(toolCallChunks).toHaveLength(0);
   });
 
+  it('does not call OpenAI when the request is already aborted', async () => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const controller = new AbortController();
+    controller.abort();
+
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools(
+      'Plan my trip',
+      {},
+      [],
+      controller.signal,
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual([]);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('forwards the cancellation signal to the OpenAI SDK', async () => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const controller = new AbortController();
+    mockCreate.mockResolvedValueOnce(createMockStream([
+      { content: 'Ready to help.' },
+      { finish: 'stop' },
+    ]));
+
+    for await (const _chunk of streamOpenAIChatCompletionWithTools(
+      'Plan my trip',
+      {},
+      [],
+      controller.signal,
+    )) {
+      // Consume the stream.
+    }
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.any(Object),
+      { signal: controller.signal },
+    );
+  });
+
   it('handles unlock_checkout tool', async () => {
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');
 
@@ -324,11 +351,6 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
         }
       },
       { finish: 'tool_calls' }
-    ]));
-
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'Your checkout is ready!' },
-      { finish: 'stop' }
     ]));
 
     const chunks: StreamChunk[] = [];
@@ -346,6 +368,7 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       success: true,
       checkout_unlocked: true
     });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
   it('passes context to system prompt', async () => {
