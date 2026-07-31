@@ -21,6 +21,10 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
+import {
+  generatedItineraryRequestSchema,
+  getTripDurationDays,
+} from "./generatedItinerary";
 
 
 const checkoutItemSchema = z.object({
@@ -686,13 +690,17 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
   app.post("/api/generated-itineraries", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { destination, startDate, endDate, participants, eventType, selectedExperiences } = req.body;
-      
-      if (!destination || !startDate || !endDate || !participants || !eventType) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
+      const {
+        destination,
+        startDate,
+        endDate,
+        participants,
+        eventType,
+        selectedExperiences,
+      } = generatedItineraryRequestSchema.parse(req.body);
 
       const userId = req.supabaseUser!.id;
+      const durationDays = getTripDurationDays(startDate, endDate);
 
       // Map destination to IATA code for flight search (using centralized mapping)
       const destIATA = cityToIata(destination);
@@ -739,16 +747,22 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       // Generate daily activities based on selected experiences (Mock)
   
-      const dailyActivities = Array.from({ length: Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) }, (_, i) => ({
+      const activityChoices = selectedExperiences.length > 0
+        ? selectedExperiences.slice(0, 2)
+        : ['Esplorazione città', 'Vita notturna'];
+      const dailyActivities = Array.from({ length: durationDays }, (_, i) => ({
         day: i + 1,
-        activities: selectedExperiences?.slice(0, 2) || ['Esplorazione città', 'Vita notturna']
+        activities: activityChoices,
       }));
 
       // Calculate total price (using mock prices)
-      const flightPrice = flights ? flights.price * participants : 200 * participants;
+      const unitFlightPrice = flights ? Number(flights.price) : 200;
+      const flightPrice = Number.isFinite(unitFlightPrice)
+        ? unitFlightPrice * participants
+        : 200 * participants;
       const hotelPrice = hotel.pricePerNight * dailyActivities.length;
       const activitiesPrice = dailyActivities.length * 150 * participants;
-      const totalPrice = flightPrice + hotelPrice + activitiesPrice;
+      const totalPrice = Math.round(flightPrice + hotelPrice + activitiesPrice);
 
       // Save itinerary
       const itinerary = await storage.createGeneratedItinerary({
@@ -758,7 +772,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         endDate,
         participants,
         eventType,
-        selectedExperiences: selectedExperiences || [],
+        selectedExperiences,
         flights,
         hotel,
         dailyActivities,
@@ -768,14 +782,23 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       res.json(itinerary);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Invalid itinerary parameters",
+          details: fromZodError(error).message,
+        });
+      }
       console.error("Error creating itinerary:", error);
-      res.status(500).json({ error: "Failed to create itinerary" });
+      return res.status(500).json({ error: "Failed to create itinerary" });
     }
   });
 
   app.get("/api/generated-itineraries/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: "Invalid itinerary ID" });
+      }
       const itinerary = await storage.getGeneratedItinerary(id);
       
       if (!itinerary) {
