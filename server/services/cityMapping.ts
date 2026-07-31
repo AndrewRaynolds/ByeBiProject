@@ -375,6 +375,15 @@ export function cityToIata(cityName: string | undefined | null): string | null {
   return CITY_TO_IATA[normalized] || null;
 }
 
+export function resolveIataCode(value: string | undefined | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const parenthesizedCode = trimmed.match(/\(([A-Z]{3})\)/i)?.[1];
+  if (parenthesizedCode) return parenthesizedCode.toUpperCase();
+  if (/^[A-Z]{3}$/i.test(trimmed)) return trimmed.toUpperCase();
+  return cityToIata(trimmed);
+}
+
 export function iataToCity(iataCode: string | undefined | null): string {
   if (!iataCode) return "Unknown";
   return IATA_TO_CITY[iataCode.toUpperCase()] || iataCode;

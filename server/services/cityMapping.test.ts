@@ -1,12 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import {
   cityToIata,
+  resolveIataCode,
   iataToCity,
   getAllCities,
   getAllIataCodes,
   CITY_TO_IATA,
   IATA_TO_CITY,
 } from './cityMapping';
+
+describe('resolveIataCode', () => {
+  it('accepts mapped cities, direct codes, and parenthesized airport codes', () => {
+    expect(resolveIataCode('Roma')).toBe('ROM');
+    expect(resolveIataCode(' bcn ')).toBe('BCN');
+    expect(resolveIataCode('Fiumicino (FCO)')).toBe('FCO');
+  });
+
+  it('does not invent codes for unknown cities', () => {
+    expect(resolveIataCode('UnknownCity')).toBeNull();
+    expect(resolveIataCode('')).toBeNull();
+  });
+});
 
 describe('cityToIata', () => {
   describe('Italian city names', () => {

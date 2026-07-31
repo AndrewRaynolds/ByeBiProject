@@ -42,7 +42,20 @@ vi.mock('./cityMapping', () => ({
       'PRG': 'Prague'
     };
     return mapping[iata] || null;
-  })
+  }),
+  resolveIataCode: vi.fn((value: string) => {
+    const parenthesized = value.match(/\(([A-Z]{3})\)/i)?.[1];
+    if (parenthesized) return parenthesized.toUpperCase();
+    if (/^[A-Z]{3}$/i.test(value.trim())) return value.trim().toUpperCase();
+    const mapping: Record<string, string> = {
+      'Rome': 'ROM',
+      'Barcelona': 'BCN',
+      'Milan': 'MIL',
+      'Ibiza': 'IBZ',
+      'Prague': 'PRG'
+    };
+    return mapping[value] || null;
+  }),
 }));
 
 // Import after mocks are set up
@@ -84,7 +97,7 @@ describe('executeToolCall', () => {
       );
     });
 
-    it('uses city substring for unknown cities', async () => {
+    it('rejects unknown cities instead of inventing IATA codes', async () => {
       const result = await executeToolCall('search_flights', {
         origin: 'UnknownCity',
         destination: 'AnotherCity',
@@ -93,10 +106,7 @@ describe('executeToolCall', () => {
         passengers: 2
       }, {});
 
-      expect(result).toMatchObject({
-        origin: 'UNK',
-        destination: 'ANO',
-      });
+      expect(result).toEqual({ error: 'Unsupported origin or destination' });
     });
 
     it('extracts IATA code from parentheses format like "Fiumicino (FCO)"', async () => {

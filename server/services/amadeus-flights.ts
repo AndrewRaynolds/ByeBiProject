@@ -1,5 +1,10 @@
 // server/services/amadeus-flights.ts
 import axios from "axios";
+import {
+  flightResultSchema,
+  type FlightResult,
+  type FlightSegment,
+} from "@shared/flightSchemas";
 
 export type FlightSearchParams = {
   originCode: string;      // IATA code, e.g., "FCO"
@@ -10,33 +15,7 @@ export type FlightSearchParams = {
   currency?: string;       // "EUR"
 };
 
-export type FlightSegment = {
-  departure: {
-    iataCode: string;
-    terminal?: string;
-    at: string; // ISO datetime
-  };
-  arrival: {
-    iataCode: string;
-    terminal?: string;
-    at: string;
-  };
-  carrierCode: string;
-  carrierName?: string;
-  flightNumber: string;
-  duration: string; // e.g., "PT2H30M"
-};
-
-export type FlightResult = {
-  id: string;
-  price: number;
-  currency: string;
-  outbound: FlightSegment[];
-  inbound?: FlightSegment[];
-  airlines: string[];
-  totalDuration: string;
-  stops: number;
-};
+export type { FlightResult, FlightSegment } from "@shared/flightSchemas";
 
 const isProd = process.env.NODE_ENV === "production";
 const useAmadeusLive = process.env.AMADEUS_ENV === "production";
@@ -129,14 +108,6 @@ export async function searchFlights(
 
   const token = await getAmadeusToken();
 
-  console.log("🔍 Amadeus Flight Search request:", {
-    originCode,
-    destinationCode,
-    departureDate,
-    returnDate,
-    adults,
-  });
-
   try {
     const queryParams: Record<string, string | number> = {
       originLocationCode: originCode,
@@ -159,22 +130,19 @@ export async function searchFlights(
       }
     );
 
-    console.log("📦 Amadeus Flight Search response:", {
-      status: resp.status,
-      count: resp.data?.data?.length || 0,
-    });
-
     const offers = resp.data?.data || [];
     const dictionaries = resp.data?.dictionaries || {};
 
-    const allFlights = offers.map((offer: any) => transformFlightOffer(offer, dictionaries, currency));
+    const allFlights = offers
+      .map((offer: any) => transformFlightOffer(offer, dictionaries, currency))
+      .filter((flight: FlightResult | null): flight is FlightResult => flight !== null);
 
     // Deduplicate flights - keep only one per airline/price/stops combination
     // This collapses multiple departure times into a single representative option
     const seen = new Set<string>();
     const uniqueFlights = allFlights.filter((f: FlightResult) => {
       const key = [
-        f.airlines.sort().join(","),
+        [...f.airlines].sort().join(","),
         f.price.toFixed(2),
         f.stops
       ].join("|");
@@ -186,18 +154,13 @@ export async function searchFlights(
       return true;
     });
 
-    console.log(`🔄 Deduplicated: ${allFlights.length} → ${uniqueFlights.length} flights`);
-
     return uniqueFlights;
-  } catch (error: any) {
-    console.error("❌ Amadeus Flight Search error:", JSON.stringify({
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    }, null, 2));
-
-    // Return empty array on error (don't throw)
-    return [];
+  } catch (error: unknown) {
+    console.error(
+      "Amadeus flight search error:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    throw error;
   }
 }
 
@@ -205,7 +168,7 @@ function transformFlightOffer(
   offer: any,
   dictionaries: any,
   currency: string
-): FlightResult {
+): FlightResult | null {
   const itineraries = offer.itineraries || [];
   const outboundItinerary = itineraries[0];
   const inboundItinerary = itineraries[1];
@@ -233,7 +196,7 @@ function transformFlightOffer(
       code
   );
 
-  return {
+  const result = flightResultSchema.safeParse({
     id: offer.id,
     price: parseFloat(offer.price?.total || "0"),
     currency: offer.price?.currency || currency,
@@ -242,7 +205,9 @@ function transformFlightOffer(
     airlines,
     totalDuration: outboundItinerary?.duration || "",
     stops: Math.max(0, outboundSegments.length - 1),
-  };
+  });
+
+  return result.success ? result.data : null;
 }
 
 function transformSegment(seg: any, dictionaries: any): FlightSegment {

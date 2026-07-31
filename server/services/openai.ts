@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 import { generateFallbackItinerary } from "./fallback-itinerary";
+import { buildAviasalesUrl } from "@shared/flightSchemas";
+import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
+import { resolveIataCode } from "./cityMapping";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -270,11 +273,7 @@ type ToolValidationResult = {
 };
 
 function isValidISODate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(parsed.getTime());
+  return normalizeTripDate(value) === value;
 }
 
 function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: string } {
@@ -298,6 +297,12 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
         return {
           valid: false,
           message: "I need your travel dates to search flights. When are you going and coming back?",
+        };
+      }
+      if (!isValidDateRange(depDate, retDate) || calculateTripDays(depDate, retDate) > 30) {
+        return {
+          valid: false,
+          message: "The return date must be after departure and the trip cannot exceed 30 days.",
         };
       }
 
@@ -404,52 +409,27 @@ export async function executeToolCall(
 ): Promise<Record<string, unknown>> {
   switch (name) {
     case "search_flights": {
-      const { cityToIata } = await import("./cityMapping");
-
-      // Helper to extract IATA code from strings like "Fiumicino (FCO)" or just use cityToIata
-      const extractIata = (input: string): string => {
-        // First try to extract IATA from parentheses, e.g., "Fiumicino (FCO)" -> "FCO"
-        const parenMatch = input.match(/\(([A-Z]{3})\)/i);
-        if (parenMatch) {
-          return parenMatch[1].toUpperCase();
-        }
-        // Then try cityToIata lookup
-        const mapped = cityToIata(input);
-        if (mapped) {
-          return mapped;
-        }
-        // Finally, if it looks like a 3-letter code already, use it
-        if (/^[A-Z]{3}$/i.test(input.trim())) {
-          return input.trim().toUpperCase();
-        }
-        // Last resort: take first 3 characters
-        return input.substring(0, 3).toUpperCase();
-      };
-
       const originCity = typeof args.origin === "string" ? args.origin : "";
       const destCity = typeof args.destination === "string" ? args.destination : "";
-      const originIata = extractIata(originCity);
-      const destIata = extractIata(destCity);
+      const originIata = resolveIataCode(originCity);
+      const destIata = resolveIataCode(destCity);
       const numPassengers = typeof args.passengers === "number" ? args.passengers : 1;
       const departureDate = typeof args.departure_date === "string" ? args.departure_date : "";
       const returnDate = typeof args.return_date === "string" ? args.return_date : undefined;
 
-      console.log("🔍 prepare Aviasales checkout called with:", {
-        originCity,
-        destCity,
-        originIata,
-        destIata,
-        departure_date: departureDate,
-        return_date: returnDate,
-        passengers: numPassengers
-      });
+      if (!originIata || !destIata) {
+        return { error: "Unsupported origin or destination" };
+      }
 
-      const depDay = departureDate.slice(8, 10);
-      const depMonth = departureDate.slice(5, 7);
-      const retDate = returnDate || departureDate;
-      const retDay = retDate.slice(8, 10);
-      const retMonth = retDate.slice(5, 7);
-      const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numPassengers}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+      const checkoutUrl = buildAviasalesUrl({
+        originIata,
+        destinationIata: destIata,
+        departDate: departureDate,
+        returnDate,
+        adults: numPassengers,
+        partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
+      });
+      if (!checkoutUrl) return { error: "Invalid flight checkout parameters" };
 
       return {
         checkoutReady: true,

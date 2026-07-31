@@ -64,7 +64,14 @@ vi.mock('./cityMapping', () => ({
       'BCN': 'Barcelona'
     };
     return mapping[iata] || null;
-  })
+  }),
+  resolveIataCode: vi.fn((value: string) => {
+    const mapping: Record<string, string> = {
+      'Rome': 'ROM',
+      'Barcelona': 'BCN'
+    };
+    return mapping[value] || (/^[A-Z]{3}$/i.test(value) ? value.toUpperCase() : null);
+  }),
 }));
 
 // Helper to create mock async iterator for streaming

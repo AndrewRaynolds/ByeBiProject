@@ -14,7 +14,7 @@ import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
 import { imageSearchService } from "./services/image-search";
 import { searchFlights } from "./services/amadeus-flights";
-import { cityToIata, iataToCity } from "./services/cityMapping";
+import { cityToIata, iataToCity, resolveIataCode } from "./services/cityMapping";
 import { searchHotels } from "./services/amadeus-hotels";
 import { getStoreProducts, getProductDetail, getShippingRates } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -22,6 +22,7 @@ import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
 import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
+import { buildAviasalesUrl, flightSearchQuerySchema } from "@shared/flightSchemas";
 
 
 const checkoutItemSchema = z.object({
@@ -923,71 +924,44 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
   // Flights search endpoint con checkoutUrl reali
   app.get("/api/flights/search", async (req: Request, res: Response) => {
+    const parsedQuery = flightSearchQuerySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      return res.status(400).json({ error: "Invalid flight search parameters" });
+    }
+
+    const { origin, destination, departDate, returnDate, passengers, currency } = parsedQuery.data;
+    const originIata = resolveIataCode(origin);
+    const destIata = resolveIataCode(destination);
+    if (!originIata || !destIata) {
+      return res.status(400).json({ error: "Unsupported origin or destination" });
+    }
+
+    const numAdults = passengers > 9 ? 1 : passengers;
+
     try {
-      const { origin, destination, departDate, returnDate, passengers, currency } = req.query;
-
-      console.log("🔍 /api/flights/search called with:", { origin, destination, departDate, returnDate, passengers });
-
-      if (!origin || !destination) {
-        return res.status(400).json({
-          error: "origin e destination sono obbligatori",
-        });
-      }
-
-      // Helper to extract IATA code from strings like "Fiumicino (FCO)" or just use cityToIata
-      const extractIata = (input: string): string => {
-        // First try to extract IATA from parentheses, e.g., "Fiumicino (FCO)" -> "FCO"
-        const parenMatch = input.match(/\(([A-Z]{3})\)/i);
-        if (parenMatch) {
-          return parenMatch[1].toUpperCase();
-        }
-        // Then try cityToIata lookup
-        const mapped = cityToIata(input);
-        if (mapped) {
-          return mapped;
-        }
-        // Finally, if it looks like a 3-letter code already, use it
-        if (/^[A-Z]{3}$/i.test(input.trim())) {
-          return input.trim().toUpperCase();
-        }
-        // Last resort: take first 3 characters
-        return input.substring(0, 3).toUpperCase();
-      };
-
-      const originIata = extractIata(String(origin));
-      const destIata = extractIata(String(destination));
-
-      console.log("✈️ Resolved IATA codes:", { originIata, destIata });
-
-      let numAdults = passengers ? parseInt(String(passengers), 10) : 1;
-      if (numAdults > 9) {
-        console.log(`👥 /api/flights/search: capping passengers ${numAdults} → 1 (Amadeus max 9)`);
-        numAdults = 1;
-      }
 
       const flightResults = await searchFlights({
         originCode: originIata,
         destinationCode: destIata,
-        departureDate: departDate ? String(departDate) : "",
-        returnDate: returnDate ? String(returnDate) : undefined,
+        departureDate: departDate,
+        returnDate,
         adults: numAdults,
-        currency: currency ? String(currency) : "EUR",
+        currency,
       });
-
-      console.log("📦 Amadeus returned", flightResults.length, "flights");
 
       // Transform to match expected client format + add Aviasales checkout URLs
       const flights = flightResults
         .slice(0, 5)
         .map((f, idx) => {
-          const depDate = f.outbound[0]?.departure.at?.slice(0, 10) || String(departDate);
-          const retDate = f.inbound?.[0]?.departure.at?.slice(0, 10) || String(returnDate) || depDate;
-          const depDay = depDate.slice(8, 10);
-          const depMonth = depDate.slice(5, 7);
-          const retDay = retDate.slice(8, 10);
-          const retMonth = retDate.slice(5, 7);
-
-          const checkoutUrl = `https://www.aviasales.com/search/${originIata}${depDay}${depMonth}${destIata}${retDay}${retMonth}${numAdults}?marker=${process.env.AVIASALES_PARTNER_ID || "byebi"}`;
+          const checkoutUrl = buildAviasalesUrl({
+            originIata,
+            destinationIata: destIata,
+            departDate,
+            returnDate,
+            adults: numAdults,
+            partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
+          });
+          if (!checkoutUrl) return null;
 
           return {
             flightId: `flight-${idx + 1}`,
@@ -1002,20 +976,24 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
             bookingFlow: "REDIRECT" as const,
             checkoutUrl,
           };
-        });
+        })
+        .filter((flight): flight is NonNullable<typeof flight> => flight !== null);
 
       return res.json({
         origin: originIata,
         destination: destIata,
         departDate,
+        returnDate,
+        passengers,
+        currency,
         flights,
       });
-    } catch (err: any) {
-      console.error("Flight search error:", err.response?.data || err.message);
-      return res.status(500).json({
-        error: "Flight search failed",
-        details: err.message,
-      });
+    } catch (error: unknown) {
+      console.error(
+        "Flight search error:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      return res.status(502).json({ error: "Flight service temporarily unavailable" });
     }
   });
 

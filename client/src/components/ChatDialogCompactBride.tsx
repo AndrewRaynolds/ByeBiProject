@@ -443,13 +443,13 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         ];
 
     // Build Aviasales URL using user's dates (not flight API dates)
-    const originIata = getCityIata(userOriginCity) || 'FCO';
+    const originIata = getCityIata(userOriginCity) || '';
     const destIata = getCityIata(selectedDestination);
     
     // Build URL with user dates, fallback to existing flight checkoutUrl if helper fails
     let aviasalesUrl = buildAviasalesUrl({
       originIata,
-      destinationIata: destIata || selectedDestination.substring(0, 3).toUpperCase(),
+      destinationIata: destIata || '',
       departDate: tripDetails.startDate,
       returnDate: tripDetails.endDate,
       adults: tripDetails.people || 2
@@ -572,11 +572,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
           passengers || currentState.tripDetails.people || 2;
 
         if (searchOrigin && searchDestination && searchDepartDate) {
-          const originIata = getCityIata(searchOrigin) || 'FCO';
+          const originIata = getCityIata(searchOrigin) || '';
           const destIata = getCityIata(searchDestination);
           const aviasalesUrl = buildAviasalesUrl({
             originIata,
-            destinationIata: destIata || searchDestination.substring(0, 3).toUpperCase(),
+            destinationIata: destIata || '',
             departDate: searchDepartDate,
             returnDate: searchReturnDate || searchDepartDate,
             adults: searchPassengers,
