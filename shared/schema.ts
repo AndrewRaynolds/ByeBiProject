@@ -59,33 +59,6 @@ export const insertTripSchema = createInsertSchema(trips).pick({
   includeMerch: true,
 });
 
-// Itinerary model
-export const itineraries = pgTable("itineraries", {
-  id: serial("id").primaryKey(),
-  tripId: integer("trip_id").notNull(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  duration: text("duration").notNull(),
-  price: integer("price").notNull(),
-  image: text("image").notNull(),
-  rating: text("rating").notNull(),
-  highlights: text("highlights").array(),
-  includes: text("includes").array(),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const insertItinerarySchema = createInsertSchema(itineraries).pick({
-  tripId: true,
-  name: true,
-  description: true,
-  duration: true,
-  price: true,
-  image: true,
-  rating: true,
-  highlights: true,
-  includes: true,
-});
-
 // Blog post model
 export const blogPosts = pgTable("blog_posts", {
   id: serial("id").primaryKey(),
@@ -227,9 +200,6 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Trip = typeof trips.$inferSelect;
 export type InsertTrip = z.infer<typeof insertTripSchema>;
-
-export type Itinerary = typeof itineraries.$inferSelect;
-export type InsertItinerary = z.infer<typeof insertItinerarySchema>;
 
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;

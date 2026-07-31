@@ -1,8 +1,8 @@
 // Updated storage with only the 10 specified destinations
-import { 
-  User, Trip, Itinerary, BlogPost, Merchandise, Destination, Experience, 
-  InsertUser, InsertTrip, InsertItinerary, InsertBlogPost, InsertMerchandise, 
-  InsertDestination, InsertExperience, ExpenseGroup, Expense, 
+import {
+  User, Trip, BlogPost, Merchandise, Destination, Experience,
+  InsertUser, InsertTrip, InsertBlogPost, InsertMerchandise,
+  InsertDestination, InsertExperience, ExpenseGroup, Expense,
   InsertExpenseGroup, InsertExpense, GeneratedItinerary, InsertGeneratedItinerary,
   expenseGroups as expenseGroupsTable,
   expenses as expensesTable,
@@ -29,11 +29,6 @@ export interface IStorage {
   getTrip(id: number): Promise<Trip | undefined>;
   getTripsByUserId(userId: string): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
-
-  // Itinerary operations
-  getItinerary(id: number): Promise<Itinerary | undefined>;
-  getItinerariesByTripId(tripId: number): Promise<Itinerary[]>;
-  createItinerary(itinerary: InsertItinerary): Promise<Itinerary>;
 
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
@@ -85,7 +80,6 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private trips: Map<number, Trip>;
-  private itineraries: Map<number, Itinerary>;
   private blogPosts: Map<number, BlogPost>;
   private merchandiseItems: Map<number, Merchandise>;
   private destinations: Map<number, Destination>;
@@ -97,7 +91,6 @@ export class MemStorage implements IStorage {
 
   private userId: number;
   private tripId: number;
-  private itineraryId: number;
   private blogPostId: number;
   private merchandiseId: number;
   private destinationId: number;
@@ -109,7 +102,6 @@ export class MemStorage implements IStorage {
   constructor() {
     this.users = new Map();
     this.trips = new Map();
-    this.itineraries = new Map();
     this.blogPosts = new Map();
     this.merchandiseItems = new Map();
     this.destinations = new Map();
@@ -121,7 +113,6 @@ export class MemStorage implements IStorage {
 
     this.userId = 1;
     this.tripId = 1;
-    this.itineraryId = 1;
     this.blogPostId = 1;
     this.merchandiseId = 1;
     this.destinationId = 1;
@@ -213,27 +204,6 @@ export class MemStorage implements IStorage {
     };
     this.trips.set(trip.id, trip);
     return trip;
-  }
-
-  // Itinerary operations
-  async getItinerary(id: number): Promise<Itinerary | undefined> {
-    return this.itineraries.get(id);
-  }
-
-  async getItinerariesByTripId(tripId: number): Promise<Itinerary[]> {
-    return Array.from(this.itineraries.values()).filter(itinerary => itinerary.tripId === tripId);
-  }
-
-  async createItinerary(insertItinerary: InsertItinerary): Promise<Itinerary> {
-    const itinerary: Itinerary = { 
-      id: this.itineraryId++, 
-      ...insertItinerary,
-      highlights: insertItinerary.highlights ?? null,
-      includes: insertItinerary.includes ?? null,
-      createdAt: new Date(),
-    };
-    this.itineraries.set(itinerary.id, itinerary);
-    return itinerary;
   }
 
   // Blog post operations

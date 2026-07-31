@@ -20,7 +20,7 @@ import { getStoreProducts, getProductDetail, getShippingRates } from "./services
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
-import { readOwnedTripItineraries } from "./tripItineraries";
+import { buildItineraryPreview } from "./itineraryPreview";
 
 
 const premiumStatusMap = new Map<string, boolean>();
@@ -280,19 +280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const trips = await storage.getTripsByUserId(requestedUserId);
       return res.status(200).json(trips);
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.get("/api/trips/:id/itineraries", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const result = await readOwnedTripItineraries(
-        req.params.id,
-        req.supabaseUser!.id,
-        storage,
-      );
-      return res.status(result.status).json(result.body);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
     }
@@ -659,24 +646,21 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 ⏰ L'itinerario dettagliato arriverà a breve!`;
       }
       
-      // Crea un itinerario nel storage per persistenza
-      const itineraryToSave = {
-        tripId: req.body.tripId || 0,
-        name: `Addio al Celibato a ${requestData.citta}`,
-        description: itineraryContent,
-        duration: `${Math.ceil((new Date(requestData.date.endDate).getTime() - new Date(requestData.date.startDate).getTime()) / (1000 * 60 * 60 * 24))} giorni`,
-        price: requestData.budget === "economico" ? 299 : requestData.budget === "medio" ? 499 : 799,
-        image: `https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80`,
-        rating: "5.0",
-        highlights: [`${requestData.persone} persone`, `Budget ${requestData.budget}`, `Destinazione: ${requestData.citta}`],
-        includes: ["Itinerario AI personalizzato", "Consigli locali", "Pianificazione ottimizzata"]
-      };
-      
-      const savedItinerary = await storage.createItinerary(itineraryToSave);
+      // This public preview is intentionally not persisted. Authenticated,
+      // durable itineraries use /api/generated-itineraries.
+      const itineraryPreview = buildItineraryPreview({
+        city: requestData.citta,
+        startDate: requestData.date.startDate,
+        endDate: requestData.date.endDate,
+        people: requestData.persone,
+        interests: requestData.interessi,
+        budget: requestData.budget,
+        content: itineraryContent,
+      });
       
       return res.status(200).json({
         success: true,
-        itinerary: savedItinerary,
+        itinerary: itineraryPreview,
         aiContent: itineraryContent,
         zapierProcessed: !!zapierResponse,
         message: zapierResponse ? "Itinerario generato con AI" : "Itinerario in elaborazione tramite Zapier"
