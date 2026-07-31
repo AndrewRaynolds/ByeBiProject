@@ -2,7 +2,6 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import amadeusDebugRoute from "./routes/amadeus-debug";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync, hasStripeCredentials } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
@@ -90,7 +89,6 @@ app.use("/api/printful", commerceLimiter);
 app.use("/api/hotels", externalApiLimiter);
 app.use("/api/flights", externalApiLimiter);
 app.use("/api/images", externalApiLimiter);
-app.use("/api/amadeus", amadeusDebugRoute);
 
 app.use((req, res, next) => {
   const start = Date.now();

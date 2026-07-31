@@ -58,6 +58,11 @@ vi.mock('./services/amadeus-hotels', () => ({
   bookHotel: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+// Mock Amadeus flights to keep route imports independent from external credentials
+vi.mock('./services/amadeus-flights', () => ({
+  searchFlights: vi.fn().mockResolvedValue([]),
+}));
+
 describe('Express App', () => {
   describe('app creation', () => {
     it('creates an express application', () => {

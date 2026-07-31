@@ -871,14 +871,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
     }
   });
 
-  // Amadeus Hotels - test ping endpoint (development only)
-  app.get("/api/hotels/test-ping", (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === "production") {
-      return res.status(403).json({ error: "Test endpoint disabled in production" });
-    }
-    res.json({ ok: true, message: "Hotels route is alive" });
-  });
-
   // Amadeus Hotels - search endpoint
   app.get("/api/hotels/search", async (req: Request, res: Response) => {
     const parsedQuery = hotelSearchQuerySchema.safeParse(req.query);
