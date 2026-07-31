@@ -177,8 +177,6 @@ function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
       return apiRequest("POST", "/api/blog-posts", {
         title: resolvedTitle,
         content: storyContent,
-        image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80",
-        isPremium: false,
         location: selectedDestination,
         category: selectedCategory,
       });
@@ -467,7 +465,7 @@ export default function SecretBlogPage() {
     return Array.from(locs);
   }, [blogPosts]);
 
-  const totalStories = (blogPosts?.length ?? 0) + 197;
+  const totalStories = blogPosts?.length ?? 0;
 
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';

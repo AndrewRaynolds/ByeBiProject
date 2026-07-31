@@ -36,6 +36,18 @@ describe('expense group ownership', () => {
     await expect(storage.close()).resolves.toBeUndefined();
   });
 
+  it('keeps the default Secret Blog stories in memory mode', async () => {
+    const storage = new MemStorage();
+
+    const posts = await storage.getAllBlogPosts();
+    expect(posts).toHaveLength(3);
+    expect(posts.map(post => post.location)).toEqual([
+      'Roma',
+      'Ibiza',
+      'Cracovia',
+    ]);
+  });
+
   it('isolates groups between users', async () => {
     const storage = new MemStorage();
     const group = await storage.createExpenseGroup(

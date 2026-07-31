@@ -6,7 +6,6 @@ import {
   insertTripSchema, 
   insertExpenseGroupSchema, 
   insertExpenseSchema,
-  insertBlogPostSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -19,6 +18,8 @@ import { cityToIata, iataToCity } from "./services/cityMapping";
 import { searchHotels } from "./services/amadeus-hotels";
 import { getStoreProducts, getProductDetail, getShippingRates } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { buildPublicBlogPost } from "./blog";
+import { blogSubmissionLimiter } from "./security";
 
 
 const premiumStatusMap = new Map<string, boolean>();
@@ -383,9 +384,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/blog-posts", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+  app.post("/api/blog-posts", blogSubmissionLimiter, isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const validatedData = insertBlogPostSchema.parse(req.body);
+      const validatedData = buildPublicBlogPost(req.body);
       const blogPost = await storage.createBlogPost(validatedData);
       return res.status(201).json(blogPost);
     } catch (error) {

@@ -33,6 +33,13 @@ export const commerceLimiter = rateLimit({
   message: { message: "Commerce request limit reached. Please try again later." },
 });
 
+export const blogSubmissionLimiter = rateLimit({
+  ...commonOptions,
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  message: { message: "Story submission limit reached. Please try again later." },
+});
+
 export const webhookLimiter = rateLimit({
   ...commonOptions,
   windowMs: 60 * 1000,

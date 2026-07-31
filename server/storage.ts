@@ -7,10 +7,11 @@ import {
   expenseGroups as expenseGroupsTable,
   expenses as expensesTable,
   generatedItineraries as generatedItinerariesTable,
+  blogPosts as blogPostsTable,
   stripeWebhookEvents,
   trips as tripsTable,
 } from "@shared/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
 export interface IStorage {
@@ -249,6 +250,10 @@ export class MemStorage implements IStorage {
   }
 
   async createBlogPost(insertBlogPost: InsertBlogPost): Promise<BlogPost> {
+    return this.storeBlogPost(insertBlogPost);
+  }
+
+  private storeBlogPost(insertBlogPost: InsertBlogPost): BlogPost {
     const blogPost: BlogPost = { 
       id: this.blogPostId++, 
       ...insertBlogPost,
@@ -595,9 +600,7 @@ export class MemStorage implements IStorage {
       }
     ];
     
-    blogPosts.forEach(post => {
-      this.createBlogPost(post);
-    });
+    blogPosts.forEach(post => this.storeBlogPost(post));
   }
 
   private initializeMerchandise() {
@@ -670,6 +673,40 @@ export class DatabaseStorage extends MemStorage {
       .values(insertTrip)
       .returning();
     return trip;
+  }
+
+  override async getBlogPost(id: number): Promise<BlogPost | undefined> {
+    const [post] = await this.db
+      .select()
+      .from(blogPostsTable)
+      .where(eq(blogPostsTable.id, id))
+      .limit(1);
+    return post;
+  }
+
+  override async getFreeBlogPosts(): Promise<BlogPost[]> {
+    return this.db
+      .select()
+      .from(blogPostsTable)
+      .where(eq(blogPostsTable.isPremium, false))
+      .orderBy(desc(blogPostsTable.createdAt), desc(blogPostsTable.id));
+  }
+
+  override async getAllBlogPosts(): Promise<BlogPost[]> {
+    return this.db
+      .select()
+      .from(blogPostsTable)
+      .orderBy(desc(blogPostsTable.createdAt), desc(blogPostsTable.id));
+  }
+
+  override async createBlogPost(
+    insertBlogPost: InsertBlogPost,
+  ): Promise<BlogPost> {
+    const [post] = await this.db
+      .insert(blogPostsTable)
+      .values(insertBlogPost)
+      .returning();
+    return post;
   }
 
   override async getExpenseGroup(id: number): Promise<ExpenseGroup | undefined> {
