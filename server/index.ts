@@ -6,6 +6,7 @@ import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync, hasStripeCredentials } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import {
+  aiConcurrencyLimiter,
   aiLimiter,
   apiLimiter,
   commerceLimiter,
@@ -82,7 +83,7 @@ app.get("/api/ready", async (_req, res) => {
 });
 
 app.use("/api", apiLimiter);
-app.use("/api/chat", aiLimiter);
+app.use("/api/chat", aiConcurrencyLimiter, aiLimiter);
 app.use("/api/generate-itinerary", aiLimiter);
 app.use("/api/stripe", commerceLimiter);
 app.use("/api/printful", commerceLimiter);
