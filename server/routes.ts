@@ -22,6 +22,8 @@ import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
 import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
 import { buildAviasalesUrl, flightSearchQuerySchema } from "@shared/flightSchemas";
+import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
+import { getSafeErrorMetadata } from "./safeError";
 
 
 const checkoutItemSchema = z.object({
@@ -32,6 +34,42 @@ const checkoutItemSchema = z.object({
 const checkoutSchema = z.object({
   items: z.array(checkoutItemSchema).min(1).max(20),
 }).strict();
+const printfulProductIdSchema = z.coerce.number().int().positive();
+const printfulShippingSchema = z
+  .object({
+    countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
+    items: z.array(z.object({
+      sync_variant_id: z.number().int().positive(),
+      quantity: z.number().int().min(1).max(10),
+    }).strict()).min(1).max(20),
+  })
+  .strict();
+const itineraryDateSchema = z.string().refine(
+  (value) => normalizeTripDate(value) === value,
+  "Invalid date",
+);
+const zapierItinerarySchema = z
+  .object({
+    citta: z.string().trim().min(1).max(100),
+    date: z.object({
+      startDate: itineraryDateSchema,
+      endDate: itineraryDateSchema,
+    }).strict(),
+    persone: z.number().int().min(1).max(50),
+    interessi: z.array(z.string().trim().min(1).max(100)).max(20).optional().default([]),
+    budget: z.enum(["economico", "medio", "alto"]).optional().default("medio"),
+    esperienze: z.array(z.string().trim().min(1).max(100)).max(20).optional().default([]),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      isValidDateRange(value.date.startDate, value.date.endDate) &&
+      calculateTripDays(value.date.startDate, value.date.endDate) <= 30,
+    { path: ["date", "endDate"], message: "Invalid itinerary date range" },
+  );
+const zapierItineraryResponseSchema = z
+  .object({ itinerary: z.string().trim().min(1).max(20_000) })
+  .passthrough();
 const updateExpenseSchema = insertExpenseSchema
   .omit({ groupId: true })
   .partial()
@@ -344,34 +382,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const products = await getStoreProducts();
       return res.status(200).json(products);
-    } catch (error: any) {
-      console.error("Error fetching Printful products:", error);
-      return res.status(500).json({ message: "Failed to fetch products from Printful", error: error.message });
+    } catch (error: unknown) {
+      console.error("Error fetching Printful products", getSafeErrorMetadata(error));
+      return res.status(502).json({ message: "Printful service temporarily unavailable" });
     }
   });
 
   app.get("/api/printful/products/:id", async (req: Request, res: Response) => {
+    const parsedProductId = printfulProductIdSchema.safeParse(req.params.id);
+    if (!parsedProductId.success) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
     try {
-      const productId = parseInt(req.params.id);
-      const product = await getProductDetail(productId);
+      const product = await getProductDetail(parsedProductId.data);
       return res.status(200).json(product);
-    } catch (error: any) {
-      console.error("Error fetching Printful product detail:", error);
-      return res.status(500).json({ message: "Failed to fetch product details", error: error.message });
+    } catch (error: unknown) {
+      console.error("Error fetching Printful product detail", getSafeErrorMetadata(error));
+      return res.status(502).json({ message: "Printful service temporarily unavailable" });
     }
   });
 
   app.post("/api/printful/shipping-rates", async (req: Request, res: Response) => {
+    const parsedShippingRequest = printfulShippingSchema.safeParse(req.body);
+    if (!parsedShippingRequest.success) {
+      return res.status(400).json({ message: "Invalid shipping request" });
+    }
+
     try {
-      const { countryCode, items } = req.body;
-      if (!countryCode || !items || !Array.isArray(items)) {
-        return res.status(400).json({ message: "countryCode and items array are required" });
-      }
+      const { countryCode, items } = parsedShippingRequest.data;
       const rates = await getShippingRates(countryCode, items);
       return res.status(200).json(rates);
-    } catch (error: any) {
-      console.error("Error fetching shipping rates:", error);
-      return res.status(500).json({ message: "Failed to fetch shipping rates", error: error.message });
+    } catch (error: unknown) {
+      console.error("Error fetching Printful shipping rates", getSafeErrorMetadata(error));
+      return res.status(502).json({ message: "Printful service temporarily unavailable" });
     }
   });
 
@@ -566,19 +610,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Zapier AI-powered itinerary generation
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
-      // Schema per validare i dati in arrivo dal frontend
-      const zapierItinerarySchema = z.object({
-        citta: z.string().min(1, "Città è richiesta"),
-        date: z.object({
-          startDate: z.string(),
-          endDate: z.string()
-        }),
-        persone: z.number().int().min(1, "Numero persone deve essere almeno 1"),
-        interessi: z.array(z.string()).optional().default([]),
-        budget: z.enum(["economico", "medio", "alto"]).optional().default("medio"),
-        esperienze: z.array(z.string()).optional().default([])
-      });
-      
       const requestData = zapierItinerarySchema.parse(req.body);
       
       // Prepara i dati per Zapier webhook
@@ -600,24 +631,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (zapierWebhookUrl) {
         try {
-          console.log("Sending data to Zapier webhook:", zapierPayload);
-          
           const response = await fetch(zapierWebhookUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(zapierPayload)
+            body: JSON.stringify(zapierPayload),
+            signal: AbortSignal.timeout(10_000),
           });
           
           if (response.ok) {
-            zapierResponse = await response.json();
-            console.log("Zapier response received:", zapierResponse);
+            const parsedResponse = zapierItineraryResponseSchema.safeParse(await response.json());
+            zapierResponse = parsedResponse.success ? parsedResponse.data : null;
           } else {
-            console.error("Zapier webhook error:", response.status, response.statusText);
+            console.error("Zapier itinerary webhook failed", { status: response.status });
           }
         } catch (error) {
-          console.error("Error calling Zapier webhook:", error);
+          console.error("Zapier itinerary webhook failed", getSafeErrorMetadata(error));
         }
       }
       
@@ -665,8 +695,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         message: zapierResponse ? "Itinerario generato con AI" : "Itinerario in elaborazione tramite Zapier"
       });
       
-    } catch (error: any) {
-      console.error("Error generating itinerary:", error);
+    } catch (error: unknown) {
+      console.error("Error generating itinerary", getSafeErrorMetadata(error));
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -675,10 +705,7 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         });
       }
       
-      return res.status(500).json({ 
-        message: "Failed to generate itinerary",
-        error: error.message || String(error)
-      });
+      return res.status(500).json({ message: "Failed to generate itinerary" });
     }
   });
 
@@ -691,9 +718,9 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       const { message, selectedDestination, tripDetails, conversationHistory, partyType, originCity, flights } = req.body;
 
       if (!process.env.OPENAI_API_KEY) {
-        return res.status(400).json({ 
+        return res.status(503).json({
           success: false, 
-          error: "OpenAI API key not configured" 
+          error: "Assistant temporarily unavailable",
         });
       }
 
@@ -703,11 +730,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       const originIata = originCity ? (cityToIata(originCity) || "") : "";
       const originCityName = originIata ? iataToCity(originIata) : "";
-
-      // Debug log only in development
-      if (process.env.NODE_ENV !== "production") {
-        console.log("🔍 OPENAI-STREAM:", { selectedDestination, partyType, originCity });
-      }
 
       const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
@@ -768,49 +790,10 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
 
-    } catch (error: any) {
-      console.error('OpenAI Streaming Error:', error);
-      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    } catch (error: unknown) {
+      console.error('OpenAI streaming failed', getSafeErrorMetadata(error));
+      res.write(`data: ${JSON.stringify({ error: "Assistant temporarily unavailable" })}\n\n`);
       res.end();
-    }
-  });
-
-  // OneClick Assistant chat endpoint (Fallback to OpenAI)
-  app.post("/api/chat/assistant", async (req: Request, res: Response) => {
-    try {
-      const { message, selectedDestination, tripDetails, conversationState } = req.body;
-      
-      if (!process.env.OPENAI_API_KEY) {
-        return res.json({ 
-          success: false, 
-          error: "OpenAI API key not configured" 
-        });
-      }
-
-      // Import OpenAI service
-      const { generateAssistantResponse } = await import('./services/openai');
-      
-      const result = await generateAssistantResponse({
-        userMessage: message,
-        selectedDestination,
-        tripDetails,
-        conversationState
-      });
-
-      res.json({
-        success: true,
-        response: result.response,
-        updatedTripDetails: result.updatedTripDetails,
-        updatedConversationState: result.updatedConversationState,
-        selectedDestination: result.selectedDestination
-      });
-
-    } catch (error: any) {
-      console.error('OpenAI Assistant Error:', error);
-      res.json({ 
-        success: false, 
-        error: error.message 
-      });
     }
   });
 

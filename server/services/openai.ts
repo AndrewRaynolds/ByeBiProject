@@ -3,6 +3,7 @@ import { generateFallbackItinerary } from "./fallback-itinerary";
 import { buildAviasalesUrl } from "@shared/flightSchemas";
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { resolveIataCode } from "./cityMapping";
+import { getSafeErrorMetadata } from "../safeError";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -112,11 +113,11 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
       try {
         return JSON.parse(itineraryText) as GeneratedItinerary;
       } catch (parseError) {
-        console.error("Error parsing JSON from OpenAI response:", parseError);
+        console.error("Error parsing JSON from OpenAI response", getSafeErrorMetadata(parseError));
         return generateFallbackItinerary(request);
       }
     } catch (openaiError) {
-      console.error("OpenAI API error, using fallback itinerary:", JSON.stringify(openaiError));
+      console.error("OpenAI API error, using fallback itinerary", getSafeErrorMetadata(openaiError));
       
       // Verifica se l'API key è configurata
       if (!process.env.OPENAI_API_KEY) {
@@ -128,87 +129,9 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
       return generateFallbackItinerary(request);
     }
   } catch (error) {
-    console.error("Error in generateItinerary function:", error);
+    console.error("Error in generateItinerary function", getSafeErrorMetadata(error));
     // Ritorna comunque un itinerario di fallback in caso di errore
     return generateFallbackItinerary(request);
-  }
-}
-
-export async function generateAssistantResponse(context: {
-  userMessage: string;
-  selectedDestination: string;
-  tripDetails: any;
-  conversationState: any;
-}): Promise<{
-  response: string;
-  updatedTripDetails?: any;
-  updatedConversationState?: any;
-  selectedDestination?: string;
-}> {
-  try {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const { userMessage, selectedDestination, tripDetails, conversationState } = context;
-    
-    const systemPrompt = `You are ByeBro assistant for planning bachelor parties. Always reply in the language the user initiates the conversation in with an informal and enthusiastic tone.
-
-AVAILABLE DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Kraków, Amsterdam, Berlin, Lisbon, Palma de Mallorca
-
-CONVERSATION RULES:
-1. Your goal is to collect all the information you need to generate a detailed itinerary. As the user provides it, make sure to set it.
-2. NEVER assume the departure city. If the user has not explicitly stated where they are departing from, you MUST ask them.
-3. NEVER ask users to provide dates in a specific format (e.g., YYYY-MM-DD). Accept natural language dates such as "June 10 to June 14", "10/06 to 14/06", "next weekend", "first weekend of July", "August 3–6". Interpret and normalize dates internally without mentioning the format.
-4. If key information is missing (departure city, dates, number of passengers), ask for it in a natural, minimal, and conversational way. Only ask for what is strictly necessary.
-5. When the destination is provided, confirm it naturally without assuming anything else.
-6. Once ALL required information is available, briefly confirm the full route and dates in natural language, then proceed.
-7. Use emojis and an enthusiastic tone.
-8. Do not repeat already asked questions.
-9. Tone: Friendly, efficient, modern startup assistant. No technical jargon. No mention of formats or backend processes.
-
-CURRENT STATE:
-- Destination: ${selectedDestination || 'none'}
-- People: ${tripDetails?.people || 0}
-- Days: ${tripDetails?.days || 0}
-- Adventure Type: ${tripDetails?.adventureType || 'not specified'}
-- Conversation Step: ${conversationState?.currentStep || 'initial'}
-
-Reply to the user's message based on this context. Return your answer in JSON format with this structure:
-{
-  "response": "your reply",
-  "updatedTripDetails": { "people": number, "days": number, "adventureType": "type" },
-  "updatedConversationState": { "currentStep": "step", "askedForPeople": boolean },
-  "selectedDestination": "destination"
-}`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: userMessage
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    const result = JSON.parse(response.choices[0].message.content || "{}");
-    
-    return {
-      response: result.response || "Something went wrong. Please try again.",
-      updatedTripDetails: result.updatedTripDetails,
-      updatedConversationState: result.updatedConversationState,
-      selectedDestination: result.selectedDestination
-    };
-
-  } catch (error) {
-    console.error("OpenAI Assistant Error:", error);
-    throw error;
   }
 }
 
@@ -472,7 +395,7 @@ export async function executeToolCall(
 
         return { hotels, destination: destIata };
       } catch (error) {
-        console.error("Hotel search error:", error);
+        console.error("Hotel search error", getSafeErrorMetadata(error));
         return { error: "Failed to search hotels. Please try again.", hotels: [] };
       }
     }
@@ -721,7 +644,7 @@ export async function createOpenAIChatCompletion(
             arguments: JSON.parse(tc.function.arguments || "{}"),
           });
         } catch (e) {
-          console.error("Error parsing tool call arguments:", e);
+          console.error("Error parsing tool call arguments", getSafeErrorMetadata(e));
         }
       }
     }
@@ -741,7 +664,7 @@ export async function createOpenAIChatCompletion(
 
     return { content: finalContent, toolCalls: validToolCalls };
   } catch (error) {
-    console.error("OpenAI API error:", error);
+    console.error("OpenAI API error", getSafeErrorMetadata(error));
     throw new Error("Error communicating with OpenAI");
   }
 }
@@ -819,7 +742,7 @@ export async function* streamOpenAIChatCompletion(
                 pendingClarification = validation.message;
               }
             } catch (e) {
-              console.error("Error parsing streamed tool call:", e);
+              console.error("Error parsing streamed tool call", getSafeErrorMetadata(e));
             }
           }
         }
@@ -839,7 +762,7 @@ export async function* streamOpenAIChatCompletion(
       }
     }
   } catch (error) {
-    console.error("OpenAI streaming error:", error);
+    console.error("OpenAI streaming error", getSafeErrorMetadata(error));
     yield {
       type: "content",
       content:
@@ -1162,7 +1085,7 @@ export async function* streamOpenAIChatCompletionWithTools(
       console.log(`⏱️ [STREAM] Needs followup via OpenAI. Elapsed: ${Date.now() - totalStart}ms`);
     }
   } catch (error) {
-    console.error("OpenAI streaming error:", error);
+    console.error("OpenAI streaming error", getSafeErrorMetadata(error));
     yield {
       type: "content",
       content: "Sorry, there was a problem. Please try again!",

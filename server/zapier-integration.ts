@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { timingSafeEqual } from 'crypto';
-import { NextFunction, Request, RequestHandler, Response } from 'express';
+import { Request, RequestHandler, Response } from 'express';
 import type { Express } from 'express';
+import { getSafeErrorMetadata } from './safeError';
 
 interface ZapierWebhook {
   id: string;
@@ -41,30 +41,6 @@ export function parseZapierWebhookUrl(value: unknown): string | null {
   }
 }
 
-function verifyZapierInboundSecret(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  const expected = process.env.ZAPIER_INBOUND_SECRET;
-  const provided = req.get('x-byebi-zapier-secret');
-  if (!expected) {
-    return res.status(503).json({ success: false, message: 'Zapier inbound integration is disabled' });
-  }
-  if (!provided) {
-    return res.status(401).json({ success: false, message: 'Missing integration secret' });
-  }
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(provided);
-  if (
-    expectedBuffer.length !== providedBuffer.length ||
-    !timingSafeEqual(expectedBuffer, providedBuffer)
-  ) {
-    return res.status(401).json({ success: false, message: 'Invalid integration secret' });
-  }
-  next();
-}
-
 // Funzione per registrare i webhook Zapier nel nostro sistema
 export const registerZapierWebhook = async (req: Request, res: Response) => {
   try {
@@ -100,7 +76,7 @@ export const registerZapierWebhook = async (req: Request, res: Response) => {
         timestamp: new Date().toISOString()
       }, zapierRequestConfig);
     } catch (error) {
-      console.error('Failed to verify webhook URL:', error);
+      console.error('Failed to verify Zapier webhook URL', getSafeErrorMetadata(error));
       // Continuiamo comunque la registrazione anche se la verifica fallisce
     }
     
@@ -110,7 +86,7 @@ export const registerZapierWebhook = async (req: Request, res: Response) => {
       message: 'Webhook registered successfully'
     });
   } catch (error) {
-    console.error('Error registering webhook:', error);
+    console.error('Error registering Zapier webhook', getSafeErrorMetadata(error));
     return res.status(500).json({ 
       success: false, 
       message: 'Failed to register webhook' 
@@ -159,7 +135,7 @@ export const triggerPackageCreated = async (packageData: any) => {
       data: packageData,
       timestamp: new Date().toISOString()
     }, zapierRequestConfig).catch(error => {
-      console.error(`Failed to trigger webhook ${webhook.id}:`, error);
+      console.error(`Failed to trigger webhook ${webhook.id}`, getSafeErrorMetadata(error));
       // Se il webhook fallisce troppe volte, potremmo disattivarlo
       // webhook.active = false;
     });
@@ -180,7 +156,7 @@ export const triggerPurchaseCompleted = async (purchaseData: any) => {
       data: purchaseData,
       timestamp: new Date().toISOString()
     }, zapierRequestConfig).catch(error => {
-      console.error(`Failed to trigger webhook ${webhook.id}:`, error);
+      console.error(`Failed to trigger webhook ${webhook.id}`, getSafeErrorMetadata(error));
     });
   });
   
@@ -199,7 +175,7 @@ export const triggerCustomQuoteRequest = async (quoteData: any) => {
       data: quoteData,
       timestamp: new Date().toISOString()
     }, zapierRequestConfig).catch(error => {
-      console.error(`Failed to trigger webhook ${webhook.id}:`, error);
+      console.error(`Failed to trigger webhook ${webhook.id}`, getSafeErrorMetadata(error));
     });
   });
   
@@ -221,55 +197,6 @@ export function registerZapierRoutes(
   // Ottenere i webhook attivi
   app.get('/api/zapier/webhooks', isAuthenticated, isAdmin, getZapierWebhooks);
   
-  // Endpoint per ricevere dati da Zapier (per azioni da Zapier a ByeBro)
-  app.post('/api/zapier/receive', verifyZapierInboundSecret, async (req: Request, res: Response) => {
-    try {
-      const { action, data } = req.body;
-      
-      if (!action || !data) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Action and data are required' 
-        });
-      }
-      
-      // Gestire diverse azioni da Zapier
-      switch (action) {
-        case 'create_package':
-          // Logica per creare un pacchetto da Zapier
-          console.log('Creating package from Zapier:', data);
-          // Qui implementeremmo la logica per creare un pacchetto nel nostro sistema
-          break;
-          
-        case 'update_pricing':
-          // Logica per aggiornare i prezzi
-          console.log('Updating pricing from Zapier:', data);
-          break;
-          
-        case 'send_notification':
-          // Logica per inviare notifiche
-          console.log('Sending notification from Zapier:', data);
-          break;
-          
-        default:
-          return res.status(400).json({ 
-            success: false, 
-            message: `Unknown action: ${action}` 
-          });
-      }
-      
-      return res.status(200).json({
-        success: true,
-        message: `Action '${action}' processed successfully`
-      });
-    } catch (error) {
-      console.error('Error processing Zapier action:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to process Zapier action' 
-      });
-    }
-  });
 }
 
 // Esempi di utilizzo per gli eventi Zapier nel nostro assistente
