@@ -2,26 +2,6 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, index } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User model
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").notNull().unique(),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  isPremium: boolean("is_premium").default(false),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  email: true,
-  firstName: true,
-  lastName: true,
-});
-
 // Trip model
 export const trips = pgTable(
   "trips",
@@ -195,9 +175,6 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
 });
 
 // Export types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
 export type Trip = typeof trips.$inferSelect;
 export type InsertTrip = z.infer<typeof insertTripSchema>;
 

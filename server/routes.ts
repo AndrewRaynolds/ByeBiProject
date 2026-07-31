@@ -23,7 +23,6 @@ import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
 
 
-const premiumStatusMap = new Map<string, boolean>();
 const checkoutItemSchema = z.object({
   productId: z.number().int().positive(),
   variantId: z.number().int().positive(),
@@ -212,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: meta.username || user.email?.split("@")[0],
       firstName: meta.firstName || meta.first_name,
       lastName: meta.lastName || meta.last_name,
-      isPremium: premiumStatusMap.get(user.id) ?? meta.isPremium ?? false,
+      isPremium: meta.isPremium ?? false,
     });
   });
 
@@ -231,7 +230,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      premiumStatusMap.set(requestedId, isPremium);
       await supabase.auth.admin.updateUserById(requestedId, {
         user_metadata: { ...targetData.user.user_metadata, isPremium },
       });

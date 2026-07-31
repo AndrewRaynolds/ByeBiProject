@@ -1,65 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  insertUserSchema,
   insertTripSchema,
   insertExpenseSchema,
   insertExpenseGroupSchema,
 } from './schema';
-
-describe('insertUserSchema', () => {
-  describe('valid data', () => {
-    it('accepts valid user data', () => {
-      const validUser = {
-        username: 'testuser',
-        password: 'password123',
-        email: 'test@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-      };
-      const result = insertUserSchema.safeParse(validUser);
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts user without optional fields', () => {
-      const minimalUser = {
-        username: 'testuser',
-        password: 'password123',
-        email: 'test@example.com',
-      };
-      const result = insertUserSchema.safeParse(minimalUser);
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('invalid data', () => {
-    it('rejects user without username', () => {
-      const invalidUser = {
-        password: 'password123',
-        email: 'test@example.com',
-      };
-      const result = insertUserSchema.safeParse(invalidUser);
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects user without password', () => {
-      const invalidUser = {
-        username: 'testuser',
-        email: 'test@example.com',
-      };
-      const result = insertUserSchema.safeParse(invalidUser);
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects user without email', () => {
-      const invalidUser = {
-        username: 'testuser',
-        password: 'password123',
-      };
-      const result = insertUserSchema.safeParse(invalidUser);
-      expect(result.success).toBe(false);
-    });
-  });
-});
 
 describe('insertTripSchema', () => {
   const validTrip = {

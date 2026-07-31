@@ -17,7 +17,7 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 - Frontend: `useAuth()` hook (`client/src/hooks/use-auth.tsx`) wraps Supabase `signInWithPassword`, `signUp`, `signOut`, and `onAuthStateChange`. `AuthUser` type has UUID `id`. Frontend uses `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`.
 - Backend: `server/supabase.ts` creates a Supabase client using server-only secrets `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (throws on startup if missing — no fallbacks). The `isAuthenticated` middleware in `routes.ts` verifies Bearer JWT tokens via `supabase.auth.getUser(token)` and attaches the verified `User` to `req.supabaseUser` (typed via Express namespace in `server/types.ts`).
 - `queryClient.ts` automatically attaches `Authorization: Bearer <token>` headers to all API requests.
-- Premium status tracked server-side in a `Map<string, boolean>` keyed by Supabase UUID.
+- Premium status is persisted in Supabase user metadata and updated only by the authenticated admin endpoint.
 - Trip `userId` is now `text` (Supabase UUID) — changed from `integer`. Trip creation/retrieval enforces ownership against the JWT-verified user.
 - Auth page (`/auth`) uses email + password (not username).
 

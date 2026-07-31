@@ -1,7 +1,7 @@
 // Updated storage with only the 10 specified destinations
 import {
-  User, Trip, BlogPost, Merchandise, Destination, Experience,
-  InsertUser, InsertTrip, InsertBlogPost, InsertMerchandise,
+  Trip, BlogPost, Merchandise, Destination, Experience,
+  InsertTrip, InsertBlogPost, InsertMerchandise,
   InsertDestination, InsertExperience, ExpenseGroup, Expense,
   InsertExpenseGroup, InsertExpense, GeneratedItinerary, InsertGeneratedItinerary,
   expenseGroups as expenseGroupsTable,
@@ -18,13 +18,6 @@ export interface IStorage {
   healthCheck(): Promise<void>;
   close(): Promise<void>;
 
-  // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUserPremiumStatus(id: number, isPremium: boolean): Promise<User | undefined>;
-  
   // Trip operations
   getTrip(id: number): Promise<Trip | undefined>;
   getTripsByUserId(userId: string): Promise<Trip[]>;
@@ -78,7 +71,6 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User>;
   private trips: Map<number, Trip>;
   private blogPosts: Map<number, BlogPost>;
   private merchandiseItems: Map<number, Merchandise>;
@@ -89,7 +81,6 @@ export class MemStorage implements IStorage {
   private generatedItineraries: Map<number, GeneratedItinerary>;
   private processedStripeEventIds: Set<string>;
 
-  private userId: number;
   private tripId: number;
   private blogPostId: number;
   private merchandiseId: number;
@@ -100,7 +91,6 @@ export class MemStorage implements IStorage {
   private generatedItineraryId: number;
 
   constructor() {
-    this.users = new Map();
     this.trips = new Map();
     this.blogPosts = new Map();
     this.merchandiseItems = new Map();
@@ -111,7 +101,6 @@ export class MemStorage implements IStorage {
     this.generatedItineraries = new Map();
     this.processedStripeEventIds = new Set();
 
-    this.userId = 1;
     this.tripId = 1;
     this.blogPostId = 1;
     this.merchandiseId = 1;
@@ -134,46 +123,6 @@ export class MemStorage implements IStorage {
 
   async close(): Promise<void> {
     return Promise.resolve();
-  }
-
-  // User operations
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const user: User = { 
-      id: this.userId++, 
-      username: insertUser.username,
-      password: insertUser.password,
-      email: insertUser.email,
-      firstName: insertUser.firstName ?? null,
-      lastName: insertUser.lastName ?? null,
-      isPremium: false,
-      createdAt: new Date(),
-    };
-    this.users.set(user.id, user);
-    return user;
-  }
-
-  async updateUserPremiumStatus(id: number, isPremium: boolean): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser: User = {
-      ...user,
-      isPremium,
-    };
-    this.users.set(id, updatedUser);
-    return updatedUser;
   }
 
   // Trip operations
