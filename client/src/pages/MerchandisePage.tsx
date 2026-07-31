@@ -43,6 +43,21 @@ interface CartItem {
   imageUrl: string;
 }
 
+type MerchandiseBrand = "byebro" | "byebride";
+
+export const BRAND_PRODUCT_IDS: Record<MerchandiseBrand, readonly number[]> = {
+  byebride: [450568421, 450564312, 450562726],
+  byebro: [420156309, 420156126],
+};
+
+export function filterProductsForBrand<T extends { id: number }>(
+  products: T[] | undefined,
+  brand: MerchandiseBrand,
+): T[] | undefined {
+  const allowedIds = new Set(BRAND_PRODUCT_IDS[brand]);
+  return products?.filter((product) => allowedIds.has(product.id));
+}
+
 export default function MerchandisePage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<PrintfulProduct | null>(null);
@@ -50,8 +65,24 @@ export default function MerchandisePage() {
   const [showCart, setShowCart] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [currentBrand, setCurrentBrand] =
+    useState<MerchandiseBrand>("byebro");
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const readBrand = (): MerchandiseBrand =>
+      localStorage.getItem("selectedBrand") === "byebride"
+        ? "byebride"
+        : "byebro";
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "selectedBrand") setCurrentBrand(readBrand());
+    };
+
+    setCurrentBrand(readBrand());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -93,11 +124,12 @@ export default function MerchandisePage() {
     }
   }, []);
 
-  const { data: products, isLoading, error } = useQuery<PrintfulProduct[]>({
+  const { data: allProducts, isLoading, error } = useQuery<PrintfulProduct[]>({
     queryKey: ["/api/printful/products"],
     staleTime: 60000,
     refetchOnMount: true,
   });
+  const products = filterProductsForBrand(allProducts, currentBrand);
 
   const handleAddToCart = (product: PrintfulProduct, variant: PrintfulVariant) => {
     setCart(prev => {
@@ -155,17 +187,40 @@ export default function MerchandisePage() {
     return `€${min.toFixed(2)} - €${max.toFixed(2)}`;
   };
 
+  const isBride = currentBrand === "byebride";
+  const brandStyles = isBride
+    ? {
+        hero: "bg-gradient-to-r from-pink-700 via-pink-600 to-pink-800",
+        heroText: "text-pink-100",
+        cartButton:
+          "relative bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white",
+        badge: "bg-pink-600",
+        cardHover: "hover:border-pink-500/50",
+        price: "text-pink-400",
+        button: "bg-pink-600 hover:bg-pink-700",
+      }
+    : {
+        hero: "bg-gradient-to-r from-red-700 via-red-600 to-red-800",
+        heroText: "text-red-100",
+        cartButton:
+          "relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white",
+        badge: "bg-red-600",
+        cardHover: "hover:border-red-500/50",
+        price: "text-red-400",
+        button: "bg-red-600 hover:bg-red-700",
+      };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
       <Header />
 
       <main id="main-content" tabIndex={-1} className="flex-grow">
-        <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-800 text-white py-16">
+        <div className={`${brandStyles.hero} text-white py-16`}>
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold font-poppins mb-4">
-              {t('merch.title')}
+            <h1 className="text-5xl md:text-6xl font-bebas-neue tracking-wider mb-4">
+              {isBride ? "💍 ByeBride Shop" : "ByeBro Shop"}
             </h1>
-            <p className="max-w-2xl mx-auto text-red-100 text-lg">
+            <p className={`max-w-2xl mx-auto ${brandStyles.heroText} text-lg`}>
               {t('merch.subtitle')}
             </p>
           </div>
@@ -174,13 +229,13 @@ export default function MerchandisePage() {
         <div className="container mx-auto px-4 py-10">
           <div className="flex justify-end mb-6">
             <Button
-              className="relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              className={brandStyles.cartButton}
               onClick={() => setShowCart(true)}
             >
               <ShoppingCart className="h-5 w-5 mr-2" />
               <span>{t('merch.cart')}</span>
               {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                <span className={`absolute -top-2 -right-2 ${brandStyles.badge} text-white text-xs w-5 h-5 rounded-full flex items-center justify-center`}>
                   {cartItemCount}
                 </span>
               )}
@@ -203,7 +258,7 @@ export default function MerchandisePage() {
           ) : error ? (
             <div className="text-center py-16">
               <Package className="h-16 w-16 mx-auto text-gray-500 mb-4" />
-              <p className="text-red-400 text-lg mb-2">{t('merch.errorLoading')}</p>
+              <p className={`${brandStyles.price} text-lg mb-2`}>{t('merch.errorLoading')}</p>
               <p className="text-gray-500 text-sm">{t('merch.checkPrintful')}</p>
             </div>
           ) : products && products.length > 0 ? (
@@ -211,7 +266,7 @@ export default function MerchandisePage() {
               {products.map(product => (
                 <Card
                   key={product.id}
-                  className="overflow-hidden group bg-gray-800/60 border-gray-700 hover:border-red-500/50 transition-all duration-300 cursor-pointer"
+                  className={`overflow-hidden group bg-gray-800/60 border-gray-700 ${brandStyles.cardHover} transition-all duration-300 cursor-pointer`}
                   onClick={() => {
                     setSelectedProduct(product);
                     setSelectedVariantId(product.variants[0]?.id.toString() || "");
@@ -223,19 +278,19 @@ export default function MerchandisePage() {
                       alt={product.name}
                       className="w-full h-full object-contain transition duration-500 group-hover:scale-105 p-2"
                     />
-                    <Badge className="absolute top-3 left-3 bg-red-600 text-white">
+                    <Badge className={`absolute top-3 left-3 ${brandStyles.badge} text-white`}>
                       {t('merch.variants', { count: product.variantCount })}
                     </Badge>
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-bold text-lg mb-2 text-white">{product.name}</h3>
-                    <p className="text-red-400 font-bold text-lg">
+                    <p className={`${brandStyles.price} font-bold text-lg`}>
                       {getFirstVariantPrice(product)}
                     </p>
                   </CardContent>
                   <CardFooter className="pt-0 pb-4 px-4">
                     <Button
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      className={`w-full ${brandStyles.button} text-white`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedProduct(product);
@@ -281,7 +336,7 @@ export default function MerchandisePage() {
               </div>
               <div className="flex flex-col justify-between">
                 <div>
-                  <p className="text-red-400 font-bold text-2xl mb-4">
+                  <p className={`${brandStyles.price} font-bold text-2xl mb-4`}>
                     {selectedVariantId
                       ? `€${selectedProduct.variants.find(v => v.id.toString() === selectedVariantId)?.retailPrice || "0.00"}`
                       : getFirstVariantPrice(selectedProduct)}
@@ -313,7 +368,7 @@ export default function MerchandisePage() {
                 </div>
 
                 <Button
-                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg"
+                  className={`w-full ${brandStyles.button} text-white py-3 text-lg`}
                   disabled={!selectedVariantId}
                   onClick={() => {
                     const variant = selectedProduct.variants.find(
@@ -359,7 +414,7 @@ export default function MerchandisePage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-white truncate">{item.productName}</p>
                     <p className="text-xs text-gray-400 truncate">{item.variantName}</p>
-                    <p className="text-red-400 font-bold">€{item.price}</p>
+                    <p className={`${brandStyles.price} font-bold`}>€{item.price}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
@@ -392,10 +447,10 @@ export default function MerchandisePage() {
               ))}
               <div className="border-t border-gray-700 pt-4 flex justify-between items-center">
                 <span className="text-lg font-bold">{t('merch.total')}:</span>
-                <span className="text-2xl font-bold text-red-400">€{cartTotal.toFixed(2)}</span>
+                <span className={`text-2xl font-bold ${brandStyles.price}`}>€{cartTotal.toFixed(2)}</span>
               </div>
               <Button
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg mt-2"
+                className={`w-full ${brandStyles.button} text-white py-3 text-lg mt-2`}
                 disabled={isCheckingOut}
                 onClick={async () => {
                   setIsCheckingOut(true);
@@ -447,7 +502,7 @@ export default function MerchandisePage() {
               {t('merch.confirmationEmail')}
             </p>
             <Button
-              className="mt-6 bg-red-600 hover:bg-red-700"
+              className={`mt-6 ${brandStyles.button}`}
               onClick={() => setPaymentSuccess(false)}
             >
               {t('merch.continueShopping')}
