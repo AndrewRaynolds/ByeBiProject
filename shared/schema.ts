@@ -62,25 +62,6 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
   category: z.enum(['sex', 'drink', 'weird']),
 });
 
-// Merchandise model
-export const merchandise = pgTable("merchandise", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  price: integer("price").notNull(),
-  image: text("image").notNull(),
-  type: text("type").notNull(),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const insertMerchandiseSchema = createInsertSchema(merchandise).pick({
-  name: true,
-  description: true,
-  price: true,
-  image: true,
-  type: true,
-});
-
 // Destination model
 export const destinations = pgTable("destinations", {
   id: serial("id").primaryKey(),
@@ -180,9 +161,6 @@ export type InsertTrip = z.infer<typeof insertTripSchema>;
 
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
-
-export type Merchandise = typeof merchandise.$inferSelect;
-export type InsertMerchandise = z.infer<typeof insertMerchandiseSchema>;
 
 export type Destination = typeof destinations.$inferSelect;
 export type InsertDestination = z.infer<typeof insertDestinationSchema>;

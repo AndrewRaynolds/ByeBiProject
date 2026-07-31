@@ -1,7 +1,7 @@
 // Updated storage with only the 10 specified destinations
 import {
-  Trip, BlogPost, Merchandise, Destination, Experience,
-  InsertTrip, InsertBlogPost, InsertMerchandise,
+  Trip, BlogPost, Destination, Experience,
+  InsertTrip, InsertBlogPost,
   InsertDestination, InsertExperience, ExpenseGroup, Expense,
   InsertExpenseGroup, InsertExpense,
   expenseGroups as expenseGroupsTable,
@@ -27,12 +27,6 @@ export interface IStorage {
   getFreeBlogPosts(): Promise<BlogPost[]>;
   getAllBlogPosts(): Promise<BlogPost[]>;
   createBlogPost(blogPost: InsertBlogPost): Promise<BlogPost>;
-
-  // Merchandise operations
-  getMerchandise(id: number): Promise<Merchandise | undefined>;
-  getAllMerchandise(): Promise<Merchandise[]>;
-  getMerchandiseByType(type: string): Promise<Merchandise[]>;
-  createMerchandise(merchandise: InsertMerchandise): Promise<Merchandise>;
 
   // Destination operations
   getDestination(id: number): Promise<Destination | undefined>;
@@ -66,7 +60,6 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private trips: Map<number, Trip>;
   private blogPosts: Map<number, BlogPost>;
-  private merchandiseItems: Map<number, Merchandise>;
   private destinations: Map<number, Destination>;
   private experiences: Map<number, Experience>;
   private expenseGroups: Map<number, ExpenseGroup>;
@@ -75,7 +68,6 @@ export class MemStorage implements IStorage {
 
   private tripId: number;
   private blogPostId: number;
-  private merchandiseId: number;
   private destinationId: number;
   private experienceId: number;
   private expenseGroupId: number;
@@ -84,7 +76,6 @@ export class MemStorage implements IStorage {
   constructor() {
     this.trips = new Map();
     this.blogPosts = new Map();
-    this.merchandiseItems = new Map();
     this.destinations = new Map();
     this.experiences = new Map();
     this.expenseGroups = new Map();
@@ -93,7 +84,6 @@ export class MemStorage implements IStorage {
 
     this.tripId = 1;
     this.blogPostId = 1;
-    this.merchandiseId = 1;
     this.destinationId = 1;
     this.experienceId = 1;
     this.expenseGroupId = 1;
@@ -103,7 +93,6 @@ export class MemStorage implements IStorage {
     this.initializeDestinations();
     this.initializeExperiences();
     this.initializeBlogPosts();
-    this.initializeMerchandise();
   }
 
   async healthCheck(): Promise<void> {
@@ -171,29 +160,6 @@ export class MemStorage implements IStorage {
     };
     this.blogPosts.set(blogPost.id, blogPost);
     return blogPost;
-  }
-
-  // Merchandise operations
-  async getMerchandise(id: number): Promise<Merchandise | undefined> {
-    return this.merchandiseItems.get(id);
-  }
-
-  async getAllMerchandise(): Promise<Merchandise[]> {
-    return Array.from(this.merchandiseItems.values());
-  }
-
-  async getMerchandiseByType(type: string): Promise<Merchandise[]> {
-    return Array.from(this.merchandiseItems.values()).filter(item => item.type === type);
-  }
-
-  async createMerchandise(insertMerchandise: InsertMerchandise): Promise<Merchandise> {
-    const merchandise: Merchandise = { 
-      id: this.merchandiseId++, 
-      ...insertMerchandise,
-      createdAt: new Date(),
-    };
-    this.merchandiseItems.set(merchandise.id, merchandise);
-    return merchandise;
   }
 
   // Destination operations
@@ -473,35 +439,6 @@ export class MemStorage implements IStorage {
     blogPosts.forEach(post => this.storeBlogPost(post));
   }
 
-  private initializeMerchandise() {
-    const merchandise = [
-      {
-        name: "Custom T-Shirts",
-        description: "Personalized bachelor party t-shirts with your group's name and destination",
-        price: 25.99,
-        image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        type: "apparel"
-      },
-      {
-        name: "ByeBro Flask Set",
-        description: "Premium stainless steel flasks engraved with your bachelor party details",
-        price: 45.99,
-        image: "https://images.unsplash.com/photo-1544966503-7cc5ac882d5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        type: "accessories"
-      },
-      {
-        name: "Memory Book",
-        description: "Custom photo album to capture all your unforgettable moments",
-        price: 35.99,
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&h=300&q=80",
-        type: "keepsakes"
-      }
-    ];
-    
-    merchandise.forEach(item => {
-      this.createMerchandise(item);
-    });
-  }
 }
 
 export class DatabaseStorage extends MemStorage {

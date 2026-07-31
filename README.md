@@ -117,7 +117,7 @@ Complete internationalization system supporting Italian (default), English, and 
 Print-on-demand merchandise store for travel gadgets via Printful API.
 
 **Files**:
-- `server/services/printful.ts` - Printful API service (products, variants, shipping rates, orders)
+- `server/services/printful.ts` - Printful API service (products, variants, shipping rates)
 - `server/routes.ts` - API routes under `/api/printful/*`
 - `client/src/pages/MerchandisePage.tsx` - Storefront showing real Printful products
 
@@ -125,9 +125,8 @@ Print-on-demand merchandise store for travel gadgets via Printful API.
 - `GET /api/printful/products` - List all store products with variants
 - `GET /api/printful/products/:id` - Get single product details
 - `POST /api/printful/shipping-rates` - Calculate shipping rates
-- `POST /api/printful/orders` - Create orders (draft or confirmed)
 
-**Legacy**: Old `/api/merchandise` route still works as fallback with in-memory mock data.
+Orders are created only after a verified Stripe Checkout webhook.
 
 ## Stripe Integration (February 2026)
 Payment processing for merchandise via Stripe Checkout (connector: Stripe).

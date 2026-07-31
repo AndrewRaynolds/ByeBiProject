@@ -8,8 +8,6 @@ vi.mock('./storage', () => ({
     getAllExperiences: vi.fn().mockResolvedValue([]),
     getAllBlogPosts: vi.fn().mockResolvedValue([]),
     getFreeBlogPosts: vi.fn().mockResolvedValue([]),
-    getAllMerchandise: vi.fn().mockResolvedValue([]),
-    getMerchandiseByType: vi.fn().mockResolvedValue([]),
     getAllExpenseGroups: vi.fn().mockResolvedValue([]),
   },
 }));

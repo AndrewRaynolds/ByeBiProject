@@ -420,30 +420,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/printful/orders", (_req: Request, res: Response) => {
-    return res.status(410).json({
-      message: "Direct order creation is disabled. Orders are created from verified Stripe webhooks.",
-    });
-  });
-
-  // Legacy merchandise route (fallback to in-memory data)
-  app.get("/api/merchandise", async (req: Request, res: Response) => {
-    try {
-      const { type } = req.query;
-      let merchandiseItems;
-      
-      if (type) {
-        merchandiseItems = await storage.getMerchandiseByType(type as string);
-      } else {
-        merchandiseItems = await storage.getAllMerchandise();
-      }
-      
-      return res.status(200).json(merchandiseItems);
-    } catch (error) {
-      return res.status(500).json({ message: "Server error" });
-    }
-  });
-
   // SplittaBro - Expense Group routes
   app.post("/api/expense-groups", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -867,13 +843,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       );
       return res.status(502).json({ error: "Hotel service temporarily unavailable" });
     }
-  });
-
-  // Amadeus Hotels - booking endpoint (solo IN_APP)
-  app.post("/api/hotels/book", (_req: Request, res: Response) => {
-    return res.status(410).json({
-      message: "Direct hotel booking is disabled. Use the verified external booking flow.",
-    });
   });
 
   // Flights search endpoint con checkoutUrl reali
