@@ -190,6 +190,26 @@ export type StreamChunk =
   | { type: "tool_call"; toolCall: ToolCall }
   | { type: "tool_result"; name: string; result: Record<string, unknown> };
 
+export function enforceSelectedDestination(
+  toolCall: ToolCall,
+  context: ChatContext,
+): ToolCall {
+  if (
+    !context.selectedDestination ||
+    (toolCall.name !== "search_flights" && toolCall.name !== "search_hotels")
+  ) {
+    return toolCall;
+  }
+
+  return {
+    ...toolCall,
+    arguments: {
+      ...toolCall.arguments,
+      destination: context.selectedDestination,
+    },
+  };
+}
+
 type ToolValidationResult = {
   validToolCalls: ToolCall[];
   clarification?: string;
@@ -214,6 +234,14 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
         return {
           valid: false,
           message: "I need both the departure city and destination to search flights.",
+        };
+      }
+      const originIata = resolveIataCode(origin);
+      const destinationIata = resolveIataCode(destination);
+      if (originIata && destinationIata && originIata === destinationIata) {
+        return {
+          valid: false,
+          message: "I still need your departure city; it must be different from the destination.",
         };
       }
       if (!depDate || !retDate || !isValidISODate(depDate) || !isValidISODate(retDate)) {
@@ -330,6 +358,8 @@ export async function executeToolCall(
   args: Record<string, unknown>,
   context: ChatContext
 ): Promise<Record<string, unknown>> {
+  args = enforceSelectedDestination({ name, arguments: args }, context).arguments;
+
   switch (name) {
     case "search_flights": {
       const originCity = typeof args.origin === "string" ? args.origin : "";
@@ -1058,7 +1088,13 @@ export async function* streamOpenAIChatCompletionWithTools(
           args = {};
         }
 
-        const validation = validateToolCall({ name: toolCall.name, arguments: args });
+        const constrainedToolCall = enforceSelectedDestination(
+          { name: toolCall.name, arguments: args },
+          context,
+        );
+        args = constrainedToolCall.arguments;
+
+        const validation = validateToolCall(constrainedToolCall);
         if (!validation.valid) {
           messages.push({
             role: "tool",

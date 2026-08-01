@@ -59,7 +59,7 @@ vi.mock('./cityMapping', () => ({
 }));
 
 // Import after mocks are set up
-import { detectUserLanguage, executeToolCall } from './openai';
+import { detectUserLanguage, enforceSelectedDestination, executeToolCall } from './openai';
 
 describe('detectUserLanguage', () => {
   it.each([
@@ -68,6 +68,18 @@ describe('detectUserLanguage', () => {
     ['I want to leave from London for six people', 'en'],
   ])('detects the current message language', (message, expected) => {
     expect(detectUserLanguage(message)).toBe(expected);
+  });
+});
+
+describe('enforceSelectedDestination', () => {
+  it('keeps the destination selected by the user instead of a model replacement', () => {
+    expect(enforceSelectedDestination({
+      name: 'search_flights',
+      arguments: { origin: 'Milan', destination: 'Amsterdam' },
+    }, { selectedDestination: 'Rome' })).toEqual({
+      name: 'search_flights',
+      arguments: { origin: 'Milan', destination: 'Rome' },
+    });
   });
 });
 
@@ -88,6 +100,23 @@ describe('executeToolCall', () => {
   });
 
   describe('search_flights tool', () => {
+    it('uses the destination already selected in the chat context', async () => {
+      const result = await executeToolCall('search_flights', {
+        origin: 'Milan',
+        destination: 'Amsterdam',
+        departure_date: '2026-09-10',
+        return_date: '2026-09-12',
+        passengers: 6,
+      }, { selectedDestination: 'Rome' });
+
+      expect(result).toMatchObject({
+        checkoutReady: true,
+        origin: 'MIL',
+        destination: 'ROM',
+      });
+      expect(result.checkoutUrl).toContain('MIL1009ROM12096');
+    });
+
     it('generates a checkout URL with mapped IATA codes', async () => {
       const result = await executeToolCall('search_flights', {
         origin: 'Rome',

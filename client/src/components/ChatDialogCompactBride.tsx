@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
 import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
 import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
+import { getCanonicalCityName } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest } from '@/lib/queryClient';
 import { consumeJsonSse } from '@/lib/sse';
@@ -333,6 +334,14 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
   useEffect(() => {
     if (initialMessage && open) {
+      const initialDestination = getCanonicalCityName(initialMessage);
+      if (initialDestination) {
+        setConversationState((prev) => {
+          const next = { ...prev, selectedDestination: initialDestination };
+          conversationStateRef.current = next;
+          return next;
+        });
+      }
       form.setValue('message', initialMessage);
       setTimeout(() => {
         form.handleSubmit(onSubmit)();
