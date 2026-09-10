@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock OpenAI before importing the module
 vi.mock('openai', () => {
@@ -86,7 +86,10 @@ describe('enforceSelectedDestination', () => {
 describe('executeToolCall', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('AVIASALES_PARTNER_ID', 'byebi');
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   describe('removed legacy tools', () => {
     it.each(['set_destination', 'set_origin', 'set_dates', 'set_participants'])(
