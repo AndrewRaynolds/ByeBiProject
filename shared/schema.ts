@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, index, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -177,3 +177,147 @@ export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
   sessionId: text("session_id").notNull(),
   processedAt: timestamp("processed_at").defaultNow().notNull(),
 });
+
+export type MerchandiseOrderItem = {
+  productId: number;
+  variantId: number;
+  productName: string;
+  variantName: string;
+  quantity: number;
+  unitAmount: number;
+};
+
+export const merchandiseOrders = pgTable(
+  "merchandise_orders",
+  {
+    id: uuid("id").primaryKey(),
+    userId: text("user_id"),
+    customerEmail: text("customer_email"),
+    brand: text("brand").notNull(),
+    stripeSessionId: text("stripe_session_id"),
+    stripeEventId: text("stripe_event_id"),
+    paymentStatus: text("payment_status").notNull().default("pending"),
+    fulfillmentStatus: text("fulfillment_status").notNull().default("pending_payment"),
+    amountTotal: integer("amount_total").notNull(),
+    currency: text("currency").notNull(),
+    shippingCountry: text("shipping_country").notNull(),
+    shippingMethod: text("shipping_method").notNull(),
+    shippingAmount: integer("shipping_amount").notNull(),
+    items: jsonb("items").$type<MerchandiseOrderItem[]>().notNull(),
+    printfulOrderId: text("printful_order_id"),
+    printfulStatus: text("printful_status"),
+    stripeRefundId: text("stripe_refund_id"),
+    trackingNumber: text("tracking_number"),
+    trackingUrl: text("tracking_url"),
+    shippingCarrier: text("shipping_carrier"),
+    shippedAt: timestamp("shipped_at"),
+    legalVersion: text("legal_version").notNull(),
+    termsAcceptedAt: timestamp("terms_accepted_at").notNull(),
+    failureCode: text("failure_code"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchandise_orders_stripe_session_id_uidx").on(table.stripeSessionId),
+    uniqueIndex("merchandise_orders_stripe_event_id_uidx").on(table.stripeEventId),
+    index("merchandise_orders_user_id_idx").on(table.userId),
+    index("merchandise_orders_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const merchandiseOrderItemSchema = z.object({
+  productId: z.number().int().positive(),
+  variantId: z.number().int().positive(),
+  productName: z.string().min(1).max(200),
+  variantName: z.string().min(1).max(200),
+  quantity: z.number().int().min(1).max(10),
+  unitAmount: z.number().int().positive(),
+});
+
+export const insertMerchandiseOrderSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().min(1).nullable().optional(),
+  customerEmail: z.string().email().max(320).nullable().optional(),
+  brand: z.enum(["byebro", "byebride"]),
+  amountTotal: z.number().int().positive(),
+  currency: z.string().length(3),
+  shippingCountry: z.string().length(2),
+  shippingMethod: z.string().min(1).max(100),
+  shippingAmount: z.number().int().nonnegative(),
+  legalVersion: z.string().min(1).max(50),
+  termsAcceptedAt: z.date(),
+  items: z.array(merchandiseOrderItemSchema).min(1).max(20),
+});
+
+export type MerchandiseOrder = typeof merchandiseOrders.$inferSelect;
+export type InsertMerchandiseOrder = z.infer<typeof insertMerchandiseOrderSchema>;
+
+export const merchandiseNotificationTypes = [
+  "payment_confirmed",
+  "order_submitted",
+  "order_shipped",
+  "order_attention",
+  "order_refunded",
+] as const;
+
+export type MerchandiseNotificationType =
+  (typeof merchandiseNotificationTypes)[number];
+
+export const merchandiseNotifications = pgTable(
+  "merchandise_notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id").notNull().references(() => merchandiseOrders.id),
+    type: text("type").$type<MerchandiseNotificationType>().notNull(),
+    status: text("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    providerMessageId: text("provider_message_id"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("merchandise_notifications_order_type_uidx").on(
+      table.orderId,
+      table.type,
+    ),
+    index("merchandise_notifications_status_updated_idx").on(
+      table.status,
+      table.updatedAt,
+    ),
+  ],
+);
+
+export type MerchandiseNotification =
+  typeof merchandiseNotifications.$inferSelect;
+
+export const affiliateClicks = pgTable(
+  "affiliate_clicks",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    provider: text("provider").notNull(),
+    placement: text("placement").notNull(),
+    brand: text("brand").notNull(),
+    destination: text("destination"),
+    monetized: boolean("monetized").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("affiliate_clicks_created_at_idx").on(table.createdAt),
+    index("affiliate_clicks_provider_idx").on(table.provider),
+  ],
+);
+
+export const insertAffiliateClickSchema = createInsertSchema(affiliateClicks)
+  .pick({
+    sessionId: true,
+    provider: true,
+    placement: true,
+    brand: true,
+    destination: true,
+    monetized: true,
+  });
+
+export type AffiliateClick = typeof affiliateClicks.$inferSelect;
+export type InsertAffiliateClick = z.infer<typeof insertAffiliateClickSchema>;

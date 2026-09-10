@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAviasalesUrl,
+  isAviasalesCheckoutUrl,
   flightResultSchema,
   flightSearchQuerySchema,
 } from "./flightSchemas";
@@ -52,6 +53,18 @@ describe("flight schemas", () => {
         adults: 4,
       }),
     ).toBe("https://www.aviasales.com/search/FCO1008BCN13084?marker=byebi");
+  });
+
+  it("accepts only HTTPS Aviasales search checkout URLs", () => {
+    expect(isAviasalesCheckoutUrl(
+      "https://www.aviasales.com/search/FCO1008BCN13084?marker=685469",
+    )).toBe(true);
+    expect(isAviasalesCheckoutUrl(
+      "http://www.aviasales.com/search/FCO1008BCN13084?marker=685469",
+    )).toBe(false);
+    expect(isAviasalesCheckoutUrl(
+      "https://example.com/search/FCO1008BCN13084?marker=685469",
+    )).toBe(false);
   });
 
   it.each([
@@ -114,4 +127,3 @@ describe("flight schemas", () => {
     expect(flightResultSchema.safeParse(result).success).toBe(false);
   });
 });
-

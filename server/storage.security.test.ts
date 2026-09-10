@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createStorageFromEnvironment, MemStorage } from './storage';
+import { createStorageFromEnvironment, MemStorage, summarizeAffiliateClicks } from './storage';
 
 const originalPersistenceMode = process.env.CRITICAL_DATA_PERSISTENCE;
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -93,6 +93,201 @@ describe('expense group ownership', () => {
     await storage.markStripeEventProcessed('evt_1', 'cs_1');
     await storage.markStripeEventProcessed('evt_1', 'cs_1');
     await expect(storage.hasProcessedStripeEvent('evt_1')).resolves.toBe(true);
+  });
+
+  it('keeps merchandise orders scoped to their authenticated user', async () => {
+    const storage = new MemStorage();
+    const order = await storage.createMerchandiseOrder({
+      id: '123e4567-e89b-42d3-a456-426614174000',
+      userId: 'user-a',
+      brand: 'byebro',
+      amountTotal: 2500,
+      currency: 'EUR',
+      shippingCountry: 'IT',
+      shippingMethod: 'STANDARD',
+      shippingAmount: 500,
+      legalVersion: '2026-08-04',
+      termsAcceptedAt: new Date('2026-08-04T10:00:00Z'),
+      items: [{
+        productId: 1,
+        variantId: 2,
+        productName: 'T-shirt',
+        variantName: 'Black / M',
+        quantity: 1,
+        unitAmount: 2500,
+      }],
+    });
+
+    await expect(storage.getMerchandiseOrdersByUserId('user-a')).resolves.toEqual([order]);
+    await expect(storage.getMerchandiseOrdersByUserId('user-b')).resolves.toEqual([]);
+  });
+
+  it('claims a paid merchandise order only once while processing is fresh', async () => {
+    const storage = new MemStorage();
+    const orderId = '123e4567-e89b-42d3-a456-426614174001';
+    await storage.createMerchandiseOrder({
+      id: orderId,
+      brand: 'byebride',
+      amountTotal: 5000,
+      currency: 'EUR',
+      shippingCountry: 'IT',
+      shippingMethod: 'STANDARD',
+      shippingAmount: 500,
+      legalVersion: '2026-08-04',
+      termsAcceptedAt: new Date('2026-08-04T10:00:00Z'),
+      items: [{
+        productId: 1,
+        variantId: 2,
+        productName: 'T-shirt',
+        variantName: 'White / M',
+        quantity: 2,
+        unitAmount: 2500,
+      }],
+    });
+    await storage.attachStripeSessionToOrder(orderId, 'cs_test_order');
+
+    const firstClaim = await storage.claimMerchandiseOrderForFulfillment(
+      orderId,
+      'cs_test_order',
+      'evt_1',
+      new Date(0),
+    );
+    const duplicateClaim = await storage.claimMerchandiseOrderForFulfillment(
+      orderId,
+      'cs_test_order',
+      'evt_1',
+      new Date(0),
+    );
+
+    expect(firstClaim?.fulfillmentStatus).toBe('processing');
+    expect(duplicateClaim).toBeUndefined();
+  });
+
+  it('moves a merchandise order from payment to Printful submission', async () => {
+    const storage = new MemStorage();
+    const orderId = '123e4567-e89b-42d3-a456-426614174002';
+    await storage.createMerchandiseOrder({
+      id: orderId,
+      brand: 'byebro',
+      amountTotal: 2500,
+      currency: 'EUR',
+      shippingCountry: 'IT',
+      shippingMethod: 'STANDARD',
+      shippingAmount: 500,
+      legalVersion: '2026-08-04',
+      termsAcceptedAt: new Date('2026-08-04T10:00:00Z'),
+      items: [{
+        productId: 1,
+        variantId: 2,
+        productName: 'T-shirt',
+        variantName: 'Black / M',
+        quantity: 1,
+        unitAmount: 2500,
+      }],
+    });
+    await storage.attachStripeSessionToOrder(orderId, 'cs_test_order');
+    await storage.claimMerchandiseOrderForFulfillment(
+      orderId,
+      'cs_test_order',
+      'evt_1',
+      new Date(0),
+    );
+    await storage.markMerchandiseOrderSubmitted(orderId, '42', 'draft');
+
+    await expect(storage.getMerchandiseOrderById(orderId)).resolves.toMatchObject({
+      paymentStatus: 'paid',
+      fulfillmentStatus: 'submitted',
+      printfulOrderId: '42',
+      printfulStatus: 'draft',
+    });
+  });
+
+  it('deduplicates and claims merchandise notifications only once', async () => {
+    const storage = new MemStorage();
+    const orderId = '123e4567-e89b-42d3-a456-426614174010';
+    await storage.createMerchandiseOrder({
+      id: orderId,
+      customerEmail: 'buyer@example.com',
+      brand: 'byebro',
+      amountTotal: 2500,
+      currency: 'EUR',
+      shippingCountry: 'IT',
+      shippingMethod: 'STANDARD',
+      shippingAmount: 500,
+      legalVersion: '2026-08-04',
+      termsAcceptedAt: new Date('2026-08-04T10:00:00Z'),
+      items: [{
+        productId: 1,
+        variantId: 2,
+        productName: 'T-shirt',
+        variantName: 'Black / M',
+        quantity: 1,
+        unitAmount: 2000,
+      }],
+    });
+
+    await storage.enqueueMerchandiseNotification(orderId, 'payment_confirmed');
+    await storage.enqueueMerchandiseNotification(orderId, 'payment_confirmed');
+    const [notification] = await storage.getRetryableMerchandiseNotifications(
+      new Date(Date.now() - 5 * 60_000),
+    );
+
+    expect(notification).toBeDefined();
+    await expect(storage.claimMerchandiseNotification(
+      notification.id,
+      new Date(Date.now() - 5 * 60_000),
+    )).resolves.toBe(true);
+    await expect(storage.claimMerchandiseNotification(
+      notification.id,
+      new Date(Date.now() - 5 * 60_000),
+    )).resolves.toBe(false);
+    await storage.completeMerchandiseNotification(notification.id, {
+      status: 'sent',
+      providerMessageId: 'email_123',
+    });
+    await expect(storage.getRetryableMerchandiseNotifications(
+      new Date(Date.now() - 5 * 60_000),
+    )).resolves.toEqual([]);
+  });
+
+  it('records privacy-preserving affiliate clicks in memory mode', async () => {
+    const storage = new MemStorage();
+    await storage.recordAffiliateClick({
+      sessionId: '123e4567-e89b-42d3-a456-426614174000',
+      provider: 'aviasales',
+      placement: 'checkout_flight',
+      brand: 'byebro',
+      destination: 'Roma',
+      monetized: true,
+    });
+
+    const summary = await storage.getAffiliateClickSummary(new Date(0), 30);
+    expect(summary).toMatchObject({
+      days: 30,
+      totalClicks: 1,
+      monetizedClicks: 1,
+      providers: [{ key: 'aviasales', total: 1, monetized: 1 }],
+    });
+  });
+
+  it('aggregates affiliate counts by provider and placement', () => {
+    expect(summarizeAffiliateClicks([
+      { provider: 'booking', placement: 'checkout_hotel', monetized: false, count: 2 },
+      { provider: 'booking', placement: 'checkout_hotel', monetized: true, count: 3 },
+      { provider: 'getyourguide', placement: 'experiences', monetized: true, count: 1 },
+    ], 30)).toEqual({
+      days: 30,
+      totalClicks: 6,
+      monetizedClicks: 4,
+      providers: [
+        { key: 'booking', total: 5, monetized: 3 },
+        { key: 'getyourguide', total: 1, monetized: 1 },
+      ],
+      placements: [
+        { key: 'checkout_hotel', total: 5, monetized: 3 },
+        { key: 'experiences', total: 1, monetized: 1 },
+      ],
+    });
   });
 
   it('requires a database URL when database persistence is enabled', () => {

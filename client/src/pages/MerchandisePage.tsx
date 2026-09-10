@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Link } from "wouter";
 import { ShoppingBag, Heart, ShoppingCart, Package, Minus, Plus, X, CreditCard, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -44,6 +46,7 @@ interface CartItem {
 }
 
 type MerchandiseBrand = "byebro" | "byebride";
+const SHIPPING_COUNTRIES = ["IT", "DE", "FR", "ES", "NL", "BE", "AT", "PT", "GR", "PL", "CZ", "HU", "HR", "RO", "BG", "SE", "DK", "FI", "IE", "GB"] as const;
 
 export const BRAND_PRODUCT_IDS: Record<MerchandiseBrand, readonly number[]> = {
   byebride: [450568421, 450564312, 450562726],
@@ -64,11 +67,15 @@ export default function MerchandisePage() {
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [showCart, setShowCart] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [fulfillmentStatus, setFulfillmentStatus] = useState<string | null>(null);
+  const [shippingCountry, setShippingCountry] = useState<(typeof SHIPPING_COUNTRIES)[number]>("IT");
   const [currentBrand, setCurrentBrand] =
     useState<MerchandiseBrand>("byebro");
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const countryNames = new Intl.DisplayNames([locale], { type: "region" });
 
   useEffect(() => {
     const readBrand = (): MerchandiseBrand =>
@@ -87,23 +94,33 @@ export default function MerchandisePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
-    if (params.get("payment") === "success" && sessionId) {
+    const orderId = params.get("order_id");
+    if (params.get("payment") === "success" && sessionId && orderId) {
       const controller = new AbortController();
-      apiRequest("GET", `/api/stripe/session/${sessionId}`, undefined, {
-        signal: controller.signal,
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === "paid") {
+      const verifyOrder = async () => {
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const response = await apiRequest(
+            "GET",
+            `/api/merchandise/orders/${orderId}/status?session_id=${encodeURIComponent(sessionId)}`,
+            undefined,
+            { signal: controller.signal },
+          );
+          const data = await response.json();
+          if (data.paymentStatus === "paid") {
+            setFulfillmentStatus(data.fulfillmentStatus);
             setPaymentSuccess(true);
             setCart([]);
-          } else {
-            toast({
-              title: t('merch.paymentPending'),
-              description: t('merch.paymentPendingDesc'),
-            });
+            setAcceptTerms(false);
+            return;
           }
-        })
+          await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+        }
+        toast({
+          title: t('merch.paymentPending'),
+          description: t('merch.paymentPendingDesc'),
+        });
+      };
+      verifyOrder()
         .catch(error => {
           if (error instanceof DOMException && error.name === "AbortError") return;
           toast({
@@ -446,16 +463,54 @@ export default function MerchandisePage() {
                 </div>
               ))}
               <div className="border-t border-gray-700 pt-4 flex justify-between items-center">
-                <span className="text-lg font-bold">{t('merch.total')}:</span>
+                <span className="text-lg font-bold">{t('merch.subtotal')}:</span>
                 <span className={`text-2xl font-bold ${brandStyles.price}`}>€{cartTotal.toFixed(2)}</span>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="shipping-country">
+                  {t('merch.shippingCountry')}
+                </label>
+                <Select
+                  value={shippingCountry}
+                  onValueChange={(value) => setShippingCountry(value as typeof shippingCountry)}
+                >
+                  <SelectTrigger id="shipping-country" className="border-gray-700 bg-gray-800">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SHIPPING_COUNTRIES.map((country) => (
+                      <SelectItem key={country} value={country}>
+                        {countryNames.of(country) || country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-400">{t('merch.shippingCalculated')}</p>
+              </div>
+              <div className="flex items-start gap-3 rounded-md border border-gray-700 bg-gray-800/60 p-3">
+                <Checkbox
+                  id="accept-merchandise-terms"
+                  checked={acceptTerms}
+                  onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="accept-merchandise-terms" className="text-sm leading-relaxed text-gray-300">
+                  {t('merch.acceptTermsPrefix')}{" "}
+                  <Link href="/terms" className="underline hover:text-white">{t('footer.termsOfService')}</Link>
+                  {" "}{t('merch.acceptTermsAnd')}{" "}
+                  <Link href="/refund-policy" className="underline hover:text-white">{t('footer.refundPolicy')}</Link>.
+                </label>
               </div>
               <Button
                 className={`w-full ${brandStyles.button} text-white py-3 text-lg mt-2`}
-                disabled={isCheckingOut}
+                disabled={isCheckingOut || !acceptTerms}
                 onClick={async () => {
                   setIsCheckingOut(true);
                   try {
                     const response = await apiRequest("POST", "/api/stripe/checkout", {
+                      brand: currentBrand,
+                      shippingCountry,
+                      acceptTerms: true,
                       items: cart,
                     });
                     const data = await response.json();
@@ -496,7 +551,9 @@ export default function MerchandisePage() {
             <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
             <h2 className="text-2xl font-bold mb-2">{t('merch.paymentComplete')}</h2>
             <p className="text-gray-400 mb-4">
-              {t('merch.orderReceived')}
+              {fulfillmentStatus === "submitted"
+                ? t('merch.orderReceived')
+                : t('merch.orderUnderReview')}
             </p>
             <p className="text-gray-500 text-sm">
               {t('merch.confirmationEmail')}

@@ -73,7 +73,7 @@ export interface PrintfulProductVariant {
   productName: string;
 }
 
-interface PrintfulShippingRate {
+export interface PrintfulShippingRate {
   id: string;
   name: string;
   rate: string;
@@ -104,20 +104,29 @@ async function printfulFetch(endpoint: string, options: RequestInit = {}) {
     throw new Error("PRINTFUL_API_KEY is not configured");
   }
 
-  const response = await fetch(`${PRINTFUL_API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(`${PRINTFUL_API_BASE}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     console.error("Printful API request failed", { status: response.status });
     throw new Error("Printful API request failed");
   }
 
+  if (response.status === 204) return { result: null };
   return response.json();
 }
 
@@ -181,21 +190,20 @@ export async function getProductDetail(productId: number): Promise<PrintfulProdu
 
 export async function getShippingRates(
   recipientCountry: string,
-  items: PrintfulOrderItem[]
+  items: PrintfulOrderItem[],
+  currency?: string,
 ): Promise<PrintfulShippingRate[]> {
   const data = await printfulFetch("/shipping/rates", {
     method: "POST",
     body: JSON.stringify({
       recipient: {
         country_code: recipientCountry,
-        city: "Anytown",
-        address1: "123 Street",
-        zip: "00000",
       },
       items: items.map((item) => ({
         sync_variant_id: item.sync_variant_id,
         quantity: item.quantity,
       })),
+      ...(currency ? { currency } : {}),
     }),
   });
 
@@ -215,24 +223,60 @@ export async function createOrder(
   items: PrintfulOrderItem[],
   isDraft: boolean = true,
   externalId?: string,
+  shippingMethod?: string,
 ) {
-  const data = await printfulFetch("/orders", {
+  if (externalId && !/^[A-Za-z0-9_-]{1,32}$/.test(externalId)) {
+    throw new Error("Invalid Printful external order ID");
+  }
+  const params = new URLSearchParams({ confirm: String(!isDraft) });
+  if (externalId) params.set("update_existing", "true");
+  const data = await printfulFetch(`/orders?${params.toString()}`, {
     method: "POST",
     body: JSON.stringify({
       ...(externalId ? { external_id: externalId } : {}),
+      ...(shippingMethod ? { shipping: shippingMethod } : {}),
       recipient,
       items: items.map((item) => ({
         sync_variant_id: item.sync_variant_id,
         quantity: item.quantity,
       })),
-      ...(isDraft ? {} : { confirm: true }),
     }),
   });
 
-  return data.result;
+  return data.result as { id: number; status?: string };
 }
 
-export async function getOrder(orderId: number) {
-  const data = await printfulFetch(`/orders/${orderId}`);
-  return data.result;
+export async function getOrder(orderId: number | string) {
+  const data = await printfulFetch(`/orders/${encodeURIComponent(String(orderId))}`);
+  return data.result as {
+    id: number;
+    status: string;
+    shipments?: Array<{
+      carrier?: string | null;
+      tracking_number?: string | number | null;
+      tracking_url?: string | null;
+      shipped_at?: number | null;
+      created?: number | null;
+    }>;
+  };
+}
+
+export class PrintfulOrderNotCancellableError extends Error {
+  constructor(public readonly printfulStatus: string) {
+    super(`Printful order cannot be cancelled from status ${printfulStatus}`);
+    this.name = "PrintfulOrderNotCancellableError";
+  }
+}
+
+export async function cancelOrder(orderId: number) {
+  const current = await getOrder(orderId) as { id: number; status: string };
+  if (current.status === "canceled") return current;
+  if (!new Set(["draft", "failed", "pending"]).has(current.status)) {
+    throw new PrintfulOrderNotCancellableError(current.status);
+  }
+  const data = await printfulFetch(`/orders/${orderId}`, { method: "DELETE" });
+  return (data.result || { ...current, status: "canceled" }) as {
+    id: number;
+    status: string;
+  };
 }

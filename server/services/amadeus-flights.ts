@@ -1,10 +1,10 @@
 // server/services/amadeus-flights.ts
-import axios from "axios";
 import {
   flightResultSchema,
   type FlightResult,
   type FlightSegment,
 } from "@shared/flightSchemas";
+import { amadeusGet, amadeusTokenPost } from "./amadeusHttp";
 
 export type FlightSearchParams = {
   originCode: string;      // IATA code, e.g., "FCO"
@@ -58,7 +58,7 @@ async function getAmadeusToken(): Promise<string> {
     client_secret: AMADEUS_API_SECRET,
   });
 
-  const resp = await axios.post(
+  const resp = await amadeusTokenPost<{ access_token: string; expires_in: number }>(
     `${AMADEUS_BASE_URL}/v1/security/oauth2/token`,
     body,
     { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
@@ -122,7 +122,7 @@ export async function searchFlights(
       queryParams.returnDate = returnDate;
     }
 
-    const resp = await axios.get(
+    const resp = await amadeusGet<{ data?: any[]; dictionaries?: Record<string, unknown> }>(
       `${AMADEUS_BASE_URL}/v2/shopping/flight-offers`,
       {
         headers: { Authorization: `Bearer ${token}` },

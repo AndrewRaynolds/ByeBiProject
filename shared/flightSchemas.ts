@@ -59,6 +59,17 @@ const aviasalesUrlParamsSchema = z
 
 export type AviasalesUrlParams = z.input<typeof aviasalesUrlParamsSchema>;
 
+export function isAviasalesCheckoutUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:"
+      && url.hostname === "www.aviasales.com"
+      && url.pathname.startsWith("/search/");
+  } catch {
+    return false;
+  }
+}
+
 export function buildAviasalesUrl(value: AviasalesUrlParams): string | null {
   const result = aviasalesUrlParamsSchema.safeParse(value);
   if (!result.success) return null;
@@ -107,4 +118,3 @@ export const flightResultSchema = z.object({
 
 export type FlightSegment = z.infer<typeof flightSegmentSchema>;
 export type FlightResult = z.infer<typeof flightResultSchema>;
-

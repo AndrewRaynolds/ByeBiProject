@@ -78,3 +78,10 @@ export const webhookLimiter = rateLimit({
   limit: 120,
   message: { message: "Webhook request limit reached." },
 });
+
+export const analyticsLimiter = rateLimit({
+  ...commonOptions,
+  windowMs: 60 * 1000,
+  limit: 60,
+  message: { message: "Too many analytics events." },
+});

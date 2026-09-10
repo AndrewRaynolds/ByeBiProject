@@ -14,7 +14,8 @@
     "check": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify": "npm run check && npm test && npm run build"
+    "verify": "npm run check && npm test && npm run build",
+    "smoke:production": "node scripts/smoke-production.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

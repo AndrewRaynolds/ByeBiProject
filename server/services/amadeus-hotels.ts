@@ -1,6 +1,11 @@
 // server/services/amadeus-hotels.ts
-import axios from "axios";
 import { hotelResultSchema, type HotelResult } from "@shared/hotelSchemas";
+import { getSafeErrorMetadata } from "../safeError";
+import {
+  amadeusBookingPost,
+  amadeusGet,
+  amadeusTokenPost,
+} from "./amadeusHttp";
 
 type SearchHotelsParams = {
   cityCode: string;      // es. "BCN"
@@ -59,7 +64,7 @@ async function getAmadeusToken(): Promise<string> {
     client_secret: AMADEUS_API_SECRET,
   });
 
-  const resp = await axios.post(
+  const resp = await amadeusTokenPost<{ access_token: string; expires_in: number }>(
     `${AMADEUS_BASE_URL}/v1/security/oauth2/token`,
     body,
     {
@@ -100,7 +105,7 @@ export async function searchHotels(
   const token = await getAmadeusToken();
 
   // STEP 1: lista hotel per città (hotelIds)
-  const hotelListResp = await axios.get(
+  const hotelListResp = await amadeusGet<{ data?: Array<{ hotelId?: string }> }>(
     `${AMADEUS_BASE_URL}/v1/reference-data/locations/hotels/by-city`,
     {
       headers: {
@@ -163,7 +168,7 @@ export async function searchHotels(
   // il numero reale di persone viene usato solo per la URL Booking.com.
   const adultsPerRoom = Math.min(adults, 2);
 
-  const offersResp = await axios.get(
+  const offersResp = await amadeusGet<{ data?: any[] }>(
     `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers`,
     {
       headers: {
@@ -326,7 +331,7 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
     const token = await getAmadeusToken();
 
     // Prima verifichiamo che l'offerta sia ancora disponibile
-    const offerCheckResp = await axios.get(
+    const offerCheckResp = await amadeusGet<{ data?: any }>(
       `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers/${offerId}`,
       {
         headers: {
@@ -353,7 +358,7 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
     }
 
     // Procedi con la prenotazione PAY_AT_HOTEL (NO carta richiesta)
-    const bookingResp = await axios.post(
+    const bookingResp = await amadeusBookingPost<{ data?: any[] }>(
       `${AMADEUS_BASE_URL}/v2/booking/hotel-orders`,
       {
         data: {
@@ -405,7 +410,7 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
       currency: bookingData.hotelBookings?.[0]?.price?.currency,
     };
   } catch (error: any) {
-    console.error("[Amadeus Booking Error]", error.response?.status, error.response?.data);
+    console.error("[Amadeus Booking Error]", getSafeErrorMetadata(error));
     
     // Gestione errori specifici
     const amadeusError = error.response?.data?.errors?.[0];

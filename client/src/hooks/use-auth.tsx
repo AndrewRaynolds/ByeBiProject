@@ -10,6 +10,7 @@ export type AuthUser = {
   username: string;
   firstName?: string;
   lastName?: string;
+  isAdmin: boolean;
 };
 
 type LoginData = { email: string; password: string };
@@ -39,6 +40,7 @@ function mapSupabaseUser(supabaseUser: SupabaseUser): AuthUser {
     username: meta.username || supabaseUser.email?.split("@")[0] || "user",
     firstName: meta.firstName || meta.first_name,
     lastName: meta.lastName || meta.last_name,
+    isAdmin: supabaseUser.app_metadata?.role === "admin",
   };
 }
 

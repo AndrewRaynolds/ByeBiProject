@@ -4,6 +4,7 @@ import {
   isValidDateRange,
   normalizeTripDate,
 } from "@shared/dateUtils";
+import { isAviasalesCheckoutUrl } from "@shared/flightSchemas";
 
 const dateOnlySchema = z.string().refine(
   (value) => normalizeTripDate(value) === value,
@@ -17,8 +18,7 @@ const checkoutUrlSchema = z
     if (!value) return true;
 
     try {
-      const url = new URL(value);
-      return url.protocol === "https:" || url.protocol === "http:";
+      return isAviasalesCheckoutUrl(value);
     } catch {
       return false;
     }

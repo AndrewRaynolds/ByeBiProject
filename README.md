@@ -35,6 +35,25 @@ The platform is built with React and TypeScript for the frontend, utilizing Shad
 - Do not make schema changes directly in the production Dashboard. Add a new
   timestamped SQL migration and let the integration apply it.
 
+## Production verification
+
+After publishing a batch of changes, verify the public application, API and
+database readiness with:
+
+```bash
+npm run smoke:production -- https://byebi.it
+```
+
+Production startup also rejects incomplete Amadeus live configuration,
+non-database critical persistence and a non-HTTPS `APP_BASE_URL`.
+GitHub also runs the same smoke test twice per hour through the
+`Production health` workflow; failures are visible in the repository Actions.
+
+Every HTTP response includes an `X-Request-Id` header. API completion logs use
+the same identifier so a production error can be correlated without logging
+request bodies, authentication tokens or user travel details. Verbose chatbot
+diagnostics are disabled in production builds.
+
 Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.
 
 The chat assistant implements a conversational flight-planning flow:
@@ -85,6 +104,29 @@ Affiliate links for experiences/activities are integrated via `GetYourGuideCta` 
 
 **Behavior**: CTA only renders for supported destinations. Opens affiliate link in new tab with tracking event.
 
+## Affiliate analytics
+
+Affiliate clicks for Aviasales, Booking.com and GetYourGuide are recorded by the
+first-party `/api/analytics/affiliate-clicks` endpoint. Events contain only a
+random page-session identifier, provider, placement, brand, destination and a
+boolean indicating whether the generated URL is monetized. The application
+does not store IP addresses, user identities, chat content, travel dates or
+complete outbound URLs in this analytics table.
+
+Booking.com links are generated centrally. Set the public build variable
+`VITE_BOOKING_AFFILIATE_ID` only after receiving a numeric `aid` from the
+Booking.com partner program. Without it, links continue to work and analytics
+correctly records them as non-monetized.
+
+Users whose Supabase `app_metadata.role` is `admin` see an Affiliates tab in
+the account dashboard with 30-day totals by provider. The summary API is
+protected by both authentication and the server-side administrator check.
+
+Monetized CTAs display a localized affiliate notice and the footer links to
+`/affiliate-disclosure`. External programmatic navigation is restricted to
+the HTTPS domains used by Aviasales, Booking.com, GetYourGuide and Google Maps;
+stored flight checkout URLs must be official Aviasales search URLs.
+
 ## i18n System (February 2026)
 Complete internationalization system supporting Italian (default), English, and Spanish.
 
@@ -122,7 +164,9 @@ Print-on-demand merchandise store for travel gadgets via Printful API.
 - `GET /api/printful/products/:id` - Get single product details
 - `POST /api/printful/shipping-rates` - Calculate shipping rates
 
-Orders are created only after a verified Stripe Checkout webhook.
+Orders are created only after a verified Stripe Checkout webhook. Shipping is
+quoted by Printful immediately before Stripe Checkout and the Checkout Session
+expires after about 30 minutes.
 
 ## Stripe Integration (February 2026)
 Payment processing for merchandise via Stripe Checkout (connector: Stripe).
@@ -136,7 +180,65 @@ Payment processing for merchandise via Stripe Checkout (connector: Stripe).
 **API Endpoints**:
 - `GET /api/stripe/publishable-key` - Get Stripe publishable key
 - `POST /api/stripe/checkout` - Create Stripe Checkout Session from cart items
-- `GET /api/stripe/session/:sessionId` - Get session payment status
+- `GET /api/merchandise/orders/:orderId/status` - Get a return-page order status using the matching Stripe session
+- `GET /api/merchandise/orders` - List the authenticated user's orders
+- `GET /api/admin/merchandise/orders` - List recent orders (admin only)
+- `POST /api/admin/merchandise/orders/:orderId/retry` - Safely retry failed Printful submission (admin only)
+- `POST /api/admin/merchandise/orders/:orderId/refund` - Cancel an eligible Printful order, then issue an idempotent full Stripe refund (admin only)
+
+The Stripe webhook endpoint is `/api/stripe/webhook` and must subscribe to:
+
+- `checkout.session.completed`
+- `checkout.session.expired`
+
+Use Stripe test keys until the seller's legal and tax setup is ready.
+
+## Transactional merchandise email
+
+Order email is delivered through the Resend HTTP API without adding an SDK.
+The database outbox prevents duplicate messages and retries temporary failures
+up to five times. Resend requests also use a stable `Idempotency-Key`.
+
+Configure:
+
+- `TRANSACTIONAL_EMAIL_MODE=disabled` to guarantee that no email is sent;
+- `TRANSACTIONAL_EMAIL_MODE=test` to redirect every message to
+  `TRANSACTIONAL_EMAIL_TEST_RECIPIENT`;
+- `TRANSACTIONAL_EMAIL_MODE=live` to send to the customer email verified by
+  Stripe Checkout;
+- `RESEND_API_KEY`, `TRANSACTIONAL_EMAIL_FROM` and, optionally,
+  `TRANSACTIONAL_EMAIL_REPLY_TO` when delivery is enabled.
+
+The sender domain must be verified in Resend before live delivery. Production
+startup rejects live merchandise sales unless transactional email is also live,
+Stripe uses live keys, seller details are complete and
+`PRINTFUL_CONFIRM_ORDERS=true`.
+
+Notification types cover payment confirmation, submission to Printful,
+shipping/tracking, manual-review warnings and refunds. Email delivery failures
+never roll back or repeat the payment or Printful operation.
+
+## Printful fulfillment webhooks
+
+Set `PRINTFUL_WEBHOOK_SECRET` to a random value of at least 32 characters and
+configure the Printful v1 webhook URL as:
+
+`https://byebi.it/api/printful/webhook?token=<PRINTFUL_WEBHOOK_SECRET>`
+
+Enable these event types:
+
+- `package_shipped`
+- `package_returned`
+- `order_updated`
+- `order_failed`
+- `order_canceled`
+- `order_put_hold`
+- `order_remove_hold`
+
+The token query is not written to application request logs. Because Printful
+v1 webhooks are not signed like Stripe events, every accepted notification is
+verified by fetching the order again from Printful before local state or
+tracking information is updated.
 
 **Flow**: Cart → Stripe Checkout (with shipping address collection) → Payment → Success page
 **Database**: stripe-replit-sync manages `stripe` schema automatically via PostgreSQL

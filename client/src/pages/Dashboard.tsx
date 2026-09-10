@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Trip } from "@shared/schema";
+import { Trip, type MerchandiseOrderItem } from "@shared/schema";
+import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,40 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { Calendar, Map, GlassWater, ListChecks, Shirt, User } from "lucide-react";
+import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, RotateCcw, Shirt, Truck, User } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+type MerchandiseOrderSummary = {
+  id: string;
+  brand: "byebro" | "byebride";
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  amountTotal: number;
+  currency: string;
+  shippingCountry: string;
+  shippingMethod: string;
+  shippingAmount: number;
+  items: MerchandiseOrderItem[];
+  createdAt: string;
+  updatedAt?: string;
+  userId?: string | null;
+  printfulOrderId?: string | null;
+  printfulStatus?: string | null;
+  failureCode?: string | null;
+  trackingNumber?: string | null;
+  trackingUrl?: string | null;
+  shippingCarrier?: string | null;
+  shippedAt?: string | null;
+};
 
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -29,6 +56,78 @@ export default function Dashboard() {
   const { data: trips, isLoading, error } = useQuery<Trip[]>({
     queryKey: [`/api/trips/user/${user?.id}`],
     enabled: !!user?.id,
+  });
+
+  const { data: merchandiseOrders, isLoading: isLoadingMerchandise } =
+    useQuery<MerchandiseOrderSummary[]>({
+      queryKey: ["/api/merchandise/orders"],
+      enabled: !!user?.id,
+    });
+
+  const { data: affiliateSummary, isLoading: isLoadingAffiliateSummary } =
+    useQuery<AffiliateClickSummary>({
+      queryKey: ["/api/admin/affiliate-summary?days=30"],
+      enabled: Boolean(user?.isAdmin),
+    });
+
+  const { data: adminMerchandiseOrders, isLoading: isLoadingAdminMerchandise } =
+    useQuery<MerchandiseOrderSummary[]>({
+      queryKey: ["/api/admin/merchandise/orders"],
+      enabled: Boolean(user?.isAdmin),
+    });
+
+  const retryMerchandiseOrder = useMutation({
+    mutationFn: async (orderId: string) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/merchandise/orders/${orderId}/retry`,
+      );
+      return response.json();
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/merchandise/orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/merchandise/orders"] }),
+      ]);
+      toast({
+        title: t('dashboard.retrySuccess'),
+        description: t('dashboard.retrySuccessDesc'),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t('dashboard.retryError'),
+        description: t('dashboard.retryErrorDesc'),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const refundMerchandiseOrder = useMutation({
+    mutationFn: async (orderId: string) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/merchandise/orders/${orderId}/refund`,
+      );
+      return response.json();
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/merchandise/orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/merchandise/orders"] }),
+      ]);
+      toast({
+        title: t('dashboard.refundSuccess'),
+        description: t('dashboard.refundSuccessDesc'),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t('dashboard.refundError'),
+        description: t('dashboard.refundErrorDesc'),
+        variant: "destructive",
+      });
+    },
   });
 
   if (!isAuthenticated) {
@@ -59,9 +158,21 @@ export default function Dashboard() {
           </div>
           
           <Tabs defaultValue="trips" className="w-full">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 h-auto flex-wrap">
               <TabsTrigger value="trips"><ListChecks className="mr-2 h-4 w-4" /> {t('dashboard.myTrips')}</TabsTrigger>
               <TabsTrigger value="merchandise"><Shirt className="mr-2 h-4 w-4" /> {t('dashboard.myMerchandise')}</TabsTrigger>
+              {user?.isAdmin && (
+                <>
+                  <TabsTrigger value="orderManagement">
+                    <AlertTriangle className="mr-2 h-4 w-4" />
+                    {t('dashboard.orderManagement')}
+                  </TabsTrigger>
+                  <TabsTrigger value="affiliateAnalytics">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    {t('dashboard.affiliateAnalytics')}
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
             
             <TabsContent value="trips">
@@ -126,7 +237,7 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
                       <CardFooter>
-                        <Button 
+                        <Button
                           className="w-full bg-primary hover:bg-accent"
                           onClick={() => {
                             const destination = trip.destinations?.[0] || "";
@@ -152,7 +263,7 @@ export default function Dashboard() {
                 <div className="text-center p-10 border-2 border-dashed border-gray-300 rounded-xl">
                   <h3 className="text-xl font-bold mb-2">{t('dashboard.noTrips')}</h3>
                   <p className="text-gray-600 mb-4">{t('dashboard.noTripsDesc')}</p>
-                  <Button 
+                  <Button
                     className="bg-primary hover:bg-accent"
                     onClick={() => setLocation("/#trip-planning")}
                   >
@@ -163,17 +274,211 @@ export default function Dashboard() {
             </TabsContent>
             
             <TabsContent value="merchandise">
-              <div className="text-center p-10 border-2 border-dashed border-gray-300 rounded-xl">
-                <h3 className="text-xl font-bold mb-2">{t('dashboard.noMerch')}</h3>
-                <p className="text-gray-600 mb-4">{t('dashboard.noMerchDesc')}</p>
-                <Button 
-                  className="bg-primary hover:bg-accent"
-                  onClick={() => setLocation("/merchandise")}
-                >
-                  Shop Merchandise
-                </Button>
-              </div>
+              {isLoadingMerchandise ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Skeleton className="h-44 w-full" />
+                  <Skeleton className="h-44 w-full" />
+                </div>
+              ) : merchandiseOrders?.length ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {merchandiseOrders.map((order) => (
+                    <Card key={order.id}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <CardTitle>{t('dashboard.merchOrder')}</CardTitle>
+                            <CardDescription>
+                              {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")} · {order.brand === "byebride" ? "ByeBride" : "ByeBro"}
+                            </CardDescription>
+                          </div>
+                          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
+                            {t(`dashboard.orderStatus.${order.fulfillmentStatus}`)}
+                          </span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {order.items.map((item) => (
+                          <div key={`${order.id}-${item.variantId}`} className="flex justify-between text-sm">
+                            <span>{item.productName} · {item.variantName} × {item.quantity}</span>
+                            <span>{(item.unitAmount * item.quantity / 100).toFixed(2)} {order.currency}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between text-sm">
+                          <span>{t('dashboard.shipping')} · {order.shippingCountry}</span>
+                          <span>{(order.shippingAmount / 100).toFixed(2)} {order.currency}</span>
+                        </div>
+                        <div className="border-t pt-2 text-right font-bold">
+                          {(order.amountTotal / 100).toFixed(2)} {order.currency}
+                        </div>
+                        {order.trackingUrl && (
+                          <a
+                            href={order.trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 flex items-center gap-2 rounded-md bg-blue-50 p-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                          >
+                            <Truck className="h-4 w-4" />
+                            {t('dashboard.trackShipment')}
+                            {order.shippingCarrier ? ` · ${order.shippingCarrier}` : ""}
+                            {order.trackingNumber ? ` · ${order.trackingNumber}` : ""}
+                          </a>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-10 border-2 border-dashed border-gray-300 rounded-xl">
+                  <h3 className="text-xl font-bold mb-2">{t('dashboard.noMerch')}</h3>
+                  <p className="text-gray-600 mb-4">{t('dashboard.noMerchDesc')}</p>
+                  <Button
+                    className="bg-primary hover:bg-accent"
+                    onClick={() => setLocation("/merchandise")}
+                  >
+                    {t('dashboard.shopMerchandise')}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
+
+            {user?.isAdmin && (
+              <TabsContent value="orderManagement">
+                {isLoadingAdminMerchandise ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-40 w-full" />
+                  </div>
+                ) : adminMerchandiseOrders?.length ? (
+                  <div className="space-y-4">
+                    {adminMerchandiseOrders.map((order) => (
+                      <Card key={`admin-${order.id}`}>
+                        <CardHeader>
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                              <CardTitle className="text-base">#{order.id.slice(0, 8)}</CardTitle>
+                              <CardDescription>
+                                {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")} · {order.userId || t('dashboard.guestOrder')}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">
+                                {t(`dashboard.orderStatus.${order.fulfillmentStatus}`)}
+                              </span>
+                              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                                {(order.amountTotal / 100).toFixed(2)} {order.currency}
+                              </span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <p className="text-sm text-gray-600">
+                            {order.items.reduce((total, item) => total + item.quantity, 0)} {t('dashboard.items')} · {order.brand === "byebride" ? "ByeBride" : "ByeBro"}
+                          </p>
+                          {order.failureCode && (
+                            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                              {t(`dashboard.failureCode.${order.failureCode}`)}
+                            </div>
+                          )}
+                          {order.printfulOrderId && (
+                            <p className="text-xs text-gray-500">
+                              Printful #{order.printfulOrderId} · {order.printfulStatus || "—"}
+                            </p>
+                          )}
+                          {order.fulfillmentStatus === "fulfillment_failed" && (
+                            <Button
+                              onClick={() => retryMerchandiseOrder.mutate(order.id)}
+                              disabled={retryMerchandiseOrder.isPending}
+                            >
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              {t('dashboard.retryPrintful')}
+                            </Button>
+                          )}
+                          {order.paymentStatus === "paid" &&
+                            order.fulfillmentStatus === "submitted" &&
+                            order.printfulStatus &&
+                            ["draft", "failed", "pending"].includes(order.printfulStatus) && (
+                            <Button
+                              variant="destructive"
+                              onClick={() => {
+                                if (window.confirm(t('dashboard.refundConfirm'))) {
+                                  refundMerchandiseOrder.mutate(order.id);
+                                }
+                              }}
+                              disabled={refundMerchandiseOrder.isPending}
+                            >
+                              {t('dashboard.cancelAndRefund')}
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border-2 border-dashed border-gray-300 p-10 text-center">
+                    <p className="text-gray-600">{t('dashboard.noOrdersToManage')}</p>
+                  </div>
+                )}
+              </TabsContent>
+            )}
+
+            {user?.isAdmin && (
+              <TabsContent value="affiliateAnalytics">
+                {isLoadingAffiliateSummary ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                  </div>
+                ) : affiliateSummary ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <MousePointerClick className="h-5 w-5" />
+                            {t('dashboard.affiliateClicks')}
+                          </CardTitle>
+                          <CardDescription>{t('dashboard.last30Days')}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-3xl font-bold">
+                          {affiliateSummary.totalClicks}
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>{t('dashboard.monetizedClicks')}</CardTitle>
+                          <CardDescription>{t('dashboard.last30Days')}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-3xl font-bold text-green-700">
+                          {affiliateSummary.monetizedClicks}
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{t('dashboard.clicksByProvider')}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {affiliateSummary.providers.length > 0 ? (
+                          affiliateSummary.providers.map((provider) => (
+                            <div key={provider.key} className="flex items-center justify-between border-b pb-3 last:border-0">
+                              <span className="font-medium capitalize">{provider.key}</span>
+                              <span className="text-sm text-gray-600">
+                                {provider.total} {t('dashboard.clicks')} · {provider.monetized} {t('dashboard.monetized')}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-600">{t('dashboard.noAffiliateClicks')}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <p className="text-red-600">{t('dashboard.affiliateAnalyticsError')}</p>
+                )}
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </main>

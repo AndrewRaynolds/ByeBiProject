@@ -27,6 +27,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import { createChatCheckoutContext } from "@/lib/chatCheckout";
+import { debugLog, debugWarn } from "@/lib/debug";
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(2_000),
@@ -316,7 +317,7 @@ export default function ChatDialogCompact({
 
       if (pendingItineraryNavigation.current) {
         pendingItineraryNavigation.current = false;
-        console.log("🛒 Auto-navigating to checkout after flight selection");
+        debugLog("🛒 Auto-navigating to checkout after flight selection");
         saveCurrentItinerary();
         onOpenChange(false);
         setLocation("/checkout");
@@ -368,7 +369,7 @@ export default function ChatDialogCompact({
             destinationCity: conversationState.selectedDestination,
             checkoutUrl: flight.checkoutUrl,
           };
-          console.log(
+          debugLog(
             `✈️ Processing pending flight selection ${flightNum}:`,
             flightData,
           );
@@ -379,7 +380,7 @@ export default function ChatDialogCompact({
           if (isLoadingRef.current) {
             pendingItineraryNavigation.current = true;
           } else {
-            console.log("🛒 Auto-navigating to checkout (deferred flight, stream already done)");
+            debugLog("🛒 Auto-navigating to checkout (deferred flight, stream already done)");
             saveCurrentItinerary();
             onOpenChange(false);
             setLocation("/checkout");
@@ -442,7 +443,7 @@ export default function ChatDialogCompact({
     // Use user-selected origin city, fallback to stored origin or default
     const userOriginCity = originCityRef.current || originCity || "Roma";
 
-    console.log("✈️ FLIGHT DATA:", {
+    debugLog("✈️ FLIGHT DATA:", {
       selectedFlight,
       originCity: userOriginCity,
       flightsAvailable: flights.length,
@@ -556,13 +557,13 @@ export default function ChatDialogCompact({
 
     // Fallback to flight's checkoutUrl if helper returned null
     if (!aviasalesUrl && currentSelectedFlight?.checkoutUrl) {
-      console.log(
+      debugLog(
         "⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback",
       );
       aviasalesUrl = currentSelectedFlight.checkoutUrl;
     }
 
-    console.log("🔗 Aviasales URL built with user dates:", {
+    debugLog("🔗 Aviasales URL built with user dates:", {
       startDate: tripDetails.startDate,
       endDate: tripDetails.endDate,
       url: aviasalesUrl,
@@ -592,7 +593,7 @@ export default function ChatDialogCompact({
     if (currentSelectedFlight) {
       localStorage.setItem("selectedFlight", JSON.stringify(currentSelectedFlight));
     }
-    console.log("💾 Saved currentItinerary to localStorage:", currentItinerary);
+    debugLog("💾 Saved currentItinerary to localStorage:", currentItinerary);
   };
 
   interface ToolCallData {
@@ -601,7 +602,7 @@ export default function ChatDialogCompact({
   }
 
   const handleToolCall = (toolCall: ToolCallData) => {
-    console.log(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
+    debugLog(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
 
     switch (toolCall.name) {
       case "search_flights": {
@@ -677,7 +678,7 @@ export default function ChatDialogCompact({
                 destinationCity: conversationState.selectedDestination,
                 checkoutUrl: flight.checkoutUrl,
               };
-              console.log(`✈️ User selected flight ${flightNum}:`, flightData);
+              debugLog(`✈️ User selected flight ${flightNum}:`, flightData);
               setSelectedFlight(flightData);
               selectedFlightRef.current = flightData;
               localStorage.setItem("selectedFlight", JSON.stringify(flightData));
@@ -685,14 +686,14 @@ export default function ChatDialogCompact({
               setShowGenerateButton(true);
             }
           } else {
-            console.log(`✈️ Storing pending flight selection: ${flightNum}`);
+            debugLog(`✈️ Storing pending flight selection: ${flightNum}`);
             setPendingFlightSelection(flightNum);
           }
         }
         break;
 
       case "unlock_checkout":
-        console.log(
+        debugLog(
           "🔓 Checkout unlocked - saving and navigating to checkout",
         );
         saveCurrentItinerary();
@@ -702,10 +703,10 @@ export default function ChatDialogCompact({
             const itinerary = JSON.parse(savedData);
             itinerary.checkoutApproved = true;
             localStorage.setItem("currentItinerary", JSON.stringify(itinerary));
-            console.log("✅ checkoutApproved flag saved, navigating to /checkout");
+            debugLog("✅ checkoutApproved flag saved, navigating to /checkout");
           }
         } catch (e) {
-          console.warn("Failed to update checkoutApproved flag:", e);
+          debugWarn("Failed to update checkoutApproved flag:", e);
         }
         onOpenChange(false);
         setLocation("/checkout");

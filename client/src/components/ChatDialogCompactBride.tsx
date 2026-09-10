@@ -15,6 +15,7 @@ import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest } from '@/lib/queryClient';
 import { consumeJsonSse } from '@/lib/sse';
 import { createChatCheckoutContext } from '@/lib/chatCheckout';
+import { debugLog, debugWarn } from '@/lib/debug';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(2_000),
@@ -322,7 +323,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             destinationCity: conversationState.selectedDestination,
             checkoutUrl: flight.checkoutUrl
           };
-          console.log(`✈️ Processing pending flight selection ${flightNum}:`, flightData);
+          debugLog(`✈️ Processing pending flight selection ${flightNum}:`, flightData);
           setSelectedFlight(flightData);
           localStorage.setItem('selectedFlight', JSON.stringify(flightData));
           setShowGenerateButton(true);
@@ -375,7 +376,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     // Use user-selected origin city, fallback to stored origin or default
     const userOriginCity = originCity || 'Roma';
     
-    console.log("✈️ FLIGHT DATA:", { 
+    debugLog("✈️ FLIGHT DATA:", {
       selectedFlight, 
       originCity: userOriginCity, 
       flightsAvailable: flights.length 
@@ -481,11 +482,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     
     // Fallback to flight's checkoutUrl if helper returned null
     if (!aviasalesUrl && selectedFlight?.checkoutUrl) {
-      console.log('⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback');
+      debugLog('⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback');
       aviasalesUrl = selectedFlight.checkoutUrl;
     }
     
-    console.log('🔗 Aviasales URL built with user dates:', {
+    debugLog('🔗 Aviasales URL built with user dates:', {
       startDate: tripDetails.startDate,
       endDate: tripDetails.endDate,
       url: aviasalesUrl
@@ -515,7 +516,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     if (selectedFlight) {
       localStorage.setItem('selectedFlight', JSON.stringify(selectedFlight));
     }
-    console.log('💾 Saved currentItinerary to localStorage:', currentItinerary);
+    debugLog('💾 Saved currentItinerary to localStorage:', currentItinerary);
   };
 
   interface ToolCallData {
@@ -524,7 +525,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   }
 
   const handleToolCall = (toolCall: ToolCallData) => {
-    console.log(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
+    debugLog(`🔧 Tool call received: ${toolCall.name}`, toolCall.arguments);
 
     switch (toolCall.name) {
       case "search_flights": {
@@ -600,20 +601,20 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
                 destinationCity: conversationState.selectedDestination,
                 checkoutUrl: flight.checkoutUrl
               };
-              console.log(`✈️ User selected flight ${flightNum}:`, flightData);
+              debugLog(`✈️ User selected flight ${flightNum}:`, flightData);
               setSelectedFlight(flightData);
               localStorage.setItem('selectedFlight', JSON.stringify(flightData));
               setShowGenerateButton(true);
             }
           } else {
-            console.log(`✈️ Storing pending flight selection: ${flightNum}`);
+            debugLog(`✈️ Storing pending flight selection: ${flightNum}`);
             setPendingFlightSelection(flightNum);
           }
         }
         break;
 
       case "unlock_checkout":
-        console.log('🔓 Checkout unlocked - saving and navigating to checkout');
+        debugLog('🔓 Checkout unlocked - saving and navigating to checkout');
         saveCurrentItinerary();
         try {
           const savedData = localStorage.getItem('currentItinerary');
@@ -621,10 +622,10 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
             const itinerary = JSON.parse(savedData);
             itinerary.checkoutApproved = true;
             localStorage.setItem('currentItinerary', JSON.stringify(itinerary));
-            console.log('✅ checkoutApproved flag saved, navigating to /checkout');
+            debugLog('✅ checkoutApproved flag saved, navigating to /checkout');
           }
         } catch (e) {
-          console.warn('Failed to update checkoutApproved flag:', e);
+          debugWarn('Failed to update checkoutApproved flag:', e);
         }
         onOpenChange(false);
         setLocation('/checkout');

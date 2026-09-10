@@ -5,6 +5,10 @@ import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/
 import { resolveIataCode } from "./cityMapping";
 import { getSafeErrorMetadata } from "../safeError";
 
+const debugLog = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== "production") console.log(...args);
+};
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ItineraryRequest {
@@ -44,7 +48,7 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
   try {
     // Controlla che ci sia una chiave API di OpenAI
     if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "") {
-      console.log("No OpenAI API key found, using fallback itinerary");
+      debugLog("No OpenAI API key found, using fallback itinerary");
       return generateFallbackItinerary(request);
     }
     
@@ -106,7 +110,7 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
   
       const itineraryText = response.choices[0].message.content;
       if (!itineraryText) {
-        console.log("Empty response from OpenAI, using fallback itinerary");
+        debugLog("Empty response from OpenAI, using fallback itinerary");
         return generateFallbackItinerary(request);
       }
   
@@ -123,7 +127,7 @@ export async function generateItinerary(request: ItineraryRequest): Promise<Gene
       if (!process.env.OPENAI_API_KEY) {
         console.error("OPENAI_API_KEY non configurata nell'ambiente");
       } else {
-        console.log("OPENAI_API_KEY è presente nell'ambiente");
+        debugLog("OPENAI_API_KEY è presente nell'ambiente");
       }
       
       return generateFallbackItinerary(request);
@@ -271,7 +275,7 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
         retDate = newEnd.toISOString().slice(0, 10);
         args.departure_date = depDate;
         args.return_date = retDate;
-        console.log(`📅 Auto-corrected past dates → dep: ${depDate}, ret: ${retDate}`);
+        debugLog(`📅 Auto-corrected past dates → dep: ${depDate}, ret: ${retDate}`);
       }
 
       if (!Number.isInteger(passengers) || passengers <= 0) {
@@ -283,7 +287,7 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       if (passengers > 9) {
         args._originalPassengers = passengers;
         args.passengers = 1;
-        console.log(`👥 Passengers capped: ${passengers} → 1 (per-person search for Amadeus max 9 limit)`);
+        debugLog(`👥 Passengers capped: ${passengers} → 1 (per-person search for Amadeus max 9 limit)`);
       }
       return { valid: true };
     }
@@ -974,7 +978,7 @@ export async function* streamOpenAIChatCompletionWithTools(
     const systemPromptLength = contextualPrompt.length;
     const historyLength = conversationHistory.length;
     const totalChars = messages.reduce((sum, m) => sum + (typeof m.content === "string" ? m.content.length : 0), 0);
-    console.log(`⏱️ [STREAM] Start | system_prompt=${systemPromptLength} chars | history=${historyLength} msgs | total_chars=${totalChars}`);
+    debugLog(`⏱️ [STREAM] Start | system_prompt=${systemPromptLength} chars | history=${historyLength} msgs | total_chars=${totalChars}`);
 
     // Tool loop: keep calling OpenAI until we get a response without tool calls
     const maxToolIterations = 4;
@@ -983,7 +987,7 @@ export async function* streamOpenAIChatCompletionWithTools(
       if (signal?.aborted) return;
 
       const apiStart = Date.now();
-      console.log(`⏱️ [STREAM] OpenAI API call #${iteration} starting...`);
+      debugLog(`⏱️ [STREAM] OpenAI API call #${iteration} starting...`);
 
       const stream = await openai.chat.completions.create(
         {
@@ -997,7 +1001,7 @@ export async function* streamOpenAIChatCompletionWithTools(
       );
 
       const firstChunkStart = Date.now();
-      console.log(`⏱️ [STREAM] Stream created in ${firstChunkStart - apiStart}ms, waiting for first chunk...`);
+      debugLog(`⏱️ [STREAM] Stream created in ${firstChunkStart - apiStart}ms, waiting for first chunk...`);
 
       let assistantContent = "";
       const toolCallsBuffer: Map<number, { id: string; name: string; arguments: string }> =
@@ -1010,7 +1014,7 @@ export async function* streamOpenAIChatCompletionWithTools(
         if (signal?.aborted) return;
 
         if (!firstChunkReceived) {
-          console.log(`⏱️ [STREAM] First chunk received in ${Date.now() - firstChunkStart}ms (total since API call: ${Date.now() - apiStart}ms)`);
+          debugLog(`⏱️ [STREAM] First chunk received in ${Date.now() - firstChunkStart}ms (total since API call: ${Date.now() - apiStart}ms)`);
           firstChunkReceived = true;
         }
         const delta = chunk.choices[0]?.delta;
@@ -1040,11 +1044,11 @@ export async function* streamOpenAIChatCompletionWithTools(
           yield { type: "content", content: chunk };
         }
       } else if (hasToolCalls && assistantContent) {
-        console.log(`⏱️ [STREAM] Discarded filler text before tool call: "${assistantContent.slice(0, 80)}..."`);
+        debugLog(`⏱️ [STREAM] Discarded filler text before tool call: "${assistantContent.slice(0, 80)}..."`);
       }
 
       const streamDone = Date.now();
-      console.log(`⏱️ [STREAM] Stream #${iteration} fully consumed in ${streamDone - apiStart}ms`);
+      debugLog(`⏱️ [STREAM] Stream #${iteration} fully consumed in ${streamDone - apiStart}ms`);
 
       // Finalize tool calls from buffer
       const toolCalls: Array<{ id: string; name: string; arguments: string }> = [];
@@ -1054,11 +1058,11 @@ export async function* streamOpenAIChatCompletionWithTools(
         }
       }
 
-      console.log(`⏱️ [STREAM] Tool calls: [${toolCalls.map(tc => tc.name).join(", ")}] | content=${assistantContent.length} chars`);
+      debugLog(`⏱️ [STREAM] Tool calls: [${toolCalls.map(tc => tc.name).join(", ")}] | content=${assistantContent.length} chars`);
 
       // If no tool calls, we're done - exit the loop
       if (toolCalls.length === 0) {
-        console.log(`⏱️ [STREAM] No tool calls, done. Total: ${Date.now() - totalStart}ms`);
+        debugLog(`⏱️ [STREAM] No tool calls, done. Total: ${Date.now() - totalStart}ms`);
         completed = true;
         break;
       }
@@ -1110,7 +1114,7 @@ export async function* streamOpenAIChatCompletionWithTools(
         const toolStart = Date.now();
         const result = await executeToolCall(toolCall.name, args, context);
         if (signal?.aborted) return;
-        console.log(`⏱️ [STREAM] Tool "${toolCall.name}" executed in ${Date.now() - toolStart}ms`);
+        debugLog(`⏱️ [STREAM] Tool "${toolCall.name}" executed in ${Date.now() - toolStart}ms`);
 
         yield { type: "tool_result", name: toolCall.name, result };
         toolResults.push({ name: toolCall.name, result, args });
@@ -1134,14 +1138,14 @@ export async function* streamOpenAIChatCompletionWithTools(
           conversationHistory,
         );
         if (localResponse) {
-          console.log(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);
+          debugLog(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);
           yield { type: "content", content: localResponse };
           completed = true;
           break;
         }
       }
 
-      console.log(`⏱️ [STREAM] Needs followup via OpenAI. Elapsed: ${Date.now() - totalStart}ms`);
+      debugLog(`⏱️ [STREAM] Needs followup via OpenAI. Elapsed: ${Date.now() - totalStart}ms`);
     }
 
     if (!completed && !signal?.aborted) {

@@ -2,8 +2,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Compass, ExternalLink } from 'lucide-react';
 import { getGetYourGuideCityLink } from '@/lib/getyourguide';
-import { trackEvent } from '@/lib/track';
+import { trackAffiliateClick } from '@/lib/track';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { openExternalUrl } from '@/lib/externalNavigation';
+import { AffiliateNotice } from '@/components/AffiliateNotice';
 
 interface GetYourGuideCtaProps {
   destinationCity?: string;
@@ -20,13 +22,13 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
   }
 
   const handleClick = () => {
-    trackEvent("gyg_click", {
-      destinationCity,
-      placement,
-      tripId,
-      url
+    trackAffiliateClick({
+      provider: "getyourguide",
+      placement: placement === "checkout" ? "checkout_experiences" : "itinerary",
+      destination: destinationCity,
+      monetized: true,
     });
-    window.open(url, "_blank", "noopener,noreferrer");
+    openExternalUrl(url);
   };
 
   return (
@@ -43,6 +45,7 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
             <p className="text-white/70 text-sm mb-4">
               {t('gyg.subtitle')}
             </p>
+            <AffiliateNotice className="mb-4" />
             <Button
               onClick={handleClick}
               className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold"

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
+import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
 import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
@@ -11,6 +11,14 @@ import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest } from '@/lib/queryClient';
 import { parseStoredTripContext, type TripContext } from '@/lib/tripContext';
 import { hotelSearchResponseSchema, type HotelResult } from '@shared/hotelSchemas';
+import {
+  buildBookingSearchUrl,
+  hasBookingAffiliateId,
+  isMonetizedAviasalesUrl,
+} from '@/lib/affiliateLinks';
+import { trackAffiliateClick } from '@/lib/track';
+import { openExternalUrl } from '@/lib/externalNavigation';
+import { AffiliateNotice } from '@/components/AffiliateNotice';
 
 
 export default function Checkout() {
@@ -21,6 +29,7 @@ export default function Checkout() {
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [loadingHotels, setLoadingHotels] = useState(true);
   const [hotelError, setHotelError] = useState<string | null>(null);
+  const [hotelSearchFailed, setHotelSearchFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +58,7 @@ export default function Checkout() {
   const fetchHotels = async (context: TripContext, signal: AbortSignal) => {
     setLoadingHotels(true);
     setHotelError(null);
+    setHotelSearchFailed(false);
     
     try {
       const cityCode = getCityCode(context.destination);
@@ -111,6 +121,7 @@ export default function Checkout() {
     } catch (error: unknown) {
       if (signal.aborted) return;
       if (import.meta.env.DEV) console.error('Hotel fetch error:', error);
+      setHotelSearchFailed(true);
       setHotelError(t('checkout.hotelLoadError'));
     } finally {
       if (!signal.aborted) setLoadingHotels(false);
@@ -118,14 +129,33 @@ export default function Checkout() {
   };
 
   const getHotelBookingUrl = (hotel: HotelResult): string => {
-    const hotelName = encodeURIComponent(hotel.name);
-    const city = encodeURIComponent(tripContext?.destination || '');
-    return `https://www.booking.com/searchresults.html?ss=${hotelName}+${city}&checkin=${hotel.checkInDate}&checkout=${hotel.checkOutDate}&group_adults=${tripContext?.people || 2}`;
+    return buildBookingSearchUrl({
+      hotelName: hotel.name,
+      destination: tripContext?.destination || '',
+      checkInDate: hotel.checkInDate,
+      checkOutDate: hotel.checkOutDate,
+      adults: tripContext?.people || 2,
+    });
   };
 
   const getDestinationBookingUrl = (): string => {
-    const city = encodeURIComponent(tripContext?.destination || '');
-    return `https://www.booking.com/searchresults.html?ss=${city}&checkin=${tripContext?.startDate || ''}&checkout=${tripContext?.endDate || ''}&group_adults=${tripContext?.people || 2}`;
+    return buildBookingSearchUrl({
+      destination: tripContext?.destination || '',
+      checkInDate: tripContext?.startDate,
+      checkOutDate: tripContext?.endDate,
+      adults: tripContext?.people || 2,
+    });
+  };
+
+  const openBookingSearch = (placement: 'checkout_hotel' | 'checkout_hotel_fallback', hotel?: HotelResult) => {
+    const url = hotel ? getHotelBookingUrl(hotel) : getDestinationBookingUrl();
+    trackAffiliateClick({
+      provider: 'booking',
+      placement,
+      destination: tripContext?.destination,
+      monetized: hasBookingAffiliateId(),
+    });
+    openExternalUrl(url);
   };
 
   const formatHotelPrice = (hotel: HotelResult): string =>
@@ -176,6 +206,8 @@ export default function Checkout() {
   // Calculate trip days from dates (safe - fields validated above)
   const tripDays = calculateTripDays(tripContext.startDate, tripContext.endDate);
   const formattedDates = formatDateRangeIT(tripContext.startDate, tripContext.endDate);
+  const aviasalesIsMonetized = isMonetizedAviasalesUrl(tripContext.aviasalesCheckoutUrl);
+  const bookingIsMonetized = hasBookingAffiliateId();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
@@ -233,6 +265,7 @@ export default function Checkout() {
             <p className="text-xs text-white/50 mb-3 italic">
               {t('checkout.bookOnAviasales')}
             </p>
+            {aviasalesIsMonetized && <AffiliateNotice className="mb-3" />}
             
             {tripContext.aviasalesCheckoutUrl ? (
               <Button 
@@ -244,6 +277,12 @@ export default function Checkout() {
                   href={tripContext.aviasalesCheckoutUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
+                  onClick={() => trackAffiliateClick({
+                    provider: 'aviasales',
+                    placement: 'checkout_flight',
+                    destination: tripContext.destination,
+                    monetized: isMonetizedAviasalesUrl(tripContext.aviasalesCheckoutUrl),
+                  })}
                 >
                   <Plane className="w-4 h-4 mr-2" />
                   {t('checkout.goToAviasales')}
@@ -279,14 +318,26 @@ export default function Checkout() {
                   <div>
                     <p className="text-yellow-200 font-medium">{t('checkout.noHotels')}</p>
                     <p className="text-yellow-200/70 text-sm mt-1">{hotelError}</p>
+                    {hotelSearchFailed && (
+                      <Button
+                        variant="outline"
+                        className="mt-4 mr-3 border-yellow-500/60 bg-transparent text-yellow-100 hover:bg-yellow-900/40 hover:text-white"
+                        onClick={() => fetchHotels(tripContext, new AbortController().signal)}
+                        data-testid="button-retry-hotels"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        {t('checkout.retryHotelSearch')}
+                      </Button>
+                    )}
                     <Button
                       className="mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-                      onClick={() => window.open(getDestinationBookingUrl(), '_blank')}
+                      onClick={() => openBookingSearch('checkout_hotel_fallback')}
                       data-testid="button-search-hotels-booking"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
                       {t('checkout.searchHotelsBooking')}
                     </Button>
+                    {bookingIsMonetized && <AffiliateNotice className="mt-3" />}
                   </div>
                 </div>
               </div>
@@ -327,14 +378,17 @@ export default function Checkout() {
             )}
 
             {selectedHotel && (
-              <Button 
-                className="w-full mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
-                onClick={() => window.open(getHotelBookingUrl(selectedHotel), '_blank', 'noopener,noreferrer')}
-                data-testid="button-book-hotel"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                {t('checkout.bookOnBooking')}
-              </Button>
+              <>
+                <Button
+                  className="w-full mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                  onClick={() => openBookingSearch('checkout_hotel', selectedHotel)}
+                  data-testid="button-book-hotel"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  {t('checkout.bookOnBooking')}
+                </Button>
+                {bookingIsMonetized && <AffiliateNotice className="mt-3" />}
+              </>
             )}
           </CardContent>
         </Card>

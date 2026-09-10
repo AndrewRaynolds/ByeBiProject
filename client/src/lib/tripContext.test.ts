@@ -7,7 +7,7 @@ const validContext = {
   startDate: "2026-08-10",
   endDate: "2026-08-13",
   people: 4,
-  aviasalesCheckoutUrl: "https://example.com/flight",
+  aviasalesCheckoutUrl: "https://www.aviasales.com/search/example?marker=685469",
 };
 
 describe("TripContext", () => {
@@ -31,10 +31,10 @@ describe("TripContext", () => {
     expect(
       createTripContext({
         ...legacyContext,
-        aviasalesUrl: "https://example.com/legacy-flight",
+        aviasalesUrl: "https://www.aviasales.com/search/legacy-flight?marker=685469",
       }),
     ).toMatchObject({
-      aviasalesCheckoutUrl: "https://example.com/legacy-flight",
+      aviasalesCheckoutUrl: "https://www.aviasales.com/search/legacy-flight?marker=685469",
     });
   });
 
@@ -45,6 +45,7 @@ describe("TripContext", () => {
     { ...validContext, people: 0 },
     { ...validContext, people: "4" },
     { ...validContext, aviasalesCheckoutUrl: "javascript:alert(1)" },
+    { ...validContext, aviasalesCheckoutUrl: "https://example.com/search/flight" },
   ])("rejects invalid checkout data", (context) => {
     expect(createTripContext(context)).toBeNull();
   });

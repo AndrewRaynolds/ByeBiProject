@@ -12,10 +12,14 @@ import {
   commerceLimiter,
   externalApiLimiter,
   webhookLimiter,
+  analyticsLimiter,
 } from "./security";
 import { storage } from "./storage";
 import { createHttpSecurityMiddleware } from "./httpSecurity";
 import { validateRuntimeEnvironment } from "./runtimeConfig";
+import { startTransactionalEmailWorker } from "./services/transactionalEmail";
+import { requestObservability } from "./requestObservability";
+import { getSafeErrorMetadata } from "./safeError";
 
 const app = express();
 
@@ -24,6 +28,7 @@ let isShuttingDown = false;
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.use(createHttpSecurityMiddleware());
+app.use(requestObservability);
 
 // Stripe webhook route MUST be registered BEFORE express.json()
 // Stripe integration (connector: Stripe)
@@ -46,7 +51,10 @@ app.post(
       await WebhookHandlers.processWebhook(req.body as Buffer, sig);
       res.status(200).json({ received: true });
     } catch (error: any) {
-      console.error('Webhook error:', error.message);
+      console.error('Webhook error', {
+        requestId: req.requestId,
+        ...getSafeErrorMetadata(error),
+      });
       res.status(400).json({ error: 'Webhook processing error' });
     }
   }
@@ -77,7 +85,7 @@ app.get("/api/ready", async (_req, res) => {
           : "memory",
     });
   } catch (error) {
-    console.error("Readiness check failed:", error);
+    console.error("Readiness check failed", getSafeErrorMetadata(error));
     res.status(503).json({ status: "unavailable" });
   }
 });
@@ -87,22 +95,10 @@ app.use("/api/chat", aiConcurrencyLimiter, aiLimiter);
 app.use("/api/generate-itinerary", aiLimiter);
 app.use("/api/stripe", commerceLimiter);
 app.use("/api/printful", commerceLimiter);
+app.use("/api/admin/merchandise", commerceLimiter);
 app.use("/api/hotels", externalApiLimiter);
 app.use("/api/flights", externalApiLimiter);
-
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-
-  next();
-});
+app.use("/api/analytics", analyticsLimiter);
 
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -142,9 +138,9 @@ async function initStripe() {
     console.log('Syncing Stripe data...');
     stripeSync.syncBackfill()
       .then(() => console.log('Stripe data synced'))
-      .catch((err: any) => console.error('Error syncing Stripe data:', err));
+      .catch((err: unknown) => console.error('Error syncing Stripe data', getSafeErrorMetadata(err)));
   } catch (error) {
-    console.error('Failed to initialize Stripe:', error);
+    console.error('Failed to initialize Stripe', getSafeErrorMetadata(error));
   }
 }
 
@@ -161,7 +157,7 @@ async function startServer() {
         ? "Internal Server Error"
         : err.message || "Internal Server Error";
 
-    console.error("Unhandled request error:", err);
+    console.error("Unhandled request error", getSafeErrorMetadata(err));
     if (!res.headersSent) {
       res.status(status).json({ message });
     }
@@ -195,10 +191,12 @@ async function startServer() {
   });
 
   log(`serving on port ${port}`);
+  const stopTransactionalEmailWorker = startTransactionalEmailWorker();
 
   const shutdown = (signal: NodeJS.Signals) => {
     if (isShuttingDown) return;
     isShuttingDown = true;
+    stopTransactionalEmailWorker();
     log(`${signal} received, shutting down`);
 
     const forceShutdownTimer = setTimeout(() => {
@@ -211,14 +209,14 @@ async function startServer() {
       let exitCode = serverError ? 1 : 0;
 
       if (serverError) {
-        console.error("HTTP server shutdown failed:", serverError);
+        console.error("HTTP server shutdown failed", getSafeErrorMetadata(serverError));
       }
 
       try {
         await storage.close();
       } catch (databaseError) {
         exitCode = 1;
-        console.error("Database shutdown failed:", databaseError);
+        console.error("Database shutdown failed", getSafeErrorMetadata(databaseError));
       } finally {
         clearTimeout(forceShutdownTimer);
         process.exit(exitCode);
@@ -231,11 +229,11 @@ async function startServer() {
 }
 
 startServer().catch(async (error) => {
-  console.error("Server startup failed:", error);
+  console.error("Server startup failed", getSafeErrorMetadata(error));
   try {
     await storage.close();
   } catch (databaseError) {
-    console.error("Database cleanup after startup failure failed:", databaseError);
+    console.error("Database cleanup after startup failure failed", getSafeErrorMetadata(databaseError));
   }
   process.exitCode = 1;
 });

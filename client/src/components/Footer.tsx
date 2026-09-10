@@ -1,12 +1,12 @@
 import { Link } from "wouter";
 import { Mail } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { sellerConfig } from "@/lib/sellerConfig";
 
 export default function Footer() {
   const { t } = useTranslation();
   const isBride = localStorage.getItem("selectedBrand") === "byebride";
   const accentClass = isBride ? "text-pink-500" : "text-primary";
-  const supportEmail = isBride ? "support@byebride.com" : "support@byebro.com";
 
   return (
     <footer className="bg-dark text-gray-300 py-12">
@@ -47,21 +47,45 @@ export default function Footer() {
                   {t('footer.customMerch')}
                 </Link>
               </li>
+              <li>
+                <Link href="/affiliate-disclosure" className="text-gray-400 hover:text-white transition">
+                  {t('footer.affiliateDisclosure')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-gray-400 hover:text-white transition">
+                  {t('footer.privacyPolicy')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="text-gray-400 hover:text-white transition">
+                  {t('footer.termsOfService')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund-policy" className="text-gray-400 hover:text-white transition">
+                  {t('footer.refundPolicy')}
+                </Link>
+              </li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-white font-bold text-lg mb-4">{t('footer.contact')}</h4>
             <ul className="space-y-2">
-              <li className="flex items-start">
-                <Mail className={`${accentClass} mt-1 mr-3 h-4 w-4`} />
-                <a
-                  href={`mailto:${supportEmail}`}
-                  className="text-gray-400 transition hover:text-white"
-                >
-                  {supportEmail}
-                </a>
-              </li>
+              {sellerConfig.contactEmail ? (
+                <li className="flex items-start">
+                  <Mail className={`${accentClass} mt-1 mr-3 h-4 w-4`} />
+                  <a
+                    href={`mailto:${sellerConfig.contactEmail}`}
+                    className="text-gray-400 transition hover:text-white"
+                  >
+                    {sellerConfig.contactEmail}
+                  </a>
+                </li>
+              ) : (
+                <li className="text-sm text-gray-400">{t('footer.salesNotActive')}</li>
+              )}
             </ul>
           </div>
         </div>

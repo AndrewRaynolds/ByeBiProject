@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { isAviasalesCheckoutUrl } from "./flightSchemas";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const httpUrlSchema = z.string().max(2048).refine((value) => {
   try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
+    return isAviasalesCheckoutUrl(value);
   } catch {
     return false;
   }
@@ -51,4 +51,3 @@ export const chatStreamRequestSchema = z.object({
 }).strict();
 
 export type ChatStreamRequest = z.infer<typeof chatStreamRequestSchema>;
-

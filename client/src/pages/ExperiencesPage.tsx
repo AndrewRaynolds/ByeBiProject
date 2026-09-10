@@ -13,8 +13,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Utensils, Wine, Music, Compass, Sparkles } from "lucide-react";
-import { trackEvent } from "@/lib/track";
+import { trackAffiliateClick, trackEvent } from "@/lib/track";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { openExternalUrl } from "@/lib/externalNavigation";
+import { AffiliateNotice } from "@/components/AffiliateNotice";
 
 const CATEGORY_ORDER: ExperienceCategory[] = ["restaurants", "bars", "nightlife", "activities"];
 const cityTranslationKey = (cityKey: string) => cityKey === "palma-de-mallorca" ? "palma" : cityKey;
@@ -36,7 +38,15 @@ function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceIte
       source: item.source,
       url: item.url,
     });
-    window.open(item.url, "_blank", "noopener,noreferrer");
+    if (item.source === "getyourguide" && item.isAffiliate) {
+      trackAffiliateClick({
+        provider: "getyourguide",
+        placement: "experiences",
+        destination: cityName,
+        monetized: true,
+      });
+    }
+    openExternalUrl(item.url);
   };
 
   return (
@@ -113,6 +123,9 @@ export default function ExperiencesPage() {
               <p className="text-white/70 max-w-2xl mx-auto">
                 {t('experiences.byCityDesc')}
               </p>
+              {activeCategory === "activities" && (
+                <AffiliateNotice className="mt-4 justify-center" />
+              )}
             </div>
 
             {selectedCity && (

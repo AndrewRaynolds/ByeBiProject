@@ -6,9 +6,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ReactCountryFlag from "react-country-flag";
 import { getGetYourGuideCityLink } from "@/lib/getyourguide";
-import { trackEvent } from "@/lib/track";
+import { trackAffiliateClick } from "@/lib/track";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { localizeDestination } from "@/lib/localizeDestination";
+import { openExternalUrl } from "@/lib/externalNavigation";
+import { AffiliateNotice } from "@/components/AffiliateNotice";
 
 export default function DestinationsPage() {
   const { t } = useTranslation();
@@ -200,6 +202,7 @@ export default function DestinationsPage() {
               <p className="text-gray-600">
                 {t("destinations.allSubtitle")}
               </p>
+              <AffiliateNotice variant="light" className="mt-4" />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -209,12 +212,13 @@ export default function DestinationsPage() {
                 const gygUrl = getGetYourGuideCityLink(destination.name);
                 const handleCardClick = () => {
                   if (!gygUrl) return;
-                  trackEvent("gyg_click", {
-                    destinationCity: destination.name,
+                  trackAffiliateClick({
+                    provider: "getyourguide",
                     placement: "destinations",
-                    url: gygUrl,
+                    destination: destination.name,
+                    monetized: true,
                   });
-                  window.open(gygUrl, "_blank", "noopener,noreferrer");
+                  openExternalUrl(gygUrl);
                 };
                 const cardClickable = !!gygUrl;
                 

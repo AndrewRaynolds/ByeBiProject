@@ -23,6 +23,10 @@ const DestinationsPage = lazy(() => import("@/pages/DestinationsPage"));
 const ExperiencesPage = lazy(() => import("@/pages/ExperiencesPage"));
 const ZapierWebhooksPage = lazy(() => import("@/pages/ZapierWebhooksPage"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
+const AffiliateDisclosurePage = lazy(() => import("@/pages/AffiliateDisclosurePage"));
+const TermsPage = lazy(() => import("@/pages/TermsPage"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
+const RefundPolicyPage = lazy(() => import("@/pages/RefundPolicyPage"));
 
 interface BrandedAppProps {
   selectedBrand: "byebro" | "byebride";
@@ -49,6 +53,10 @@ function Router({ selectedBrand }: BrandedAppProps) {
       <ProtectedRoute path="/splitta-bride" component={SplittaPage} />
       <ProtectedRoute path="/zapier-webhooks" component={ZapierWebhooksPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/affiliate-disclosure" component={AffiliateDisclosurePage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPolicyPage} />
+      <Route path="/refund-policy" component={RefundPolicyPage} />
       <Route component={NotFound} />
     </Switch>
   );

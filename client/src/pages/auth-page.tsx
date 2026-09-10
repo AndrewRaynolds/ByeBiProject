@@ -236,6 +236,12 @@ export default function AuthPage() {
                       t('auth.createAccount')
                     )}
                   </Button>
+                  <p className="text-center text-xs leading-relaxed text-gray-400">
+                    {t('auth.legalPrefix')}{" "}
+                    <Link href="/terms" className="underline hover:text-white">{t('footer.termsOfService')}</Link>
+                    {" "}{t('auth.legalAnd')}{" "}
+                    <Link href="/privacy" className="underline hover:text-white">{t('footer.privacyPolicy')}</Link>.
+                  </p>
                 </form>
               </Form>
             </TabsContent>

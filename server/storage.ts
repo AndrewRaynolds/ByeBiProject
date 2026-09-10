@@ -8,9 +8,18 @@ import {
   expenses as expensesTable,
   blogPosts as blogPostsTable,
   stripeWebhookEvents,
+  affiliateClicks,
+  type InsertAffiliateClick,
   trips as tripsTable,
+  merchandiseOrders,
+  merchandiseNotifications,
+  type MerchandiseOrder,
+  type InsertMerchandiseOrder,
+  type MerchandiseNotification,
+  type MerchandiseNotificationType,
 } from "@shared/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
+import { and, desc, eq, gte, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
 export interface IStorage {
@@ -54,6 +63,67 @@ export interface IStorage {
   // Stripe webhook idempotency
   hasProcessedStripeEvent(eventId: string): Promise<boolean>;
   markStripeEventProcessed(eventId: string, sessionId: string): Promise<void>;
+
+  // Privacy-preserving first-party affiliate analytics
+  recordAffiliateClick(click: InsertAffiliateClick): Promise<void>;
+  getAffiliateClickSummary(since: Date, days: number): Promise<AffiliateClickSummary>;
+
+  // Merchandise order lifecycle
+  createMerchandiseOrder(order: InsertMerchandiseOrder): Promise<MerchandiseOrder>;
+  attachStripeSessionToOrder(orderId: string, sessionId: string): Promise<boolean>;
+  getMerchandiseOrderById(orderId: string): Promise<MerchandiseOrder | undefined>;
+  getMerchandiseOrderByPrintfulOrderId(printfulOrderId: string): Promise<MerchandiseOrder | undefined>;
+  getMerchandiseOrderByIdAndSession(orderId: string, sessionId: string): Promise<MerchandiseOrder | undefined>;
+  getMerchandiseOrdersByUserId(userId: string): Promise<MerchandiseOrder[]>;
+  getAllMerchandiseOrders(limit?: number): Promise<MerchandiseOrder[]>;
+  setMerchandiseOrderCustomerEmail(orderId: string, email: string): Promise<void>;
+  claimMerchandiseOrderForFulfillment(
+    orderId: string,
+    sessionId: string,
+    eventId: string,
+    staleBefore: Date,
+  ): Promise<MerchandiseOrder | undefined>;
+  markMerchandiseOrderSubmitted(
+    orderId: string,
+    printfulOrderId: string,
+    printfulStatus?: string,
+  ): Promise<void>;
+  markMerchandiseOrderFailure(
+    orderId: string,
+    failureCode: string,
+    manualReview?: boolean,
+  ): Promise<void>;
+  markMerchandiseOrderExpired(orderId: string, sessionId: string): Promise<boolean>;
+  markMerchandiseOrderRefunded(
+    orderId: string,
+    refundId: string,
+    fulfillmentCancelled: boolean,
+  ): Promise<void>;
+  updateMerchandiseOrderFromPrintful(
+    orderId: string,
+    update: {
+      printfulStatus: string;
+      fulfillmentStatus: string;
+      trackingNumber?: string | null;
+      trackingUrl?: string | null;
+      shippingCarrier?: string | null;
+      shippedAt?: Date | null;
+      failureCode?: string | null;
+    },
+  ): Promise<void>;
+  enqueueMerchandiseNotification(
+    orderId: string,
+    type: MerchandiseNotificationType,
+  ): Promise<void>;
+  getRetryableMerchandiseNotifications(
+    staleBefore: Date,
+    limit?: number,
+  ): Promise<MerchandiseNotification[]>;
+  claimMerchandiseNotification(id: string, staleBefore: Date): Promise<boolean>;
+  completeMerchandiseNotification(
+    id: string,
+    result: { status: "sent" | "failed"; providerMessageId?: string; lastError?: string },
+  ): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -64,6 +134,12 @@ export class MemStorage implements IStorage {
   private expenseGroups: Map<number, ExpenseGroup>;
   private expenseItems: Map<number, Expense>;
   private processedStripeEventIds: Set<string>;
+  private affiliateClickEvents: Array<{
+    click: InsertAffiliateClick;
+    createdAt: Date;
+  }>;
+  private merchandiseOrderItems: Map<string, MerchandiseOrder>;
+  private merchandiseNotificationItems: Map<string, MerchandiseNotification>;
 
   private tripId: number;
   private blogPostId: number;
@@ -80,6 +156,9 @@ export class MemStorage implements IStorage {
     this.expenseGroups = new Map();
     this.expenseItems = new Map();
     this.processedStripeEventIds = new Set();
+    this.affiliateClickEvents = [];
+    this.merchandiseOrderItems = new Map();
+    this.merchandiseNotificationItems = new Map();
 
     this.tripId = 1;
     this.blogPostId = 1;
@@ -100,6 +179,298 @@ export class MemStorage implements IStorage {
 
   async close(): Promise<void> {
     return Promise.resolve();
+  }
+
+  async recordAffiliateClick(click: InsertAffiliateClick): Promise<void> {
+    this.affiliateClickEvents.push({ click, createdAt: new Date() });
+  }
+
+  async getAffiliateClickSummary(
+    since: Date,
+    days: number,
+  ): Promise<AffiliateClickSummary> {
+    return summarizeAffiliateClicks(
+      this.affiliateClickEvents
+        .filter((event) => event.createdAt >= since)
+        .map(({ click }) => ({
+          provider: click.provider,
+          placement: click.placement,
+          monetized: click.monetized,
+          count: 1,
+        })),
+      days,
+    );
+  }
+
+  async createMerchandiseOrder(
+    order: InsertMerchandiseOrder,
+  ): Promise<MerchandiseOrder> {
+    const now = new Date();
+    const created: MerchandiseOrder = {
+      id: order.id,
+      userId: order.userId ?? null,
+      customerEmail: order.customerEmail ?? null,
+      brand: order.brand,
+      stripeSessionId: null,
+      stripeEventId: null,
+      paymentStatus: "pending",
+      fulfillmentStatus: "pending_payment",
+      amountTotal: order.amountTotal,
+      currency: order.currency,
+      shippingCountry: order.shippingCountry,
+      shippingMethod: order.shippingMethod,
+      shippingAmount: order.shippingAmount,
+      items: order.items,
+      printfulOrderId: null,
+      printfulStatus: null,
+      stripeRefundId: null,
+      trackingNumber: null,
+      trackingUrl: null,
+      shippingCarrier: null,
+      shippedAt: null,
+      legalVersion: order.legalVersion,
+      termsAcceptedAt: order.termsAcceptedAt,
+      failureCode: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.merchandiseOrderItems.set(created.id, created);
+    return created;
+  }
+
+  async attachStripeSessionToOrder(orderId: string, sessionId: string): Promise<boolean> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order || order.stripeSessionId) return false;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      stripeSessionId: sessionId,
+      updatedAt: new Date(),
+    });
+    return true;
+  }
+
+  async getMerchandiseOrderById(orderId: string): Promise<MerchandiseOrder | undefined> {
+    return this.merchandiseOrderItems.get(orderId);
+  }
+
+  async getMerchandiseOrderByPrintfulOrderId(
+    printfulOrderId: string,
+  ): Promise<MerchandiseOrder | undefined> {
+    return Array.from(this.merchandiseOrderItems.values())
+      .find((order) => order.printfulOrderId === printfulOrderId);
+  }
+
+  async getMerchandiseOrderByIdAndSession(
+    orderId: string,
+    sessionId: string,
+  ): Promise<MerchandiseOrder | undefined> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    return order?.stripeSessionId === sessionId ? order : undefined;
+  }
+
+  async getMerchandiseOrdersByUserId(userId: string): Promise<MerchandiseOrder[]> {
+    return Array.from(this.merchandiseOrderItems.values())
+      .filter((order) => order.userId === userId)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  }
+
+  async getAllMerchandiseOrders(limit = 100): Promise<MerchandiseOrder[]> {
+    return Array.from(this.merchandiseOrderItems.values())
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async setMerchandiseOrderCustomerEmail(orderId: string, email: string): Promise<void> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order) return;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      customerEmail: email,
+      updatedAt: new Date(),
+    });
+  }
+
+  async claimMerchandiseOrderForFulfillment(
+    orderId: string,
+    sessionId: string,
+    eventId: string,
+    staleBefore: Date,
+  ): Promise<MerchandiseOrder | undefined> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    const claimable = order && order.stripeSessionId === sessionId && (
+      order.fulfillmentStatus === "pending_payment" ||
+      order.fulfillmentStatus === "fulfillment_failed" ||
+      (order.fulfillmentStatus === "processing" && order.updatedAt <= staleBefore)
+    );
+    if (!order || !claimable) return undefined;
+    const claimed = {
+      ...order,
+      stripeEventId: eventId,
+      paymentStatus: "paid",
+      fulfillmentStatus: "processing",
+      failureCode: null,
+      updatedAt: new Date(),
+    };
+    this.merchandiseOrderItems.set(orderId, claimed);
+    return claimed;
+  }
+
+  async markMerchandiseOrderSubmitted(
+    orderId: string,
+    printfulOrderId: string,
+    printfulStatus?: string,
+  ): Promise<void> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order) return;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      fulfillmentStatus: "submitted",
+      printfulOrderId,
+      printfulStatus: printfulStatus ?? null,
+      failureCode: null,
+      updatedAt: new Date(),
+    });
+  }
+
+  async markMerchandiseOrderFailure(
+    orderId: string,
+    failureCode: string,
+    manualReview = false,
+  ): Promise<void> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order) return;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      paymentStatus: "paid",
+      fulfillmentStatus: manualReview ? "manual_review" : "fulfillment_failed",
+      failureCode,
+      updatedAt: new Date(),
+    });
+  }
+
+  async markMerchandiseOrderExpired(orderId: string, sessionId: string): Promise<boolean> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order || order.stripeSessionId !== sessionId || order.paymentStatus !== "pending") return false;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      paymentStatus: "failed",
+      fulfillmentStatus: "cancelled",
+      failureCode: "checkout_expired",
+      updatedAt: new Date(),
+    });
+    return true;
+  }
+
+  async markMerchandiseOrderRefunded(
+    orderId: string,
+    refundId: string,
+    fulfillmentCancelled: boolean,
+  ): Promise<void> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order) return;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      paymentStatus: "refunded",
+      fulfillmentStatus: fulfillmentCancelled ? "cancelled" : "manual_review",
+      stripeRefundId: refundId,
+      printfulStatus: fulfillmentCancelled ? "canceled" : order.printfulStatus,
+      failureCode: fulfillmentCancelled ? null : "refund_requires_fulfillment_review",
+      updatedAt: new Date(),
+    });
+  }
+
+  async updateMerchandiseOrderFromPrintful(
+    orderId: string,
+    update: {
+      printfulStatus: string;
+      fulfillmentStatus: string;
+      trackingNumber?: string | null;
+      trackingUrl?: string | null;
+      shippingCarrier?: string | null;
+      shippedAt?: Date | null;
+      failureCode?: string | null;
+    },
+  ): Promise<void> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order) return;
+    this.merchandiseOrderItems.set(orderId, {
+      ...order,
+      ...update,
+      updatedAt: new Date(),
+    });
+  }
+
+  async enqueueMerchandiseNotification(
+    orderId: string,
+    type: MerchandiseNotificationType,
+  ): Promise<void> {
+    const existing = Array.from(this.merchandiseNotificationItems.values())
+      .find((notification) => notification.orderId === orderId && notification.type === type);
+    if (existing) return;
+    const now = new Date();
+    const id = `${orderId}:${type}`;
+    this.merchandiseNotificationItems.set(id, {
+      id,
+      orderId,
+      type,
+      status: "pending",
+      attempts: 0,
+      providerMessageId: null,
+      lastError: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  async getRetryableMerchandiseNotifications(
+    staleBefore: Date,
+    limit = 20,
+  ): Promise<MerchandiseNotification[]> {
+    return Array.from(this.merchandiseNotificationItems.values())
+      .filter((notification) =>
+        notification.attempts < 5 && (
+          notification.status === "pending" ||
+          (["failed", "processing"].includes(notification.status) &&
+            notification.updatedAt <= staleBefore)
+        ),
+      )
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async claimMerchandiseNotification(id: string, staleBefore: Date): Promise<boolean> {
+    const notification = this.merchandiseNotificationItems.get(id);
+    const claimable = notification && (
+      notification.attempts < 5 && (
+        notification.status === "pending" ||
+        (["failed", "processing"].includes(notification.status) &&
+          notification.updatedAt <= staleBefore)
+      )
+    );
+    if (!notification || !claimable) return false;
+    this.merchandiseNotificationItems.set(id, {
+      ...notification,
+      status: "processing",
+      attempts: notification.attempts + 1,
+      lastError: null,
+      updatedAt: new Date(),
+    });
+    return true;
+  }
+
+  async completeMerchandiseNotification(
+    id: string,
+    result: { status: "sent" | "failed"; providerMessageId?: string; lastError?: string },
+  ): Promise<void> {
+    const notification = this.merchandiseNotificationItems.get(id);
+    if (!notification) return;
+    this.merchandiseNotificationItems.set(id, {
+      ...notification,
+      status: result.status,
+      providerMessageId: result.providerMessageId ?? null,
+      lastError: result.lastError?.slice(0, 500) ?? null,
+      updatedAt: new Date(),
+    });
   }
 
   // Trip operations
@@ -624,6 +995,375 @@ export class DatabaseStorage extends MemStorage {
       .values({ eventId, sessionId })
       .onConflictDoNothing({ target: stripeWebhookEvents.eventId });
   }
+
+  override async recordAffiliateClick(
+    click: InsertAffiliateClick,
+  ): Promise<void> {
+    await this.db.insert(affiliateClicks).values(click);
+  }
+
+  override async getAffiliateClickSummary(
+    since: Date,
+    days: number,
+  ): Promise<AffiliateClickSummary> {
+    const rows = await this.db
+      .select({
+        provider: affiliateClicks.provider,
+        placement: affiliateClicks.placement,
+        monetized: affiliateClicks.monetized,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(affiliateClicks)
+      .where(gte(affiliateClicks.createdAt, since))
+      .groupBy(
+        affiliateClicks.provider,
+        affiliateClicks.placement,
+        affiliateClicks.monetized,
+      );
+
+    return summarizeAffiliateClicks(rows, days);
+  }
+
+  override async createMerchandiseOrder(
+    order: InsertMerchandiseOrder,
+  ): Promise<MerchandiseOrder> {
+    const [created] = await this.db
+      .insert(merchandiseOrders)
+      .values(order)
+      .returning();
+    return created;
+  }
+
+  override async attachStripeSessionToOrder(
+    orderId: string,
+    sessionId: string,
+  ): Promise<boolean> {
+    const updated = await this.db
+      .update(merchandiseOrders)
+      .set({ stripeSessionId: sessionId, updatedAt: new Date() })
+      .where(and(
+        eq(merchandiseOrders.id, orderId),
+        sql`${merchandiseOrders.stripeSessionId} is null`,
+      ))
+      .returning({ id: merchandiseOrders.id });
+    return updated.length === 1;
+  }
+
+  override async getMerchandiseOrderById(
+    orderId: string,
+  ): Promise<MerchandiseOrder | undefined> {
+    const [order] = await this.db
+      .select()
+      .from(merchandiseOrders)
+      .where(eq(merchandiseOrders.id, orderId))
+      .limit(1);
+    return order;
+  }
+
+  override async getMerchandiseOrderByPrintfulOrderId(
+    printfulOrderId: string,
+  ): Promise<MerchandiseOrder | undefined> {
+    const [order] = await this.db
+      .select()
+      .from(merchandiseOrders)
+      .where(eq(merchandiseOrders.printfulOrderId, printfulOrderId))
+      .limit(1);
+    return order;
+  }
+
+  override async getMerchandiseOrderByIdAndSession(
+    orderId: string,
+    sessionId: string,
+  ): Promise<MerchandiseOrder | undefined> {
+    const [order] = await this.db
+      .select()
+      .from(merchandiseOrders)
+      .where(and(
+        eq(merchandiseOrders.id, orderId),
+        eq(merchandiseOrders.stripeSessionId, sessionId),
+      ))
+      .limit(1);
+    return order;
+  }
+
+  override async getMerchandiseOrdersByUserId(
+    userId: string,
+  ): Promise<MerchandiseOrder[]> {
+    return this.db
+      .select()
+      .from(merchandiseOrders)
+      .where(eq(merchandiseOrders.userId, userId))
+      .orderBy(desc(merchandiseOrders.createdAt));
+  }
+
+  override async getAllMerchandiseOrders(limit = 100): Promise<MerchandiseOrder[]> {
+    return this.db
+      .select()
+      .from(merchandiseOrders)
+      .orderBy(desc(merchandiseOrders.createdAt))
+      .limit(limit);
+  }
+
+  override async setMerchandiseOrderCustomerEmail(
+    orderId: string,
+    email: string,
+  ): Promise<void> {
+    await this.db
+      .update(merchandiseOrders)
+      .set({ customerEmail: email, updatedAt: new Date() })
+      .where(eq(merchandiseOrders.id, orderId));
+  }
+
+  override async claimMerchandiseOrderForFulfillment(
+    orderId: string,
+    sessionId: string,
+    eventId: string,
+    staleBefore: Date,
+  ): Promise<MerchandiseOrder | undefined> {
+    const [order] = await this.db
+      .update(merchandiseOrders)
+      .set({
+        stripeEventId: eventId,
+        paymentStatus: "paid",
+        fulfillmentStatus: "processing",
+        failureCode: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(merchandiseOrders.id, orderId),
+        eq(merchandiseOrders.stripeSessionId, sessionId),
+        or(
+          eq(merchandiseOrders.fulfillmentStatus, "pending_payment"),
+          eq(merchandiseOrders.fulfillmentStatus, "fulfillment_failed"),
+          and(
+            eq(merchandiseOrders.fulfillmentStatus, "processing"),
+            lte(merchandiseOrders.updatedAt, staleBefore),
+          ),
+        ),
+      ))
+      .returning();
+    return order;
+  }
+
+  override async markMerchandiseOrderSubmitted(
+    orderId: string,
+    printfulOrderId: string,
+    printfulStatus?: string,
+  ): Promise<void> {
+    await this.db
+      .update(merchandiseOrders)
+      .set({
+        fulfillmentStatus: "submitted",
+        printfulOrderId,
+        printfulStatus: printfulStatus ?? null,
+        failureCode: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(merchandiseOrders.id, orderId));
+  }
+
+  override async markMerchandiseOrderFailure(
+    orderId: string,
+    failureCode: string,
+    manualReview = false,
+  ): Promise<void> {
+    await this.db
+      .update(merchandiseOrders)
+      .set({
+        paymentStatus: "paid",
+        fulfillmentStatus: manualReview ? "manual_review" : "fulfillment_failed",
+        failureCode,
+        updatedAt: new Date(),
+      })
+      .where(eq(merchandiseOrders.id, orderId));
+  }
+
+  override async markMerchandiseOrderExpired(
+    orderId: string,
+    sessionId: string,
+  ): Promise<boolean> {
+    const updated = await this.db
+      .update(merchandiseOrders)
+      .set({
+        paymentStatus: "failed",
+        fulfillmentStatus: "cancelled",
+        failureCode: "checkout_expired",
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(merchandiseOrders.id, orderId),
+        eq(merchandiseOrders.stripeSessionId, sessionId),
+        eq(merchandiseOrders.paymentStatus, "pending"),
+      ))
+      .returning({ id: merchandiseOrders.id });
+    return updated.length === 1;
+  }
+
+  override async markMerchandiseOrderRefunded(
+    orderId: string,
+    refundId: string,
+    fulfillmentCancelled: boolean,
+  ): Promise<void> {
+    await this.db
+      .update(merchandiseOrders)
+      .set({
+        paymentStatus: "refunded",
+        fulfillmentStatus: fulfillmentCancelled ? "cancelled" : "manual_review",
+        stripeRefundId: refundId,
+        ...(fulfillmentCancelled ? { printfulStatus: "canceled" } : {}),
+        failureCode: fulfillmentCancelled ? null : "refund_requires_fulfillment_review",
+        updatedAt: new Date(),
+      })
+      .where(eq(merchandiseOrders.id, orderId));
+  }
+
+  override async updateMerchandiseOrderFromPrintful(
+    orderId: string,
+    update: {
+      printfulStatus: string;
+      fulfillmentStatus: string;
+      trackingNumber?: string | null;
+      trackingUrl?: string | null;
+      shippingCarrier?: string | null;
+      shippedAt?: Date | null;
+      failureCode?: string | null;
+    },
+  ): Promise<void> {
+    await this.db
+      .update(merchandiseOrders)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(merchandiseOrders.id, orderId));
+  }
+
+  override async enqueueMerchandiseNotification(
+    orderId: string,
+    type: MerchandiseNotificationType,
+  ): Promise<void> {
+    await this.db
+      .insert(merchandiseNotifications)
+      .values({ orderId, type })
+      .onConflictDoNothing({
+        target: [merchandiseNotifications.orderId, merchandiseNotifications.type],
+      });
+  }
+
+  override async getRetryableMerchandiseNotifications(
+    staleBefore: Date,
+    limit = 20,
+  ): Promise<MerchandiseNotification[]> {
+    return this.db
+      .select()
+      .from(merchandiseNotifications)
+      .where(or(
+        and(
+          lt(merchandiseNotifications.attempts, 5),
+          eq(merchandiseNotifications.status, "pending"),
+        ),
+        and(
+          lt(merchandiseNotifications.attempts, 5),
+          eq(merchandiseNotifications.status, "failed"),
+          lte(merchandiseNotifications.updatedAt, staleBefore),
+        ),
+        and(
+          lt(merchandiseNotifications.attempts, 5),
+          eq(merchandiseNotifications.status, "processing"),
+          lte(merchandiseNotifications.updatedAt, staleBefore),
+        ),
+      ))
+      .orderBy(merchandiseNotifications.createdAt)
+      .limit(limit);
+  }
+
+  override async claimMerchandiseNotification(
+    id: string,
+    staleBefore: Date,
+  ): Promise<boolean> {
+    const claimed = await this.db
+      .update(merchandiseNotifications)
+      .set({
+        status: "processing",
+        attempts: sql`${merchandiseNotifications.attempts} + 1`,
+        lastError: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(merchandiseNotifications.id, id),
+        lt(merchandiseNotifications.attempts, 5),
+        or(
+          eq(merchandiseNotifications.status, "pending"),
+          and(
+            eq(merchandiseNotifications.status, "failed"),
+            lte(merchandiseNotifications.updatedAt, staleBefore),
+          ),
+          and(
+            eq(merchandiseNotifications.status, "processing"),
+            lte(merchandiseNotifications.updatedAt, staleBefore),
+          ),
+        ),
+      ))
+      .returning({ id: merchandiseNotifications.id });
+    return claimed.length === 1;
+  }
+
+  override async completeMerchandiseNotification(
+    id: string,
+    result: { status: "sent" | "failed"; providerMessageId?: string; lastError?: string },
+  ): Promise<void> {
+    await this.db
+      .update(merchandiseNotifications)
+      .set({
+        status: result.status,
+        providerMessageId: result.providerMessageId ?? null,
+        lastError: result.lastError?.slice(0, 500) ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(merchandiseNotifications.id, id));
+  }
+}
+
+type AffiliateCountRow = {
+  provider: string;
+  placement: string;
+  monetized: boolean;
+  count: number;
+};
+
+export function summarizeAffiliateClicks(
+  rows: AffiliateCountRow[],
+  days: number,
+): AffiliateClickSummary {
+  const providers = new Map<string, { total: number; monetized: number }>();
+  const placements = new Map<string, { total: number; monetized: number }>();
+  let totalClicks = 0;
+  let monetizedClicks = 0;
+
+  for (const row of rows) {
+    const count = Number(row.count);
+    totalClicks += count;
+    if (row.monetized) monetizedClicks += count;
+
+    for (const [map, key] of [
+      [providers, row.provider],
+      [placements, row.placement],
+    ] as const) {
+      const current = map.get(key) ?? { total: 0, monetized: 0 };
+      current.total += count;
+      if (row.monetized) current.monetized += count;
+      map.set(key, current);
+    }
+  }
+
+  const toRows = (values: Map<string, { total: number; monetized: number }>) =>
+    Array.from(values, ([key, counts]) => ({ key, ...counts }))
+      .sort((left, right) => right.total - left.total || left.key.localeCompare(right.key));
+
+  return {
+    days,
+    totalClicks,
+    monetizedClicks,
+    providers: toRows(providers),
+    placements: toRows(placements),
+  };
 }
 
 export function createStorageFromEnvironment(): IStorage {
