@@ -245,6 +245,19 @@ describe('expense group ownership', () => {
       status: 'sent',
       providerMessageId: 'email_123',
     });
+    await expect(storage.getMerchandiseNotificationsByOrderIds([orderId]))
+      .resolves.toEqual([
+        expect.objectContaining({
+          orderId,
+          type: 'payment_confirmed',
+          status: 'sent',
+          attempts: 1,
+          providerMessageId: 'email_123',
+        }),
+      ]);
+    await expect(storage.getMerchandiseNotificationsByOrderIds([
+      '123e4567-e89b-42d3-a456-426614174099',
+    ])).resolves.toEqual([]);
     await expect(storage.getRetryableMerchandiseNotifications(
       new Date(Date.now() - 5 * 60_000),
     )).resolves.toEqual([]);

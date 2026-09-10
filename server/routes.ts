@@ -396,6 +396,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (_req: Request, res: Response) => {
       try {
         const orders = await storage.getAllMerchandiseOrders(100);
+        const notifications = await storage.getMerchandiseNotificationsByOrderIds(
+          orders.map((order) => order.id),
+        );
+        const notificationsByOrder = new Map<string, typeof notifications>();
+        for (const notification of notifications) {
+          const orderNotifications = notificationsByOrder.get(notification.orderId) ?? [];
+          orderNotifications.push(notification);
+          notificationsByOrder.set(notification.orderId, orderNotifications);
+        }
         return res.json(orders.map((order) => ({
           id: order.id,
           userId: order.userId,
@@ -417,6 +426,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shippingCarrier: order.shippingCarrier,
           shippedAt: order.shippedAt,
           failureCode: order.failureCode,
+          notifications: (notificationsByOrder.get(order.id) ?? []).map((notification) => ({
+            type: notification.type,
+            status: notification.status,
+            attempts: notification.attempts,
+            updatedAt: notification.updatedAt,
+          })),
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
         })));

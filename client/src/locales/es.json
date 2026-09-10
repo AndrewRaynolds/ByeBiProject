@@ -322,6 +322,8 @@
   "dashboard.orderFilter.active": "En curso",
   "dashboard.orderFilter.completed": "Completados",
   "dashboard.noMatchingOrders": "Ningún pedido coincide con la búsqueda o el filtro seleccionado.",
+  "dashboard.emailDeliveryIssue": "El email del pedido no se ha entregado",
+  "dashboard.emailDeliveryIssueDesc": "El sistema reintentará automáticamente hasta cinco veces. Comprueba Resend si el aviso persiste.",
   "dashboard.guestOrder": "Invitado",
   "dashboard.items": "artículos",
   "dashboard.retryPrintful": "Reintentar envío a Printful",

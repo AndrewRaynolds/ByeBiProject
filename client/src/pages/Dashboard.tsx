@@ -38,6 +38,12 @@ type MerchandiseOrderSummary = {
   trackingUrl?: string | null;
   shippingCarrier?: string | null;
   shippedAt?: string | null;
+  notifications?: Array<{
+    type: string;
+    status: string;
+    attempts: number;
+    updatedAt: string;
+  }>;
 };
 
 export default function Dashboard() {
@@ -65,6 +71,7 @@ export default function Dashboard() {
     useQuery<MerchandiseOrderSummary[]>({
       queryKey: ["/api/merchandise/orders"],
       enabled: !!user?.id,
+      refetchInterval: 60_000,
     });
 
   const { data: affiliateSummary, isLoading: isLoadingAffiliateSummary } =
@@ -82,6 +89,7 @@ export default function Dashboard() {
     useQuery<MerchandiseOrderSummary[]>({
       queryKey: ["/api/admin/merchandise/orders"],
       enabled: Boolean(user?.isAdmin),
+      refetchInterval: 60_000,
     });
 
   const retryMerchandiseOrder = useMutation({
@@ -436,6 +444,12 @@ export default function Dashboard() {
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                          {order.notifications?.some((notification) => notification.status === "failed") && (
+                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                              <p className="font-semibold">{t('dashboard.emailDeliveryIssue')}</p>
+                              <p>{t('dashboard.emailDeliveryIssueDesc')}</p>
+                            </div>
+                          )}
                           <p className="text-sm text-gray-600">
                             {order.items.reduce((total, item) => total + item.quantity, 0)} {t('dashboard.items')} · {order.brand === "byebride" ? "ByeBride" : "ByeBro"}
                           </p>

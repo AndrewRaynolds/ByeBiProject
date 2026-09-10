@@ -325,6 +325,8 @@
   "dashboard.orderFilter.active": "In corso",
   "dashboard.orderFilter.completed": "Conclusi",
   "dashboard.noMatchingOrders": "Nessun ordine corrisponde alla ricerca o al filtro selezionato.",
+  "dashboard.emailDeliveryIssue": "Email dell’ordine non consegnata",
+  "dashboard.emailDeliveryIssueDesc": "Il sistema riproverà automaticamente fino a cinque volte. Controlla Resend se l’avviso persiste.",
   "dashboard.guestOrder": "Ospite",
   "dashboard.items": "articoli",
   "dashboard.retryPrintful": "Riprova invio a Printful",

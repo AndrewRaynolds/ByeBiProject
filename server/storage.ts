@@ -19,7 +19,7 @@ import {
   type MerchandiseNotificationType,
 } from "@shared/schema";
 import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
-import { and, desc, eq, gte, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
 export interface IStorage {
@@ -118,6 +118,9 @@ export interface IStorage {
   getRetryableMerchandiseNotifications(
     staleBefore: Date,
     limit?: number,
+  ): Promise<MerchandiseNotification[]>;
+  getMerchandiseNotificationsByOrderIds(
+    orderIds: string[],
   ): Promise<MerchandiseNotification[]>;
   claimMerchandiseNotification(id: string, staleBefore: Date): Promise<boolean>;
   completeMerchandiseNotification(
@@ -436,6 +439,15 @@ export class MemStorage implements IStorage {
       )
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       .slice(0, limit);
+  }
+
+  async getMerchandiseNotificationsByOrderIds(
+    orderIds: string[],
+  ): Promise<MerchandiseNotification[]> {
+    const requestedOrderIds = new Set(orderIds);
+    return Array.from(this.merchandiseNotificationItems.values())
+      .filter((notification) => requestedOrderIds.has(notification.orderId))
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
   }
 
   async claimMerchandiseNotification(id: string, staleBefore: Date): Promise<boolean> {
@@ -1272,6 +1284,17 @@ export class DatabaseStorage extends MemStorage {
       ))
       .orderBy(merchandiseNotifications.createdAt)
       .limit(limit);
+  }
+
+  override async getMerchandiseNotificationsByOrderIds(
+    orderIds: string[],
+  ): Promise<MerchandiseNotification[]> {
+    if (orderIds.length === 0) return [];
+    return this.db
+      .select()
+      .from(merchandiseNotifications)
+      .where(inArray(merchandiseNotifications.orderId, orderIds))
+      .orderBy(desc(merchandiseNotifications.updatedAt));
   }
 
   override async claimMerchandiseNotification(

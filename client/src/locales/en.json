@@ -322,6 +322,8 @@
   "dashboard.orderFilter.active": "In progress",
   "dashboard.orderFilter.completed": "Completed",
   "dashboard.noMatchingOrders": "No orders match the selected search or filter.",
+  "dashboard.emailDeliveryIssue": "Order email was not delivered",
+  "dashboard.emailDeliveryIssueDesc": "The system will retry automatically up to five times. Check Resend if this warning persists.",
   "dashboard.guestOrder": "Guest",
   "dashboard.items": "items",
   "dashboard.retryPrintful": "Retry Printful submission",
