@@ -19,7 +19,7 @@ import {
   type MerchandiseNotificationType,
 } from "@shared/schema";
 import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
-import { and, desc, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
 export interface IStorage {
@@ -70,6 +70,7 @@ export interface IStorage {
 
   // Merchandise order lifecycle
   createMerchandiseOrder(order: InsertMerchandiseOrder): Promise<MerchandiseOrder>;
+  deleteUnattachedMerchandiseOrder(orderId: string): Promise<boolean>;
   attachStripeSessionToOrder(orderId: string, sessionId: string): Promise<boolean>;
   getMerchandiseOrderById(orderId: string): Promise<MerchandiseOrder | undefined>;
   getMerchandiseOrderByPrintfulOrderId(printfulOrderId: string): Promise<MerchandiseOrder | undefined>;
@@ -240,6 +241,12 @@ export class MemStorage implements IStorage {
     };
     this.merchandiseOrderItems.set(created.id, created);
     return created;
+  }
+
+  async deleteUnattachedMerchandiseOrder(orderId: string): Promise<boolean> {
+    const order = this.merchandiseOrderItems.get(orderId);
+    if (!order || order.stripeSessionId || order.paymentStatus !== "pending") return false;
+    return this.merchandiseOrderItems.delete(orderId);
   }
 
   async attachStripeSessionToOrder(orderId: string, sessionId: string): Promise<boolean> {
@@ -1066,6 +1073,18 @@ export class DatabaseStorage extends MemStorage {
       .values(order)
       .returning();
     return created;
+  }
+
+  override async deleteUnattachedMerchandiseOrder(orderId: string): Promise<boolean> {
+    const deleted = await this.db
+      .delete(merchandiseOrders)
+      .where(and(
+        eq(merchandiseOrders.id, orderId),
+        isNull(merchandiseOrders.stripeSessionId),
+        eq(merchandiseOrders.paymentStatus, "pending"),
+      ))
+      .returning({ id: merchandiseOrders.id });
+    return deleted.length === 1;
   }
 
   override async attachStripeSessionToOrder(

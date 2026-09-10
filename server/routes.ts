@@ -131,6 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/stripe/checkout", async (req: Request, res: Response) => {
+    let unattachedOrderId: string | undefined;
     try {
       const salesMode = process.env.MERCHANDISE_SALES_MODE ||
         (process.env.NODE_ENV === "production" ? "disabled" : "test");
@@ -259,6 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }),
       });
+      unattachedOrderId = order.id;
 
       const configuredBaseUrl = process.env.APP_BASE_URL?.replace(/\/+$/, "");
       if (process.env.NODE_ENV === "production" && !configuredBaseUrl) {
@@ -293,9 +295,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
         throw new Error("Unable to associate Stripe session with merchandise order");
       }
+      unattachedOrderId = undefined;
 
       return res.json({ url: session.url, orderId: order.id });
     } catch (error: any) {
+      if (unattachedOrderId) {
+        await storage.deleteUnattachedMerchandiseOrder(unattachedOrderId).catch((cleanupError) =>
+          console.error("Error cleaning up unattached merchandise order", getSafeErrorMetadata(cleanupError)),
+        );
+      }
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid checkout items" });
       }

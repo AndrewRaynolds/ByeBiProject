@@ -122,6 +122,39 @@ describe('expense group ownership', () => {
     await expect(storage.getMerchandiseOrdersByUserId('user-b')).resolves.toEqual([]);
   });
 
+  it('removes only unpaid merchandise orders that never reached Stripe', async () => {
+    const storage = new MemStorage();
+    const buildOrder = (id: string) => ({
+      id,
+      brand: 'byebro' as const,
+      amountTotal: 2500,
+      currency: 'EUR',
+      shippingCountry: 'IT',
+      shippingMethod: 'STANDARD',
+      shippingAmount: 500,
+      legalVersion: '2026-08-04',
+      termsAcceptedAt: new Date('2026-08-04T10:00:00Z'),
+      items: [{
+        productId: 1,
+        variantId: 2,
+        productName: 'T-shirt',
+        variantName: 'Black / M',
+        quantity: 1,
+        unitAmount: 2000,
+      }],
+    });
+    const unattachedId = '123e4567-e89b-42d3-a456-426614174020';
+    const attachedId = '123e4567-e89b-42d3-a456-426614174021';
+    await storage.createMerchandiseOrder(buildOrder(unattachedId));
+    await storage.createMerchandiseOrder(buildOrder(attachedId));
+    await storage.attachStripeSessionToOrder(attachedId, 'cs_test_attached');
+
+    await expect(storage.deleteUnattachedMerchandiseOrder(unattachedId)).resolves.toBe(true);
+    await expect(storage.getMerchandiseOrderById(unattachedId)).resolves.toBeUndefined();
+    await expect(storage.deleteUnattachedMerchandiseOrder(attachedId)).resolves.toBe(false);
+    await expect(storage.getMerchandiseOrderById(attachedId)).resolves.toBeDefined();
+  });
+
   it('claims a paid merchandise order only once while processing is fresh', async () => {
     const storage = new MemStorage();
     const orderId = '123e4567-e89b-42d3-a456-426614174001';
