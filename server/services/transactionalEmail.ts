@@ -144,6 +144,7 @@ async function sendWithResend(
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
       "Idempotency-Key": `byebi/${type}/${order.id}`,
+      "User-Agent": "ByeBi/1.0",
     },
     body: JSON.stringify({
       from: process.env.TRANSACTIONAL_EMAIL_FROM,

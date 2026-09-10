@@ -118,6 +118,7 @@ describe("transactional merchandise email", () => {
     expect(payload.subject).toContain("[TEST per buyer@example.com]");
     expect(request[1].headers["Idempotency-Key"])
       .toBe(`byebi/payment_confirmed/${order.id}`);
+    expect(request[1].headers["User-Agent"]).toBe("ByeBi/1.0");
     expect(storageMock.completeMerchandiseNotification).toHaveBeenCalledWith(
       "notification-1",
       { status: "sent", providerMessageId: "email_123" },
