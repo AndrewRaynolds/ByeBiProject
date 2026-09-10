@@ -31,6 +31,7 @@ import { parsePositiveIntegerParam } from "./routeParams";
 import { affiliateClickEventSchema } from "@shared/analyticsSchemas";
 import { MerchandiseOrderRetryError, WebhookHandlers } from "./webhookHandlers";
 import { isValidPrintfulWebhookToken, processPrintfulWebhook } from "./printfulWebhookHandlers";
+import { drainMerchandiseNotifications } from "./services/transactionalEmail";
 
 
 const checkoutItemSchema = z.object({
@@ -491,6 +492,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.error("Error refunding merchandise order", getSafeErrorMetadata(error));
         return res.status(503).json({ message: "Refund is temporarily unavailable" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/merchandise/orders/:orderId/notifications/retry",
+    isAuthenticated,
+    isAdmin,
+    async (req: Request, res: Response) => {
+      const parsedOrderId = z.string().uuid().safeParse(req.params.orderId);
+      if (!parsedOrderId.success) {
+        return res.status(400).json({ message: "Invalid merchandise order ID" });
+      }
+      try {
+        const retried = await storage.retryFailedMerchandiseNotifications(parsedOrderId.data);
+        if (retried === 0) {
+          return res.status(409).json({ message: "No exhausted email deliveries can be retried" });
+        }
+        void drainMerchandiseNotifications().catch((error) =>
+          console.error("Manual email retry failed", getSafeErrorMetadata(error)),
+        );
+        return res.status(202).json({ retried });
+      } catch (error) {
+        console.error("Error retrying merchandise emails", getSafeErrorMetadata(error));
+        return res.status(503).json({ message: "Email retry is temporarily unavailable" });
       }
     },
   );

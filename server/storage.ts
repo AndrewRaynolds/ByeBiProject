@@ -122,6 +122,7 @@ export interface IStorage {
   getMerchandiseNotificationsByOrderIds(
     orderIds: string[],
   ): Promise<MerchandiseNotification[]>;
+  retryFailedMerchandiseNotifications(orderId: string): Promise<number>;
   claimMerchandiseNotification(id: string, staleBefore: Date): Promise<boolean>;
   completeMerchandiseNotification(
     id: string,
@@ -448,6 +449,27 @@ export class MemStorage implements IStorage {
     return Array.from(this.merchandiseNotificationItems.values())
       .filter((notification) => requestedOrderIds.has(notification.orderId))
       .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+  }
+
+  async retryFailedMerchandiseNotifications(orderId: string): Promise<number> {
+    let retried = 0;
+    for (const [id, notification] of this.merchandiseNotificationItems) {
+      if (
+        notification.orderId !== orderId ||
+        notification.status !== "failed" ||
+        notification.attempts < 5
+      ) continue;
+      this.merchandiseNotificationItems.set(id, {
+        ...notification,
+        status: "pending",
+        attempts: 0,
+        providerMessageId: null,
+        lastError: null,
+        updatedAt: new Date(),
+      });
+      retried += 1;
+    }
+    return retried;
   }
 
   async claimMerchandiseNotification(id: string, staleBefore: Date): Promise<boolean> {
@@ -1295,6 +1317,25 @@ export class DatabaseStorage extends MemStorage {
       .from(merchandiseNotifications)
       .where(inArray(merchandiseNotifications.orderId, orderIds))
       .orderBy(desc(merchandiseNotifications.updatedAt));
+  }
+
+  override async retryFailedMerchandiseNotifications(orderId: string): Promise<number> {
+    const retried = await this.db
+      .update(merchandiseNotifications)
+      .set({
+        status: "pending",
+        attempts: 0,
+        providerMessageId: null,
+        lastError: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(merchandiseNotifications.orderId, orderId),
+        eq(merchandiseNotifications.status, "failed"),
+        gte(merchandiseNotifications.attempts, 5),
+      ))
+      .returning({ id: merchandiseNotifications.id });
+    return retried.length;
   }
 
   override async claimMerchandiseNotification(

@@ -146,6 +146,30 @@ export default function Dashboard() {
     },
   });
 
+  const retryMerchandiseEmails = useMutation({
+    mutationFn: async (orderId: string) => {
+      const response = await apiRequest(
+        "POST",
+        `/api/admin/merchandise/orders/${orderId}/notifications/retry`,
+      );
+      return response.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/merchandise/orders"] });
+      toast({
+        title: t('dashboard.emailRetrySuccess'),
+        description: t('dashboard.emailRetrySuccessDesc'),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t('dashboard.emailRetryError'),
+        description: t('dashboard.emailRetryErrorDesc'),
+        variant: "destructive",
+      });
+    },
+  });
+
   const adminOrders = adminMerchandiseOrders ?? [];
   const attentionStatuses = new Set(["fulfillment_failed", "manual_review", "returned"]);
   const activeStatuses = new Set(["pending_payment", "processing", "submitted"]);
@@ -448,6 +472,20 @@ export default function Dashboard() {
                             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
                               <p className="font-semibold">{t('dashboard.emailDeliveryIssue')}</p>
                               <p>{t('dashboard.emailDeliveryIssueDesc')}</p>
+                              {order.notifications.some((notification) =>
+                                notification.status === "failed" && notification.attempts >= 5
+                              ) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="mt-3 border-red-300 bg-white"
+                                  onClick={() => retryMerchandiseEmails.mutate(order.id)}
+                                  disabled={retryMerchandiseEmails.isPending}
+                                >
+                                  <RotateCcw className="mr-2 h-4 w-4" />
+                                  {t('dashboard.retryOrderEmails')}
+                                </Button>
+                              )}
                             </div>
                           )}
                           <p className="text-sm text-gray-600">

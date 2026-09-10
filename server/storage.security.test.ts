@@ -263,6 +263,56 @@ describe('expense group ownership', () => {
     )).resolves.toEqual([]);
   });
 
+  it('allows admins to requeue only exhausted email deliveries', async () => {
+    const storage = new MemStorage();
+    const orderId = '123e4567-e89b-42d3-a456-426614174011';
+    await storage.createMerchandiseOrder({
+      id: orderId,
+      customerEmail: 'buyer@example.com',
+      brand: 'byebro',
+      amountTotal: 2500,
+      currency: 'EUR',
+      shippingCountry: 'IT',
+      shippingMethod: 'STANDARD',
+      shippingAmount: 500,
+      legalVersion: '2026-08-04',
+      termsAcceptedAt: new Date('2026-08-04T10:00:00Z'),
+      items: [{
+        productId: 1,
+        variantId: 2,
+        productName: 'T-shirt',
+        variantName: 'Black / M',
+        quantity: 1,
+        unitAmount: 2000,
+      }],
+    });
+    await storage.enqueueMerchandiseNotification(orderId, 'order_attention');
+    const [notification] = await storage.getRetryableMerchandiseNotifications(new Date(0));
+
+    await expect(storage.retryFailedMerchandiseNotifications(orderId)).resolves.toBe(0);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await expect(storage.claimMerchandiseNotification(
+        notification.id,
+        new Date(Date.now() + 1_000),
+      )).resolves.toBe(true);
+      await storage.completeMerchandiseNotification(notification.id, {
+        status: 'failed',
+        lastError: 'Provider unavailable',
+      });
+    }
+
+    await expect(storage.retryFailedMerchandiseNotifications(orderId)).resolves.toBe(1);
+    await expect(storage.getMerchandiseNotificationsByOrderIds([orderId]))
+      .resolves.toEqual([
+        expect.objectContaining({
+          status: 'pending',
+          attempts: 0,
+          lastError: null,
+        }),
+      ]);
+    await expect(storage.retryFailedMerchandiseNotifications(orderId)).resolves.toBe(0);
+  });
+
   it('records privacy-preserving affiliate clicks in memory mode', async () => {
     const storage = new MemStorage();
     await storage.recordAffiliateClick({
