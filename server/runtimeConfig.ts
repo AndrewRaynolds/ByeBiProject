@@ -1,5 +1,23 @@
 type RuntimeEnvironment = Record<string, string | undefined>;
 
+function hasUsableCredential(
+  value: string,
+  allowedPrefixes: readonly string[],
+): boolean {
+  const trimmedValue = value.trim();
+  const matchingPrefix = allowedPrefixes.find((prefix) =>
+    trimmedValue.startsWith(prefix),
+  );
+
+  if (!matchingPrefix) return false;
+
+  const suffix = trimmedValue.slice(matchingPrefix.length);
+  return (
+    suffix.length >= 16 &&
+    !/(placeholder|example|change[-_]?me|your[-_]?key)/i.test(suffix)
+  );
+}
+
 function isAbsoluteUrl(
   value: string,
   allowedProtocols: readonly string[],
@@ -36,6 +54,25 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     if (!env[variable]?.trim()) {
       errors.push(`${variable} is required`);
     }
+  }
+
+  if (
+    env.STRIPE_SECRET_KEY &&
+    !hasUsableCredential(env.STRIPE_SECRET_KEY, ["sk_test_", "sk_live_"])
+  ) {
+    errors.push("STRIPE_SECRET_KEY appears incomplete or invalid");
+  }
+  if (
+    env.STRIPE_PUBLISHABLE_KEY &&
+    !hasUsableCredential(env.STRIPE_PUBLISHABLE_KEY, ["pk_test_", "pk_live_"])
+  ) {
+    errors.push("STRIPE_PUBLISHABLE_KEY appears incomplete or invalid");
+  }
+  if (
+    env.STRIPE_WEBHOOK_SECRET &&
+    !hasUsableCredential(env.STRIPE_WEBHOOK_SECRET, ["whsec_"])
+  ) {
+    errors.push("STRIPE_WEBHOOK_SECRET appears incomplete or invalid");
   }
 
   const merchandiseSalesMode = env.MERCHANDISE_SALES_MODE;

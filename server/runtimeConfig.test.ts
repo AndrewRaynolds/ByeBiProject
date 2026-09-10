@@ -10,9 +10,9 @@ const validProductionEnvironment = {
   SUPABASE_SERVICE_ROLE_KEY: "service-role-placeholder",
   OPENAI_API_KEY: "openai-key-placeholder",
   MERCHANDISE_SALES_MODE: "live",
-  STRIPE_SECRET_KEY: "sk_live_placeholder",
-  STRIPE_PUBLISHABLE_KEY: "pk_live_placeholder",
-  STRIPE_WEBHOOK_SECRET: "whsec_placeholder",
+  STRIPE_SECRET_KEY: "sk_live_1234567890abcdef",
+  STRIPE_PUBLISHABLE_KEY: "pk_live_1234567890abcdef",
+  STRIPE_WEBHOOK_SECRET: "whsec_1234567890abcdef",
   PRINTFUL_API_KEY: "printful-key-placeholder",
   PRINTFUL_CONFIRM_ORDERS: "true",
   PRINTFUL_WEBHOOK_SECRET: "printful-webhook-secret-at-least-32-characters",
@@ -127,13 +127,26 @@ describe("runtime environment validation", () => {
     ).toThrow("PRINTFUL_WEBHOOK_SECRET must be at least 32 characters");
   });
 
+  it("rejects incomplete Stripe credentials", () => {
+    expect(() =>
+      validateRuntimeEnvironment({
+        ...validProductionEnvironment,
+        STRIPE_SECRET_KEY: "sk_live_",
+        STRIPE_PUBLISHABLE_KEY: "pk_live_placeholder",
+        STRIPE_WEBHOOK_SECRET: "whsec_change_me",
+      }),
+    ).toThrow(
+      /STRIPE_SECRET_KEY appears incomplete or invalid; STRIPE_PUBLISHABLE_KEY appears incomplete or invalid; STRIPE_WEBHOOK_SECRET appears incomplete or invalid/,
+    );
+  });
+
   it("allows Stripe test keys only when production sales stay in test mode", () => {
     expect(() =>
       validateRuntimeEnvironment({
         ...validProductionEnvironment,
         MERCHANDISE_SALES_MODE: "test",
-        STRIPE_SECRET_KEY: "sk_test_placeholder",
-        STRIPE_PUBLISHABLE_KEY: "pk_test_placeholder",
+        STRIPE_SECRET_KEY: "sk_test_1234567890abcdef",
+        STRIPE_PUBLISHABLE_KEY: "pk_test_1234567890abcdef",
         VITE_SELLER_LEGAL_NAME: "",
         VITE_SELLER_CONTACT_EMAIL: "",
         VITE_SELLER_LEGAL_ADDRESS: "",
@@ -188,8 +201,8 @@ describe("runtime environment validation", () => {
       validateRuntimeEnvironment({
         ...validProductionEnvironment,
         MERCHANDISE_SALES_MODE: "test",
-        STRIPE_SECRET_KEY: "sk_test_placeholder",
-        STRIPE_PUBLISHABLE_KEY: "pk_test_placeholder",
+        STRIPE_SECRET_KEY: "sk_test_1234567890abcdef",
+        STRIPE_PUBLISHABLE_KEY: "pk_test_1234567890abcdef",
         TRANSACTIONAL_EMAIL_MODE: "test",
         TRANSACTIONAL_EMAIL_TEST_RECIPIENT: "",
       }),
