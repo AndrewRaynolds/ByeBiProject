@@ -30,7 +30,7 @@ describe("Printful shipping integration", () => {
 
     const rates = await getShippingRates(
       "IT",
-      [{ sync_variant_id: 123, quantity: 2 }],
+      [{ variant_id: 123, quantity: 2 }],
       "EUR",
     );
 
@@ -38,7 +38,7 @@ describe("Printful shipping integration", () => {
     const request = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(request).toEqual({
       recipient: { country_code: "IT" },
-      items: [{ sync_variant_id: 123, quantity: 2 }],
+      items: [{ variant_id: 123, quantity: 2 }],
       currency: "EUR",
     });
   });

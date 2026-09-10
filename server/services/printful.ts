@@ -64,6 +64,7 @@ export interface PrintfulProduct {
 
 export interface PrintfulProductVariant {
   id: number;
+  catalogVariantId: number;
   name: string;
   retailPrice: string;
   currency: string;
@@ -84,6 +85,11 @@ export interface PrintfulShippingRate {
 
 interface PrintfulOrderItem {
   sync_variant_id: number;
+  quantity: number;
+}
+
+interface PrintfulShippingItem {
+  variant_id: number;
   quantity: number;
 }
 
@@ -176,6 +182,7 @@ export async function getProductDetail(productId: number): Promise<PrintfulProdu
       const previewFile = v.files?.find((f) => f.type === "preview") || v.files?.[0];
       return {
         id: v.id,
+        catalogVariantId: v.product.variant_id,
         name: v.name,
         retailPrice: v.retail_price,
         currency: v.currency,
@@ -190,7 +197,7 @@ export async function getProductDetail(productId: number): Promise<PrintfulProdu
 
 export async function getShippingRates(
   recipientCountry: string,
-  items: PrintfulOrderItem[],
+  items: PrintfulShippingItem[],
   currency?: string,
 ): Promise<PrintfulShippingRate[]> {
   const data = await printfulFetch("/shipping/rates", {
@@ -200,7 +207,7 @@ export async function getShippingRates(
         country_code: recipientCountry,
       },
       items: items.map((item) => ({
-        sync_variant_id: item.sync_variant_id,
+        variant_id: item.variant_id,
         quantity: item.quantity,
       })),
       ...(currency ? { currency } : {}),

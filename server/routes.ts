@@ -57,7 +57,7 @@ const printfulShippingSchema = z
   .object({
     countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
     items: z.array(z.object({
-      sync_variant_id: z.number().int().positive(),
+      variant_id: z.number().int().positive(),
       quantity: z.number().int().min(1).max(10),
     }).strict()).min(1).max(20),
   })
@@ -143,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const productIds = Array.from(new Set(items.map((item) => item.productId)));
 
-      const verifiedVariants = new Map<string, { name: string; price: string; currency: string; imageUrl: string; productName: string }>();
+      const verifiedVariants = new Map<string, { name: string; price: string; currency: string; imageUrl: string; productName: string; catalogVariantId: number }>();
 
       for (const productId of productIds) {
         const product = await getProductDetail(productId);
@@ -154,6 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currency: variant.currency,
             imageUrl: variant.previewUrl || variant.imageUrl,
             productName: product.name,
+            catalogVariantId: variant.catalogVariantId,
           });
         }
       }
@@ -194,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shippingRates = await getShippingRates(
         shippingCountry,
         items.map((item) => ({
-          sync_variant_id: item.variantId,
+          variant_id: verifiedVariants.get(`${item.productId}:${item.variantId}`)!.catalogVariantId,
           quantity: item.quantity,
         })),
         currency,
