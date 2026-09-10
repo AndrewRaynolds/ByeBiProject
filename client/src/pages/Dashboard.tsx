@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Trip, type MerchandiseOrderItem } from "@shared/schema";
@@ -10,11 +10,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, RefreshCw, RotateCcw, Search, Shirt, Truck, User } from "lucide-react";
+import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, PlaneTakeoff, RefreshCw, RotateCcw, Search, Shirt, Truck, User } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { savePlannedTrip } from "@/lib/plannedTrip";
 
 type MerchandiseOrderSummary = {
   id: string;
@@ -53,6 +54,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [adminOrderFilter, setAdminOrderFilter] = useState<"all" | "attention" | "active" | "completed">("all");
   const [adminOrderSearch, setAdminOrderSearch] = useState("");
+  const importedLocalTripForUser = useRef<string | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -60,6 +62,23 @@ export default function Dashboard() {
       setLocation("/");
     }
   }, [isAuthenticated, setLocation]);
+
+  useEffect(() => {
+    if (!user?.id || importedLocalTripForUser.current === user.id) return;
+    importedLocalTripForUser.current = user.id;
+    const storedItinerary = localStorage.getItem("currentItinerary");
+    if (!storedItinerary) return;
+    try {
+      const itinerary = JSON.parse(storedItinerary);
+      void savePlannedTrip(itinerary)
+        .then(() => queryClient.invalidateQueries({
+          queryKey: [`/api/trips/user/${user.id}`],
+        }))
+        .catch(() => undefined);
+    } catch {
+      // Ignore malformed legacy browser data; it must not block the Dashboard.
+    }
+  }, [user?.id]);
 
   // Fetch user trips
   const { data: trips, isLoading, error } = useQuery<Trip[]>({
@@ -271,7 +290,7 @@ export default function Dashboard() {
                         <div className="flex justify-between items-start">
                           <CardTitle>{trip.name}</CardTitle>
                           <div className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            {trip.experienceType}
+                            {t(`dashboard.experienceType.${trip.experienceType}`)}
                           </div>
                         </div>
                         <CardDescription>
@@ -283,6 +302,10 @@ export default function Dashboard() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
+                          <div className="flex items-center text-sm">
+                            <PlaneTakeoff className="mr-2 h-4 w-4 text-primary" />
+                            <span>{t('dashboard.departure')}: {trip.departureCity || "—"}</span>
+                          </div>
                           <div className="flex items-center text-sm">
                             <Map className="mr-2 h-4 w-4 text-primary" />
                             <span>{t('dashboard.destinations')}: {(trip.destinations ?? []).join(", ")}</span>
@@ -303,14 +326,15 @@ export default function Dashboard() {
                           className="w-full bg-primary hover:bg-accent"
                           onClick={() => {
                             const destination = trip.destinations?.[0] || "";
+                            const origin = trip.departureCity || "Italia";
                             localStorage.setItem("currentItinerary", JSON.stringify({
                               destination,
-                              origin: "Italia",
+                              origin,
                               startDate: trip.startDate,
                               endDate: trip.endDate,
                               people: trip.participants,
                               aviasalesCheckoutUrl: "",
-                              flightLabel: `Italia → ${destination}`,
+                              flightLabel: `${origin} → ${destination}`,
                             }));
                             setLocation("/checkout");
                           }}

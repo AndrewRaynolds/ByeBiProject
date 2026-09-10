@@ -58,10 +58,32 @@
   }
   
   /* Custom styles per l'auth page */
+  .auth-page-form {
+    color-scheme: light;
+  }
+
   .auth-page-form input {
-    background-color: #f2f2f2 !important;
-    border-color: #333 !important;
-    color: #000000 !important;
+    background-color: #ffffff !important;
+    border-color: #6b7280 !important;
+    color: #111827 !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: #111827 !important;
+    box-shadow: inset 0 0 0 1000px #ffffff !important;
+  }
+
+  .auth-page-form input:-webkit-autofill,
+  .auth-page-form input:-webkit-autofill:hover,
+  .auth-page-form input:-webkit-autofill:focus {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    -webkit-box-shadow: inset 0 0 0 1000px #ffffff !important;
+    transition: background-color 9999s ease-out 0s;
+  }
+
+  .auth-page-form input::placeholder {
+    color: #6b7280 !important;
+    opacity: 1 !important;
   }
   
   .auth-page-form label {

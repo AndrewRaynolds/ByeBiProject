@@ -22,6 +22,24 @@ import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
 import { and, desc, eq, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
+function normalizeTripIdentity(value: string | null | undefined): string {
+  return (value ?? "").trim().toLocaleLowerCase("en");
+}
+
+export function arePlannedTripsEquivalent(
+  existing: Pick<Trip, "userId" | "startDate" | "endDate" | "destinations" | "experienceType">,
+  candidate: Pick<InsertTrip, "userId" | "startDate" | "endDate" | "destinations" | "experienceType">,
+): boolean {
+  return (
+    existing.userId === candidate.userId &&
+    existing.startDate === candidate.startDate &&
+    existing.endDate === candidate.endDate &&
+    existing.experienceType === candidate.experienceType &&
+    normalizeTripIdentity(existing.destinations?.[0]) ===
+      normalizeTripIdentity(candidate.destinations?.[0])
+  );
+}
+
 export interface IStorage {
   healthCheck(): Promise<void>;
   close(): Promise<void>;
@@ -30,6 +48,7 @@ export interface IStorage {
   getTrip(id: number): Promise<Trip | undefined>;
   getTripsByUserId(userId: string): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
+  createTripIfAbsent(trip: InsertTrip): Promise<{ trip: Trip; created: boolean }>;
 
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
@@ -544,6 +563,16 @@ export class MemStorage implements IStorage {
     return trip;
   }
 
+  async createTripIfAbsent(
+    insertTrip: InsertTrip,
+  ): Promise<{ trip: Trip; created: boolean }> {
+    const existing = Array.from(this.trips.values()).find((trip) =>
+      arePlannedTripsEquivalent(trip, insertTrip),
+    );
+    if (existing) return { trip: existing, created: false };
+    return { trip: await this.createTrip(insertTrip), created: true };
+  }
+
   // Blog post operations
   async getBlogPost(id: number): Promise<BlogPost | undefined> {
     return this.blogPosts.get(id);
@@ -883,6 +912,29 @@ export class DatabaseStorage extends MemStorage {
       .values(insertTrip)
       .returning();
     return trip;
+  }
+
+  override async createTripIfAbsent(
+    insertTrip: InsertTrip,
+  ): Promise<{ trip: Trip; created: boolean }> {
+    return this.db.transaction(async (transaction) => {
+      await transaction.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`byebi-trip:${insertTrip.userId}`}))`,
+      );
+      const existingTrips = await transaction
+        .select()
+        .from(tripsTable)
+        .where(eq(tripsTable.userId, insertTrip.userId));
+      const existing = existingTrips.find((trip) =>
+        arePlannedTripsEquivalent(trip, insertTrip),
+      );
+      if (existing) return { trip: existing, created: false };
+      const [trip] = await transaction
+        .insert(tripsTable)
+        .values(insertTrip)
+        .returning();
+      return { trip, created: true };
+    });
   }
 
   override async getBlogPost(id: number): Promise<BlogPost | undefined> {

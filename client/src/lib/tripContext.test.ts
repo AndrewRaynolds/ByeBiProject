@@ -26,6 +26,15 @@ describe("TripContext", () => {
     ).toMatchObject({ origin: "Roma", originCity: "Roma" });
   });
 
+  it("preserves the ByeBride party type when local data is parsed again", () => {
+    expect(
+      parseStoredTripContext(JSON.stringify({
+        ...validContext,
+        partyType: "bachelorette",
+      })),
+    ).toMatchObject({ partyType: "bachelorette" });
+  });
+
   it("supports the legacy Aviasales URL field", () => {
     const { aviasalesCheckoutUrl, ...legacyContext } = validContext;
     expect(
@@ -44,6 +53,7 @@ describe("TripContext", () => {
     { ...validContext, endDate: "2026-10-10" },
     { ...validContext, people: 0 },
     { ...validContext, people: "4" },
+    { ...validContext, partyType: "birthday" },
     { ...validContext, aviasalesCheckoutUrl: "javascript:alert(1)" },
     { ...validContext, aviasalesCheckoutUrl: "https://example.com/search/flight" },
   ])("rejects invalid checkout data", (context) => {

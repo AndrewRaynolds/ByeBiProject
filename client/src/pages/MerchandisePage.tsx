@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
-import { ShoppingBag, Heart, ShoppingCart, Package, Minus, Plus, X, CreditCard, CheckCircle, Loader2 } from "lucide-react";
+import { ShoppingBag, Heart, ShoppingCart, Package, Minus, Plus, X, CreditCard, CheckCircle, Loader2, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -215,8 +215,9 @@ export default function MerchandisePage() {
   const isBride = currentBrand === "byebride";
   const brandStyles = isBride
     ? {
-        hero: "bg-gradient-to-r from-pink-700 via-pink-600 to-pink-800",
-        heroText: "text-pink-100",
+        accentText: "text-pink-400",
+        glow: "bg-pink-500/25",
+        softBadge: "border-pink-400/30 bg-pink-500/10 text-pink-200",
         cartButton:
           "relative bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white",
         badge: "bg-pink-600",
@@ -225,8 +226,9 @@ export default function MerchandisePage() {
         button: "bg-pink-600 hover:bg-pink-700",
       }
     : {
-        hero: "bg-gradient-to-r from-red-700 via-red-600 to-red-800",
-        heroText: "text-red-100",
+        accentText: "text-red-400",
+        glow: "bg-red-500/25",
+        softBadge: "border-red-400/30 bg-red-500/10 text-red-200",
         cartButton:
           "relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white",
         badge: "bg-red-600",
@@ -240,31 +242,63 @@ export default function MerchandisePage() {
       <Header />
 
       <main id="main-content" tabIndex={-1} className="flex-grow">
-        <div className={`${brandStyles.hero} text-white py-16`}>
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-5xl md:text-6xl font-bebas-neue tracking-wider mb-4">
-              {isBride ? "💍 ByeBride Shop" : "ByeBro Shop"}
-            </h1>
-            <p className={`max-w-2xl mx-auto ${brandStyles.heroText} text-lg`}>
-              {t('merch.subtitle')}
-            </p>
-          </div>
-        </div>
+        <section className="relative overflow-hidden border-b border-white/10 bg-black text-white">
+          <div className={`pointer-events-none absolute -left-24 -top-28 h-80 w-80 rounded-full ${brandStyles.glow} blur-3xl`} />
+          <div className={`pointer-events-none absolute -bottom-40 right-0 h-96 w-96 rounded-full ${brandStyles.glow} blur-3xl`} />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[length:28px_28px] opacity-40" />
 
-        <div className="container mx-auto px-4 py-10">
-          <div className="flex justify-end mb-6">
+          <div className="container relative mx-auto grid gap-10 px-4 py-16 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:py-20">
+            <div className="max-w-3xl">
+              <div className={`mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${brandStyles.softBadge}`}>
+                <Sparkles className="h-4 w-4" />
+                {t('merch.collectionEyebrow')}
+              </div>
+              <h1 className="mb-5 text-5xl font-bold tracking-tight md:text-7xl">
+                {isBride ? "ByeBride" : "ByeBro"}{" "}
+                <span className={brandStyles.accentText}>Shop</span>
+              </h1>
+              <p className="max-w-2xl text-lg leading-relaxed text-white/75 md:text-xl">
+                {t('merch.subtitle')}
+              </p>
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/80">
+                <span className="inline-flex items-center gap-2"><ShieldCheck className={`h-4 w-4 ${brandStyles.accentText}`} />{t('merch.secureCheckoutBenefit')}</span>
+                <span className="inline-flex items-center gap-2"><Package className={`h-4 w-4 ${brandStyles.accentText}`} />{t('merch.madeToOrderBenefit')}</span>
+                <span className="inline-flex items-center gap-2"><Truck className={`h-4 w-4 ${brandStyles.accentText}`} />{t('merch.europeShippingBenefit')}</span>
+              </div>
+            </div>
+
             <Button
-              className={brandStyles.cartButton}
+              size="lg"
+              className={`${brandStyles.cartButton} min-w-44 shadow-2xl`}
               onClick={() => setShowCart(true)}
             >
-              <ShoppingCart className="h-5 w-5 mr-2" />
+              <ShoppingCart className="mr-2 h-5 w-5" />
               <span>{t('merch.cart')}</span>
               {cartItemCount > 0 && (
-                <span className={`absolute -top-2 -right-2 ${brandStyles.badge} text-white text-xs w-5 h-5 rounded-full flex items-center justify-center`}>
+                <span className={`absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full ${brandStyles.badge} text-xs text-white ring-2 ring-black`}>
                   {cartItemCount}
                 </span>
               )}
             </Button>
+          </div>
+        </section>
+
+        <div className="container mx-auto px-4 py-10">
+          <div className="mb-8 flex flex-col gap-3 border-b border-white/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className={`mb-2 text-sm font-semibold uppercase tracking-[0.2em] ${brandStyles.accentText}`}>
+                {isBride ? "ByeBride" : "ByeBro"}
+              </p>
+              <h2 className="text-3xl font-bold text-white md:text-4xl">
+                {t('merch.collectionTitle')}
+              </h2>
+              <p className="mt-2 max-w-2xl text-white/65">
+                {t('merch.collectionSubtitle')}
+              </p>
+            </div>
+            <p className="text-sm text-white/55">
+              {t('merch.selectProductHint')}
+            </p>
           </div>
 
           {isLoading ? (
@@ -291,8 +325,17 @@ export default function MerchandisePage() {
               {products.map(product => (
                 <Card
                   key={product.id}
-                  className={`overflow-hidden group bg-gray-800/60 border-gray-700 ${brandStyles.cardHover} transition-all duration-300 cursor-pointer`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t('merch.openProduct', { product: product.name })}
+                  className={`overflow-hidden group bg-gray-800/60 border-gray-700 ${brandStyles.cardHover} transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-4 focus-visible:ring-offset-gray-950`}
                   onClick={() => {
+                    setSelectedProduct(product);
+                    setSelectedVariantId(product.variants[0]?.id.toString() || "");
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
                     setSelectedProduct(product);
                     setSelectedVariantId(product.variants[0]?.id.toString() || "");
                   }}
@@ -339,6 +382,21 @@ export default function MerchandisePage() {
         </div>
       </main>
 
+      {cartItemCount > 0 && (
+        <Button
+          size="lg"
+          aria-label={t('merch.openCartCount', { count: cartItemCount })}
+          className={`fixed bottom-5 right-5 z-40 ${brandStyles.cartButton} rounded-full px-5 shadow-2xl ring-1 ring-white/20 md:bottom-8 md:right-8`}
+          onClick={() => setShowCart(true)}
+        >
+          <ShoppingCart className="mr-2 h-5 w-5" />
+          {t('merch.cart')}
+          <span className="ml-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-gray-950">
+            {cartItemCount}
+          </span>
+        </Button>
+      )}
+
       {selectedProduct && (
         <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
           <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white">
@@ -369,7 +427,7 @@ export default function MerchandisePage() {
 
                   {selectedProduct.variants.length > 0 && (
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-white/80 mb-2">
                         {t('merch.selectVariant')}
                       </label>
                       <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
@@ -430,7 +488,7 @@ export default function MerchandisePage() {
           ) : (
             <div className="space-y-4 mt-4">
               {cart.map(item => (
-                <div key={item.variantId} className="flex items-center gap-4 bg-gray-800 rounded-lg p-3">
+                <div key={item.variantId} className="flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-3">
                   <img
                     src={item.imageUrl}
                     alt={item.variantName}
@@ -438,14 +496,15 @@ export default function MerchandisePage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-white truncate">{item.productName}</p>
-                    <p className="text-xs text-gray-400 truncate">{item.variantName}</p>
+                    <p className="text-xs text-white/65 truncate">{item.variantName}</p>
                     <p className={`${brandStyles.price} font-bold`}>€{item.price}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 text-gray-400 hover:text-white"
+                      aria-label={t('merch.decreaseQuantity', { item: item.productName })}
+                      className="h-7 w-7 text-white/65 hover:text-white"
                       onClick={() => updateCartQuantity(item.variantId, -1)}
                     >
                       <Minus className="h-3 w-3" />
@@ -454,7 +513,8 @@ export default function MerchandisePage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 text-gray-400 hover:text-white"
+                      aria-label={t('merch.increaseQuantity', { item: item.productName })}
+                      className="h-7 w-7 text-white/65 hover:text-white"
                       onClick={() => updateCartQuantity(item.variantId, 1)}
                     >
                       <Plus className="h-3 w-3" />
@@ -463,7 +523,8 @@ export default function MerchandisePage() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7 text-gray-400 hover:text-red-400"
+                    aria-label={t('merch.removeItem', { item: item.productName })}
+                    className="h-7 w-7 text-white/65 hover:text-red-400"
                     onClick={() => removeFromCart(item.variantId)}
                   >
                     <X className="h-4 w-4" />
@@ -493,7 +554,7 @@ export default function MerchandisePage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-400">{t('merch.shippingCalculated')}</p>
+                <p className="text-xs text-white/65">{t('merch.shippingCalculated')}</p>
               </div>
               <div className="flex items-start gap-3 rounded-md border border-gray-700 bg-gray-800/60 p-3">
                 <Checkbox
@@ -502,7 +563,7 @@ export default function MerchandisePage() {
                   onCheckedChange={(checked) => setAcceptTerms(checked === true)}
                   className="mt-0.5"
                 />
-                <label htmlFor="accept-merchandise-terms" className="text-sm leading-relaxed text-gray-300">
+                <label htmlFor="accept-merchandise-terms" className="text-sm leading-relaxed text-white/80">
                   {t('merch.acceptTermsPrefix')}{" "}
                   <Link href="/terms" className="underline hover:text-white">{t('footer.termsOfService')}</Link>
                   {" "}{t('merch.acceptTermsAnd')}{" "}
@@ -545,7 +606,7 @@ export default function MerchandisePage() {
                 )}
                 {isCheckingOut ? t('merch.redirecting') : t('merch.checkout')}
               </Button>
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-white/55 text-center">
                 {t('merch.securePayment')}
               </p>
             </div>

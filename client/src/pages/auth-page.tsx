@@ -43,6 +43,11 @@ export default function AuthPage() {
   );
   const { t } = useTranslation();
   const isBride = localStorage.getItem("selectedBrand") === "byebride";
+  const authInputClassName = [
+    "h-12 border-gray-500 bg-white text-gray-950 caret-gray-950",
+    "placeholder:text-gray-500 placeholder:opacity-100",
+    isBride ? "focus-visible:ring-pink-500" : "focus-visible:ring-red-500",
+  ].join(" ");
 
   useEffect(() => {
     if (user) {
@@ -116,7 +121,7 @@ export default function AuthPage() {
 
             <TabsContent value="login" className="mt-6">
               <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="auth-page-form space-y-4">
                   <FormField
                     control={loginForm.control}
                     name="email"
@@ -124,7 +129,13 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>{t('auth.email')}</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="you@example.com" {...field} />
+                          <Input
+                            type="email"
+                            autoComplete="email"
+                            placeholder="you@example.com"
+                            className={authInputClassName}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -138,7 +149,13 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>{t('auth.password')}</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                          <Input
+                            type="password"
+                            autoComplete="current-password"
+                            placeholder="••••••••"
+                            className={authInputClassName}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -165,7 +182,7 @@ export default function AuthPage() {
 
             <TabsContent value="register" className="mt-6">
               <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="auth-page-form space-y-4">
                   <FormField
                     control={registerForm.control}
                     name="email"
@@ -173,7 +190,13 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>{t('auth.email')}</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="you@example.com" {...field} />
+                          <Input
+                            type="email"
+                            autoComplete="email"
+                            placeholder="you@example.com"
+                            className={authInputClassName}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -187,7 +210,12 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>{t('auth.usernameOptional')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="username" {...field} />
+                          <Input
+                            autoComplete="username"
+                            placeholder="username"
+                            className={authInputClassName}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -201,7 +229,12 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>{t('auth.fullNameOptional')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Mario Rossi" {...field} />
+                          <Input
+                            autoComplete="name"
+                            placeholder="Mario Rossi"
+                            className={authInputClassName}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -215,7 +248,13 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>{t('auth.password')}</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                          <Input
+                            type="password"
+                            autoComplete="new-password"
+                            placeholder="••••••••"
+                            className={authInputClassName}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

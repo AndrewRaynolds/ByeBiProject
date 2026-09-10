@@ -29,6 +29,7 @@ const storedTripContextSchema = z
     origin: z.string().trim().max(100).optional(),
     originCity: z.string().trim().max(100).optional(),
     destination: z.string().trim().min(1).max(100),
+    partyType: z.enum(["bachelor", "bachelorette"]).optional(),
     startDate: dateOnlySchema,
     endDate: dateOnlySchema,
     people: z.number().int().min(1).max(50),
@@ -69,6 +70,7 @@ export interface TripContext {
   aviasalesCheckoutUrl: string;
   flightLabel: string;
   originCity?: string;
+  partyType?: "bachelor" | "bachelorette";
 }
 
 export function createTripContext(value: unknown): TripContext | null {
@@ -89,6 +91,7 @@ export function createTripContext(value: unknown): TripContext | null {
       result.data.selectedFlight?.label ||
       `${origin} → ${result.data.destination}`,
     originCity: result.data.originCity,
+    ...(result.data.partyType ? { partyType: result.data.partyType } : {}),
   };
 }
 

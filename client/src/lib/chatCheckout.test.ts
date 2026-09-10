@@ -29,6 +29,12 @@ describe("createChatCheckoutContext", () => {
     });
   });
 
+  it("preserves the ByeBride trip type in the checkout context", () => {
+    expect(
+      createChatCheckoutContext(validArguments, validResult, "bachelorette"),
+    ).toMatchObject({ partyType: "bachelorette" });
+  });
+
   it.each([
     [{ ...validArguments, passengers: 0 }, validResult],
     [{ ...validArguments, return_date: "2026-09-14" }, validResult],

@@ -22,6 +22,7 @@ const FLAG_LABELS: Record<Locale, { flag: string; label: string }> = {
 // Utilizziamo React.memo per evitare re-render inutili
 const Header = memo(function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<'byebro' | 'byebride' | null>(null);
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
@@ -74,7 +75,7 @@ const Header = memo(function Header() {
   }, [mobileMenuOpen]); // Dipendenza da mobileMenuOpen per evitare calcoli inutili
 
   return (
-    <header className={`bg-white sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md py-1' : 'py-2'}`}>
+    <header className={`isolate overflow-visible bg-white sticky top-0 z-[60] py-2 transition-shadow duration-300 ${isScrolled ? 'shadow-md' : ''}`}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-black focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-600"
@@ -152,7 +153,7 @@ const Header = memo(function Header() {
         </div>
         
         <div className="flex items-center space-x-2">
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -164,7 +165,7 @@ const Header = memo(function Header() {
                 <Globe className="w-3.5 h-3.5 text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="z-[100]">
               {(Object.keys(FLAG_LABELS) as Locale[]).map((loc) => (
                 <DropdownMenuItem
                   key={loc}
@@ -180,16 +181,21 @@ const Header = memo(function Header() {
 
           {user ? (
             <div className="hidden md:block">
-              <DropdownMenu>
+              <DropdownMenu modal={false} open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="font-medium">
                     <User className="mr-2 h-4 w-4" />
                     {user.username}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">{t('header.dashboard')}</Link>
+                <DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="z-[100]">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setProfileMenuOpen(false);
+                      navigate("/dashboard");
+                    }}
+                  >
+                    {t('header.dashboard')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
                     {logoutMutation.isPending ? (

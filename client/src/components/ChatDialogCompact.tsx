@@ -24,10 +24,13 @@ import {
 import { buildAviasalesUrl, getCityIata } from "@/lib/aviasales";
 import { getCanonicalCityName } from "@shared/cityMapping";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import { createChatCheckoutContext } from "@/lib/chatCheckout";
+import { savePlannedTrip } from "@/lib/plannedTrip";
 import { debugLog, debugWarn } from "@/lib/debug";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(2_000),
@@ -92,6 +95,8 @@ export default function ChatDialogCompact({
   initialMessage,
 }: ChatDialogCompactProps) {
   const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -277,6 +282,7 @@ export default function ChatDialogCompact({
               const checkoutContext = createChatCheckoutContext(
                 pendingFlightSearchRef.current,
                 jsonData.tool_result.result,
+                "bachelor",
               );
               pendingFlightSearchRef.current = null;
               if (checkoutContext) {
@@ -578,6 +584,7 @@ export default function ChatDialogCompact({
       endDate: tripDetails.endDate,
       days: tripDetails.days,
       partyType: currentConversationState.partyType,
+      budget: tripDetails.budget,
       originCity: userOriginCity,
       selectedFlight: currentSelectedFlight,
       aviasalesCheckoutUrl: aviasalesUrl || currentSelectedFlight?.checkoutUrl || "",
@@ -594,6 +601,23 @@ export default function ChatDialogCompact({
       localStorage.setItem("selectedFlight", JSON.stringify(currentSelectedFlight));
     }
     debugLog("💾 Saved currentItinerary to localStorage:", currentItinerary);
+    if (isAuthenticated && user?.id) {
+      void savePlannedTrip(currentItinerary)
+        .then(async ({ created }) => {
+          await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
+          if (created) {
+            toast({
+              title: t('chat.tripSaved'),
+              description: t('chat.tripSavedDesc'),
+            });
+          }
+        })
+        .catch(() => toast({
+          title: t('chat.tripSaveError'),
+          description: t('chat.tripSaveErrorDesc'),
+          variant: "destructive",
+        }));
+    }
   };
 
   interface ToolCallData {

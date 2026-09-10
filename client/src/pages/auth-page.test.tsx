@@ -74,6 +74,8 @@ describe("AuthPage", () => {
     expect(
       screen.getByRole("tab", { name: "Accedi", selected: true }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveClass("bg-white", "text-gray-950");
+    expect(screen.getByLabelText("Email")).toHaveAttribute("autocomplete", "email");
   });
 
   it("uses ByeBride content when that brand is selected", () => {

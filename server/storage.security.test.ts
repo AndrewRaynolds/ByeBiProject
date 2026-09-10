@@ -86,6 +86,34 @@ describe('expense group ownership', () => {
     ]);
   });
 
+  it('serializes equivalent trip plans into one dashboard record', async () => {
+    const storage = new MemStorage();
+    const basePlan = {
+      userId: 'user-a',
+      name: 'ByeBro · Barcelona',
+      participants: 4,
+      startDate: '2026-10-20',
+      endDate: '2026-10-23',
+      departureCity: 'Rome',
+      destinations: ['Barcelona'],
+      experienceType: 'bachelor',
+      budget: 600,
+      activities: [],
+      specialRequests: null,
+      includeMerch: false,
+    };
+
+    const results = await Promise.all([
+      storage.createTripIfAbsent(basePlan),
+      storage.createTripIfAbsent({ ...basePlan, departureCity: 'Italia' }),
+      storage.createTripIfAbsent({ ...basePlan, departureCity: 'Roma' }),
+    ]);
+
+    expect(results.filter((result) => result.created)).toHaveLength(1);
+    expect(new Set(results.map((result) => result.trip.id)).size).toBe(1);
+    await expect(storage.getTripsByUserId('user-a')).resolves.toHaveLength(1);
+  });
+
   it('records processed Stripe events idempotently', async () => {
     const storage = new MemStorage();
 

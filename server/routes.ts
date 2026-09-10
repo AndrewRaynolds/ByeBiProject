@@ -604,8 +604,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Always use the authenticated user's UUID as userId (ignoring any client-sent userId)
       const tripPayload = { ...req.body, userId: supabaseUser.id };
       const tripData = insertTripSchema.parse(tripPayload);
-      const trip = await storage.createTrip(tripData);
-      return res.status(201).json(trip);
+      const { trip, created } = await storage.createTripIfAbsent(tripData);
+      return res.status(created ? 201 : 200).json(trip);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: fromZodError(error).message });

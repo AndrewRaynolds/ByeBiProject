@@ -17,6 +17,7 @@ const flightSearchResultSchema = z.object({
 export function createChatCheckoutContext(
   rawArguments: unknown,
   rawResult: unknown,
+  partyType?: "bachelor" | "bachelorette",
 ): TripContext | null {
   const argumentsResult = flightSearchArgumentsSchema.safeParse(rawArguments);
   const searchResult = flightSearchResultSchema.safeParse(rawResult);
@@ -27,6 +28,7 @@ export function createChatCheckoutContext(
     origin: args.origin,
     originCity: args.origin,
     destination: args.destination,
+    partyType,
     startDate: args.departure_date,
     endDate: args.return_date,
     people: args.passengers,
