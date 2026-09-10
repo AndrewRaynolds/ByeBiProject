@@ -45,6 +45,14 @@ interface CartItem {
   imageUrl: string;
 }
 
+export function toCheckoutItems(items: CartItem[]) {
+  return items.map(({ productId, variantId, quantity }) => ({
+    productId,
+    variantId,
+    quantity,
+  }));
+}
+
 type MerchandiseBrand = "byebro" | "byebride";
 const SHIPPING_COUNTRIES = ["IT", "DE", "FR", "ES", "NL", "BE", "AT", "PT", "GR", "PL", "CZ", "HU", "HR", "RO", "BG", "SE", "DK", "FI", "IE", "GB"] as const;
 
@@ -511,7 +519,7 @@ export default function MerchandisePage() {
                       brand: currentBrand,
                       shippingCountry,
                       acceptTerms: true,
-                      items: cart,
+                      items: toCheckoutItems(cart),
                     });
                     const data = await response.json();
                     if (data.url) {

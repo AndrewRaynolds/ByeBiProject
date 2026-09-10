@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BRAND_PRODUCT_IDS,
   filterProductsForBrand,
+  toCheckoutItems,
 } from "./MerchandisePage";
 
 describe("brand merchandise filtering", () => {
@@ -21,5 +22,24 @@ describe("brand merchandise filtering", () => {
     expect(filterProductsForBrand(products, "byebride")).toEqual(
       products.filter((product) => product.brand === "bride"),
     );
+  });
+});
+
+describe("merchandise checkout payload", () => {
+  it("sends only the fields accepted by the checkout API", () => {
+    expect(toCheckoutItems([{
+      productId: 420156126,
+      variantId: 5200740039,
+      quantity: 1,
+      variantName: "ByeBro Cap / Black",
+      productName: "ByeBro Cap",
+      price: "15.00",
+      currency: "EUR",
+      imageUrl: "https://example.com/cap.png",
+    }])).toEqual([{
+      productId: 420156126,
+      variantId: 5200740039,
+      quantity: 1,
+    }]);
   });
 });
