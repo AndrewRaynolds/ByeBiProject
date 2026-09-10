@@ -349,6 +349,7 @@
   "dashboard.shipping": "Envío",
   "dashboard.trackShipment": "Seguir el envío",
   "dashboard.cancelAndRefund": "Cancelar y reembolsar",
+  "dashboard.completeRefund": "Completar reembolso",
   "dashboard.refundConfirm": "¿Confirmas la cancelación en Printful y el reembolso completo en Stripe? Esta acción no se puede deshacer.",
   "dashboard.refundSuccess": "Reembolso iniciado",
   "dashboard.refundSuccessDesc": "El pedido de Printful fue cancelado y Stripe recibió el reembolso.",

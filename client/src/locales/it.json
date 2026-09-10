@@ -352,6 +352,7 @@
   "dashboard.shipping": "Spedizione",
   "dashboard.trackShipment": "Segui la spedizione",
   "dashboard.cancelAndRefund": "Annulla e rimborsa",
+  "dashboard.completeRefund": "Completa il rimborso",
   "dashboard.refundConfirm": "Confermi l'annullamento su Printful e il rimborso completo su Stripe? Questa operazione non può essere annullata.",
   "dashboard.refundSuccess": "Rimborso avviato",
   "dashboard.refundSuccessDesc": "L'ordine Printful è stato annullato e Stripe ha ricevuto il rimborso.",

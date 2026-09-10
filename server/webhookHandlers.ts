@@ -120,9 +120,12 @@ export class WebhookHandlers {
     }
     const order = await storage.getMerchandiseOrderById(parsedOrderId.data);
     if (!order) throw new MerchandiseOrderRetryError("Merchandise order not found", 404);
+    const isSubmittedOrder = order.fulfillmentStatus === "submitted";
+    const isCancelledAwaitingRefund =
+      order.fulfillmentStatus === "cancelled" && order.printfulStatus === "canceled";
     if (
       order.paymentStatus !== "paid" ||
-      order.fulfillmentStatus !== "submitted" ||
+      (!isSubmittedOrder && !isCancelledAwaitingRefund) ||
       !order.printfulOrderId ||
       !order.stripeSessionId
     ) {

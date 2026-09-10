@@ -349,6 +349,7 @@
   "dashboard.shipping": "Shipping",
   "dashboard.trackShipment": "Track shipment",
   "dashboard.cancelAndRefund": "Cancel and refund",
+  "dashboard.completeRefund": "Complete refund",
   "dashboard.refundConfirm": "Confirm cancellation on Printful and a full Stripe refund? This action cannot be undone.",
   "dashboard.refundSuccess": "Refund started",
   "dashboard.refundSuccessDesc": "The Printful order was cancelled and Stripe received the refund.",

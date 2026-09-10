@@ -218,4 +218,39 @@ describe("merchandise Stripe webhook", () => {
     expect(cancelOrderMock.mock.invocationCallOrder[0])
       .toBeLessThan(refundMock.mock.invocationCallOrder[0]);
   });
+
+  it("finishes a refund after Printful already reported the order as cancelled", async () => {
+    storageMock.getMerchandiseOrderById.mockResolvedValue({
+      ...order,
+      paymentStatus: "paid",
+      fulfillmentStatus: "cancelled",
+      printfulOrderId: "42",
+      printfulStatus: "canceled",
+    });
+
+    await WebhookHandlers.refundMerchandiseOrder(orderId);
+
+    expect(cancelOrderMock).toHaveBeenCalledWith(42);
+    expect(refundMock).toHaveBeenCalledWith(
+      { payment_intent: "pi_order" },
+      { idempotencyKey: `byebi-refund-${orderId}` },
+    );
+    expect(storageMock.markMerchandiseOrderRefunded)
+      .toHaveBeenCalledWith(orderId, "re_order", true);
+  });
+
+  it("does not refund a cancelled order that Printful has not confirmed as cancelled", async () => {
+    storageMock.getMerchandiseOrderById.mockResolvedValue({
+      ...order,
+      paymentStatus: "paid",
+      fulfillmentStatus: "cancelled",
+      printfulOrderId: "42",
+      printfulStatus: "pending",
+    });
+
+    await expect(WebhookHandlers.refundMerchandiseOrder(orderId))
+      .rejects.toMatchObject({ statusCode: 409 });
+    expect(cancelOrderMock).not.toHaveBeenCalled();
+    expect(refundMock).not.toHaveBeenCalled();
+  });
 });

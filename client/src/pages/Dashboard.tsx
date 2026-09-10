@@ -511,9 +511,11 @@ export default function Dashboard() {
                             </Button>
                           )}
                           {order.paymentStatus === "paid" &&
-                            order.fulfillmentStatus === "submitted" &&
                             order.printfulStatus &&
-                            ["draft", "failed", "pending"].includes(order.printfulStatus) && (
+                            ((order.fulfillmentStatus === "submitted" &&
+                              ["draft", "failed", "pending"].includes(order.printfulStatus)) ||
+                              (order.fulfillmentStatus === "cancelled" &&
+                                order.printfulStatus === "canceled")) && (
                             <Button
                               variant="destructive"
                               onClick={() => {
@@ -523,7 +525,9 @@ export default function Dashboard() {
                               }}
                               disabled={refundMerchandiseOrder.isPending}
                             >
-                              {t('dashboard.cancelAndRefund')}
+                              {order.fulfillmentStatus === "cancelled"
+                                ? t('dashboard.completeRefund')
+                                : t('dashboard.cancelAndRefund')}
                             </Button>
                           )}
                         </CardContent>
