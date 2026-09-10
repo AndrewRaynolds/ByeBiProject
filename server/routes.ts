@@ -399,6 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(orders.map((order) => ({
           id: order.id,
           userId: order.userId,
+          customerEmail: order.customerEmail,
           brand: order.brand,
           paymentStatus: order.paymentStatus,
           fulfillmentStatus: order.fulfillmentStatus,

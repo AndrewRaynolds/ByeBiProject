@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Trip, type MerchandiseOrderItem } from "@shared/schema";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, RotateCcw, Shirt, Truck, User } from "lucide-react";
+import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, RefreshCw, RotateCcw, Search, Shirt, Truck, User } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -30,6 +30,7 @@ type MerchandiseOrderSummary = {
   createdAt: string;
   updatedAt?: string;
   userId?: string | null;
+  customerEmail?: string | null;
   printfulOrderId?: string | null;
   printfulStatus?: string | null;
   failureCode?: string | null;
@@ -44,6 +45,8 @@ export default function Dashboard() {
   const [location, setLocation] = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [adminOrderFilter, setAdminOrderFilter] = useState<"all" | "attention" | "active" | "completed">("all");
+  const [adminOrderSearch, setAdminOrderSearch] = useState("");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -70,7 +73,12 @@ export default function Dashboard() {
       enabled: Boolean(user?.isAdmin),
     });
 
-  const { data: adminMerchandiseOrders, isLoading: isLoadingAdminMerchandise } =
+  const {
+    data: adminMerchandiseOrders,
+    isLoading: isLoadingAdminMerchandise,
+    isFetching: isFetchingAdminMerchandise,
+    refetch: refetchAdminMerchandise,
+  } =
     useQuery<MerchandiseOrderSummary[]>({
       queryKey: ["/api/admin/merchandise/orders"],
       enabled: Boolean(user?.isAdmin),
@@ -129,6 +137,28 @@ export default function Dashboard() {
       });
     },
   });
+
+  const adminOrders = adminMerchandiseOrders ?? [];
+  const attentionStatuses = new Set(["fulfillment_failed", "manual_review", "returned"]);
+  const activeStatuses = new Set(["pending_payment", "processing", "submitted"]);
+  const completedStatuses = new Set(["shipped", "cancelled"]);
+  const normalizedAdminSearch = adminOrderSearch.trim().toLowerCase();
+  const filteredAdminOrders = adminOrders.filter((order) => {
+    const matchesFilter = adminOrderFilter === "all" ||
+      (adminOrderFilter === "attention" && attentionStatuses.has(order.fulfillmentStatus)) ||
+      (adminOrderFilter === "active" && activeStatuses.has(order.fulfillmentStatus)) ||
+      (adminOrderFilter === "completed" && completedStatuses.has(order.fulfillmentStatus));
+    if (!matchesFilter) return false;
+    if (!normalizedAdminSearch) return true;
+    return [order.id, order.userId, order.customerEmail, order.printfulOrderId]
+      .some((value) => value?.toLowerCase().includes(normalizedAdminSearch));
+  });
+  const adminOrderCounts = {
+    all: adminOrders.length,
+    attention: adminOrders.filter((order) => attentionStatuses.has(order.fulfillmentStatus)).length,
+    active: adminOrders.filter((order) => activeStatuses.has(order.fulfillmentStatus)).length,
+    completed: adminOrders.filter((order) => completedStatuses.has(order.fulfillmentStatus)).length,
+  };
 
   if (!isAuthenticated) {
     return null; // Will redirect in useEffect
@@ -343,21 +373,56 @@ export default function Dashboard() {
 
             {user?.isAdmin && (
               <TabsContent value="orderManagement">
+                <div className="mb-5 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="relative w-full md:max-w-md">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="search"
+                        value={adminOrderSearch}
+                        onChange={(event) => setAdminOrderSearch(event.target.value)}
+                        placeholder={t('dashboard.searchOrders')}
+                        className="h-10 w-full rounded-md border border-gray-300 bg-white pl-10 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => void refetchAdminMerchandise()}
+                      disabled={isFetchingAdminMerchandise}
+                    >
+                      <RefreshCw className={`mr-2 h-4 w-4 ${isFetchingAdminMerchandise ? "animate-spin" : ""}`} />
+                      {t('dashboard.refreshOrders')}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    {(["all", "attention", "active", "completed"] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        type="button"
+                        onClick={() => setAdminOrderFilter(filter)}
+                        className={`rounded-lg border p-3 text-left transition-colors ${adminOrderFilter === filter ? "border-primary bg-primary/10" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                      >
+                        <span className="block text-2xl font-bold">{adminOrderCounts[filter]}</span>
+                        <span className="text-xs text-gray-600">{t(`dashboard.orderFilter.${filter}`)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {isLoadingAdminMerchandise ? (
                   <div className="space-y-4">
                     <Skeleton className="h-40 w-full" />
                     <Skeleton className="h-40 w-full" />
                   </div>
-                ) : adminMerchandiseOrders?.length ? (
+                ) : filteredAdminOrders.length ? (
                   <div className="space-y-4">
-                    {adminMerchandiseOrders.map((order) => (
+                    {filteredAdminOrders.map((order) => (
                       <Card key={`admin-${order.id}`}>
                         <CardHeader>
                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div>
                               <CardTitle className="text-base">#{order.id.slice(0, 8)}</CardTitle>
                               <CardDescription>
-                                {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")} · {order.userId || t('dashboard.guestOrder')}
+                                {format(new Date(order.createdAt), "dd/MM/yyyy HH:mm")} · {order.customerEmail || order.userId || t('dashboard.guestOrder')}
                               </CardDescription>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -415,7 +480,9 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="rounded-xl border-2 border-dashed border-gray-300 p-10 text-center">
-                    <p className="text-gray-600">{t('dashboard.noOrdersToManage')}</p>
+                    <p className="text-gray-600">
+                      {adminOrders.length ? t('dashboard.noMatchingOrders') : t('dashboard.noOrdersToManage')}
+                    </p>
                   </div>
                 )}
               </TabsContent>

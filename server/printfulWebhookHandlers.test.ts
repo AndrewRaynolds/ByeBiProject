@@ -104,4 +104,64 @@ describe("Printful webhook processing", () => {
       "order_attention",
     );
   });
+
+  it("marks failed Printful orders for manual review", async () => {
+    getOrderMock.mockResolvedValue({ id: 42, status: "failed", shipments: [] });
+
+    await processPrintfulWebhook({ ...payload, type: "order_failed" });
+
+    expect(storageMock.updateMerchandiseOrderFromPrintful).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        fulfillmentStatus: "manual_review",
+        failureCode: "printful_failed",
+      }),
+    );
+    expect(queueNotificationMock).toHaveBeenCalledWith(
+      expect.any(String),
+      "order_attention",
+    );
+  });
+
+  it("restores a released Printful order to submitted", async () => {
+    getOrderMock.mockResolvedValue({ id: 42, status: "draft", shipments: [] });
+
+    await processPrintfulWebhook({ ...payload, type: "order_remove_hold" });
+
+    expect(storageMock.updateMerchandiseOrderFromPrintful).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        fulfillmentStatus: "submitted",
+        failureCode: null,
+      }),
+    );
+    expect(queueNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it("marks cancelled Printful orders as cancelled", async () => {
+    getOrderMock.mockResolvedValue({ id: 42, status: "canceled", shipments: [] });
+
+    await processPrintfulWebhook({ ...payload, type: "order_canceled" });
+
+    expect(storageMock.updateMerchandiseOrderFromPrintful).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        fulfillmentStatus: "cancelled",
+        failureCode: null,
+      }),
+    );
+    expect(queueNotificationMock).toHaveBeenCalledWith(
+      expect.any(String),
+      "order_attention",
+    );
+  });
+
+  it("ignores orders that do not belong to ByeBi", async () => {
+    storageMock.getMerchandiseOrderByPrintfulOrderId.mockResolvedValue(null);
+
+    await processPrintfulWebhook(payload);
+
+    expect(storageMock.updateMerchandiseOrderFromPrintful).not.toHaveBeenCalled();
+    expect(queueNotificationMock).not.toHaveBeenCalled();
+  });
 });
