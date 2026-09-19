@@ -1,244 +1,118 @@
-# ByeBi Dual-Brand Travel Platform
+# ByeBi
 
-## Overview
-ByeBi is an AI-powered dual-brand travel platform featuring **ByeBro** for bachelor parties and **ByeBride** for bachelorette parties. It offers "The Chat Bro" / "The Chat Bride" as central chat assistants for conversational flight search and itinerary generation, and comprehensive expense management via SplittaBro/SplittaBride. The platform's core vision is to streamline group travel planning for specific event types (bachelor/bachelorette parties) by leveraging AI for personalized and efficient itinerary creation, with a strong focus on user experience and brand-specific customization.
+ByeBi is a full-stack web application for planning bachelor and bachelorette trips. It combines conversational travel assistance with authentication, group tools, affiliate travel services and a merchandise checkout flow.
 
-## User Preferences
-- Language: Italian interface preferred
-- Style: Informal, enthusiastic tone with emojis for trip planning
-- Visual: ByeBro red theme colors for branding consistency
-- Focus: Conversational approach over dropdown menus for user interaction
+> **Project status:** pre-launch and under active development. Payments and order handling have been tested in Stripe test mode. This repository demonstrates project experience; it does not claim a commercial launch or revenue.
 
-## System Architecture
-The platform is built with React and TypeScript for the frontend, utilizing Shadcn components with Tailwind CSS for a modern UI/UX featuring dark gradients, glassmorphism, and responsive design. Wouter handles client-side routing. The backend is an Express.js server backed by PostgreSQL in production; in-memory storage is limited to local development.
+## What the application does
 
-**Authentication: Supabase Auth** (migrated from Passport.js, March 2025)
-- All auth is handled by Supabase. Users appear in the Supabase Authentication dashboard.
-- Frontend: `useAuth()` hook (`client/src/hooks/use-auth.tsx`) wraps Supabase `signInWithPassword`, `signUp`, `signOut`, and `onAuthStateChange`. `AuthUser` type has UUID `id`. Frontend uses `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`.
-- Backend: `server/supabase.ts` creates a Supabase client using server-only secrets `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (throws on startup if missing — no fallbacks). The `isAuthenticated` middleware in `routes.ts` verifies Bearer JWT tokens via `supabase.auth.getUser(token)` and attaches the verified `User` to `req.supabaseUser` (typed via Express namespace in `server/types.ts`).
-- `queryClient.ts` automatically attaches `Authorization: Bearer <token>` headers to all API requests.
-- Trip `userId` is now `text` (Supabase UUID) — changed from `integer`. Trip creation/retrieval enforces ownership against the JWT-verified user.
-- Auth page (`/auth`) uses email + password (not username).
+- Provides two branded experiences: **ByeBro** and **ByeBride**.
+- Collects trip details through a conversational assistant.
+- Directs users to external travel providers through affiliate links.
+- Uses Supabase for authentication and session management.
+- Stores application data in PostgreSQL through versioned migrations.
+- Includes a Stripe Checkout flow for merchandise, with persisted orders.
+- Supports Italian, English and Spanish interfaces.
 
-## Database migrations
+## Technology stack
 
-- `supabase/migrations/` is the canonical database history used by the
-  Supabase GitHub integration.
-- `supabase/seed.sql` contains local/preview test content and is not deployed
-  to production by the GitHub integration.
-- The integration working directory is `.` because `supabase/` is located at
-  the repository root.
-- Production deploys are triggered from `main`. Require the Supabase status
-  check before merging database changes.
-- Files under `migrations/manual/` are historical records only and must not be
-  applied again.
-- Do not make schema changes directly in the production Dashboard. Add a new
-  timestamped SQL migration and let the integration apply it.
+| Area | Technologies |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, TanStack Query |
+| Backend | Node.js, Express, TypeScript |
+| Data and authentication | PostgreSQL, Supabase Auth, Drizzle ORM, Zod |
+| Testing and delivery | Vitest, Testing Library, GitHub Actions |
+| Travel services | OpenAI, Amadeus, Aviasales, Booking.com, GetYourGuide |
+| Commerce and communications | Stripe Checkout, Printful, Resend |
 
-## Production verification
+## My contribution
 
-After publishing a batch of changes, verify the public application, API and
-database readiness with:
+I am Andrea Ranaldo, co-creator of ByeBi. I have worked on the technical implementation since late 2025, while my project collaborator focuses on commercial strategy.
+
+My hands-on work includes:
+
+- integrating Supabase authentication and managing user sessions;
+- creating and modifying database tables, migrations and relationships;
+- connecting external services and generating affiliate travel links;
+- implementing Stripe Checkout, testing payments and persisting orders;
+- testing APIs, debugging application flows and maintaining the project with Git and GitHub.
+
+Development includes AI-assisted coding for research, implementation and debugging. I review and test application behaviour and am continuing to strengthen my independent command of React, TypeScript and Node.js/Express.
+
+## Architecture at a glance
+
+```text
+client/                 React application and user interface
+server/                 Express API and external-service integrations
+shared/                 Shared schemas, validation and data contracts
+supabase/migrations/    Versioned PostgreSQL migrations
+.github/workflows/      CI and production-health workflows
+```
+
+The frontend sends authenticated API requests using the Supabase access token. Express middleware verifies the token server-side before protected data is read or changed. External-service credentials remain on the server and are configured through environment variables.
+
+## Main flows
+
+### Travel planning
+
+1. The user describes a trip in natural language.
+2. The assistant collects any missing origin, destination, dates and passenger count.
+3. The server validates the request and calls the relevant travel service.
+4. The application creates a verified affiliate link.
+5. The user completes the booking on the provider's website.
+
+### Merchandise checkout
+
+1. The user selects products and a shipping option.
+2. The server creates a Stripe Checkout session.
+3. Stripe test mode processes the payment simulation.
+4. A verified webhook updates the stored order.
+5. Printful and transactional-email operations are handled server-side.
+
+## Run locally
+
+### Requirements
+
+- Node.js 20
+- PostgreSQL or a Supabase project
+- Environment variables for the services being tested
+
+### Installation
 
 ```bash
-npm run smoke:production -- https://byebi.it
+git clone https://github.com/AndrewRaynolds/ByeBiProject.git
+cd ByeBiProject
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-Production startup also rejects incomplete Amadeus live configuration,
-non-database critical persistence and a non-HTTPS `APP_BASE_URL`.
-GitHub also runs the same smoke test twice per hour through the
-`Production health` workflow; failures are visible in the repository Actions.
+The application starts through the Express server, which also serves the frontend during development. Features connected to external providers require their respective credentials.
 
-Every HTTP response includes an `X-Request-Id` header. API completion logs use
-the same identifier so a production error can be correlated without logging
-request bodies, authentication tokens or user travel details. Verbose chatbot
-diagnostics are disabled in production builds.
+## Quality checks
 
-Key architectural decisions include a dual-brand system starting with a ByeBi landing page for brand selection (ByeBro: red/black, bachelor focus; ByeBride: pink/black, bachelorette focus). All shared components are brand-aware, dynamically adjusting content and themes.
-
-The chat assistant implements a conversational flight-planning flow:
-1. The user describes the trip naturally.
-2. The assistant asks only for missing origin, destination, dates, or passenger count.
-3. Once the required data is complete, OpenAI calls the validated `search_flights` tool.
-4. The backend maps cities to IATA codes and creates the Aviasales checkout link.
-5. The frontend waits for the successful tool result, stores the shared `TripContext`, and opens checkout.
-
-The server-generated checkout URL is authoritative; the frontend never navigates from an unverified tool request.
-
-**Current booking flow:**
-The booking flow uses a unified TripContext data contract stored in localStorage under 'currentItinerary':
-```typescript
-interface TripContext {
-  origin: string;           // IATA code or city name
-  destination: string;      // City name
-  startDate: string;        // YYYY-MM-DD (user's trip dates)
-  endDate: string;          // YYYY-MM-DD
-  people: number;           // Number of travelers
-  aviasalesCheckoutUrl: string;  // Pre-built Aviasales deep link
-  flightLabel?: string;     // Display label for flight section
-}
+```bash
+npm run check
+npm test
+npm run build
 ```
-- **Chatbot** → writes TripContext to localStorage
-- **Checkout.tsx** (/checkout) → reads TripContext, shows Aviasales button + real Amadeus hotel search
-- Legacy `/itinerary` URLs redirect to `/checkout`
 
-**Flight prices are NEVER shown** - users book flights directly via Aviasales partner links.
-**Date handling**: All dates use string-only formatters (formatDateRangeIT, normalizeFutureTripDate) - NO Date() constructor to avoid timezone issues.
+The repository contains unit and integration tests for frontend components, shared schemas, security controls and server-side services. GitHub Actions runs the project checks on repository changes.
 
-**Entry points:**
-- `ChatDialogCompact.tsx` and `ChatDialogCompactBride.tsx` save the verified
-  trip context and navigate directly to `/checkout`.
+## Security and data handling
 
-The hero section of each brand features a centered chat assistant ("The Chat Bro" for ByeBro, "The Chat Bride" for ByeBride) as the primary entry point for trip planning. Expense management is handled by brand-specific SplittaBro/SplittaBride components with corresponding themes and robust group creation flows.
+- Authentication tokens are verified server-side before protected operations.
+- Secrets and service-role credentials are read from environment variables and are not committed.
+- External navigation is restricted to approved HTTPS providers.
+- Stripe and Printful events are verified before order state is updated.
+- Affiliate analytics excludes authentication tokens, chat content and complete outbound URLs.
 
-## GetYourGuide Integration (January 2026)
-Affiliate links for experiences/activities are integrated via `GetYourGuideCta` component in Itinerary and Checkout pages.
+## Current status
 
-**Supported destinations**:
-- Rome, Barcelona, Ibiza, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
+ByeBi is not yet commercially launched. Current work focuses on consolidating the user journey, validating integrations and preparing the product for a reliable release.
 
-**Files**:
-- `client/src/lib/getyourguide.ts` - Link mapping with IT/EN city name normalization (Roma↔Rome, Barcellona↔Barcelona, etc.)
-- `client/src/lib/track.ts` - Event tracking helper (console log structured)
-- `client/src/components/GetYourGuideCta.tsx` - Reusable CTA component
+## Contact
 
-**Behavior**: CTA only renders for supported destinations. Opens affiliate link in new tab with tracking event.
+**Andrea Ranaldo**
 
-## Affiliate analytics
-
-Affiliate clicks for Aviasales, Booking.com and GetYourGuide are recorded by the
-first-party `/api/analytics/affiliate-clicks` endpoint. Events contain only a
-random page-session identifier, provider, placement, brand, destination and a
-boolean indicating whether the generated URL is monetized. The application
-does not store IP addresses, user identities, chat content, travel dates or
-complete outbound URLs in this analytics table.
-
-Booking.com links are generated centrally. Set the public build variable
-`VITE_BOOKING_AFFILIATE_ID` only after receiving a numeric `aid` from the
-Booking.com partner program. Without it, links continue to work and analytics
-correctly records them as non-monetized.
-
-Users whose Supabase `app_metadata.role` is `admin` see an Affiliates tab in
-the account dashboard with 30-day totals by provider. The summary API is
-protected by both authentication and the server-side administrator check.
-
-Monetized CTAs display a localized affiliate notice and the footer links to
-`/affiliate-disclosure`. External programmatic navigation is restricted to
-the HTTPS domains used by Aviasales, Booking.com, GetYourGuide and Google Maps;
-stored flight checkout URLs must be official Aviasales search URLs.
-
-## i18n System (February 2026)
-Complete internationalization system supporting Italian (default), English, and Spanish.
-
-**Architecture**:
-- `client/src/contexts/LanguageContext.tsx` - LanguageProvider, useTranslation hook, t() function with {{param}} interpolation
-- `client/src/locales/it.json` - Italian translations (221 keys, default/fallback)
-- `client/src/locales/en.json` - English translations (221 keys, lazy-loaded)
-- `client/src/locales/es.json` - Spanish translations (221 keys, lazy-loaded)
-
-**Usage**: `const { t, locale, setLocale } = useTranslation();` then `t('key.name')` or `t('key.name', { param: value })`
-
-**Language selector**: Flag dropdown in Header navbar (🇮🇹/🇬🇧/🇪🇸), persisted to localStorage under `byebi_locale`
-
-Shared navigation, landing-page, chatbot, checkout, blog, merchandise and
-error-page content uses the same translation context.
-
-**Note**: Italian locale is loaded synchronously (bundled) for instant first render. EN/ES are lazy-loaded on demand. Chat responses are handled separately by AI language detection.
-
-## External Dependencies
-- **OpenAI API**: Primary engine for streaming chat responses and validated travel tool calls.
-- **Zapier**: Integrated via webhooks for AI-powered itinerary generation, allowing structured data exchange for ChatGPT processing.
-- **GetYourGuide**: Affiliate links for city-based experiences (10 destinations supported).
-- **Printful API**: Print-on-demand merchandise integration for travel gadgets (t-shirts, caps). Uses Bearer token auth via `PRINTFUL_API_KEY` secret.
-
-## Printful Integration (February 2026)
-Print-on-demand merchandise store for travel gadgets via Printful API.
-
-**Files**:
-- `server/services/printful.ts` - Printful API service (products, variants, shipping rates)
-- `server/routes.ts` - API routes under `/api/printful/*`
-- `client/src/pages/MerchandisePage.tsx` - Storefront showing real Printful products
-
-**API Endpoints**:
-- `GET /api/printful/products` - List all store products with variants
-- `GET /api/printful/products/:id` - Get single product details
-- `POST /api/printful/shipping-rates` - Calculate shipping rates
-
-Orders are created only after a verified Stripe Checkout webhook. Shipping is
-quoted by Printful immediately before Stripe Checkout and the Checkout Session
-expires after about 30 minutes.
-
-## Stripe Integration (February 2026)
-Payment processing for merchandise via Stripe Checkout (connector: Stripe).
-
-**Files**:
-- `server/stripeClient.ts` - Stripe client using environment credentials, with an optional Replit connector fallback
-- `server/webhookHandlers.ts` - Stripe webhook processing via stripe-replit-sync
-- `server/index.ts` - Stripe initialization (migrations, webhook, sync) and webhook route (BEFORE express.json())
-- `server/routes.ts` - Checkout session and payment routes under `/api/stripe/*`
-
-**API Endpoints**:
-- `GET /api/stripe/publishable-key` - Get Stripe publishable key
-- `POST /api/stripe/checkout` - Create Stripe Checkout Session from cart items
-- `GET /api/merchandise/orders/:orderId/status` - Get a return-page order status using the matching Stripe session
-- `GET /api/merchandise/orders` - List the authenticated user's orders
-- `GET /api/admin/merchandise/orders` - List recent orders (admin only)
-- `POST /api/admin/merchandise/orders/:orderId/retry` - Safely retry failed Printful submission (admin only)
-- `POST /api/admin/merchandise/orders/:orderId/refund` - Cancel an eligible Printful order, then issue an idempotent full Stripe refund (admin only)
-
-The Stripe webhook endpoint is `/api/stripe/webhook` and must subscribe to:
-
-- `checkout.session.completed`
-- `checkout.session.expired`
-
-Use Stripe test keys until the seller's legal and tax setup is ready.
-
-## Transactional merchandise email
-
-Order email is delivered through the Resend HTTP API without adding an SDK.
-The database outbox prevents duplicate messages and retries temporary failures
-up to five times. Resend requests also use a stable `Idempotency-Key`.
-
-Configure:
-
-- `TRANSACTIONAL_EMAIL_MODE=disabled` to guarantee that no email is sent;
-- `TRANSACTIONAL_EMAIL_MODE=test` to redirect every message to
-  `TRANSACTIONAL_EMAIL_TEST_RECIPIENT`;
-- `TRANSACTIONAL_EMAIL_MODE=live` to send to the customer email verified by
-  Stripe Checkout;
-- `RESEND_API_KEY`, `TRANSACTIONAL_EMAIL_FROM` and, optionally,
-  `TRANSACTIONAL_EMAIL_REPLY_TO` when delivery is enabled.
-
-The sender domain must be verified in Resend before live delivery. Production
-startup rejects live merchandise sales unless transactional email is also live,
-Stripe uses live keys, seller details are complete and
-`PRINTFUL_CONFIRM_ORDERS=true`.
-
-Notification types cover payment confirmation, submission to Printful,
-shipping/tracking, manual-review warnings and refunds. Email delivery failures
-never roll back or repeat the payment or Printful operation.
-
-## Printful fulfillment webhooks
-
-Set `PRINTFUL_WEBHOOK_SECRET` to a random value of at least 32 characters and
-configure the Printful v1 webhook URL as:
-
-`https://byebi.it/api/printful/webhook?token=<PRINTFUL_WEBHOOK_SECRET>`
-
-Enable these event types:
-
-- `package_shipped`
-- `package_returned`
-- `order_updated`
-- `order_failed`
-- `order_canceled`
-- `order_put_hold`
-- `order_remove_hold`
-
-The token query is not written to application request logs. Because Printful
-v1 webhooks are not signed like Stripe events, every accepted notification is
-verified by fetching the order again from Printful before local state or
-tracking information is updated.
-
-**Flow**: Cart → Stripe Checkout (with shipping address collection) → Payment → Success page
-**Database**: stripe-replit-sync manages `stripe` schema automatically via PostgreSQL
+[GitHub profile](https://github.com/AndrewRaynolds) · [andrew.ranaldo@gmail.com](mailto:andrew.ranaldo@gmail.com)
