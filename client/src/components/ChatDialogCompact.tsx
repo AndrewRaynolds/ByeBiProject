@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Send, Bot, User, Sparkles, Beer } from "lucide-react";
-import byebiLogo from "@assets/Bb logo_1763313858570.png";
+import byebiLogo from "@/assets/byebi-logo.png";
 import {
   normalizeFutureTripDate,
   calculateTripDays,

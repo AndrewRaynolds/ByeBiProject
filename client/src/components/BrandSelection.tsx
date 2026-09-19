@@ -1,6 +1,6 @@
 import { CardContent } from "@/components/ui/card";
 import { ArrowRight, Users, Heart } from "lucide-react";
-import byebiLogo from "@assets/Bb logo_1763313858570.png";
+import byebiLogo from "@/assets/byebi-logo.png";
 import { useTranslation } from "@/contexts/LanguageContext";
 
 interface BrandSelectionProps {
