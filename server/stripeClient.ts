@@ -6,6 +6,25 @@ function hasRealValue(value: string | undefined) {
   return Boolean(value && value.trim() !== "...");
 }
 
+export function getManagedStripeWebhookUrl(
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  if (env.NODE_ENV !== "production" || env.REPLIT_DEPLOYMENT !== "1") {
+    return null;
+  }
+
+  const appBaseUrl = env.APP_BASE_URL?.trim();
+  if (!appBaseUrl) return null;
+
+  try {
+    const url = new URL(appBaseUrl);
+    if (url.protocol !== "https:") return null;
+    return new URL("/api/stripe/webhook", url.origin).toString();
+  } catch {
+    return null;
+  }
+}
+
 export function hasStripeCredentials() {
   return Boolean(
     hasRealValue(process.env.STRIPE_SECRET_KEY) &&
