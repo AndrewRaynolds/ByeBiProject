@@ -25,6 +25,27 @@ export function getManagedStripeWebhookUrl(
   }
 }
 
+export function chooseStripeWebhookSecret(
+  managedSecret: string | null | undefined,
+  configuredSecret: string | null | undefined,
+): string | null {
+  const managed = managedSecret?.trim();
+  if (managed) return managed;
+  const configured = configuredSecret?.trim();
+  return configured || null;
+}
+
+export async function getManagedStripeWebhookSecret(): Promise<string | null> {
+  const managedWebhookUrl = getManagedStripeWebhookUrl();
+  if (!managedWebhookUrl) return null;
+
+  const sync = await getStripeSync();
+  const webhook = await sync.getManagedWebhookByUrl(managedWebhookUrl);
+  return typeof webhook?.secret === "string" && webhook.secret.trim()
+    ? webhook.secret.trim()
+    : null;
+}
+
 export function hasStripeCredentials() {
   return Boolean(
     hasRealValue(process.env.STRIPE_SECRET_KEY) &&

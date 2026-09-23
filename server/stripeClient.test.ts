@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getManagedStripeWebhookUrl } from "./stripeClient";
+import { chooseStripeWebhookSecret, getManagedStripeWebhookUrl } from "./stripeClient";
 
 describe("managed Stripe webhook URL", () => {
   it("uses APP_BASE_URL only for a production Replit deployment", () => {
@@ -43,5 +43,20 @@ describe("managed Stripe webhook URL", () => {
       APP_BASE_URL: "https://byebi.it",
       REPLIT_DOMAINS: "temporary.picard.replit.dev",
     })).toBe("https://byebi.it/api/stripe/webhook");
+  });
+});
+
+
+describe("Stripe webhook secret selection", () => {
+  it("prefers the secret stored for the active managed webhook", () => {
+    expect(chooseStripeWebhookSecret("whsec_managed", "whsec_configured")).toBe("whsec_managed");
+  });
+
+  it("falls back to the configured secret outside managed deployments", () => {
+    expect(chooseStripeWebhookSecret(null, "whsec_configured")).toBe("whsec_configured");
+  });
+
+  it("returns null when no signing secret is available", () => {
+    expect(chooseStripeWebhookSecret(undefined, undefined)).toBeNull();
   });
 });
