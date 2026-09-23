@@ -92,7 +92,7 @@ describe('executeToolCall', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   describe('removed legacy tools', () => {
-    it.each(['set_destination', 'set_origin', 'set_dates', 'set_participants'])(
+    it.each(['set_destination', 'set_origin', 'set_dates', 'set_participants', 'select_flight', 'unlock_checkout'])(
       'rejects the obsolete %s tool',
       async (name) => {
         await expect(executeToolCall(name, {}, {})).resolves.toEqual({
@@ -322,24 +322,6 @@ describe('executeToolCall', () => {
     });
   });
 
-  describe('select_flight tool', () => {
-    it('returns success with selected flight number', async () => {
-      const result = await executeToolCall('select_flight', { flight_number: 2 }, {});
-      expect(result).toEqual({ success: true, selected_flight: 2 });
-    });
-
-    it('handles first flight selection', async () => {
-      const result = await executeToolCall('select_flight', { flight_number: 1 }, {});
-      expect(result).toEqual({ success: true, selected_flight: 1 });
-    });
-  });
-
-  describe('unlock_checkout tool', () => {
-    it('returns success with checkout unlocked', async () => {
-      const result = await executeToolCall('unlock_checkout', {}, {});
-      expect(result).toEqual({ success: true, checkout_unlocked: true });
-    });
-  });
 
   describe('unknown tool', () => {
     it('returns error for unknown tool name', async () => {
