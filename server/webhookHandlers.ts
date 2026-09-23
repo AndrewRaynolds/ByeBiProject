@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { getStripeSecretKey, getStripeSync, getUncachableStripeClient } from "./stripeClient";
+import { chooseStripeWebhookSecret, getManagedStripeWebhookSecret, getStripeSecretKey, getStripeSync, getUncachableStripeClient } from "./stripeClient";
 import { cancelOrder, createOrder } from "./services/printful";
 import { storage } from "./storage";
 import { queueMerchandiseNotification } from "./services/transactionalEmail";
@@ -41,14 +41,19 @@ export class WebhookHandlers {
       );
     }
 
-    if (process.env.STRIPE_WEBHOOK_SECRET && process.env.STRIPE_SECRET_KEY) {
+    const webhookSecret = chooseStripeWebhookSecret(
+      await getManagedStripeWebhookSecret(),
+      process.env.STRIPE_WEBHOOK_SECRET,
+    );
+
+    if (webhookSecret) {
       const stripe = new Stripe(await getStripeSecretKey(), {
         apiVersion: "2025-08-27.basil" as any,
       });
       const event = stripe.webhooks.constructEvent(
         payload,
         signature,
-        process.env.STRIPE_WEBHOOK_SECRET,
+        webhookSecret,
       );
       await this.processStripeEvent(event);
       return;
