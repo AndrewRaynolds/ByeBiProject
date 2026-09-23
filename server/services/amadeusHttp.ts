@@ -25,6 +25,36 @@ export class AmadeusTemporaryError extends Error {
   }
 }
 
+export type SafeAmadeusErrorMetadata = {
+  name: string;
+  status?: number;
+  networkCode?: string;
+  apiCode?: number | string;
+  apiTitle?: string;
+};
+
+export function getSafeAmadeusErrorMetadata(error: unknown): SafeAmadeusErrorMetadata {
+  const source = error instanceof AmadeusTemporaryError ? error.cause : error;
+  const name = error instanceof Error ? error.name : "UnknownError";
+
+  if (!axios.isAxiosError(source)) return { name };
+
+  const metadata: SafeAmadeusErrorMetadata = { name };
+  if (typeof source.response?.status === "number") metadata.status = source.response.status;
+  if (source.code) metadata.networkCode = source.code;
+
+  const data = source.response?.data as { errors?: Array<{ code?: unknown; title?: unknown }> } | undefined;
+  const first = data?.errors?.[0];
+  if (typeof first?.code === "number" || typeof first?.code === "string") {
+    metadata.apiCode = first.code;
+  }
+  if (typeof first?.title === "string" && first.title.trim()) {
+    metadata.apiTitle = first.title.trim().slice(0, 160);
+  }
+
+  return metadata;
+}
+
 export function isRetryableAmadeusError(error: unknown): boolean {
   if (!axios.isAxiosError(error)) return false;
 
