@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { generateFallbackItinerary } from "./fallback-itinerary";
-import { buildAviasalesUrl } from "@shared/flightSchemas";
+import { buildAviasalesUrl, getAviasalesAdultCount } from "@shared/flightSchemas";
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { resolveIataCode } from "./cityMapping";
 import { getSafeErrorMetadata } from "../safeError";
@@ -278,16 +278,11 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
         debugLog(`📅 Auto-corrected past dates → dep: ${depDate}, ret: ${retDate}`);
       }
 
-      if (!Number.isInteger(passengers) || passengers <= 0) {
+      if (!Number.isInteger(passengers) || passengers <= 0 || passengers > 50) {
         return {
           valid: false,
-          message: "How many people are traveling?",
+          message: "How many people are traveling? ByeBi supports groups from 1 to 50 people.",
         };
-      }
-      if (passengers > 9) {
-        args._originalPassengers = passengers;
-        args.passengers = 1;
-        debugLog(`👥 Passengers capped: ${passengers} → 1 (per-person search for Amadeus max 9 limit)`);
       }
       return { valid: true };
     }
@@ -370,7 +365,7 @@ export async function executeToolCall(
       const destCity = typeof args.destination === "string" ? args.destination : "";
       const originIata = resolveIataCode(originCity);
       const destIata = resolveIataCode(destCity);
-      const numPassengers = typeof args.passengers === "number" ? args.passengers : 1;
+      const groupSize = typeof args.passengers === "number" ? args.passengers : 0;
       const departureDate = typeof args.departure_date === "string" ? args.departure_date : "";
       const returnDate = typeof args.return_date === "string" ? args.return_date : undefined;
 
@@ -378,12 +373,17 @@ export async function executeToolCall(
         return { error: "Unsupported origin or destination" };
       }
 
+      const checkoutAdults = getAviasalesAdultCount(groupSize);
+      if (!checkoutAdults) {
+        return { error: "Invalid passenger count" };
+      }
+
       const checkoutUrl = buildAviasalesUrl({
         originIata,
         destinationIata: destIata,
         departDate: departureDate,
         returnDate,
-        adults: numPassengers,
+        adults: checkoutAdults,
         partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
       });
       if (!checkoutUrl) return { error: "Invalid flight checkout parameters" };
@@ -393,6 +393,9 @@ export async function executeToolCall(
         checkoutUrl,
         origin: originIata,
         destination: destIata,
+        groupSize,
+        checkoutAdults,
+        groupBookingRequired: groupSize > checkoutAdults,
       };
     }
 
