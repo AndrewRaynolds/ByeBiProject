@@ -525,6 +525,7 @@
   "checkout.flight": "Vuelo",
   "checkout.bookOnAviasales": "Reserva tu vuelo directamente en Aviasales para las mejores tarifas",
   "checkout.goToAviasales": "Ir a Aviasales",
+  "checkout.largeGroupFlightNote": "Aviasales admite hasta 9 adultos en una sola búsqueda. Tu grupo es de {{count}} personas, por lo que puede ser necesario dividir la reserva de los vuelos en varias reservas.",
   "checkout.flightUnavailable": "Enlace de vuelo no disponible. Vuelve al chatbot para seleccionar un vuelo.",
   "checkout.selectHotel": "Seleccionar Hotel",
   "checkout.loadingHotels": "Cargando hoteles disponibles...",
