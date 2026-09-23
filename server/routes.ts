@@ -10,7 +10,6 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { generateItinerary } from "./services/openai";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
 import { searchFlights } from "./services/amadeus-flights";
