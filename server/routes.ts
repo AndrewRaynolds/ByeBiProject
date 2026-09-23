@@ -1064,7 +1064,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         conversationHistory,
         partyType,
         originCity,
-        flights,
       } = parsedRequest.data;
 
       if (!process.env.OPENAI_API_KEY) {
@@ -1083,28 +1082,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
 
       const { streamOpenAIChatCompletionWithTools } = await import('./services/openai');
 
-      const normalizedFlights = flights
-        ? flights.flatMap((f) => {
-            const departureAt = f.departure_at || f.departureAt;
-            const returnAt = f.return_at || f.returnAt;
-            const flightNumber =
-              f.flight_number ||
-              (typeof f.flightNumber === "number" ? f.flightNumber : undefined);
-            if (!f.airline || !departureAt || !returnAt || !flightNumber) {
-              return [];
-            }
-            return [{
-              id: typeof f.id === "number" ? f.id : undefined,
-              airline: f.airline,
-              departure_at: departureAt,
-              return_at: returnAt,
-              flight_number: flightNumber,
-              origin: f.origin,
-              destination: f.destination,
-              checkoutUrl: f.checkoutUrl,
-            }];
-          })
-        : undefined;
 
       const context = {
         selectedDestination,
@@ -1112,7 +1089,6 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         partyType: partyType || 'bachelor',
         origin: originIata,
         originCityName,
-        flights: normalizedFlights,
       };
 
       // Use the new tool-loop streaming function that properly executes tools
