@@ -29,6 +29,11 @@ import { affiliateClickEventSchema } from "@shared/analyticsSchemas";
 import { MerchandiseOrderRetryError, WebhookHandlers } from "./webhookHandlers";
 import { isValidPrintfulWebhookToken, processPrintfulWebhook } from "./printfulWebhookHandlers";
 import { drainMerchandiseNotifications } from "./services/transactionalEmail";
+import {
+  confirmNewsletterSubscription,
+  requestNewsletterSubscription,
+  unsubscribeNewsletterSubscription,
+} from "./services/newsletterEmail";
 
 
 const checkoutItemSchema = z.object({
@@ -74,6 +79,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     return error ? undefined : user ?? undefined;
   };
+
+  app.post("/api/newsletter/subscribe", async (req: Request, res: Response) => {
+    try {
+      await requestNewsletterSubscription(req.body);
+      return res.status(202).json({ accepted: true });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid newsletter subscription" });
+      }
+      console.error("Newsletter subscription failed", getSafeErrorMetadata(error));
+      return res.status(503).json({ message: "Newsletter subscription is temporarily unavailable" });
+    }
+  });
+
+  app.get("/api/newsletter/confirm", async (req: Request, res: Response) => {
+    const confirmed = await confirmNewsletterSubscription(req.query.token);
+    const baseUrl = (process.env.APP_BASE_URL || "https://byebi.it").replace(/\/+$/, "");
+    return res.redirect(303, `${baseUrl}/?newsletter=${confirmed ? "confirmed" : "invalid"}`);
+  });
+
+  app.get("/api/newsletter/unsubscribe", async (req: Request, res: Response) => {
+    const unsubscribed = await unsubscribeNewsletterSubscription(req.query.token);
+    const baseUrl = (process.env.APP_BASE_URL || "https://byebi.it").replace(/\/+$/, "");
+    return res.redirect(303, `${baseUrl}/?newsletter=${unsubscribed ? "unsubscribed" : "invalid"}`);
+  });
 
   app.post("/api/analytics/affiliate-clicks", async (req: Request, res: Response) => {
     const event = affiliateClickEventSchema.safeParse(req.body);

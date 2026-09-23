@@ -94,3 +94,100 @@
     color: #ff4c4c !important;
   }
 }
+
+/*
+ * Shared ByeBride palette.
+ * Several routes are shared by both brands and historically embedded ByeBro's
+ * red Tailwind utilities. Scoping the palette to the selected brand keeps those
+ * pages coherent without changing semantic markup or duplicating components.
+ */
+html[data-brand="byebride"] {
+  --bride-50: 253 242 248;
+  --bride-200: 251 207 232;
+  --bride-300: 249 168 212;
+  --bride-400: 244 114 182;
+  --bride-500: 236 72 153;
+  --bride-600: 219 39 119;
+  --bride-700: 190 24 93;
+  --bride-800: 157 23 77;
+  --bride-900: 88 28 135;
+  --bride-950: 59 7 100;
+}
+
+html[data-brand="byebride"] [class~="bg-red-50"] { background-color: rgb(var(--bride-50)); }
+html[data-brand="byebride"] [class~="bg-red-500"] { background-color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="bg-red-600"] { background-color: rgb(var(--bride-600)); }
+html[data-brand="byebride"] [class~="bg-red-900"] { background-color: rgb(var(--bride-900)); }
+html[data-brand="byebride"] [class~="bg-red-500/10"] { background-color: rgb(var(--bride-500) / 0.1); }
+html[data-brand="byebride"] [class~="bg-red-500/20"] { background-color: rgb(var(--bride-500) / 0.2); }
+html[data-brand="byebride"] [class~="bg-red-500/25"] { background-color: rgb(var(--bride-500) / 0.25); }
+html[data-brand="byebride"] [class~="bg-red-900/5"] { background-color: rgb(var(--bride-900) / 0.05); }
+html[data-brand="byebride"] [class~="bg-red-900/10"] { background-color: rgb(var(--bride-900) / 0.1); }
+html[data-brand="byebride"] [class~="bg-red-900/15"] { background-color: rgb(var(--bride-900) / 0.15); }
+
+html[data-brand="byebride"] [class~="text-red-200"] { color: rgb(var(--bride-200)); }
+html[data-brand="byebride"] [class~="text-red-300"] { color: rgb(var(--bride-300)); }
+html[data-brand="byebride"] [class~="text-red-400"] { color: rgb(var(--bride-400)); }
+html[data-brand="byebride"] [class~="text-red-500"] { color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="text-red-500/70"] { color: rgb(var(--bride-500) / 0.7); }
+html[data-brand="byebride"] [class~="text-red-500/80"] { color: rgb(var(--bride-500) / 0.8); }
+html[data-brand="byebride"] [class~="text-red-600"] { color: rgb(var(--bride-600)); }
+html[data-brand="byebride"] [class~="text-red-900"] { color: rgb(var(--bride-900)); }
+
+html[data-brand="byebride"] [class~="border-red-200"] { border-color: rgb(var(--bride-200)); }
+html[data-brand="byebride"] [class~="border-red-300"] { border-color: rgb(var(--bride-300)); }
+html[data-brand="byebride"] [class~="border-red-500"] { border-color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="border-red-600"] { border-color: rgb(var(--bride-600)); }
+html[data-brand="byebride"] [class~="border-red-400/30"] { border-color: rgb(var(--bride-400) / 0.3); }
+html[data-brand="byebride"] [class~="border-red-500/20"] { border-color: rgb(var(--bride-500) / 0.2); }
+html[data-brand="byebride"] [class~="border-red-500/30"] { border-color: rgb(var(--bride-500) / 0.3); }
+html[data-brand="byebride"] [class~="border-red-500/50"] { border-color: rgb(var(--bride-500) / 0.5); }
+html[data-brand="byebride"] [class~="border-red-600/30"] { border-color: rgb(var(--bride-600) / 0.3); }
+html[data-brand="byebride"] [class~="border-red-600/40"] { border-color: rgb(var(--bride-600) / 0.4); }
+
+html[data-brand="byebride"] [class~="from-red-500"],
+html[data-brand="byebride"] [class~="from-red-600"],
+html[data-brand="byebride"] [class~="from-red-700"] {
+  --tw-gradient-from: rgb(var(--bride-600)) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(var(--bride-600) / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+html[data-brand="byebride"] [class~="from-red-900/30"] {
+  --tw-gradient-from: rgb(var(--bride-900) / 0.3) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(var(--bride-900) / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+html[data-brand="byebride"] [class~="from-red-500/10"] { --tw-gradient-from: rgb(var(--bride-500) / 0.1) var(--tw-gradient-from-position); }
+html[data-brand="byebride"] [class~="from-red-500/20"] { --tw-gradient-from: rgb(var(--bride-500) / 0.2) var(--tw-gradient-from-position); }
+html[data-brand="byebride"] [class~="via-red-200"] { --tw-gradient-via: rgb(var(--bride-200)) var(--tw-gradient-via-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to); }
+html[data-brand="byebride"] [class~="via-red-600"] { --tw-gradient-via: rgb(var(--bride-600)) var(--tw-gradient-via-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to); }
+html[data-brand="byebride"] [class~="to-red-400"] { --tw-gradient-to: rgb(var(--bride-400)) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] [class~="to-red-500"],
+html[data-brand="byebride"] [class~="to-red-600"] { --tw-gradient-to: rgb(var(--bride-500)) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] [class~="to-red-700"] { --tw-gradient-to: rgb(var(--bride-700)) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] [class~="to-red-900"] { --tw-gradient-to: rgb(var(--bride-900)) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] [class~="to-red-900/50"] { --tw-gradient-to: rgb(var(--bride-900) / 0.5) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] [class~="to-red-950"] { --tw-gradient-to: rgb(var(--bride-950)) var(--tw-gradient-to-position); }
+
+html[data-brand="byebride"] [class~="hover:bg-red-700"]:hover { background-color: rgb(var(--bride-700)); }
+html[data-brand="byebride"] [class~="hover:bg-red-500/20"]:hover { background-color: rgb(var(--bride-500) / 0.2); }
+html[data-brand="byebride"] [class~="hover:bg-red-900/20"]:hover { background-color: rgb(var(--bride-900) / 0.2); }
+html[data-brand="byebride"] [class~="hover:text-red-300"]:hover { color: rgb(var(--bride-300)); }
+html[data-brand="byebride"] [class~="hover:text-red-400"]:hover { color: rgb(var(--bride-400)); }
+html[data-brand="byebride"] [class~="hover:text-red-600"]:hover { color: rgb(var(--bride-600)); }
+html[data-brand="byebride"] [class~="hover:text-red-700"]:hover { color: rgb(var(--bride-700)); }
+html[data-brand="byebride"] [class~="hover:border-red-400"]:hover { border-color: rgb(var(--bride-400)); }
+html[data-brand="byebride"] [class~="hover:border-red-500"]:hover { border-color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="hover:border-red-500/50"]:hover { border-color: rgb(var(--bride-500) / 0.5); }
+html[data-brand="byebride"] [class~="hover:from-red-700"]:hover { --tw-gradient-from: rgb(var(--bride-700)) var(--tw-gradient-from-position); --tw-gradient-to: rgb(var(--bride-700) / 0) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] [class~="hover:to-red-800"]:hover { --tw-gradient-to: rgb(var(--bride-800)) var(--tw-gradient-to-position); }
+html[data-brand="byebride"] .group:hover [class~="group-hover:text-red-400"] { color: rgb(var(--bride-400)); }
+html[data-brand="byebride"] [class~="focus:ring-red-400"]:focus,
+html[data-brand="byebride"] [class~="focus:ring-red-500"]:focus,
+html[data-brand="byebride"] [class~="focus:ring-red-600"]:focus,
+html[data-brand="byebride"] [class~="focus-visible:ring-red-500"]:focus-visible { --tw-ring-color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="focus:border-red-500"]:focus { border-color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="focus:ring-offset-red-600"]:focus { --tw-ring-offset-color: rgb(var(--bride-600)); }
+html[data-brand="byebride"] [class~="ring-red-500"] { --tw-ring-color: rgb(var(--bride-500)); }
+html[data-brand="byebride"] [class~="shadow-red-500/20"] { --tw-shadow-color: rgb(var(--bride-500) / 0.2); --tw-shadow: var(--tw-shadow-colored); }
+html[data-brand="byebride"] [class~="shadow-red-500/30"] { --tw-shadow-color: rgb(var(--bride-500) / 0.3); --tw-shadow: var(--tw-shadow-colored); }

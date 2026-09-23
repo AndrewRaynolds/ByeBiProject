@@ -76,6 +76,8 @@ describe("AuthPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toHaveClass("bg-white", "text-gray-950");
     expect(screen.getByLabelText("Email")).toHaveAttribute("autocomplete", "email");
+    expect(screen.getByLabelText("Email")).not.toHaveAttribute("placeholder");
+    expect(screen.getByLabelText("Password")).not.toHaveAttribute("placeholder");
   });
 
   it("uses ByeBride content when that brand is selected", () => {

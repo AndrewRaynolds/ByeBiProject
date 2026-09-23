@@ -4,9 +4,11 @@ import { useTranslation } from "@/contexts/LanguageContext";
 export function AffiliateNotice({
   variant = "dark",
   className = "",
+  showText = true,
 }: {
   variant?: "dark" | "light";
   className?: string;
+  showText?: boolean;
 }) {
   const { t } = useTranslation();
   const textClass = variant === "dark" ? "text-white/60" : "text-gray-600";
@@ -20,7 +22,7 @@ export function AffiliateNotice({
       <Badge className="bg-orange-500/90 text-white hover:bg-orange-500">
         {t('affiliateNotice.badge')}
       </Badge>
-      <span>{t('affiliateNotice.text')}</span>
+      {showText && <span>{t('affiliateNotice.text')}</span>}
     </div>
   );
 }

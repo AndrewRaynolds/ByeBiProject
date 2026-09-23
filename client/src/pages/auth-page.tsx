@@ -45,7 +45,6 @@ export default function AuthPage() {
   const isBride = localStorage.getItem("selectedBrand") === "byebride";
   const authInputClassName = [
     "h-12 border-gray-500 bg-white text-gray-950 caret-gray-950",
-    "placeholder:text-gray-500 placeholder:opacity-100",
     isBride ? "focus-visible:ring-pink-500" : "focus-visible:ring-red-500",
   ].join(" ");
 
@@ -115,8 +114,8 @@ export default function AuthPage() {
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="mt-8">
             <TabsList className="grid w-full grid-cols-2 bg-gray-900">
-              <TabsTrigger value="login" className="text-white data-[state=active]:bg-red-600">{t('auth.login')}</TabsTrigger>
-              <TabsTrigger value="register" className="text-white data-[state=active]:bg-red-600">{t('auth.signup')}</TabsTrigger>
+              <TabsTrigger value="login" className={`text-white ${isBride ? "data-[state=active]:bg-pink-600" : "data-[state=active]:bg-red-600"}`}>{t('auth.login')}</TabsTrigger>
+              <TabsTrigger value="register" className={`text-white ${isBride ? "data-[state=active]:bg-pink-600" : "data-[state=active]:bg-red-600"}`}>{t('auth.signup')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login" className="mt-6">
@@ -132,7 +131,6 @@ export default function AuthPage() {
                           <Input
                             type="email"
                             autoComplete="email"
-                            placeholder="you@example.com"
                             className={authInputClassName}
                             {...field}
                           />
@@ -152,7 +150,6 @@ export default function AuthPage() {
                           <Input
                             type="password"
                             autoComplete="current-password"
-                            placeholder="••••••••"
                             className={authInputClassName}
                             {...field}
                           />
@@ -164,7 +161,7 @@ export default function AuthPage() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-red-600 hover:bg-red-700 text-white"
+                    className={`w-full text-white ${isBride ? "bg-pink-600 hover:bg-pink-700" : "bg-red-600 hover:bg-red-700"}`}
                     disabled={loginMutation.isPending}
                   >
                     {loginMutation.isPending ? (
@@ -193,7 +190,6 @@ export default function AuthPage() {
                           <Input
                             type="email"
                             autoComplete="email"
-                            placeholder="you@example.com"
                             className={authInputClassName}
                             {...field}
                           />
@@ -212,7 +208,6 @@ export default function AuthPage() {
                         <FormControl>
                           <Input
                             autoComplete="username"
-                            placeholder="username"
                             className={authInputClassName}
                             {...field}
                           />
@@ -231,7 +226,6 @@ export default function AuthPage() {
                         <FormControl>
                           <Input
                             autoComplete="name"
-                            placeholder="Mario Rossi"
                             className={authInputClassName}
                             {...field}
                           />
@@ -251,7 +245,6 @@ export default function AuthPage() {
                           <Input
                             type="password"
                             autoComplete="new-password"
-                            placeholder="••••••••"
                             className={authInputClassName}
                             {...field}
                           />
@@ -263,7 +256,7 @@ export default function AuthPage() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-red-600 hover:bg-red-700 text-white"
+                    className={`w-full text-white ${isBride ? "bg-pink-600 hover:bg-pink-700" : "bg-red-600 hover:bg-red-700"}`}
                     disabled={registerMutation.isPending}
                   >
                     {registerMutation.isPending ? (

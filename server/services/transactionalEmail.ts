@@ -131,6 +131,11 @@ function hasProviderConfiguration(): boolean {
   );
 }
 
+export function getTransactionalEmailStatus(): "disabled" | "configured" | "misconfigured" {
+  if (getDeliveryMode() === "disabled") return "disabled";
+  return hasProviderConfiguration() ? "configured" : "misconfigured";
+}
+
 async function sendWithResend(
   order: MerchandiseOrder,
   type: MerchandiseNotificationType,

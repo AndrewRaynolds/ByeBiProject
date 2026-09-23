@@ -13,11 +13,13 @@ import {
   externalApiLimiter,
   webhookLimiter,
   analyticsLimiter,
+  newsletterLimiter,
 } from "./security";
 import { storage } from "./storage";
 import { createHttpSecurityMiddleware } from "./httpSecurity";
 import { validateRuntimeEnvironment } from "./runtimeConfig";
-import { startTransactionalEmailWorker } from "./services/transactionalEmail";
+import { getTransactionalEmailStatus, startTransactionalEmailWorker } from "./services/transactionalEmail";
+import { getNewsletterDeliveryStatus } from "./services/newsletterEmail";
 import { requestObservability } from "./requestObservability";
 import { getSafeErrorMetadata } from "./safeError";
 
@@ -83,6 +85,10 @@ app.get("/api/ready", async (_req, res) => {
         process.env.CRITICAL_DATA_PERSISTENCE === "database"
           ? "database"
           : "memory",
+      email: {
+        orderConfirmations: getTransactionalEmailStatus(),
+        newsletter: getNewsletterDeliveryStatus(),
+      },
     });
   } catch (error) {
     console.error("Readiness check failed", getSafeErrorMetadata(error));
@@ -99,6 +105,7 @@ app.use("/api/admin/merchandise", commerceLimiter);
 app.use("/api/hotels", externalApiLimiter);
 app.use("/api/flights", externalApiLimiter);
 app.use("/api/analytics", analyticsLimiter);
+app.use("/api/newsletter", newsletterLimiter);
 
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;

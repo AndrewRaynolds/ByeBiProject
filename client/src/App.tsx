@@ -46,6 +46,18 @@ function App() {
     "byebro" | "byebride" | null
   >(getSavedBrand);
 
+  useEffect(() => {
+    if (selectedBrand) {
+      document.documentElement.dataset.brand = selectedBrand;
+    } else {
+      delete document.documentElement.dataset.brand;
+    }
+
+    return () => {
+      delete document.documentElement.dataset.brand;
+    };
+  }, [selectedBrand]);
+
   const handleBrandSelection = (brand: "byebro" | "byebride") => {
     setSelectedBrand(brand);
     localStorage.setItem("selectedBrand", brand);

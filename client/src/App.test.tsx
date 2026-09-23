@@ -29,6 +29,7 @@ vi.mock('@/contexts/LanguageContext', () => ({
 describe('App brand loading', () => {
   beforeEach(() => {
     localStorage.clear();
+    delete document.documentElement.dataset.brand;
     document.head.innerHTML = '<meta name="description" content="">';
   });
 
@@ -55,6 +56,7 @@ describe('App brand loading', () => {
 
     expect(await screen.findByTestId('branded-app')).toHaveTextContent('byebride');
     expect(screen.queryByTestId('brand-selection')).not.toBeInTheDocument();
+    await waitFor(() => expect(document.documentElement.dataset.brand).toBe('byebride'));
     await waitFor(() => expect(document.title).toBe('meta.titleBride'));
   });
 
@@ -64,6 +66,7 @@ describe('App brand loading', () => {
 
     expect(await screen.findByTestId('branded-app')).toHaveTextContent('byebro');
     expect(localStorage.getItem('selectedBrand')).toBe('byebro');
+    expect(document.documentElement.dataset.brand).toBe('byebro');
   });
 });
 

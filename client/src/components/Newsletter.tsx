@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -11,33 +11,51 @@ export default function Newsletter() {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("newsletter");
+    if (!status) return;
+    toast({
+      title: t(`newsletter.${status}Title`),
+      description: t(`newsletter.${status}Desc`),
+      ...(status === "invalid" ? { variant: "destructive" as const } : {}),
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.delete("newsletter");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [t, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       emailSchema.parse(email);
       
       setIsSubmitting(true);
-      
-      // Simulate API call
-      setTimeout(() => {
-        toast({
-          title: t('newsletter.successTitle'),
-          description: t('newsletter.successDesc'),
-        });
-        
-        setEmail("");
-        setIsSubmitting(false);
-      }, 1000);
-      
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          locale,
+          brand: localStorage.getItem("selectedBrand") === "byebride" ? "byebride" : "byebro",
+        }),
+      });
+      if (!response.ok) throw new Error("Newsletter subscription failed");
+      toast({
+        title: t('newsletter.successTitle'),
+        description: t('newsletter.successDesc'),
+      });
+      setEmail("");
     } catch (error) {
       toast({
-        title: t('newsletter.errorTitle'),
-        description: t('newsletter.errorDesc'),
+        title: t(emailSchema.safeParse(email).success ? 'newsletter.serviceErrorTitle' : 'newsletter.errorTitle'),
+        description: t(emailSchema.safeParse(email).success ? 'newsletter.serviceErrorDesc' : 'newsletter.errorDesc'),
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -291,6 +291,31 @@ export const merchandiseNotifications = pgTable(
 export type MerchandiseNotification =
   typeof merchandiseNotifications.$inferSelect;
 
+export const newsletterSubscribers = pgTable(
+  "newsletter_subscribers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull(),
+    brand: text("brand").$type<"byebro" | "byebride">().notNull(),
+    locale: text("locale").$type<"it" | "en" | "es">().notNull(),
+    status: text("status").$type<"pending" | "confirmed" | "unsubscribed">().notNull().default("pending"),
+    tokenHash: text("token_hash").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at").notNull(),
+    confirmationSentAt: timestamp("confirmation_sent_at").notNull(),
+    confirmedAt: timestamp("confirmed_at"),
+    unsubscribedAt: timestamp("unsubscribed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("newsletter_subscribers_email_uidx").on(table.email),
+    uniqueIndex("newsletter_subscribers_token_hash_uidx").on(table.tokenHash),
+    index("newsletter_subscribers_status_idx").on(table.status),
+  ],
+);
+
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+
 export const affiliateClicks = pgTable(
   "affiliate_clicks",
   {

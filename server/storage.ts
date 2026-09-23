@@ -13,13 +13,15 @@ import {
   trips as tripsTable,
   merchandiseOrders,
   merchandiseNotifications,
+  newsletterSubscribers,
   type MerchandiseOrder,
   type InsertMerchandiseOrder,
   type MerchandiseNotification,
   type MerchandiseNotificationType,
+  type NewsletterSubscriber,
 } from "@shared/schema";
 import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
-import { and, desc, eq, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
 function normalizeTripIdentity(value: string | null | undefined): string {
@@ -148,6 +150,16 @@ export interface IStorage {
     id: string,
     result: { status: "sent" | "failed"; providerMessageId?: string; lastError?: string },
   ): Promise<void>;
+  upsertNewsletterSubscriber(input: {
+    email: string;
+    brand: "byebro" | "byebride";
+    locale: "it" | "en" | "es";
+    tokenHash: string;
+    tokenExpiresAt: Date;
+  }): Promise<NewsletterSubscriber>;
+  getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined>;
+  confirmNewsletterSubscriber(tokenHash: string, now: Date): Promise<boolean>;
+  unsubscribeNewsletterSubscriber(tokenHash: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -164,6 +176,7 @@ export class MemStorage implements IStorage {
   }>;
   private merchandiseOrderItems: Map<string, MerchandiseOrder>;
   private merchandiseNotificationItems: Map<string, MerchandiseNotification>;
+  private newsletterSubscriberItems: Map<string, NewsletterSubscriber>;
 
   private tripId: number;
   private blogPostId: number;
@@ -183,6 +196,7 @@ export class MemStorage implements IStorage {
     this.affiliateClickEvents = [];
     this.merchandiseOrderItems = new Map();
     this.merchandiseNotificationItems = new Map();
+    this.newsletterSubscriberItems = new Map();
 
     this.tripId = 1;
     this.blogPostId = 1;
@@ -531,6 +545,63 @@ export class MemStorage implements IStorage {
       lastError: result.lastError?.slice(0, 500) ?? null,
       updatedAt: new Date(),
     });
+  }
+
+  async upsertNewsletterSubscriber(input: {
+    email: string;
+    brand: "byebro" | "byebride";
+    locale: "it" | "en" | "es";
+    tokenHash: string;
+    tokenExpiresAt: Date;
+  }): Promise<NewsletterSubscriber> {
+    const existing = this.newsletterSubscriberItems.get(input.email);
+    const now = new Date();
+    const subscriber: NewsletterSubscriber = {
+      id: existing?.id ?? `newsletter:${input.email}`,
+      ...input,
+      status: existing?.status === "confirmed" ? "confirmed" : "pending",
+      confirmationSentAt: now,
+      confirmedAt: existing?.confirmedAt ?? null,
+      unsubscribedAt: null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.newsletterSubscriberItems.set(input.email, subscriber);
+    return subscriber;
+  }
+
+  async getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined> {
+    return this.newsletterSubscriberItems.get(email);
+  }
+
+  async confirmNewsletterSubscriber(tokenHash: string, now: Date): Promise<boolean> {
+    for (const [email, subscriber] of this.newsletterSubscriberItems) {
+      if (subscriber.tokenHash !== tokenHash || subscriber.tokenExpiresAt <= now) continue;
+      this.newsletterSubscriberItems.set(email, {
+        ...subscriber,
+        status: "confirmed",
+        confirmedAt: now,
+        unsubscribedAt: null,
+        updatedAt: now,
+      });
+      return true;
+    }
+    return false;
+  }
+
+  async unsubscribeNewsletterSubscriber(tokenHash: string): Promise<boolean> {
+    for (const [email, subscriber] of this.newsletterSubscriberItems) {
+      if (subscriber.tokenHash !== tokenHash) continue;
+      const now = new Date();
+      this.newsletterSubscriberItems.set(email, {
+        ...subscriber,
+        status: "unsubscribed",
+        unsubscribedAt: now,
+        updatedAt: now,
+      });
+      return true;
+    }
+    return false;
   }
 
   // Trip operations
@@ -1453,6 +1524,67 @@ export class DatabaseStorage extends MemStorage {
         updatedAt: new Date(),
       })
       .where(eq(merchandiseNotifications.id, id));
+  }
+
+  override async upsertNewsletterSubscriber(input: {
+    email: string;
+    brand: "byebro" | "byebride";
+    locale: "it" | "en" | "es";
+    tokenHash: string;
+    tokenExpiresAt: Date;
+  }): Promise<NewsletterSubscriber> {
+    const now = new Date();
+    const [subscriber] = await this.db
+      .insert(newsletterSubscribers)
+      .values({ ...input, confirmationSentAt: now })
+      .onConflictDoUpdate({
+        target: newsletterSubscribers.email,
+        set: {
+          brand: input.brand,
+          locale: input.locale,
+          status: "pending",
+          tokenHash: input.tokenHash,
+          tokenExpiresAt: input.tokenExpiresAt,
+          confirmationSentAt: now,
+          confirmedAt: null,
+          unsubscribedAt: null,
+          updatedAt: now,
+        },
+      })
+      .returning();
+    return subscriber;
+  }
+
+  override async getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | undefined> {
+    const [subscriber] = await this.db
+      .select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.email, email))
+      .limit(1);
+    return subscriber;
+  }
+
+  override async confirmNewsletterSubscriber(tokenHash: string, now: Date): Promise<boolean> {
+    const confirmed = await this.db
+      .update(newsletterSubscribers)
+      .set({ status: "confirmed", confirmedAt: now, unsubscribedAt: null, updatedAt: now })
+      .where(and(
+        eq(newsletterSubscribers.tokenHash, tokenHash),
+        eq(newsletterSubscribers.status, "pending"),
+        gt(newsletterSubscribers.tokenExpiresAt, now),
+      ))
+      .returning({ id: newsletterSubscribers.id });
+    return confirmed.length === 1;
+  }
+
+  override async unsubscribeNewsletterSubscriber(tokenHash: string): Promise<boolean> {
+    const now = new Date();
+    const unsubscribed = await this.db
+      .update(newsletterSubscribers)
+      .set({ status: "unsubscribed", unsubscribedAt: now, updatedAt: now })
+      .where(eq(newsletterSubscribers.tokenHash, tokenHash))
+      .returning({ id: newsletterSubscribers.id });
+    return unsubscribed.length === 1;
   }
 }
 

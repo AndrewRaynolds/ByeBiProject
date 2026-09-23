@@ -273,7 +273,7 @@ export default function Checkout() {
                 {t('checkout.largeGroupFlightNote', { count: String(tripContext.people) })}
               </div>
             )}
-            {aviasalesIsMonetized && <AffiliateNotice className="mb-3" />}
+            {aviasalesIsMonetized && <AffiliateNotice className="mb-3" showText={false} />}
             
             {tripContext.aviasalesCheckoutUrl ? (
               <Button 
@@ -345,7 +345,7 @@ export default function Checkout() {
                       <ExternalLink className="w-4 h-4 mr-2" />
                       {t('checkout.searchHotelsBooking')}
                     </Button>
-                    {bookingIsMonetized && <AffiliateNotice className="mt-3" />}
+                    {bookingIsMonetized && <AffiliateNotice className="mt-3" showText={false} />}
                   </div>
                 </div>
               </div>
@@ -395,7 +395,7 @@ export default function Checkout() {
                   <ExternalLink className="w-4 h-4 mr-2" />
                   {t('checkout.bookOnBooking')}
                 </Button>
-                {bookingIsMonetized && <AffiliateNotice className="mt-3" />}
+                {bookingIsMonetized && <AffiliateNotice className="mt-3" showText={false} />}
               </>
             )}
           </CardContent>

@@ -85,3 +85,10 @@ export const analyticsLimiter = rateLimit({
   limit: 60,
   message: { message: "Too many analytics events." },
 });
+
+export const newsletterLimiter = rateLimit({
+  ...commonOptions,
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  message: { message: "Too many newsletter requests. Please try again later." },
+});

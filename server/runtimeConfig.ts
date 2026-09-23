@@ -144,6 +144,15 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     errors.push("TRANSACTIONAL_EMAIL_TEST_RECIPIENT is required in test email mode");
   }
 
+  const newsletterEmailMode = env.NEWSLETTER_EMAIL_MODE || "disabled";
+  if (!['disabled', 'live'].includes(newsletterEmailMode)) {
+    errors.push("NEWSLETTER_EMAIL_MODE must be disabled or live");
+  }
+  if (newsletterEmailMode === "live") {
+    if (!env.RESEND_API_KEY?.trim()) errors.push("RESEND_API_KEY is required when newsletter email is enabled");
+    if (!env.NEWSLETTER_EMAIL_FROM?.trim()) errors.push("NEWSLETTER_EMAIL_FROM is required when newsletter email is enabled");
+  }
+
   if (env.CRITICAL_DATA_PERSISTENCE !== "database") {
     errors.push("CRITICAL_DATA_PERSISTENCE must be database");
   }

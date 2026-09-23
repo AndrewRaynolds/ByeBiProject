@@ -15,6 +15,7 @@ vi.mock("../storage", () => ({ storage: storageMock }));
 import {
   buildMerchandiseEmail,
   drainMerchandiseNotifications,
+  getTransactionalEmailStatus,
   queueMerchandiseNotification,
 } from "./transactionalEmail";
 
@@ -75,6 +76,12 @@ afterEach(() => {
 });
 
 describe("transactional merchandise email", () => {
+  it("reports whether order confirmation delivery is ready", () => {
+    expect(getTransactionalEmailStatus()).toBe("configured");
+    delete process.env.RESEND_API_KEY;
+    expect(getTransactionalEmailStatus()).toBe("misconfigured");
+  });
+
   it("builds escaped order content without exposing internal failure details", () => {
     const email = buildMerchandiseEmail(order as any, "order_submitted");
 

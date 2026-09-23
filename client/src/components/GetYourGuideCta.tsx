@@ -45,7 +45,7 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
             <p className="text-white/70 text-sm mb-4">
               {t('gyg.subtitle')}
             </p>
-            <AffiliateNotice className="mb-4" />
+            <AffiliateNotice className="mb-4" showText={placement !== "checkout"} />
             <Button
               onClick={handleClick}
               className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold"
