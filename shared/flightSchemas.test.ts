@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAviasalesUrl,
+  getAviasalesAdultCount,
   isAviasalesCheckoutUrl,
   flightResultSchema,
   flightSearchQuerySchema,
@@ -41,6 +42,19 @@ describe("flight schemas", () => {
     { currency: "EURO" },
   ])("rejects invalid search parameters", (override) => {
     expect(flightSearchQuerySchema.safeParse({ ...validQuery, ...override }).success).toBe(false);
+  });
+
+  it.each([
+    [1, 1],
+    [9, 9],
+    [10, 9],
+    [50, 9],
+  ])("maps a group of %i travelers to %i Aviasales adults", (passengers, expected) => {
+    expect(getAviasalesAdultCount(passengers)).toBe(expected);
+  });
+
+  it.each([0, 2.5, 51])("rejects invalid group size %s for Aviasales", (passengers) => {
+    expect(getAviasalesAdultCount(passengers)).toBeNull();
   });
 
   it("builds a validated Aviasales URL", () => {

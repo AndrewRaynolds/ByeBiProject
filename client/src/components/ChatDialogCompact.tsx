@@ -19,14 +19,13 @@ import {
   calculateTripDays,
   isValidDateRange,
   formatFlightDateTime,
-  formatDateRangeIT,
 } from "@shared/dateUtils";
-import { buildAviasalesUrl, getCityIata } from "@/lib/aviasales";
 import { getCanonicalCityName } from "@shared/cityMapping";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import { createChatCheckoutContext } from "@/lib/chatCheckout";
+import { createTripContext } from "@/lib/tripContext";
 import { savePlannedTrip } from "@/lib/plannedTrip";
 import { debugLog, debugWarn } from "@/lib/debug";
 import { useAuth } from "@/hooks/use-auth";
@@ -371,7 +370,7 @@ export default function ChatDialogCompact({
             departure_at: flight.departure_at,
             return_at: flight.return_at,
             flight_number: flight.flight_number,
-            originCity: originCity || "Roma",
+            originCity: originCityRef.current || originCity || "",
             destinationCity: conversationState.selectedDestination,
             checkoutUrl: flight.checkoutUrl,
           };
@@ -429,180 +428,57 @@ export default function ChatDialogCompact({
     }
   }, [conversationState, flights, originCity, selectedFlight]);
 
-  const formatDateRange = (startDate: string, endDate: string): string => {
-    return formatDateRangeIT(startDate, endDate) || `${startDate} - ${endDate}`;
-  };
-
   const saveCurrentItinerary = () => {
     const currentConversationState = conversationStateRef.current;
     const { selectedDestination, tripDetails } = currentConversationState;
+    const userOriginCity = (originCityRef.current || originCity || "").trim();
 
-    if (!selectedDestination || tripDetails.people <= 0) {
+    if (
+      !userOriginCity ||
+      !selectedDestination ||
+      !tripDetails.startDate ||
+      !tripDetails.endDate ||
+      tripDetails.people <= 0
+    ) {
+      debugWarn("Trip context is incomplete; checkout state was not persisted");
       return;
     }
 
-    const dateStr =
-      tripDetails.startDate && tripDetails.endDate
-        ? formatDateRange(tripDetails.startDate, tripDetails.endDate)
-        : "Date da definire";
-
-    // Use user-selected origin city, fallback to stored origin or default
-    const userOriginCity = originCityRef.current || originCity || "Roma";
-
-    debugLog("✈️ FLIGHT DATA:", {
-      selectedFlight,
-      originCity: userOriginCity,
-      flightsAvailable: flights.length,
-    });
-
-    // Use selected flight if available, otherwise first flight, otherwise fallback
     const currentSelectedFlight = selectedFlightRef.current ?? selectedFlight;
-    let flightItem;
-    if (currentSelectedFlight) {
-      flightItem = {
-        id: "flight-selected",
-        type: "flight" as const,
-        name: `${currentSelectedFlight.airline} - ${currentSelectedFlight.originCity} → ${currentSelectedFlight.destinationCity}`,
-        description: `Volo da ${currentSelectedFlight.originCity}`,
-        details: [
-          `Volo: ${currentSelectedFlight.flight_number}`,
-          "Bagaglio a mano incluso",
-        ],
-      };
-    } else if (flights.length > 0) {
-      const firstFlight = flights[0];
-      flightItem = {
-        id: "flight-dynamic-1",
-        type: "flight" as const,
-        name: `${firstFlight.airline} - ${userOriginCity} → ${selectedDestination}`,
-        description: `Volo da ${userOriginCity}`,
-        details: [
-          `Volo: ${firstFlight.flight_number}`,
-          "Bagaglio a mano incluso",
-        ],
-      };
-    } else {
-      flightItem = {
-        id: "flight-fallback",
-        type: "flight" as const,
-        name: `Volo ${userOriginCity} → ${selectedDestination}`,
-        description: `Volo diretto da ${userOriginCity}`,
-        details: ["Bagaglio a mano incluso"],
-      };
-    }
-
-    const carItems = [
-      {
-        id: "car-dynamic-1",
-        type: "car" as const,
-        name: "Fiat 500 o simile",
-        description: "Auto compatta 4 posti",
-        price: 45,
-        details: [
-          `${tripDetails.days || 3} giorni`,
-          "Assicurazione base inclusa",
-          "Chilometraggio illimitato",
-          "Ritiro aeroporto",
-        ],
-      },
-    ];
-
-    const activityItems =
-      tripDetails.interests.length > 0
-        ? tripDetails.interests.slice(0, 4).map((interest, idx) => ({
-            id: `activity-dynamic-${idx + 1}`,
-            type: "activity" as const,
-            name: interest,
-            description: `Esperienza a ${selectedDestination}`,
-            price: 45 + idx * 10,
-            details: [
-              "Durata: 3-4 ore",
-              "Guida inclusa",
-              "Prenotazione garantita",
-            ],
-          }))
-        : [
-            {
-              id: "activity-dynamic-1",
-              type: "activity" as const,
-              name: "Boat Party con DJ",
-              description: "Festa in barca con open bar",
-              price: 65,
-              details: [
-                "5 ore di party",
-                "Open bar premium",
-                "DJ internazionale",
-              ],
-            },
-            {
-              id: "activity-dynamic-2",
-              type: "activity" as const,
-              name: "Tour Serale",
-              description: "Pub crawl guidato",
-              price: 35,
-              details: [
-                "4 locali inclusi",
-                "1 drink per locale",
-                "Guida locale",
-              ],
-            },
-          ];
-
-    // Build Aviasales URL using user's dates (not flight API dates)
-    const originIata = getCityIata(userOriginCity) || "";
-    const destIata = getCityIata(selectedDestination);
-
-    // Build URL with user dates, fallback to existing flight checkoutUrl if helper fails
-    let aviasalesUrl = buildAviasalesUrl({
-      originIata,
-      destinationIata: destIata || "",
-      departDate: tripDetails.startDate,
-      returnDate: tripDetails.endDate,
-      adults: tripDetails.people || 2,
-    });
-
-    // Fallback to flight's checkoutUrl if helper returned null
-    if (!aviasalesUrl && currentSelectedFlight?.checkoutUrl) {
-      debugLog(
-        "⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback",
-      );
-      aviasalesUrl = currentSelectedFlight.checkoutUrl;
-    }
-
-    debugLog("🔗 Aviasales URL built with user dates:", {
-      startDate: tripDetails.startDate,
-      endDate: tripDetails.endDate,
-      url: aviasalesUrl,
-    });
-
-    const currentItinerary = {
-      destination: selectedDestination,
+    const partyType = currentConversationState.partyType === "bachelorette"
+      ? "bachelorette"
+      : "bachelor";
+    const currentItinerary = createTripContext({
       origin: userOriginCity,
-      dates: dateStr,
-      people: tripDetails.people,
+      originCity: userOriginCity,
+      destination: selectedDestination,
       startDate: tripDetails.startDate,
       endDate: tripDetails.endDate,
-      days: tripDetails.days,
-      partyType: currentConversationState.partyType,
-      budget: tripDetails.budget,
-      originCity: userOriginCity,
-      selectedFlight: currentSelectedFlight,
-      aviasalesCheckoutUrl: aviasalesUrl || currentSelectedFlight?.checkoutUrl || "",
+      people: tripDetails.people,
+      partyType,
+      aviasalesCheckoutUrl: currentSelectedFlight?.checkoutUrl || "",
       flightLabel: currentSelectedFlight
         ? `${currentSelectedFlight.airline} - ${currentSelectedFlight.originCity} → ${currentSelectedFlight.destinationCity}`
         : `${userOriginCity} → ${selectedDestination}`,
-      flights: [flightItem],
-      cars: carItems,
-      activities: activityItems,
-    };
+    });
+
+    if (!currentItinerary) {
+      debugWarn("Trip context validation failed; checkout state was not persisted");
+      return;
+    }
 
     localStorage.setItem("currentItinerary", JSON.stringify(currentItinerary));
     if (currentSelectedFlight) {
       localStorage.setItem("selectedFlight", JSON.stringify(currentSelectedFlight));
     }
-    debugLog("💾 Saved currentItinerary to localStorage:", currentItinerary);
+    debugLog("💾 Saved validated TripContext to localStorage:", currentItinerary);
+
     if (isAuthenticated && user?.id) {
-      void savePlannedTrip(currentItinerary)
+      void savePlannedTrip({
+        ...currentItinerary,
+        budget: tripDetails.budget,
+        activities: tripDetails.interests,
+      })
         .then(async ({ created }) => {
           await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
           if (created) {
@@ -698,7 +574,7 @@ export default function ChatDialogCompact({
                 departure_at: flight.departure_at,
                 return_at: flight.return_at,
                 flight_number: flight.flight_number,
-                originCity: originCity || "Roma",
+                originCity: originCityRef.current || originCity || "",
                 destinationCity: conversationState.selectedDestination,
                 checkoutUrl: flight.checkoutUrl,
               };

@@ -23,7 +23,7 @@ import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
 import { buildItineraryPreview } from "./itineraryPreview";
 import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
-import { buildAviasalesUrl, flightSearchQuerySchema } from "@shared/flightSchemas";
+import { buildAviasalesUrl, flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
@@ -1211,7 +1211,10 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
       return res.status(400).json({ error: "Unsupported origin or destination" });
     }
 
-    const numAdults = passengers > 9 ? 1 : passengers;
+    const numAdults = getAviasalesAdultCount(passengers);
+    if (!numAdults) {
+      return res.status(400).json({ error: "Invalid passenger count" });
+    }
 
     try {
 
@@ -1260,6 +1263,8 @@ Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
         departDate,
         returnDate,
         passengers,
+        checkoutAdults: numAdults,
+        groupBookingRequired: passengers > numAdults,
         currency,
         flights,
       });

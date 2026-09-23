@@ -59,6 +59,13 @@ const aviasalesUrlParamsSchema = z
 
 export type AviasalesUrlParams = z.input<typeof aviasalesUrlParamsSchema>;
 
+export function getAviasalesAdultCount(passengers: number): number | null {
+  if (!Number.isInteger(passengers) || passengers < 1 || passengers > 50) {
+    return null;
+  }
+  return Math.min(passengers, 9);
+}
+
 export function isAviasalesCheckoutUrl(value: string): boolean {
   try {
     const url = new URL(value);
