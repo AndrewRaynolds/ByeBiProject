@@ -535,6 +535,7 @@
   "checkout.flight": "Volo",
   "checkout.bookOnAviasales": "Prenota il volo direttamente su Aviasales per le migliori tariffe",
   "checkout.goToAviasales": "Vai su Aviasales",
+  "checkout.largeGroupFlightNote": "Aviasales accetta fino a 9 adulti in una singola ricerca. Il tuo gruppo è di {{count}} persone, quindi potrebbe essere necessario dividere la prenotazione dei voli in più prenotazioni.",
   "checkout.flightUnavailable": "Link volo non disponibile. Torna al chatbot per selezionare un volo.",
   "checkout.selectHotel": "Seleziona Hotel",
   "checkout.loadingHotels": "Caricamento hotel disponibili...",
