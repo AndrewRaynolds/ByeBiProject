@@ -12,16 +12,16 @@ import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
-import { searchFlights } from "./services/amadeus-flights";
 import { iataToCity, resolveIataCode } from "./services/cityMapping";
 import { searchHotels } from "./services/amadeus-hotels";
 import { AmadeusTemporaryError, getSafeAmadeusErrorMetadata } from "./services/amadeusHttp";
+import { searchFlightsForCheckout } from "./services/flightSearch";
 import { getStoreProducts, getProductDetail, getShippingRates, PrintfulOrderNotCancellableError } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
 import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
-import { buildAviasalesUrl, flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
+import { flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
 import { parsePositiveIntegerParam } from "./routeParams";
@@ -1088,72 +1088,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "Invalid passenger count" });
     }
 
-    try {
+    const result = await searchFlightsForCheckout({
+      originIata,
+      destinationIata: destIata,
+      departDate,
+      returnDate,
+      passengers,
+      checkoutAdults: numAdults,
+      currency,
+      partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
+    }, {
+      onProviderError: (error) => {
+        console.error("Amadeus flight search unavailable", getSafeAmadeusErrorMetadata(error));
+      },
+    });
 
-      const flightResults = await searchFlights({
-        originCode: originIata,
-        destinationCode: destIata,
-        departureDate: departDate,
-        returnDate,
-        adults: numAdults,
-        currency,
-      });
-
-      // Transform to match expected client format + add Aviasales checkout URLs
-      const flights = flightResults
-        .slice(0, 5)
-        .map((f, idx) => {
-          const checkoutUrl = buildAviasalesUrl({
-            originIata,
-            destinationIata: destIata,
-            departDate,
-            returnDate,
-            adults: numAdults,
-            partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
-          });
-          if (!checkoutUrl) return null;
-
-          return {
-            flightId: `flight-${idx + 1}`,
-            airline: f.airlines.join(", "),
-            price: f.price,
-            currency: f.currency,
-            departureAt: f.outbound[0]?.departure.at,
-            returnAt: f.inbound?.[0]?.departure.at,
-            stops: f.stops,
-            duration: f.totalDuration,
-            direct: f.stops === 0,
-            bookingFlow: "REDIRECT" as const,
-            checkoutUrl,
-          };
-        })
-        .filter((flight): flight is NonNullable<typeof flight> => flight !== null);
-
-      return res.json({
-        origin: originIata,
-        destination: destIata,
-        departDate,
-        returnDate,
-        passengers,
-        checkoutAdults: numAdults,
-        groupBookingRequired: passengers > numAdults,
-        currency,
-        flights,
-      });
-    } catch (error: unknown) {
-      console.error(
-        "Flight search error:",
-        error instanceof Error ? error.message : "Unknown error",
-      );
-      if (error instanceof AmadeusTemporaryError) {
-        res.setHeader("Retry-After", "5");
-        return res.status(503).json({
-          error: "Flight service temporarily unavailable",
-          code: error.code,
-        });
-      }
-      return res.status(502).json({ error: "Flight service temporarily unavailable" });
+    if (!result) {
+      return res.status(500).json({ error: "Flight checkout configuration is invalid" });
     }
+
+    return res.json(result);
   });
 
   const httpServer = createServer(app);

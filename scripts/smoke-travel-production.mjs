@@ -73,9 +73,21 @@ if (
   flights.passengers !== 2 ||
   flights.checkoutAdults !== 2 ||
   flights.groupBookingRequired !== false ||
+  !["live", "unavailable"].includes(flights.flightDataStatus) ||
+  typeof flights.checkoutUrl !== "string" ||
   !Array.isArray(flights.flights)
 ) {
   throw new Error("Flight endpoint returned an invalid funnel contract");
+}
+
+const primaryCheckout = new URL(flights.checkoutUrl);
+if (
+  primaryCheckout.protocol !== "https:" ||
+  primaryCheckout.hostname !== "www.aviasales.com" ||
+  !primaryCheckout.pathname.startsWith("/search/") ||
+  !primaryCheckout.searchParams.get("marker")
+) {
+  throw new Error("Flight endpoint returned an invalid primary Aviasales checkout URL");
 }
 
 for (const flight of flights.flights) {
@@ -90,7 +102,9 @@ for (const flight of flights.flights) {
   }
 }
 
-console.log(`PASS flights: ${flights.flights.length} result(s), checkout contract valid`);
+console.log(
+  `PASS flights: ${flights.flights.length} result(s), ${flights.flightDataStatus} data, checkout contract valid`,
+);
 
 async function checkHotels(adults) {
   const hotels = await getJson("/api/hotels/search", {
