@@ -7,16 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Send, Heart, User, Sparkles } from 'lucide-react';
-import { normalizeFutureTripDate, calculateTripDays, isValidDateRange, formatFlightDateTime, formatDateRangeIT } from '@shared/dateUtils';
-import { buildAviasalesUrl, getCityIata } from '@/lib/aviasales';
+import { Loader2, Send, Heart, User } from 'lucide-react';
+import { normalizeFutureTripDate, calculateTripDays, isValidDateRange } from '@shared/dateUtils';
 import { getCanonicalCityName } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { consumeJsonSse } from '@/lib/sse';
 import { createChatCheckoutContext } from '@/lib/chatCheckout';
 import { savePlannedTrip } from '@/lib/plannedTrip';
-import { debugLog, debugWarn } from '@/lib/debug';
+import { debugLog } from '@/lib/debug';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -49,27 +48,6 @@ interface ConversationState {
   partyType: string;
 }
 
-interface FlightInfo {
-  id?: number;
-  airline: string;
-  departure_at: string;
-  return_at: string;
-  flight_number: number;
-  origin?: string;
-  destination?: string;
-  checkoutUrl?: string;
-}
-
-interface SelectedFlightData {
-  flightIndex: number;
-  airline: string;
-  departure_at: string;
-  return_at: string;
-  flight_number: number;
-  originCity: string;
-  destinationCity: string;
-  checkoutUrl?: string;
-}
 
 interface ChatDialogCompactBrideProps {
   open: boolean;
@@ -92,16 +70,11 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
-  const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
-  const [flights, setFlights] = useState<FlightInfo[]>([]);
-  const flightsRef = useRef<FlightInfo[]>([]);
   const [originCity, setOriginCity] = useState<string>('');
   const originCityRef = useRef<string>('');
-  const [selectedFlight, setSelectedFlight] = useState<SelectedFlightData | null>(null);
-  const [pendingFlightSelection, setPendingFlightSelection] = useState<number | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
   const pendingFlightSearchRef = useRef<Record<string, unknown> | null>(null);
   const conversationStateRef = useRef<ConversationState>({
@@ -156,9 +129,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     messagesRef.current = messages;
   }, [messages]);
 
-  useEffect(() => {
-    flightsRef.current = flights;
-  }, [flights]);
 
   useEffect(() => {
     originCityRef.current = originCity;
@@ -242,10 +212,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
               setLoadingMessage('Preparing checkout...');
             } else if (jsonData.tool_call.name === 'search_hotels') {
               setLoadingMessage('Searching for hotels...');
-            } else if (jsonData.tool_call.name === 'select_flight') {
-              setLoadingMessage('Selecting your flight...');
-            } else if (jsonData.tool_call.name === 'unlock_checkout') {
-              setLoadingMessage('Preparing checkout...');
             }
             handleToolCall(jsonData.tool_call);
           }
@@ -260,6 +226,31 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
               pendingFlightSearchRef.current = null;
               if (checkoutContext) {
                 localStorage.setItem('currentItinerary', JSON.stringify(checkoutContext));
+                localStorage.removeItem('selectedFlight');
+
+                if (isAuthenticated && user?.id) {
+                  const tripDetails = conversationStateRef.current.tripDetails;
+                  void savePlannedTrip({
+                    ...checkoutContext,
+                    budget: tripDetails.budget,
+                    activities: tripDetails.interests,
+                  })
+                    .then(async ({ created }) => {
+                      await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
+                      if (created) {
+                        toast({
+                          title: t('chat.tripSaved'),
+                          description: t('chat.tripSavedDesc'),
+                        });
+                      }
+                    })
+                    .catch(() => toast({
+                      title: t('chat.tripSaveError'),
+                      description: t('chat.tripSaveErrorDesc'),
+                      variant: 'destructive',
+                    }));
+                }
+
                 onOpenChange(false);
                 setLocation('/checkout');
               }
@@ -313,31 +304,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     }
   };
 
-  useEffect(() => {
-    if (pendingFlightSelection !== null && flights.length > 0) {
-      const flightNum = pendingFlightSelection;
-      if (flightNum >= 1 && flightNum <= flights.length) {
-        const flight = flights[flightNum - 1];
-        if (flight) {
-          const flightData: SelectedFlightData = {
-            flightIndex: flightNum,
-            airline: flight.airline,
-            departure_at: flight.departure_at,
-            return_at: flight.return_at,
-            flight_number: flight.flight_number,
-            originCity: originCity || 'Roma',
-            destinationCity: conversationState.selectedDestination,
-            checkoutUrl: flight.checkoutUrl
-          };
-          debugLog(`✈️ Processing pending flight selection ${flightNum}:`, flightData);
-          setSelectedFlight(flightData);
-          localStorage.setItem('selectedFlight', JSON.stringify(flightData));
-          setShowGenerateButton(true);
-        }
-      }
-      setPendingFlightSelection(null);
-    }
-  }, [flights, pendingFlightSelection, originCity, conversationState.selectedDestination]);
 
   useEffect(() => {
     if (initialMessage && open) {
@@ -356,192 +322,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     }
   }, [initialMessage, open]);
 
-  useEffect(() => {
-    if (conversationState.selectedDestination && 
-        conversationState.tripDetails.people > 0 && 
-        conversationState.tripDetails.startDate) {
-      saveCurrentItinerary();
-    }
-  }, [conversationState, flights, originCity, selectedFlight]);
-
-  const formatDateRange = (startDate: string, endDate: string): string => {
-    return formatDateRangeIT(startDate, endDate) || `${startDate} - ${endDate}`;
-  };
-
-  const saveCurrentItinerary = () => {
-    const { selectedDestination, tripDetails } = conversationState;
-    
-    if (!selectedDestination || tripDetails.people <= 0) {
-      return;
-    }
-
-    const dateStr = tripDetails.startDate && tripDetails.endDate 
-      ? formatDateRange(tripDetails.startDate, tripDetails.endDate)
-      : 'Date da definire';
-
-    // Use user-selected origin city, fallback to stored origin or default
-    const userOriginCity = originCity || 'Roma';
-    
-    debugLog("✈️ FLIGHT DATA:", {
-      selectedFlight, 
-      originCity: userOriginCity, 
-      flightsAvailable: flights.length 
-    });
-
-    // Use selected flight if available, otherwise first flight, otherwise fallback
-    let flightItem;
-    if (selectedFlight) {
-      flightItem = {
-        id: 'flight-selected',
-        type: 'flight' as const,
-        name: `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}`,
-        description: `Volo da ${selectedFlight.originCity}`,
-        details: [
-          `Volo: ${selectedFlight.flight_number}`,
-          'Bagaglio a mano incluso'
-        ]
-      };
-    } else if (flights.length > 0) {
-      const firstFlight = flights[0];
-      flightItem = {
-        id: 'flight-dynamic-1',
-        type: 'flight' as const,
-        name: `${firstFlight.airline} - ${userOriginCity} → ${selectedDestination}`,
-        description: `Volo da ${userOriginCity}`,
-        details: [
-          `Volo: ${firstFlight.flight_number}`,
-          'Bagaglio a mano incluso'
-        ]
-      };
-    } else {
-      flightItem = {
-        id: 'flight-fallback',
-        type: 'flight' as const,
-        name: `Volo ${userOriginCity} → ${selectedDestination}`,
-        description: `Volo diretto da ${userOriginCity}`,
-        details: [
-          'Bagaglio a mano incluso'
-        ]
-      };
-    }
-
-    const carItems = [
-      {
-        id: 'car-dynamic-1',
-        type: 'car' as const,
-        name: 'Mini Cooper o simile',
-        description: 'Auto compatta stilosa',
-        price: 55,
-        details: [
-          `${tripDetails.days || 3} giorni`,
-          'Assicurazione base inclusa',
-          'Chilometraggio illimitato',
-          'Ritiro aeroporto'
-        ]
-      }
-    ];
-
-    const activityItems = tripDetails.interests.length > 0 
-      ? tripDetails.interests.slice(0, 4).map((interest, idx) => ({
-          id: `activity-dynamic-${idx + 1}`,
-          type: 'activity' as const,
-          name: interest,
-          description: `Esperienza a ${selectedDestination}`,
-          price: 40 + (idx * 15),
-          details: [
-            'Durata: 3-4 ore',
-            'Guida inclusa',
-            'Prenotazione garantita'
-          ]
-        }))
-      : [
-          {
-            id: 'activity-dynamic-1',
-            type: 'activity' as const,
-            name: 'Spa Day & Prosecco',
-            description: 'Relax e bollicine',
-            price: 85,
-            details: ['Massaggio incluso', 'Prosecco illimitato', 'Accesso piscina']
-          },
-          {
-            id: 'activity-dynamic-2',
-            type: 'activity' as const,
-            name: 'Cocktail Class',
-            description: 'Corso di mixology',
-            price: 45,
-            details: ['3 cocktail creati', 'Aperitivo finale', 'Ricette da portare a casa']
-          }
-        ];
-
-    // Build Aviasales URL using user's dates (not flight API dates)
-    const originIata = getCityIata(userOriginCity) || '';
-    const destIata = getCityIata(selectedDestination);
-    
-    // Build URL with user dates, fallback to existing flight checkoutUrl if helper fails
-    let aviasalesUrl = buildAviasalesUrl({
-      originIata,
-      destinationIata: destIata || '',
-      departDate: tripDetails.startDate,
-      returnDate: tripDetails.endDate,
-      adults: tripDetails.people || 2
-    });
-    
-    // Fallback to flight's checkoutUrl if helper returned null
-    if (!aviasalesUrl && selectedFlight?.checkoutUrl) {
-      debugLog('⚠️ buildAviasalesUrl returned null, using flight checkoutUrl fallback');
-      aviasalesUrl = selectedFlight.checkoutUrl;
-    }
-    
-    debugLog('🔗 Aviasales URL built with user dates:', {
-      startDate: tripDetails.startDate,
-      endDate: tripDetails.endDate,
-      url: aviasalesUrl
-    });
-
-    const currentItinerary = {
-      destination: selectedDestination,
-      origin: userOriginCity,
-      dates: dateStr,
-      people: tripDetails.people,
-      startDate: tripDetails.startDate,
-      endDate: tripDetails.endDate,
-      days: tripDetails.days,
-      partyType: conversationState.partyType,
-      budget: tripDetails.budget,
-      originCity: userOriginCity,
-      selectedFlight: selectedFlight,
-      aviasalesCheckoutUrl: aviasalesUrl || selectedFlight?.checkoutUrl || '',
-      flightLabel: selectedFlight 
-        ? `${selectedFlight.airline} - ${selectedFlight.originCity} → ${selectedFlight.destinationCity}` 
-        : `${userOriginCity} → ${selectedDestination}`,
-      flights: [flightItem],
-      cars: carItems,
-      activities: activityItems
-    };
-
-    localStorage.setItem('currentItinerary', JSON.stringify(currentItinerary));
-    if (selectedFlight) {
-      localStorage.setItem('selectedFlight', JSON.stringify(selectedFlight));
-    }
-    debugLog('💾 Saved currentItinerary to localStorage:', currentItinerary);
-    if (isAuthenticated && user?.id) {
-      void savePlannedTrip(currentItinerary)
-        .then(async ({ created }) => {
-          await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
-          if (created) {
-            toast({
-              title: t('chat.tripSaved'),
-              description: t('chat.tripSavedDesc'),
-            });
-          }
-        })
-        .catch(() => toast({
-          title: t('chat.tripSaveError'),
-          description: t('chat.tripSaveErrorDesc'),
-          variant: 'destructive',
-        }));
-    }
-  };
 
   interface ToolCallData {
     name: string;
@@ -609,51 +389,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         break;
       }
 
-      case "select_flight":
-        const flightNum = toolCall.arguments.flight_number;
-        if (typeof flightNum === "number" && flightNum >= 1) {
-          if (flights.length > 0 && flightNum <= flights.length) {
-            const flight = flights[flightNum - 1];
-            if (flight) {
-              const flightData: SelectedFlightData = {
-                flightIndex: flightNum,
-                airline: flight.airline,
-                departure_at: flight.departure_at,
-                return_at: flight.return_at,
-                flight_number: flight.flight_number,
-                originCity: originCity || 'Roma',
-                destinationCity: conversationState.selectedDestination,
-                checkoutUrl: flight.checkoutUrl
-              };
-              debugLog(`✈️ User selected flight ${flightNum}:`, flightData);
-              setSelectedFlight(flightData);
-              localStorage.setItem('selectedFlight', JSON.stringify(flightData));
-              setShowGenerateButton(true);
-            }
-          } else {
-            debugLog(`✈️ Storing pending flight selection: ${flightNum}`);
-            setPendingFlightSelection(flightNum);
-          }
-        }
-        break;
-
-      case "unlock_checkout":
-        debugLog('🔓 Checkout unlocked - saving and navigating to checkout');
-        saveCurrentItinerary();
-        try {
-          const savedData = localStorage.getItem('currentItinerary');
-          if (savedData) {
-            const itinerary = JSON.parse(savedData);
-            itinerary.checkoutApproved = true;
-            localStorage.setItem('currentItinerary', JSON.stringify(itinerary));
-            debugLog('✅ checkoutApproved flag saved, navigating to /checkout');
-          }
-        } catch (e) {
-          debugWarn('Failed to update checkoutApproved flag:', e);
-        }
-        onOpenChange(false);
-        setLocation('/checkout');
-        break;
     }
   };
 
@@ -663,11 +398,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
     await sendChatRequest(data.message, true);
   };
 
-  const handleGenerateItinerary = () => {
-    saveCurrentItinerary();
-    onOpenChange(false);
-    setLocation('/checkout');
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -731,16 +461,6 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
         </div>
 
         <div className="px-6 py-4 border-t space-y-3">
-          {showGenerateButton && (
-            <Button
-              onClick={handleGenerateItinerary}
-              className="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white font-semibold py-6 shadow-lg"
-              data-testid="button-generate-itinerary-bride"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Vai al Checkout
-            </Button>
-          )}
           
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
             <Input

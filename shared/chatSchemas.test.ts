@@ -26,18 +26,6 @@ describe("chatStreamRequestSchema", () => {
     expect(chatStreamRequestSchema.safeParse(validRequest).success).toBe(true);
   });
 
-  it("accepts a validated flight context", () => {
-    expect(chatStreamRequestSchema.safeParse({
-      ...validRequest,
-      flights: [{
-        airline: "Vueling",
-        departure_at: "2026-08-10T10:00:00",
-        return_at: "2026-08-13T18:00:00",
-        flight_number: 6101,
-        checkoutUrl: "https://www.aviasales.com/search/example",
-      }],
-    }).success).toBe(true);
-  });
 
   it.each([
     { message: "" },
@@ -45,7 +33,7 @@ describe("chatStreamRequestSchema", () => {
     { partyType: "other" },
     { extra: "unexpected" },
     { conversationHistory: Array.from({ length: 21 }, () => ({ role: "user", content: "hi" })) },
-    { flights: [{ airline: "Airline", checkoutUrl: "javascript:alert(1)" }] },
+    { flights: [] },
     { tripDetails: { ...validRequest.tripDetails, people: 51 } },
   ])("rejects unsafe or oversized chat input", (override) => {
     expect(chatStreamRequestSchema.safeParse({ ...validRequest, ...override }).success).toBe(false);

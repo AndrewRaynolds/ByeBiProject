@@ -12,22 +12,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Send, Bot, User, Sparkles, Beer } from "lucide-react";
+import { Loader2, Send, Bot, User, Beer } from "lucide-react";
 import byebiLogo from "@/assets/byebi-logo.png";
 import {
   normalizeFutureTripDate,
   calculateTripDays,
   isValidDateRange,
-  formatFlightDateTime,
 } from "@shared/dateUtils";
 import { getCanonicalCityName } from "@shared/cityMapping";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import { createChatCheckoutContext } from "@/lib/chatCheckout";
-import { createTripContext } from "@/lib/tripContext";
 import { savePlannedTrip } from "@/lib/plannedTrip";
-import { debugLog, debugWarn } from "@/lib/debug";
+import { debugLog } from "@/lib/debug";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -60,27 +58,6 @@ interface ConversationState {
   partyType: string;
 }
 
-interface FlightInfo {
-  id?: number;
-  airline: string;
-  departure_at: string;
-  return_at: string;
-  flight_number: number;
-  origin?: string;
-  destination?: string;
-  checkoutUrl?: string;
-}
-
-interface SelectedFlightData {
-  flightIndex: number;
-  airline: string;
-  departure_at: string;
-  return_at: string;
-  flight_number: number;
-  originCity: string;
-  destinationCity: string;
-  checkoutUrl?: string;
-}
 
 interface ChatDialogCompactProps {
   open: boolean;
@@ -99,23 +76,12 @@ export default function ChatDialogCompact({
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const isLoadingRef = useRef(false);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
-  const [showGenerateButton, setShowGenerateButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
-  const [flights, setFlights] = useState<FlightInfo[]>([]);
-  const flightsRef = useRef<FlightInfo[]>([]);
   const [originCity, setOriginCity] = useState<string>("");
   const originCityRef = useRef<string>("");
-  const [selectedFlight, setSelectedFlight] =
-    useState<SelectedFlightData | null>(null);
-  const selectedFlightRef = useRef<SelectedFlightData | null>(null);
-  const [pendingFlightSelection, setPendingFlightSelection] = useState<
-    number | null
-  >(null);
-  const pendingItineraryNavigation = useRef(false);
   const streamAbortRef = useRef<AbortController | null>(null);
   const pendingFlightSearchRef = useRef<Record<string, unknown> | null>(null);
   const conversationStateRef = useRef<ConversationState>({
@@ -172,9 +138,6 @@ export default function ChatDialogCompact({
     messagesRef.current = messages;
   }, [messages]);
 
-  useEffect(() => {
-    flightsRef.current = flights;
-  }, [flights]);
 
   useEffect(() => {
     originCityRef.current = originCity;
@@ -184,13 +147,7 @@ export default function ChatDialogCompact({
     conversationStateRef.current = conversationState;
   }, [conversationState]);
 
-  useEffect(() => {
-    selectedFlightRef.current = selectedFlight;
-  }, [selectedFlight]);
 
-  useEffect(() => {
-    isLoadingRef.current = isLoading;
-  }, [isLoading]);
 
   useEffect(() => {
     if (!open) {
@@ -240,7 +197,6 @@ export default function ChatDialogCompact({
         conversationHistory,
         partyType: currentState.partyType,
         originCity: originCityRef.current,
-        flights: flightsRef.current,
       };
       const response = await apiRequest(
         "POST",
@@ -268,10 +224,6 @@ export default function ChatDialogCompact({
               setLoadingMessage("Preparing checkout...");
             } else if (jsonData.tool_call.name === "search_hotels") {
               setLoadingMessage("Finding hotels for you...");
-            } else if (jsonData.tool_call.name === "select_flight") {
-              setLoadingMessage("Selecting your flight...");
-            } else if (jsonData.tool_call.name === "unlock_checkout") {
-              setLoadingMessage("Preparing checkout...");
             }
             handleToolCall(jsonData.tool_call);
           }
@@ -289,6 +241,31 @@ export default function ChatDialogCompact({
                   "currentItinerary",
                   JSON.stringify(checkoutContext),
                 );
+                localStorage.removeItem("selectedFlight");
+
+                if (isAuthenticated && user?.id) {
+                  const tripDetails = conversationStateRef.current.tripDetails;
+                  void savePlannedTrip({
+                    ...checkoutContext,
+                    budget: tripDetails.budget,
+                    activities: tripDetails.interests,
+                  })
+                    .then(async ({ created }) => {
+                      await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
+                      if (created) {
+                        toast({
+                          title: t('chat.tripSaved'),
+                          description: t('chat.tripSavedDesc'),
+                        });
+                      }
+                    })
+                    .catch(() => toast({
+                      title: t('chat.tripSaveError'),
+                      description: t('chat.tripSaveErrorDesc'),
+                      variant: "destructive",
+                    }));
+                }
+
                 onOpenChange(false);
                 setLocation("/checkout");
               }
@@ -320,13 +297,6 @@ export default function ChatDialogCompact({
       setIsLoading(false);
       setLoadingMessage(null);
 
-      if (pendingItineraryNavigation.current) {
-        pendingItineraryNavigation.current = false;
-        debugLog("🛒 Auto-navigating to checkout after flight selection");
-        saveCurrentItinerary();
-        onOpenChange(false);
-        setLocation("/checkout");
-      }
     } catch (error) {
       setMessages((prev) =>
         prev.filter(
@@ -358,48 +328,6 @@ export default function ChatDialogCompact({
     }
   };
 
-  useEffect(() => {
-    if (pendingFlightSelection !== null && flights.length > 0) {
-      const flightNum = pendingFlightSelection;
-      if (flightNum >= 1 && flightNum <= flights.length) {
-        const flight = flights[flightNum - 1];
-        if (flight) {
-          const flightData: SelectedFlightData = {
-            flightIndex: flightNum,
-            airline: flight.airline,
-            departure_at: flight.departure_at,
-            return_at: flight.return_at,
-            flight_number: flight.flight_number,
-            originCity: originCityRef.current || originCity || "",
-            destinationCity: conversationState.selectedDestination,
-            checkoutUrl: flight.checkoutUrl,
-          };
-          debugLog(
-            `✈️ Processing pending flight selection ${flightNum}:`,
-            flightData,
-          );
-          setSelectedFlight(flightData);
-          selectedFlightRef.current = flightData;
-          localStorage.setItem("selectedFlight", JSON.stringify(flightData));
-          setShowGenerateButton(true);
-          if (isLoadingRef.current) {
-            pendingItineraryNavigation.current = true;
-          } else {
-            debugLog("🛒 Auto-navigating to checkout (deferred flight, stream already done)");
-            saveCurrentItinerary();
-            onOpenChange(false);
-            setLocation("/checkout");
-          }
-        }
-      }
-      setPendingFlightSelection(null);
-    }
-  }, [
-    flights,
-    pendingFlightSelection,
-    originCity,
-    conversationState.selectedDestination,
-  ]);
 
   useEffect(() => {
     if (initialMessage && open) {
@@ -418,83 +346,6 @@ export default function ChatDialogCompact({
     }
   }, [initialMessage, open]);
 
-  useEffect(() => {
-    if (
-      conversationState.selectedDestination &&
-      conversationState.tripDetails.people > 0 &&
-      conversationState.tripDetails.startDate
-    ) {
-      saveCurrentItinerary();
-    }
-  }, [conversationState, flights, originCity, selectedFlight]);
-
-  const saveCurrentItinerary = () => {
-    const currentConversationState = conversationStateRef.current;
-    const { selectedDestination, tripDetails } = currentConversationState;
-    const userOriginCity = (originCityRef.current || originCity || "").trim();
-
-    if (
-      !userOriginCity ||
-      !selectedDestination ||
-      !tripDetails.startDate ||
-      !tripDetails.endDate ||
-      tripDetails.people <= 0
-    ) {
-      debugWarn("Trip context is incomplete; checkout state was not persisted");
-      return;
-    }
-
-    const currentSelectedFlight = selectedFlightRef.current ?? selectedFlight;
-    const partyType = currentConversationState.partyType === "bachelorette"
-      ? "bachelorette"
-      : "bachelor";
-    const currentItinerary = createTripContext({
-      origin: userOriginCity,
-      originCity: userOriginCity,
-      destination: selectedDestination,
-      startDate: tripDetails.startDate,
-      endDate: tripDetails.endDate,
-      people: tripDetails.people,
-      partyType,
-      aviasalesCheckoutUrl: currentSelectedFlight?.checkoutUrl || "",
-      flightLabel: currentSelectedFlight
-        ? `${currentSelectedFlight.airline} - ${currentSelectedFlight.originCity} → ${currentSelectedFlight.destinationCity}`
-        : `${userOriginCity} → ${selectedDestination}`,
-    });
-
-    if (!currentItinerary) {
-      debugWarn("Trip context validation failed; checkout state was not persisted");
-      return;
-    }
-
-    localStorage.setItem("currentItinerary", JSON.stringify(currentItinerary));
-    if (currentSelectedFlight) {
-      localStorage.setItem("selectedFlight", JSON.stringify(currentSelectedFlight));
-    }
-    debugLog("💾 Saved validated TripContext to localStorage:", currentItinerary);
-
-    if (isAuthenticated && user?.id) {
-      void savePlannedTrip({
-        ...currentItinerary,
-        budget: tripDetails.budget,
-        activities: tripDetails.interests,
-      })
-        .then(async ({ created }) => {
-          await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
-          if (created) {
-            toast({
-              title: t('chat.tripSaved'),
-              description: t('chat.tripSavedDesc'),
-            });
-          }
-        })
-        .catch(() => toast({
-          title: t('chat.tripSaveError'),
-          description: t('chat.tripSaveErrorDesc'),
-          variant: "destructive",
-        }));
-    }
-  };
 
   interface ToolCallData {
     name: string;
@@ -562,55 +413,6 @@ export default function ChatDialogCompact({
         break;
       }
 
-      case "select_flight":
-        const flightNum = toolCall.arguments.flight_number;
-        if (typeof flightNum === "number" && flightNum >= 1) {
-          if (flights.length > 0 && flightNum <= flights.length) {
-            const flight = flights[flightNum - 1];
-            if (flight) {
-              const flightData: SelectedFlightData = {
-                flightIndex: flightNum,
-                airline: flight.airline,
-                departure_at: flight.departure_at,
-                return_at: flight.return_at,
-                flight_number: flight.flight_number,
-                originCity: originCityRef.current || originCity || "",
-                destinationCity: conversationState.selectedDestination,
-                checkoutUrl: flight.checkoutUrl,
-              };
-              debugLog(`✈️ User selected flight ${flightNum}:`, flightData);
-              setSelectedFlight(flightData);
-              selectedFlightRef.current = flightData;
-              localStorage.setItem("selectedFlight", JSON.stringify(flightData));
-              pendingItineraryNavigation.current = true;
-              setShowGenerateButton(true);
-            }
-          } else {
-            debugLog(`✈️ Storing pending flight selection: ${flightNum}`);
-            setPendingFlightSelection(flightNum);
-          }
-        }
-        break;
-
-      case "unlock_checkout":
-        debugLog(
-          "🔓 Checkout unlocked - saving and navigating to checkout",
-        );
-        saveCurrentItinerary();
-        try {
-          const savedData = localStorage.getItem("currentItinerary");
-          if (savedData) {
-            const itinerary = JSON.parse(savedData);
-            itinerary.checkoutApproved = true;
-            localStorage.setItem("currentItinerary", JSON.stringify(itinerary));
-            debugLog("✅ checkoutApproved flag saved, navigating to /checkout");
-          }
-        } catch (e) {
-          debugWarn("Failed to update checkoutApproved flag:", e);
-        }
-        onOpenChange(false);
-        setLocation("/checkout");
-        break;
     }
   };
 
@@ -620,11 +422,6 @@ export default function ChatDialogCompact({
     await sendChatRequest(data.message, true);
   };
 
-  const handleGenerateItinerary = () => {
-    saveCurrentItinerary();
-    onOpenChange(false);
-    setLocation("/checkout");
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -701,16 +498,6 @@ export default function ChatDialogCompact({
         </div>
 
         <div className="px-6 py-4 border-t space-y-3">
-          {showGenerateButton && (
-            <Button
-              onClick={handleGenerateItinerary}
-              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-6 shadow-lg"
-              data-testid="button-generate-itinerary"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Vai al Checkout
-            </Button>
-          )}
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
             <Input
