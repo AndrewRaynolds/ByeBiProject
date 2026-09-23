@@ -160,16 +160,6 @@ interface ChatContext {
   origin?: string;
   originCityName?: string;
 
-  flights?: {
-    id?: number;
-    airline: string;
-    departure_at: string;
-    return_at: string;
-    flight_number: number;
-    origin?: string;
-    destination?: string;
-    checkoutUrl?: string;
-  }[];
 
   hotels?: {
     hotelId: string;
@@ -312,18 +302,6 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       }
       return { valid: true };
     }
-    case "select_flight": {
-      const flightNumber = Number(args.flight_number);
-      if (!Number.isInteger(flightNumber) || flightNumber <= 0) {
-        return {
-          valid: false,
-          message: "Which flight option would you like? You can say 1, 2, or 3.",
-        };
-      }
-      return { valid: true };
-    }
-    case "unlock_checkout":
-      return { valid: true };
     default:
       return { valid: false, message: "Can you clarify what you'd like to do?" };
   }
@@ -437,11 +415,6 @@ export async function executeToolCall(
       }
     }
 
-    case "select_flight":
-      return { success: true, selected_flight: args.flight_number };
-
-    case "unlock_checkout":
-      return { success: true, checkout_unlocked: true };
 
     default:
       return { error: `Unknown tool: ${name}` };
@@ -517,37 +490,6 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "select_flight",
-      description:
-        "Legacy fallback only. The user normally chooses flights directly on Aviasales.",
-      parameters: {
-        type: "object",
-        properties: {
-          flight_number: {
-            type: "integer",
-            description: "The flight option number (1, 2, or 3)",
-          },
-        },
-        required: ["flight_number"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "unlock_checkout",
-      description:
-        "Unlock the checkout button when the user confirms they want to proceed with booking",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
-    },
-  },
 ];
 
 const SHARED_SYSTEM_PROMPT = (() => {
@@ -568,8 +510,6 @@ RULES:
 TOOLS:
 - search_flights: prepares the checkout link. Needs origin, destination, departure_date, return_date, passengers. All dates MUST be today or in the future (YYYY-MM-DD).
 - search_hotels: needs destination, check_in_date, check_out_date, guests.
-- select_flight: legacy fallback only.
-- unlock_checkout: when user confirms booking. Flights go through external checkout — never say booking is completed.
 
 Never list 3 flight options in chat. The user will choose the actual flight directly on Aviasales from checkout.`;
 })();
@@ -607,40 +547,6 @@ function buildContextualPrompt(context: ChatContext): string {
     }
   }
 
-  if (context.flights && context.flights.length > 0) {
-    const originCity = context.originCityName;
-    contextualPrompt += `\n\nAVAILABLE REAL FLIGHTS (from ${originCity} to ${context.selectedDestination}):`;
-    contextualPrompt += `\nThese are REAL flights with updated prices. Present them to the user and ask which one they prefer.\n`;
-    context.flights.forEach((f, idx) => {
-      const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-      const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-      const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      contextualPrompt += `${idx + 1}. Departure: ${depDate} at ${depTime}\n`;
-      contextualPrompt += `   Return: ${retDate} at ${retTime}\n`;
-      contextualPrompt += `   Airline: ${f.airline}\n`;
-      contextualPrompt += `   Flight no. ${f.flight_number}\n\n`;
-      if (f.checkoutUrl) {
-        contextualPrompt += `   Checkout link: ${f.checkoutUrl}\n\n`;
-      }
-    });
-    contextualPrompt += `\nWhen the user chooses a flight (e.g., "the 2nd one", "I'll take the first", "flight 3"), call select_flight with the flight number.\n`;
-  }
 
   return contextualPrompt;
 }
@@ -794,7 +700,7 @@ export async function* streamOpenAIChatCompletion(
         yield { type: "content", content: pendingClarification };
       } else if (collectedToolCalls.length > 0) {
         // Use local follow-up generation instead of a second API call
-        const fallbackContent = generateFollowUpMessage(collectedToolCalls, context);
+        const fallbackContent = generateFollowUpMessage(collectedToolCalls);
         yield { type: "content", content: fallbackContent };
       }
     }
@@ -808,45 +714,10 @@ export async function* streamOpenAIChatCompletion(
   }
 }
 
-function generateFollowUpMessage(
-  toolCalls: ToolCall[],
-  context: ChatContext,
-): string {
-  if (context.flights && context.flights.length > 0) {
-    const originCity = context.originCityName;
-    const flightOptions = context.flights
-      .slice(0, 3)
-      .map((f, idx) => {
-        const depDate = new Date(f.departure_at).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        const depTime = new Date(f.departure_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const retDate = new Date(f.return_at).toLocaleDateString("en-US", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        const retTime = new Date(f.return_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const link = f.checkoutUrl ? `\n   Link: ${f.checkoutUrl}` : "";
-
-        return `${idx + 1}) ${originCity} → ${context.selectedDestination}: ${depDate} ${depTime} / Return ${retDate} ${retTime} (${f.airline} Flight ${f.flight_number})${link}`;
-      })
-      .join("\n");
-
-    return `Here are the best flight options I found:\n${flightOptions}\n\nWhich one would you like?`;
-  }
-
+function generateFollowUpMessage(toolCalls: ToolCall[]): string {
   const toolNames = new Set(toolCalls.map((tc) => tc.name));
   if (toolNames.has("search_flights")) {
-    return "Searching for the best flights for you...";
+    return "Preparing your checkout...";
   }
 
   return "Got it! Anything else you'd like to share?";
@@ -868,56 +739,20 @@ export function detectUserLanguage(
 interface LocalStrings {
   noFlightsError: (o: string, d: string) => string;
   noFlights: (o: string, d: string) => string;
-  flightsHeader: (o: string, d: string) => string;
-  direct: string;
-  stop: (n: number) => string;
-  dep: string;
-  ret: string;
-  whichOne: string;
-  perPersonNote: (n: number) => string;
-  flightSelected: string;
-  checkout: string;
 }
 
 const STRINGS: Record<string, LocalStrings> = {
   it: {
     noFlightsError: (o, d) => `Non sono riuscito a preparare il collegamento da ${o} a ${d}. Controlla città e date, poi riprova.`,
     noFlights: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
-    flightsHeader: (o, d) => `Ecco i migliori voli da **${o}** a **${d}**:\n\n`,
-    direct: "diretto",
-    stop: (n) => `${n} scal${n > 1 ? "i" : "o"}`,
-    dep: "Partenza",
-    ret: "Ritorno",
-    whichOne: "Quale preferisci?",
-    perPersonNote: (n) => `\n> I prezzi sono **per persona**. Per ${n} partecipanti, moltiplica il prezzo x${n}.\n\n`,
-    flightSelected: "Perfetto, volo selezionato! Vuoi procedere con la prenotazione?",
-    checkout: "Ottimo! Ti porto al checkout per completare la prenotazione.",
   },
   en: {
     noFlightsError: (o, d) => `I couldn't prepare the connection from ${o} to ${d}. Check the cities and dates, then try again.`,
     noFlights: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
-    flightsHeader: (o, d) => `Here are the best flights from **${o}** to **${d}**:\n\n`,
-    direct: "direct",
-    stop: (n) => `${n} stop${n > 1 ? "s" : ""}`,
-    dep: "Departure",
-    ret: "Return",
-    whichOne: "Which one do you prefer?",
-    perPersonNote: (n) => `\n> Prices are **per person**. For ${n} travelers, multiply the price x${n}.\n\n`,
-    flightSelected: "Flight selected! Ready to proceed with booking?",
-    checkout: "Taking you to checkout to complete the booking.",
   },
   es: {
     noFlightsError: (o, d) => `No pude preparar la conexión de ${o} a ${d}. Comprueba las ciudades y las fechas e inténtalo de nuevo.`,
     noFlights: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
-    flightsHeader: (o, d) => `Aquí están los mejores vuelos de **${o}** a **${d}**:\n\n`,
-    direct: "directo",
-    stop: (n) => `${n} escala${n > 1 ? "s" : ""}`,
-    dep: "Salida",
-    ret: "Regreso",
-    whichOne: "¿Cuál prefieres?",
-    perPersonNote: (n) => `\n> Los precios son **por persona**. Para ${n} viajeros, multiplica el precio x${n}.\n\n`,
-    flightSelected: "¡Vuelo seleccionado! ¿Quieres proceder con la reserva?",
-    checkout: "¡Genial! Te llevo al checkout para completar la reserva.",
   },
 };
 
@@ -938,11 +773,6 @@ function generateLocalToolResponse(
         return result.error ? s.noFlightsError(origin, destination) : s.noFlights(origin, destination);
       }
 
-      case "select_flight":
-        return s.flightSelected;
-
-      case "unlock_checkout":
-        return s.checkout;
     }
   }
   return null;
@@ -1130,7 +960,7 @@ export async function* streamOpenAIChatCompletionWithTools(
       }
 
       // Short-circuit: generate local response for search tools to avoid a second OpenAI call (~3-8s saved)
-      const searchToolNames = new Set(["search_flights", "select_flight", "unlock_checkout"]);
+      const searchToolNames = new Set(["search_flights"]);
       const allToolsAreSimple = canShortCircuit && toolResults.every(t => searchToolNames.has(t.name));
 
       if (allToolsAreSimple && toolResults.length > 0) {
