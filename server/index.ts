@@ -3,7 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { runMigrations } from 'stripe-replit-sync';
-import { getStripeSync, hasStripeCredentials } from './stripeClient';
+import { getManagedStripeWebhookUrl, getStripeSync, hasStripeCredentials } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import {
   aiConcurrencyLimiter,
@@ -119,20 +119,17 @@ async function initStripe() {
 
     const stripeSync = await getStripeSync();
 
-    const replitDomains = process.env.REPLIT_DOMAINS;
-    if (replitDomains) {
+    const managedWebhookUrl = getManagedStripeWebhookUrl();
+    if (managedWebhookUrl) {
       console.log('Setting up managed webhook...');
-      const webhookBaseUrl = `https://${replitDomains.split(',')[0]}`;
       try {
-        const result = await stripeSync.findOrCreateManagedWebhook(
-          `${webhookBaseUrl}/api/stripe/webhook`
-        );
+        const result = await stripeSync.findOrCreateManagedWebhook(managedWebhookUrl);
         console.log(`Webhook configured: ${result?.webhook?.url || 'OK'}`);
       } catch (err: any) {
         console.warn('Webhook setup skipped:', err.message);
       }
     } else {
-      console.log('REPLIT_DOMAINS not set, skipping webhook setup');
+      console.log('Managed Stripe webhook setup skipped outside a production Replit deployment');
     }
 
     console.log('Syncing Stripe data...');
