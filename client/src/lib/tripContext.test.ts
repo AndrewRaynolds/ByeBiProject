@@ -51,6 +51,7 @@ describe("TripContext", () => {
     { ...validContext, startDate: "2026-02-30" },
     { ...validContext, endDate: "2026-08-10" },
     { ...validContext, endDate: "2026-10-10" },
+    { ...validContext, origin: undefined, originCity: undefined },
     { ...validContext, people: 0 },
     { ...validContext, people: "4" },
     { ...validContext, partyType: "birthday" },
