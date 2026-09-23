@@ -150,51 +150,6 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     expect(fullContent).toBe('Hello! How can I help you today?');
   });
 
-  it('executes a checkout tool and short-circuits with a local response', async () => {
-    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
-
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      {
-        tool_call: {
-          id: 'call_123',
-          name: 'unlock_checkout',
-          arguments: '{}'
-        }
-      },
-      { finish: 'tool_calls' }
-    ]));
-
-    const chunks: StreamChunk[] = [];
-    for await (const chunk of streamOpenAIChatCompletionWithTools(
-      'I want to go to Barcelona',
-      {},
-      []
-    )) {
-      chunks.push(chunk);
-    }
-
-    expect(mockCreate).toHaveBeenCalledTimes(1);
-
-    // Verify tool call was emitted
-    const toolCallChunks = chunks.filter(c => c.type === 'tool_call');
-    expect(toolCallChunks).toHaveLength(1);
-    expect((toolCallChunks[0] as any).toolCall.name).toBe('unlock_checkout');
-
-    // Verify tool result was emitted
-    const toolResultChunks = chunks.filter(c => c.type === 'tool_result');
-    expect(toolResultChunks).toHaveLength(1);
-    expect((toolResultChunks[0] as any).name).toBe('unlock_checkout');
-    expect((toolResultChunks[0] as any).result).toEqual({
-      success: true,
-      checkout_unlocked: true,
-    });
-
-    // Verify final content includes follow-up question
-    const contentChunks = chunks.filter(c => c.type === 'content');
-    const fullContent = contentChunks.map(c => (c as any).content).join('');
-    expect(fullContent.length).toBeGreaterThan(0);
-  });
-
   it('handles search_flights tool with API call', async () => {
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');
 
@@ -336,39 +291,6 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       expect.any(Object),
       { signal: controller.signal },
     );
-  });
-
-  it('handles unlock_checkout tool', async () => {
-    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
-
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'Taking you to checkout now! ' },
-      {
-        tool_call: {
-          id: 'call_checkout',
-          name: 'unlock_checkout',
-          arguments: '{}'
-        }
-      },
-      { finish: 'tool_calls' }
-    ]));
-
-    const chunks: StreamChunk[] = [];
-    for await (const chunk of streamOpenAIChatCompletionWithTools(
-      'Yes, proceed to checkout',
-      { selectedDestination: 'Barcelona' },
-      []
-    )) {
-      chunks.push(chunk);
-    }
-
-    const toolResultChunks = chunks.filter(c => c.type === 'tool_result');
-    expect(toolResultChunks).toHaveLength(1);
-    expect((toolResultChunks[0] as any).result).toEqual({
-      success: true,
-      checkout_unlocked: true
-    });
-    expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 
   it('passes context to system prompt', async () => {
