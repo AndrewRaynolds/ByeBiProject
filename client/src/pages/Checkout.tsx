@@ -265,6 +265,14 @@ export default function Checkout() {
             <p className="text-xs text-white/50 mb-3 italic">
               {t('checkout.bookOnAviasales')}
             </p>
+            {tripContext.people > 9 && (
+              <div
+                className="mb-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-100"
+                data-testid="flight-large-group-note"
+              >
+                {t('checkout.largeGroupFlightNote', { count: String(tripContext.people) })}
+              </div>
+            )}
             {aviasalesIsMonetized && <AffiliateNotice className="mb-3" />}
             
             {tripContext.aviasalesCheckoutUrl ? (
