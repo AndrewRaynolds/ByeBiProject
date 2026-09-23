@@ -602,7 +602,7 @@ export async function createOpenAIChatCompletion(
 
     // If no content was returned, generate a quick follow-up without a second API call
     if (!finalContent.trim() && validToolCalls.length > 0 && !clarification) {
-      finalContent = generateFollowUpMessage(validToolCalls, context);
+      finalContent = generateFollowUpMessage(validToolCalls);
     }
 
     return { content: finalContent, toolCalls: validToolCalls };
