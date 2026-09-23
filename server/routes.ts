@@ -15,7 +15,7 @@ import { registerZapierRoutes } from "./zapier-integration";
 import { searchFlights } from "./services/amadeus-flights";
 import { iataToCity, resolveIataCode } from "./services/cityMapping";
 import { searchHotels } from "./services/amadeus-hotels";
-import { AmadeusTemporaryError } from "./services/amadeusHttp";
+import { AmadeusTemporaryError, getSafeAmadeusErrorMetadata } from "./services/amadeusHttp";
 import { getStoreProducts, getProductDetail, getShippingRates, PrintfulOrderNotCancellableError } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { buildPublicBlogPost } from "./blog";
@@ -1027,10 +1027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hotels,
       });
     } catch (error: unknown) {
-      console.error(
-        "Amadeus hotel search error:",
-        error instanceof Error ? error.message : "Unknown error",
-      );
+      console.error("Amadeus hotel search error", getSafeAmadeusErrorMetadata(error));
       if (error instanceof AmadeusTemporaryError) {
         res.setHeader("Retry-After", "5");
         return res.status(503).json({

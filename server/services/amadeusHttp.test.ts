@@ -2,6 +2,7 @@ import axios from "axios";
 import { describe, expect, it, vi } from "vitest";
 import {
   AmadeusTemporaryError,
+  getSafeAmadeusErrorMetadata,
   isRetryableAmadeusError,
   withAmadeusRetry,
 } from "./amadeusHttp";
@@ -62,5 +63,43 @@ describe("Amadeus HTTP resilience", () => {
       }),
     ).rejects.toBeInstanceOf(AmadeusTemporaryError);
     expect(operation).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+describe("safe Amadeus error metadata", () => {
+  it("exposes status and Amadeus error identifiers without response details", () => {
+    const error = new axios.AxiosError(
+      "Request failed",
+      "ERR_BAD_REQUEST",
+      undefined,
+      undefined,
+      {
+        status: 400,
+        data: {
+          errors: [{
+            code: 38189,
+            title: "INVALID FORMAT",
+            detail: "sensitive upstream detail that must not be logged",
+          }],
+        },
+      } as never,
+    );
+
+    expect(getSafeAmadeusErrorMetadata(error)).toEqual({
+      name: "AxiosError",
+      status: 400,
+      networkCode: "ERR_BAD_REQUEST",
+      apiCode: 38189,
+      apiTitle: "INVALID FORMAT",
+    });
+  });
+
+  it("unwraps the final cause of a temporary Amadeus error", () => {
+    const cause = axiosError("ETIMEDOUT");
+    expect(getSafeAmadeusErrorMetadata(new AmadeusTemporaryError(cause))).toEqual({
+      name: "AmadeusTemporaryError",
+      networkCode: "ETIMEDOUT",
+    });
   });
 });

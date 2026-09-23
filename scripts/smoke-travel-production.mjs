@@ -92,24 +92,29 @@ for (const flight of flights.flights) {
 
 console.log(`PASS flights: ${flights.flights.length} result(s), checkout contract valid`);
 
-const hotels = await getJson("/api/hotels/search", {
-  cityCode: "BCN",
-  checkInDate: departDate,
-  checkOutDate: returnDate,
-  adults: 2,
-  currency: "EUR",
-});
+async function checkHotels(adults) {
+  const hotels = await getJson("/api/hotels/search", {
+    cityCode: "BCN",
+    checkInDate: departDate,
+    checkOutDate: returnDate,
+    adults,
+    currency: "EUR",
+  });
 
-if (
-  hotels.cityCode !== "BCN" ||
-  hotels.checkInDate !== departDate ||
-  hotels.checkOutDate !== returnDate ||
-  hotels.adults !== 2 ||
-  hotels.currency !== "EUR" ||
-  !Array.isArray(hotels.hotels)
-) {
-  throw new Error("Hotel endpoint returned an invalid funnel contract");
+  if (
+    hotels.cityCode !== "BCN" ||
+    hotels.checkInDate !== departDate ||
+    hotels.checkOutDate !== returnDate ||
+    hotels.adults !== adults ||
+    hotels.currency !== "EUR" ||
+    !Array.isArray(hotels.hotels)
+  ) {
+    throw new Error(`Hotel endpoint returned an invalid funnel contract for ${adults} adult(s)`);
+  }
+
+  console.log(`PASS hotels (${adults} adults): ${hotels.hotels.length} result(s), search contract valid`);
 }
 
-console.log(`PASS hotels: ${hotels.hotels.length} result(s), search contract valid`);
+await checkHotels(2);
+await checkHotels(12);
 console.log(`Travel funnel smoke test passed for ${baseUrl}`);
