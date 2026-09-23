@@ -139,6 +139,26 @@ describe('executeToolCall', () => {
       );
     });
 
+    it('keeps the real group size while limiting Aviasales checkout to 9 adults', async () => {
+      const result = await executeToolCall('search_flights', {
+        origin: 'Rome',
+        destination: 'Barcelona',
+        departure_date: '2026-10-10',
+        return_date: '2026-10-13',
+        passengers: 12,
+      }, {});
+
+      expect(result).toMatchObject({
+        checkoutReady: true,
+        groupSize: 12,
+        checkoutAdults: 9,
+        groupBookingRequired: true,
+      });
+      expect(result.checkoutUrl).toBe(
+        'https://www.aviasales.com/search/ROM1010BCN13109?marker=byebi',
+      );
+    });
+
     it('rejects unknown cities instead of inventing IATA codes', async () => {
       const result = await executeToolCall('search_flights', {
         origin: 'UnknownCity',
