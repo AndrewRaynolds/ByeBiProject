@@ -20,10 +20,8 @@ import { getStoreProducts, getProductDetail, getShippingRates, PrintfulOrderNotC
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
-import { buildItineraryPreview } from "./itineraryPreview";
 import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
 import { buildAviasalesUrl, flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
-import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
 import { parsePositiveIntegerParam } from "./routeParams";
@@ -62,32 +60,6 @@ const printfulShippingSchema = z
     }).strict()).min(1).max(20),
   })
   .strict();
-const itineraryDateSchema = z.string().refine(
-  (value) => normalizeTripDate(value) === value,
-  "Invalid date",
-);
-const zapierItinerarySchema = z
-  .object({
-    citta: z.string().trim().min(1).max(100),
-    date: z.object({
-      startDate: itineraryDateSchema,
-      endDate: itineraryDateSchema,
-    }).strict(),
-    persone: z.number().int().min(1).max(50),
-    interessi: z.array(z.string().trim().min(1).max(100)).max(20).optional().default([]),
-    budget: z.enum(["economico", "medio", "alto"]).optional().default("medio"),
-    esperienze: z.array(z.string().trim().min(1).max(100)).max(20).optional().default([]),
-  })
-  .strict()
-  .refine(
-    (value) =>
-      isValidDateRange(value.date.startDate, value.date.endDate) &&
-      calculateTripDays(value.date.startDate, value.date.endDate) <= 30,
-    { path: ["date", "endDate"], message: "Invalid itinerary date range" },
-  );
-const zapierItineraryResponseSchema = z
-  .object({ itinerary: z.string().trim().min(1).max(20_000) })
-  .passthrough();
 const updateExpenseSchema = insertExpenseSchema
   .omit({ groupId: true })
   .partial()
@@ -925,108 +897,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json({ message: "Expense deleted successfully" });
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  // Zapier AI-powered itinerary generation
-  app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
-    try {
-      const requestData = zapierItinerarySchema.parse(req.body);
-      
-      // Prepara i dati per Zapier webhook
-      const zapierPayload = {
-        destination: requestData.citta,
-        startDate: requestData.date.startDate,
-        endDate: requestData.date.endDate,
-        groupSize: requestData.persone,
-        budget: requestData.budget,
-        interests: requestData.interessi,
-        experiences: requestData.esperienze,
-        timestamp: new Date().toISOString(),
-        source: "ByeBi itinerary API"
-      };
-      
-      // Invia i dati a Zapier webhook (se configurato)
-      let zapierResponse = null;
-      const zapierWebhookUrl = process.env.ZAPIER_WEBHOOK_URL;
-      
-      if (zapierWebhookUrl) {
-        try {
-          const response = await fetch(zapierWebhookUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(zapierPayload),
-            signal: AbortSignal.timeout(10_000),
-          });
-          
-          if (response.ok) {
-            const parsedResponse = zapierItineraryResponseSchema.safeParse(await response.json());
-            zapierResponse = parsedResponse.success ? parsedResponse.data : null;
-          } else {
-            console.error("Zapier itinerary webhook failed", { status: response.status });
-          }
-        } catch (error) {
-          console.error("Zapier itinerary webhook failed", getSafeErrorMetadata(error));
-        }
-      }
-      
-      // Se Zapier ha restituito un itinerario, usalo; altrimenti usa fallback
-      let itineraryContent = "Itinerario personalizzato in generazione...";
-      
-      if (zapierResponse && zapierResponse.itinerary) {
-        itineraryContent = zapierResponse.itinerary;
-      } else {
-        // Fallback: genera un itinerario di base
-        const duration = Math.ceil(
-          (new Date(requestData.date.endDate).getTime() - new Date(requestData.date.startDate).getTime()) 
-          / (1000 * 60 * 60 * 24)
-        );
-        
-        itineraryContent = `🎉 Addio al Celibato a ${requestData.citta}
-        
-📅 Durata: ${duration} giorni per ${requestData.persone} persone
-💰 Budget: ${requestData.budget}
-🎯 Interessi: ${requestData.interessi.join(', ') || 'Divertimento generale'}
-
-📋 Itinerario personalizzato:
-Stiamo elaborando il vostro itinerario perfetto con ChatGPT tramite Zapier...
-
-⏰ L'itinerario dettagliato arriverà a breve!`;
-      }
-      
-      // This public preview is intentionally not persisted. Checkout performs
-      // its own live searches using the trip context selected by the user.
-      const itineraryPreview = buildItineraryPreview({
-        city: requestData.citta,
-        startDate: requestData.date.startDate,
-        endDate: requestData.date.endDate,
-        people: requestData.persone,
-        interests: requestData.interessi,
-        budget: requestData.budget,
-        content: itineraryContent,
-      });
-      
-      return res.status(200).json({
-        success: true,
-        itinerary: itineraryPreview,
-        aiContent: itineraryContent,
-        zapierProcessed: !!zapierResponse,
-        message: zapierResponse ? "Itinerario generato con AI" : "Itinerario in elaborazione tramite Zapier"
-      });
-      
-    } catch (error: unknown) {
-      console.error("Error generating itinerary", getSafeErrorMetadata(error));
-      
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Invalid itinerary parameters", 
-          errors: fromZodError(error).message 
-        });
-      }
-      
-      return res.status(500).json({ message: "Failed to generate itinerary" });
     }
   });
 
