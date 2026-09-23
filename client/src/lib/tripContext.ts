@@ -43,6 +43,15 @@ const storedTripContextSchema = z
   })
   .passthrough()
   .superRefine((value, context) => {
+    if (!value.origin?.trim() && !value.originCity?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["origin"],
+        message: "Origin is required",
+      });
+      return;
+    }
+
     if (!isValidDateRange(value.startDate, value.endDate)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -77,7 +86,7 @@ export function createTripContext(value: unknown): TripContext | null {
   const result = storedTripContextSchema.safeParse(value);
   if (!result.success) return null;
 
-  const origin = result.data.origin || result.data.originCity || "Italia";
+  const origin = result.data.origin || result.data.originCity!;
   return {
     origin,
     destination: result.data.destination,
