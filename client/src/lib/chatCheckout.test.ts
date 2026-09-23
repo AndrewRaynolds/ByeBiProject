@@ -29,6 +29,21 @@ describe("createChatCheckoutContext", () => {
     });
   });
 
+  it("preserves the original group size above the Aviasales single-search limit", () => {
+    const largeGroupArguments = { ...validArguments, passengers: 12 };
+    const largeGroupResult = {
+      ...validResult,
+      checkoutUrl: "https://www.aviasales.com/search/ROM1509BCN18099?marker=685469",
+      checkoutAdults: 9,
+      groupBookingRequired: true,
+    };
+
+    expect(createChatCheckoutContext(largeGroupArguments, largeGroupResult)).toMatchObject({
+      people: 12,
+      aviasalesCheckoutUrl: largeGroupResult.checkoutUrl,
+    });
+  });
+
   it("preserves the ByeBride trip type in the checkout context", () => {
     expect(
       createChatCheckoutContext(validArguments, validResult, "bachelorette"),
@@ -37,6 +52,7 @@ describe("createChatCheckoutContext", () => {
 
   it.each([
     [{ ...validArguments, passengers: 0 }, validResult],
+    [{ ...validArguments, origin: "   " }, validResult],
     [{ ...validArguments, return_date: "2026-09-14" }, validResult],
     [validArguments, { error: "Unsupported destination" }],
     [validArguments, { ...validResult, checkoutUrl: "javascript:alert(1)" }],
