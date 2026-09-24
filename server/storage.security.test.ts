@@ -472,7 +472,6 @@ describe('expense group ownership', () => {
     await storage.recordProductEvent(event);
     await storage.recordProductEvent({
       ...event,
-      sessionId: '223e4567-e89b-42d3-a456-426614174000',
       eventName: 'chat_started',
     });
 
@@ -485,8 +484,13 @@ describe('expense group ownership', () => {
 
   it('combines provider sessions without duplicating affiliate event storage', () => {
     const summary = summarizeProductAnalytics(
-      [{ eventName: 'trip_hub_viewed', count: 4 }],
-      2,
+      [
+        { eventName: 'trip_hub_viewed', sessionId: 'session-1' },
+        { eventName: 'trip_hub_viewed', sessionId: 'session-2' },
+        { eventName: 'trip_hub_viewed', sessionId: 'session-3' },
+        { eventName: 'trip_hub_viewed', sessionId: 'session-4' },
+      ],
+      ['session-1', 'session-2'],
       {
         days: 30,
         totalClicks: 3,
@@ -498,6 +502,53 @@ describe('expense group ownership', () => {
     );
     expect(summary.funnel.find((step) => step.eventName === 'provider_click')?.count).toBe(2);
     expect(summary.providers).toEqual([{ key: 'booking', total: 3, monetized: 2 }]);
+  });
+
+  it('calculates previous-step conversion from session cohorts', () => {
+    const summary = summarizeProductAnalytics(
+      [
+        { eventName: 'auth_started', sessionId: 'session-1' },
+        { eventName: 'auth_started', sessionId: 'session-2' },
+        { eventName: 'signup_submitted', sessionId: 'session-2' },
+        { eventName: 'signup_submitted', sessionId: 'session-3' },
+        { eventName: 'signup_submitted', sessionId: 'session-4' },
+      ],
+      [],
+      { days: 7, totalClicks: 0, monetizedClicks: 0, providers: [], placements: [] },
+      7,
+    );
+
+    expect(summary.funnel.find((step) => step.eventName === 'signup_submitted')).toEqual({
+      eventName: 'signup_submitted',
+      count: 3,
+      previousStepRate: 50,
+    });
+  });
+
+  it('uses the previous-step session intersection for provider clicks', () => {
+    const summary = summarizeProductAnalytics(
+      [
+        { eventName: 'trip_hub_viewed', sessionId: 'session-1' },
+        { eventName: 'trip_hub_viewed', sessionId: 'session-2' },
+        { eventName: 'trip_hub_viewed', sessionId: 'session-3' },
+      ],
+      ['session-2', 'session-3', 'session-4', 'session-5'],
+      {
+        days: 30,
+        totalClicks: 5,
+        monetizedClicks: 3,
+        providers: [{ key: 'booking', total: 5, monetized: 3 }],
+        placements: [],
+      },
+      30,
+    );
+
+    expect(summary.funnel.find((step) => step.eventName === 'provider_click')).toEqual({
+      eventName: 'provider_click',
+      count: 4,
+      previousStepRate: 66.7,
+    });
+    expect(summary.providers).toEqual([{ key: 'booking', total: 5, monetized: 3 }]);
   });
 
   it('requires a database URL when database persistence is enabled', () => {
