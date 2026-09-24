@@ -29,14 +29,18 @@ function normalizeTripIdentity(value: string | null | undefined): string {
 }
 
 export function arePlannedTripsEquivalent(
-  existing: Pick<Trip, "userId" | "startDate" | "endDate" | "destinations" | "experienceType">,
-  candidate: Pick<InsertTrip, "userId" | "startDate" | "endDate" | "destinations" | "experienceType">,
+  existing: Pick<Trip, "userId" | "participants" | "startDate" | "endDate" | "departureCity" | "destinations" | "experienceType" | "budget">,
+  candidate: Pick<InsertTrip, "userId" | "participants" | "startDate" | "endDate" | "departureCity" | "destinations" | "experienceType" | "budget">,
 ): boolean {
   return (
     existing.userId === candidate.userId &&
+    existing.participants === candidate.participants &&
     existing.startDate === candidate.startDate &&
     existing.endDate === candidate.endDate &&
+    normalizeTripIdentity(existing.departureCity) ===
+      normalizeTripIdentity(candidate.departureCity) &&
     existing.experienceType === candidate.experienceType &&
+    existing.budget === candidate.budget &&
     normalizeTripIdentity(existing.destinations?.[0]) ===
       normalizeTripIdentity(candidate.destinations?.[0])
   );

@@ -38,7 +38,7 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
           <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg flex-shrink-0">
             <Compass className="w-6 h-6 text-white" />
           </div>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold text-white mb-1">
               {t('gyg.title', { city: destinationCity || '' })}
             </h3>
@@ -48,7 +48,7 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
             <AffiliateNotice className="mb-4" showText={placement !== "checkout"} />
             <Button
               onClick={handleClick}
-              className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold"
+              className="h-auto min-h-11 w-full whitespace-normal bg-gradient-to-r from-orange-500 to-amber-600 text-center font-semibold leading-tight text-white hover:from-orange-600 hover:to-amber-700 sm:w-auto"
               data-testid={`button-gyg-${placement}`}
             >
               <Compass className="w-4 h-4 mr-2" />

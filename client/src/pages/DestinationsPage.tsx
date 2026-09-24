@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Destination, Experience } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, StarHalf, ExternalLink, Compass } from "lucide-react";
+import { ExternalLink, Compass } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ReactCountryFlag from "react-country-flag";
@@ -47,24 +47,6 @@ export default function DestinationsPage() {
     };
     
     return countryMap[country] || "EU"; // Usa l'UE come fallback
-  };
-
-  // Helper function to render rating stars
-  const renderRatingStars = (rating: string) => {
-    const ratingNum = parseFloat(rating);
-    const fullStars = Math.floor(ratingNum);
-    const hasHalfStar = ratingNum % 1 >= 0.5;
-    const stars = [];
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`full-${i}`} className="fill-yellow-400 text-yellow-400 h-4 w-4" />);
-    }
-
-    if (hasHalfStar) {
-      stars.push(<StarHalf key="half" className="fill-yellow-400 text-yellow-400 h-4 w-4" />);
-    }
-
-    return stars;
   };
 
   // Helper function to get best experience types for a destination
@@ -291,13 +273,7 @@ export default function DestinationsPage() {
                       
                       <p className="text-gray-700 mb-4">{localizedDestination.description}</p>
                       
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="text-yellow-400 flex">
-                            {renderRatingStars(destination.rating)}
-                          </div>
-                          <span className="text-gray-600 ml-2 text-sm">{destination.rating} ({destination.reviewCount})</span>
-                        </div>
+                      <div className="flex items-center justify-end">
                         {cardClickable && (
                           <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600 group-hover:underline">
                             {t('destinations.discoverActivities')}

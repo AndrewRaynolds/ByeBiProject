@@ -294,8 +294,6 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
   }
 
   const visiblePosts = blogPosts || [];
-  const totalStories = (blogPosts?.length || 0) + 197;
-
   const CardComponent = isBride ? BrideCard : BroCard;
 
   return (
@@ -326,7 +324,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
             </p>
             <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${isBride ? 'text-pink-400/80' : 'text-red-500/80'}`}>
               <Flame className="w-3.5 h-3.5" />
-              <span>{t('blog.storyCount', { count: totalStories })}</span>
+              <span>{t('blog.storyLabel')}</span>
             </div>
           </div>
         </div>

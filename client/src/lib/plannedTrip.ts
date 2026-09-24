@@ -1,4 +1,5 @@
 import { isValidDateRange } from "@shared/dateUtils";
+import type { Trip } from "@shared/schema";
 import { apiRequest } from "./queryClient";
 
 type PlannedActivity = string | { name?: string };
@@ -72,4 +73,24 @@ export async function savePlannedTrip(context: PlannedTripContext): Promise<{
   if (!payload) throw new Error("Trip planning data is incomplete");
   const response = await apiRequest("POST", "/api/trips", payload);
   return { created: response.status === 201 };
+}
+
+const normalizeIdentity = (value: string | null | undefined) =>
+  (value ?? "").trim().toLocaleLowerCase("en");
+
+export function plannedTripMatchesSavedTrip(
+  context: PlannedTripContext,
+  trip: Pick<Trip, "participants" | "startDate" | "endDate" | "departureCity" | "destinations" | "experienceType" | "budget">,
+): boolean {
+  const payload = buildPlannedTripPayload(context);
+  if (!payload) return false;
+  return (
+    trip.participants === payload.participants &&
+    trip.startDate === payload.startDate &&
+    trip.endDate === payload.endDate &&
+    normalizeIdentity(trip.departureCity) === normalizeIdentity(payload.departureCity) &&
+    normalizeIdentity(trip.destinations?.[0]) === normalizeIdentity(payload.destinations[0]) &&
+    trip.experienceType === payload.experienceType &&
+    trip.budget === payload.budget
+  );
 }

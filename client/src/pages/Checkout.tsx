@@ -21,7 +21,8 @@ import { openExternalUrl } from '@/lib/externalNavigation';
 import { AffiliateNotice } from '@/components/AffiliateNotice';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { savePlannedTrip } from '@/lib/plannedTrip';
+import { plannedTripMatchesSavedTrip, savePlannedTrip } from '@/lib/plannedTrip';
+import type { Trip } from '@shared/schema';
 
 
 export default function Checkout() {
@@ -37,7 +38,8 @@ export default function Checkout() {
   const [hotelSearchFailed, setHotelSearchFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savingTrip, setSavingTrip] = useState(false);
-  const [tripSaved, setTripSaved] = useState(false);
+  const [tripSaveStatus, setTripSaveStatus] = useState<'idle' | 'saved' | 'existing'>('idle');
+  const [checkingSavedTrip, setCheckingSavedTrip] = useState(false);
 
   useEffect(() => {
     const data = localStorage.getItem('currentItinerary');
@@ -61,6 +63,33 @@ export default function Checkout() {
     setIsLoading(false);
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!tripContext || !isAuthenticated || !user?.id) {
+      setTripSaveStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingSavedTrip(true);
+    apiRequest('GET', `/api/trips/user/${user.id}`)
+      .then((response) => response.json() as Promise<Trip[]>)
+      .then((trips) => {
+        if (!cancelled && trips.some((trip) => plannedTripMatchesSavedTrip(tripContext, trip))) {
+          setTripSaveStatus('existing');
+        }
+      })
+      .catch(() => {
+        // Saving remains available if this optional status check is unavailable.
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingSavedTrip(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, tripContext, user?.id]);
 
   const fetchHotels = async (context: TripContext, signal: AbortSignal) => {
     setLoadingHotels(true);
@@ -185,12 +214,12 @@ export default function Checkout() {
 
     setSavingTrip(true);
     try {
-      await savePlannedTrip(tripContext);
+      const { created } = await savePlannedTrip(tripContext);
       await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
-      setTripSaved(true);
+      setTripSaveStatus(created ? 'saved' : 'existing');
       toast({
-        title: t('chat.tripSaved'),
-        description: t('chat.tripSavedDesc'),
+        title: t(created ? 'chat.tripSaved' : 'chat.tripAlreadySaved'),
+        description: t(created ? 'chat.tripSavedDesc' : 'chat.tripAlreadySavedDesc'),
       });
     } catch {
       toast({
@@ -471,19 +500,21 @@ export default function Checkout() {
               </div>
               <Button
                 onClick={handleSaveTrip}
-                disabled={savingTrip || tripSaved}
-                className="shrink-0 bg-white text-gray-950 hover:bg-gray-100"
+                disabled={savingTrip || checkingSavedTrip || tripSaveStatus !== 'idle'}
+                className="min-h-11 w-full shrink-0 bg-white text-gray-950 hover:bg-gray-100 md:w-auto"
                 data-testid="button-save-trip"
               >
                 {savingTrip ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : tripSaved ? (
+                ) : tripSaveStatus !== 'idle' ? (
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                {tripSaved
+                {tripSaveStatus === 'saved'
                   ? t('checkout.tripSaved')
+                  : tripSaveStatus === 'existing'
+                    ? t('checkout.tripAlreadySaved')
                   : isAuthenticated
                     ? t('checkout.saveTrip')
                     : t('checkout.signInToSave')}

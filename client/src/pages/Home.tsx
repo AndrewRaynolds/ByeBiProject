@@ -4,7 +4,6 @@ import HowItWorks from "@/components/HowItWorks";
 import FeaturedDestinations from "@/components/FeaturedDestinations";
 import ExperienceTypes from "@/components/ExperienceTypes";
 import SecretBlog from "@/components/SecretBlog";
-import Testimonials from "@/components/Testimonials";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
 
@@ -28,9 +27,6 @@ export default function Home() {
         
         {/* Secret Blog */}
         <SecretBlog brand="bro" />
-        
-        {/* Testimonials */}
-        <Testimonials brand="bro" />
         
         {/* Newsletter */}
         <Newsletter />

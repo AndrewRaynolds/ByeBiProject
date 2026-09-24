@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Destination } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, StarHalf } from "lucide-react";
 import { Link } from "wouter";
 import { memo, useCallback } from "react";
 import OptimizedImage from "@/components/ui/optimized-image";
@@ -21,24 +20,6 @@ const DestinationCard = memo(({ destination, onExplore }: {
   const handleExplore = useCallback(() => {
     onExplore(destination.id);
   }, [destination.id, onExplore]);
-
-  // Helper function to render rating stars
-  const renderRatingStars = (rating: string) => {
-    const ratingNum = parseFloat(rating);
-    const fullStars = Math.floor(ratingNum);
-    const hasHalfStar = ratingNum % 1 >= 0.5;
-    const stars = [];
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`full-${i}`} className="fill-yellow-400 text-yellow-400 h-4 w-4" />);
-    }
-
-    if (hasHalfStar) {
-      stars.push(<StarHalf key="half" className="fill-yellow-400 text-yellow-400 h-4 w-4" />);
-    }
-
-    return stars;
-  };
 
   return (
     <div className="rounded-xl overflow-hidden shadow-lg group bg-black">
@@ -72,13 +53,7 @@ const DestinationCard = memo(({ destination, onExplore }: {
           ))}
         </div>
         <p className="text-gray-300 text-sm mb-4 line-clamp-2">{localizedDestination.description}</p>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="text-yellow-400 flex">
-              {renderRatingStars(destination.rating)}
-            </div>
-            <span className="text-gray-300 ml-1 text-sm">{destination.rating} ({destination.reviewCount})</span>
-          </div>
+        <div className="flex justify-end items-center">
           <Button
             variant="ghost"
             className="text-red-600 hover:text-red-700 font-medium"
