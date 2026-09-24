@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle, RefreshCw, Save, CheckCircle2 } from 'lucide-react';
 import Header from '@/components/Header';
 import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
 import { GetYourGuideCta } from '@/components/GetYourGuideCta';
 import { getCityCode } from '@shared/cityMapping';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { parseStoredTripContext, type TripContext } from '@/lib/tripContext';
 import { hotelSearchResponseSchema, type HotelResult } from '@shared/hotelSchemas';
 import {
@@ -19,11 +19,16 @@ import {
 import { trackAffiliateClick } from '@/lib/track';
 import { openExternalUrl } from '@/lib/externalNavigation';
 import { AffiliateNotice } from '@/components/AffiliateNotice';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { savePlannedTrip } from '@/lib/plannedTrip';
 
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
@@ -31,6 +36,8 @@ export default function Checkout() {
   const [hotelError, setHotelError] = useState<string | null>(null);
   const [hotelSearchFailed, setHotelSearchFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [savingTrip, setSavingTrip] = useState(false);
+  const [tripSaved, setTripSaved] = useState(false);
 
   useEffect(() => {
     const data = localStorage.getItem('currentItinerary');
@@ -113,9 +120,14 @@ export default function Checkout() {
         });
       }
       
-      if (result.data.hotels.length > 0) {
+      if (result.data.hotelDataStatus === 'unavailable') {
+        setHotels([]);
+        setHotelSearchFailed(true);
+        setHotelError(t('checkout.hotelLoadError'));
+      } else if (result.data.hotels.length > 0) {
         setHotels(result.data.hotels.slice(0, 5));
       } else {
+        setHotels([]);
         setHotelError(t('checkout.noHotelsForDates'));
       }
     } catch (error: unknown) {
@@ -163,6 +175,33 @@ export default function Checkout() {
       style: 'currency',
       currency: hotel.currency,
     }).format(hotel.priceTotal);
+
+  const handleSaveTrip = async () => {
+    if (!tripContext) return;
+    if (!isAuthenticated || !user?.id) {
+      setLocation('/auth?next=/checkout');
+      return;
+    }
+
+    setSavingTrip(true);
+    try {
+      await savePlannedTrip(tripContext);
+      await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
+      setTripSaved(true);
+      toast({
+        title: t('chat.tripSaved'),
+        description: t('chat.tripSavedDesc'),
+      });
+    } catch {
+      toast({
+        title: t('chat.tripSaveError'),
+        description: t('chat.tripSaveErrorDesc'),
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingTrip(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -422,6 +461,36 @@ export default function Checkout() {
           destinationCity={tripContext.destination} 
           placement="checkout" 
         />
+
+        <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border border-white/20">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold text-white">{t('checkout.saveTripTitle')}</p>
+                <p className="mt-1 text-sm text-white/70">{t('checkout.saveTripDesc')}</p>
+              </div>
+              <Button
+                onClick={handleSaveTrip}
+                disabled={savingTrip || tripSaved}
+                className="shrink-0 bg-white text-gray-950 hover:bg-gray-100"
+                data-testid="button-save-trip"
+              >
+                {savingTrip ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : tripSaved ? (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {tripSaved
+                  ? t('checkout.tripSaved')
+                  : isAuthenticated
+                    ? t('checkout.saveTrip')
+                    : t('checkout.signInToSave')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Navigation */}
         <div className="flex flex-col md:flex-row gap-4">

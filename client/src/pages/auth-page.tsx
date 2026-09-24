@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { getSafePostAuthPath } from "@/lib/authNavigation";
 
 const loginSchema = z.object({
   email: z.string().email("Email non valida"),
@@ -50,7 +51,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      navigate("/");
+      navigate(getSafePostAuthPath(window.location.search));
     }
   }, [user, navigate]);
 

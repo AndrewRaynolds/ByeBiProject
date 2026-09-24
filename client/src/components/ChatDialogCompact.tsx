@@ -21,13 +21,10 @@ import {
 } from "@shared/dateUtils";
 import { getCanonicalCityName } from "@shared/cityMapping";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import { createChatCheckoutContext } from "@/lib/chatCheckout";
-import { savePlannedTrip } from "@/lib/plannedTrip";
 import { debugLog } from "@/lib/debug";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(2_000),
@@ -71,8 +68,6 @@ export default function ChatDialogCompact({
   initialMessage,
 }: ChatDialogCompactProps) {
   const { t } = useTranslation();
-  const { user, isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -242,29 +237,6 @@ export default function ChatDialogCompact({
                   JSON.stringify(checkoutContext),
                 );
                 localStorage.removeItem("selectedFlight");
-
-                if (isAuthenticated && user?.id) {
-                  const tripDetails = conversationStateRef.current.tripDetails;
-                  void savePlannedTrip({
-                    ...checkoutContext,
-                    budget: tripDetails.budget,
-                    activities: tripDetails.interests,
-                  })
-                    .then(async ({ created }) => {
-                      await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
-                      if (created) {
-                        toast({
-                          title: t('chat.tripSaved'),
-                          description: t('chat.tripSavedDesc'),
-                        });
-                      }
-                    })
-                    .catch(() => toast({
-                      title: t('chat.tripSaveError'),
-                      description: t('chat.tripSaveErrorDesc'),
-                      variant: "destructive",
-                    }));
-                }
 
                 onOpenChange(false);
                 setLocation("/checkout");

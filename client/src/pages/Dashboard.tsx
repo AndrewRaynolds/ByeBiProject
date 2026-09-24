@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Trip, type MerchandiseOrderItem } from "@shared/schema";
@@ -15,7 +15,6 @@ import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { savePlannedTrip } from "@/lib/plannedTrip";
 
 type MerchandiseOrderSummary = {
   id: string;
@@ -54,7 +53,6 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [adminOrderFilter, setAdminOrderFilter] = useState<"all" | "attention" | "active" | "completed">("all");
   const [adminOrderSearch, setAdminOrderSearch] = useState("");
-  const importedLocalTripForUser = useRef<string | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -62,23 +60,6 @@ export default function Dashboard() {
       setLocation("/");
     }
   }, [isAuthenticated, setLocation]);
-
-  useEffect(() => {
-    if (!user?.id || importedLocalTripForUser.current === user.id) return;
-    importedLocalTripForUser.current = user.id;
-    const storedItinerary = localStorage.getItem("currentItinerary");
-    if (!storedItinerary) return;
-    try {
-      const itinerary = JSON.parse(storedItinerary);
-      void savePlannedTrip(itinerary)
-        .then(() => queryClient.invalidateQueries({
-          queryKey: [`/api/trips/user/${user.id}`],
-        }))
-        .catch(() => undefined);
-    } catch {
-      // Ignore malformed legacy browser data; it must not block the Dashboard.
-    }
-  }, [user?.id]);
 
   // Fetch user trips
   const { data: trips, isLoading, error } = useQuery<Trip[]>({

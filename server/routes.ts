@@ -13,8 +13,8 @@ import { fromZodError } from "zod-validation-error";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
 import { iataToCity, resolveIataCode } from "./services/cityMapping";
-import { searchHotels } from "./services/amadeus-hotels";
-import { AmadeusTemporaryError, getSafeAmadeusErrorMetadata } from "./services/amadeusHttp";
+import { getSafeAmadeusErrorMetadata } from "./services/amadeusHttp";
+import { searchHotelsForCheckout } from "./services/hotelSearch";
 import { searchFlightsForCheckout } from "./services/flightSearch";
 import { getStoreProducts, getProductDetail, getShippingRates, PrintfulOrderNotCancellableError } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -1037,36 +1037,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "Invalid hotel search parameters" });
     }
 
-    try {
-      const { cityCode, checkInDate, checkOutDate, adults, currency } = parsedQuery.data;
+    const result = await searchHotelsForCheckout(parsedQuery.data, {
+      onProviderError: (error) => {
+        console.error("Amadeus hotel search unavailable", getSafeAmadeusErrorMetadata(error));
+      },
+    });
 
-      const hotels = await searchHotels({
-        cityCode,
-        checkInDate,
-        checkOutDate,
-        adults,
-        currency,
-      });
-
-      return res.json({
-        cityCode,
-        checkInDate,
-        checkOutDate,
-        adults,
-        currency,
-        hotels,
-      });
-    } catch (error: unknown) {
-      console.error("Amadeus hotel search error", getSafeAmadeusErrorMetadata(error));
-      if (error instanceof AmadeusTemporaryError) {
-        res.setHeader("Retry-After", "5");
-        return res.status(503).json({
-          error: "Hotel service temporarily unavailable",
-          code: error.code,
-        });
-      }
-      return res.status(502).json({ error: "Hotel service temporarily unavailable" });
-    }
+    return res.json(result);
   });
 
   // Flights search endpoint con checkoutUrl reali

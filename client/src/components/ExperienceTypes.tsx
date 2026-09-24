@@ -27,6 +27,18 @@ const EXPERIENCE_NAME_MAP: Record<string, string> = {
   "The Wild Broventure": "The Wild Brideventure"
 };
 
+export function adaptExperienceForBrand<T extends { name: string; description: string }>(
+  experience: T,
+  brand: Brand,
+): T {
+  if (brand !== 'bride') return experience;
+  return {
+    ...experience,
+    name: EXPERIENCE_NAME_MAP[experience.name] ?? experience.name,
+    description: experience.description.replace(/\bbros\b/gi, 'friends'),
+  };
+}
+
 export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps) {
   const { t } = useTranslation();
   const { data: experiences, isLoading, error } = useQuery<Experience[]>({
@@ -34,10 +46,9 @@ export default function ExperienceTypes({ brand = 'bro' }: ExperienceTypesProps)
   });
   
   const copy = COPY[brand];
-  const mappedExperiences = experiences?.map(exp => ({
-    ...exp,
-    name: brand === 'bride' && EXPERIENCE_NAME_MAP[exp.name] ? EXPERIENCE_NAME_MAP[exp.name] : exp.name
-  }));
+  const mappedExperiences = experiences?.map((experience) =>
+    adaptExperienceForBrand(experience, brand),
+  );
 
   if (isLoading) {
     return (

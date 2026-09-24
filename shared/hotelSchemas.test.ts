@@ -65,7 +65,22 @@ describe("hotel schemas", () => {
         checkOutDate: "2026-08-13",
         adults: 4,
         currency: "EUR",
+        hotelDataStatus: "live",
         hotels: [validHotel],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts an unavailable provider response without fake hotel data", () => {
+    expect(
+      hotelSearchResponseSchema.safeParse({
+        cityCode: "BCN",
+        checkInDate: "2026-08-10",
+        checkOutDate: "2026-08-13",
+        adults: 12,
+        currency: "EUR",
+        hotelDataStatus: "unavailable",
+        hotels: [],
       }).success,
     ).toBe(true);
   });

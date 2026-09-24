@@ -66,6 +66,7 @@ export const hotelSearchResponseSchema = z.object({
   checkOutDate: dateOnlySchema,
   adults: z.coerce.number().int().min(1).max(50),
   currency: codeSchema,
+  hotelDataStatus: z.enum(["live", "unavailable"]),
   hotels: z.array(hotelResultSchema).max(30),
 });
 
