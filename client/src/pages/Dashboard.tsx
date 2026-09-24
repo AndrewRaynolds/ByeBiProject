@@ -26,7 +26,6 @@ import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { createSavedTripContext } from "@/lib/tripContext";
 
 type MerchandiseOrderSummary = {
   id: string;
@@ -338,14 +337,9 @@ export default function Dashboard() {
                       <CardFooter className="flex flex-col gap-2 sm:flex-row">
                         <Button
                           className="w-full bg-primary hover:bg-accent sm:flex-1"
-                          onClick={() => {
-                            const context = createSavedTripContext(trip);
-                            if (!context) return;
-                            localStorage.setItem("currentItinerary", JSON.stringify(context));
-                            setLocation("/checkout");
-                          }}
+                          onClick={() => setLocation(`/trips/${trip.id}`)}
                         >
-                          {t('dashboard.openCheckout')}
+                          {t('dashboard.openTripHub')}
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
