@@ -7,10 +7,21 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, PlaneTakeoff, RefreshCw, RotateCcw, Search, Shirt, Truck, User } from "lucide-react";
+import { AlertTriangle, BarChart3, Calendar, Map, GlassWater, ListChecks, MousePointerClick, PlaneTakeoff, RefreshCw, RotateCcw, Search, Shirt, Trash2, Truck, User, Users } from "lucide-react";
 import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -65,6 +76,26 @@ export default function Dashboard() {
   const { data: trips, isLoading, error } = useQuery<Trip[]>({
     queryKey: [`/api/trips/user/${user?.id}`],
     enabled: !!user?.id,
+  });
+
+  const deleteTrip = useMutation({
+    mutationFn: async (tripId: number) => {
+      await apiRequest("DELETE", `/api/trips/${tripId}`);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user?.id}`] });
+      toast({
+        title: t('dashboard.deleteSuccess'),
+        description: t('dashboard.deleteSuccessDesc'),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t('dashboard.deleteError'),
+        description: t('dashboard.deleteErrorDesc'),
+        variant: "destructive",
+      });
+    },
   });
 
   const { data: merchandiseOrders, isLoading: isLoadingMerchandise } =
@@ -266,45 +297,46 @@ export default function Dashboard() {
               ) : trips && trips.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {trips.map((trip) => (
-                    <Card key={trip.id} className="shadow-md">
+                    <Card key={trip.id} className="flex h-full flex-col shadow-md">
                       <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <CardTitle>{trip.name}</CardTitle>
-                          <div className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        <div className="flex items-start justify-between gap-3">
+                          <CardTitle className="leading-tight">{trip.name}</CardTitle>
+                          <div className="shrink-0 rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">
                             {t(`dashboard.experienceType.${trip.experienceType}`)}
                           </div>
                         </div>
                         <CardDescription>
-                          <div className="flex items-center text-sm text-gray-500 mt-1">
-                            <Calendar className="mr-1 h-3 w-3" /> 
+                          <div className="mt-1 flex items-center text-sm text-gray-500">
+                            <Calendar className="mr-2 h-4 w-4" />
                             {trip.startDate} - {trip.endDate}
                           </div>
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center text-sm">
-                            <PlaneTakeoff className="mr-2 h-4 w-4 text-primary" />
-                            <span>{t('dashboard.departure')}: {trip.departureCity || "—"}</span>
+                      <CardContent className="flex-1">
+                        <div className="grid gap-3 text-sm sm:grid-cols-2">
+                          <div className="flex items-start gap-2">
+                            <Users className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span><span className="font-semibold">{t('dashboard.participants')}:</span> {trip.participants}</span>
                           </div>
-                          <div className="flex items-center text-sm">
-                            <Map className="mr-2 h-4 w-4 text-primary" />
-                            <span>{t('dashboard.destinations')}: {(trip.destinations ?? []).join(", ")}</span>
+                          <div className="flex items-start gap-2">
+                            <PlaneTakeoff className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span><span className="font-semibold">{t('dashboard.departure')}:</span> {trip.departureCity || "—"}</span>
                           </div>
-                          <div className="flex items-center text-sm">
-                            <GlassWater className="mr-2 h-4 w-4 text-primary" />
-                            <span>{t('dashboard.activities')}: {(trip.activities ?? []).slice(0, 2).join(", ")}
-                              {(trip.activities ?? []).length > 2 ? ` and ${(trip.activities ?? []).length - 2} more` : ""}
+                          <div className="flex items-start gap-2 sm:col-span-2">
+                            <Map className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span><span className="font-semibold">{t('dashboard.destinations')}:</span> {(trip.destinations ?? []).join(", ") || "—"}</span>
+                          </div>
+                          <div className="flex items-start gap-2 sm:col-span-2">
+                            <GlassWater className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span><span className="font-semibold">{t('dashboard.activities')}:</span> {(trip.activities ?? []).slice(0, 2).join(", ") || "—"}
+                              {(trip.activities ?? []).length > 2 ? ` ${t('dashboard.moreActivities', { count: (trip.activities ?? []).length - 2 })}` : ""}
                             </span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-semibold">{t('dashboard.budget')}:</span> €{trip.budget} {t('dashboard.perPerson')}
                           </div>
                         </div>
                       </CardContent>
-                      <CardFooter>
+                      <CardFooter className="flex flex-col gap-2 sm:flex-row">
                         <Button
-                          className="w-full bg-primary hover:bg-accent"
+                          className="w-full bg-primary hover:bg-accent sm:flex-1"
                           onClick={() => {
                             const destination = trip.destinations?.[0] || "";
                             const origin = trip.departureCity || "Italia";
@@ -322,6 +354,36 @@ export default function Dashboard() {
                         >
                           {t('dashboard.openCheckout')}
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:w-auto"
+                              disabled={deleteTrip.isPending && deleteTrip.variables === trip.id}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {t('dashboard.deleteTrip')}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{t('dashboard.deleteConfirmTitle')}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {t('dashboard.deleteConfirmDesc', { name: trip.name })}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{t('dashboard.deleteCancel')}</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-red-600 text-white hover:bg-red-700"
+                                onClick={() => deleteTrip.mutate(trip.id)}
+                              >
+                                {t('dashboard.deleteConfirm')}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </CardFooter>
                     </Card>
                   ))}

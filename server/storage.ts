@@ -55,6 +55,7 @@ export interface IStorage {
   getTripsByUserId(userId: string): Promise<Trip[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
   createTripIfAbsent(trip: InsertTrip): Promise<{ trip: Trip; created: boolean }>;
+  deleteTripForUser(id: number, userId: string): Promise<boolean>;
 
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
@@ -648,6 +649,12 @@ export class MemStorage implements IStorage {
     return { trip: await this.createTrip(insertTrip), created: true };
   }
 
+  async deleteTripForUser(id: number, userId: string): Promise<boolean> {
+    const trip = this.trips.get(id);
+    if (!trip || trip.userId !== userId) return false;
+    return this.trips.delete(id);
+  }
+
   // Blog post operations
   async getBlogPost(id: number): Promise<BlogPost | undefined> {
     return this.blogPosts.get(id);
@@ -1010,6 +1017,14 @@ export class DatabaseStorage extends MemStorage {
         .returning();
       return { trip, created: true };
     });
+  }
+
+  override async deleteTripForUser(id: number, userId: string): Promise<boolean> {
+    const deleted = await this.db
+      .delete(tripsTable)
+      .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, userId)))
+      .returning({ id: tripsTable.id });
+    return deleted.length > 0;
   }
 
   override async getBlogPost(id: number): Promise<BlogPost | undefined> {
