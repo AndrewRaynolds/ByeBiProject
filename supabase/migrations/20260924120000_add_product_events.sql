@@ -13,7 +13,7 @@ CREATE TABLE public.product_events (
       'trip_plan_completed',
       'checkout_viewed',
       'auth_started',
-      'signup_completed',
+      'signup_submitted',
       'trip_saved',
       'trip_hub_viewed',
       'splitta_opened'

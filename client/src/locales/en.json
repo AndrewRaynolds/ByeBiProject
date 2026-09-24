@@ -462,7 +462,7 @@
   "dashboard.analyticsEvent.trip_plan_completed": "Plan completed",
   "dashboard.analyticsEvent.checkout_viewed": "Checkout viewed",
   "dashboard.analyticsEvent.auth_started": "Authentication started",
-  "dashboard.analyticsEvent.signup_completed": "Signup completed",
+  "dashboard.analyticsEvent.signup_submitted": "Signup submitted",
   "dashboard.analyticsEvent.trip_saved": "Trip saved",
   "dashboard.analyticsEvent.trip_hub_viewed": "Trip Hub viewed",
   "dashboard.analyticsEvent.provider_click": "Provider click",

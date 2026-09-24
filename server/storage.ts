@@ -268,16 +268,12 @@ export class MemStorage implements IStorage {
     days: 7 | 30,
   ): Promise<ProductAnalyticsSummary> {
     const recentEvents = this.productEventItems.filter((item) => item.createdAt >= since);
-    const eventCounts = productEventNames.map((eventName) => ({
-      eventName,
-      count: new Set(
-        recentEvents
-          .filter((item) => item.event.eventName === eventName)
-          .map((item) => item.event.sessionId),
-      ).size,
+    const eventSessions = recentEvents.map((item) => ({
+      eventName: item.event.eventName,
+      sessionId: item.event.sessionId,
     }));
     const recentClicks = this.affiliateClickEvents.filter((item) => item.createdAt >= since);
-    const providerSessions = new Set(recentClicks.map((item) => item.click.sessionId)).size;
+    const providerSessionIds = recentClicks.map((item) => item.click.sessionId);
     const affiliateSummary = summarizeAffiliateClicks(
       recentClicks.map(({ click }) => ({
         provider: click.provider,
@@ -287,7 +283,7 @@ export class MemStorage implements IStorage {
       })),
       days,
     );
-    return summarizeProductAnalytics(eventCounts, providerSessions, affiliateSummary, days);
+    return summarizeProductAnalytics(eventSessions, providerSessionIds, affiliateSummary, days);
   }
 
   async createMerchandiseOrder(
@@ -1278,23 +1274,24 @@ export class DatabaseStorage extends MemStorage {
       this.db
         .select({
           eventName: productEvents.eventName,
-          count: sql<number>`count(distinct ${productEvents.sessionId})::int`,
+          sessionId: productEvents.sessionId,
         })
         .from(productEvents)
         .where(gte(productEvents.createdAt, since))
-        .groupBy(productEvents.eventName),
+        .groupBy(productEvents.eventName, productEvents.sessionId),
       this.db
         .select({
-          count: sql<number>`count(distinct ${affiliateClicks.sessionId})::int`,
+          sessionId: affiliateClicks.sessionId,
         })
         .from(affiliateClicks)
-        .where(gte(affiliateClicks.createdAt, since)),
+        .where(gte(affiliateClicks.createdAt, since))
+        .groupBy(affiliateClicks.sessionId),
       this.getAffiliateClickSummary(since, days),
     ]);
 
     return summarizeProductAnalytics(
       eventRows,
-      Number(providerSessionRows[0]?.count ?? 0),
+      providerSessionRows.map((row) => row.sessionId),
       affiliateSummary,
       days,
     );
@@ -1745,29 +1742,39 @@ export function summarizeAffiliateClicks(
   };
 }
 
-type ProductEventCountRow = { eventName: string; count: number };
+type ProductEventSessionRow = { eventName: string; sessionId: string };
 
 export function summarizeProductAnalytics(
-  eventRows: ProductEventCountRow[],
-  providerSessions: number,
+  eventRows: ProductEventSessionRow[],
+  providerSessionIds: string[],
   affiliateSummary: AffiliateClickSummary,
   days: 7 | 30,
 ): ProductAnalyticsSummary {
-  const counts = new Map(eventRows.map((row) => [row.eventName, Number(row.count)]));
+  const sessionsByEvent = new Map<string, Set<string>>();
+  for (const row of eventRows) {
+    const sessions = sessionsByEvent.get(row.eventName) ?? new Set<string>();
+    sessions.add(row.sessionId);
+    sessionsByEvent.set(row.eventName, sessions);
+  }
+  const providerSessions = new Set(providerSessionIds);
   const orderedSteps = [
     ...productEventNames.slice(0, 8),
     "provider_click" as const,
     productEventNames[8],
   ];
-  let previousCount: number | null = null;
+  let previousSessions: Set<string> | null = null;
   const funnel = orderedSteps.map((eventName) => {
-    const count = eventName === "provider_click"
+    const currentSessions = eventName === "provider_click"
       ? providerSessions
-      : (counts.get(eventName) ?? 0);
-    const previousStepRate = previousCount && previousCount > 0
-      ? Math.round((count / previousCount) * 1_000) / 10
+      : (sessionsByEvent.get(eventName) ?? new Set<string>());
+    const count = currentSessions.size;
+    const previousStepRate = previousSessions && previousSessions.size > 0
+      ? Math.round(
+        (Array.from(previousSessions).filter((sessionId) => currentSessions.has(sessionId)).length
+          / previousSessions.size) * 1_000,
+      ) / 10
       : null;
-    previousCount = count;
+    previousSessions = currentSessions;
     return { eventName, count, previousStepRate };
   });
 

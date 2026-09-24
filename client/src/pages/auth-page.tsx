@@ -53,7 +53,7 @@ export default function AuthPage() {
   useEffect(() => trackProductEvent("auth_started"), []);
 
   useEffect(() => {
-    if (registerMutation.isSuccess) trackProductEvent("signup_completed");
+    if (registerMutation.isSuccess) trackProductEvent("signup_submitted");
   }, [registerMutation.isSuccess]);
 
   useEffect(() => {

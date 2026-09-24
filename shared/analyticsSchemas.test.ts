@@ -54,4 +54,18 @@ describe("product event schema", () => {
       brand: "byebro",
     }).success).toBe(false);
   });
+
+  it("uses signup_submitted instead of signup_completed", () => {
+    expect(productEventSchema.safeParse({
+      sessionId: validEvent.sessionId,
+      eventName: "signup_submitted",
+      brand: "byebro",
+    }).success).toBe(true);
+
+    expect(productEventSchema.safeParse({
+      sessionId: validEvent.sessionId,
+      eventName: "signup_completed",
+      brand: "byebro",
+    }).success).toBe(false);
+  });
 });

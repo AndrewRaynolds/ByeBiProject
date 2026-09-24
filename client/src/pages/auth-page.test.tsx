@@ -5,7 +5,11 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuthPage from "./auth-page";
 
-const navigate = vi.fn();
+const { authState, navigate, trackProductEvent } = vi.hoisted(() => ({
+  authState: { registerSuccess: false },
+  navigate: vi.fn(),
+  trackProductEvent: vi.fn(),
+}));
 
 vi.mock("wouter", () => ({
   useLocation: () => [window.location.pathname, navigate],
@@ -24,9 +28,15 @@ vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
     user: null,
     loginMutation: { mutate: vi.fn(), isPending: false },
-    registerMutation: { mutate: vi.fn(), isPending: false },
+    registerMutation: {
+      mutate: vi.fn(),
+      isPending: false,
+      isSuccess: authState.registerSuccess,
+    },
   }),
 }));
+
+vi.mock("@/lib/track", () => ({ trackProductEvent }));
 
 vi.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({
@@ -51,6 +61,8 @@ vi.mock("@/contexts/LanguageContext", () => ({
 describe("AuthPage", () => {
   beforeEach(() => {
     navigate.mockClear();
+    trackProductEvent.mockClear();
+    authState.registerSuccess = false;
     localStorage.setItem("selectedBrand", "byebro");
   });
 
@@ -95,5 +107,14 @@ describe("AuthPage", () => {
       screen.getByRole("heading", { name: "Unisciti a ByeBride oggi" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Descrizione ByeBride")).toBeInTheDocument();
+  });
+
+  it("tracks a submitted signup after signUp succeeds", () => {
+    authState.registerSuccess = true;
+
+    render(<AuthPage />);
+
+    expect(trackProductEvent).toHaveBeenCalledWith("signup_submitted");
+    expect(trackProductEvent).not.toHaveBeenCalledWith("signup_completed");
   });
 });
