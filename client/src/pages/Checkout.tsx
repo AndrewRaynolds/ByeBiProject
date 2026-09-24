@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { plannedTripMatchesSavedTrip, savePlannedTrip } from '@/lib/plannedTrip';
 import type { Trip } from '@shared/schema';
+import { flightCheckoutSearchResponseSchema } from '@shared/flightSchemas';
 
 
 export default function Checkout() {
@@ -31,6 +32,8 @@ export default function Checkout() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
+  const [flightCheckoutUrl, setFlightCheckoutUrl] = useState("");
+  const [loadingFlight, setLoadingFlight] = useState(false);
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [loadingHotels, setLoadingHotels] = useState(true);
@@ -57,8 +60,12 @@ export default function Checkout() {
     }
 
     setTripContext(context);
+    setFlightCheckoutUrl(context.aviasalesCheckoutUrl);
     const controller = new AbortController();
     fetchHotels(context, controller.signal);
+    if (!context.aviasalesCheckoutUrl) {
+      fetchFlightCheckoutUrl(context, controller.signal);
+    }
     
     setIsLoading(false);
     return () => controller.abort();
@@ -90,6 +97,36 @@ export default function Checkout() {
       cancelled = true;
     };
   }, [isAuthenticated, tripContext, user?.id]);
+
+  const fetchFlightCheckoutUrl = async (context: TripContext, signal: AbortSignal) => {
+    setLoadingFlight(true);
+    try {
+      const params = new URLSearchParams({
+        origin: context.origin,
+        destination: context.destination,
+        departDate: context.startDate,
+        returnDate: context.endDate,
+        passengers: String(context.people),
+        currency: 'EUR',
+      });
+      const response = await apiRequest(
+        'GET',
+        `/api/flights/search?${params}`,
+        undefined,
+        { signal, timeoutMs: 30_000 },
+      );
+      const result = flightCheckoutSearchResponseSchema.safeParse(await response.json());
+      if (!result.success || signal.aborted) return;
+
+      setFlightCheckoutUrl(result.data.checkoutUrl);
+    } catch (error: unknown) {
+      if (signal.aborted) return;
+      if (import.meta.env.DEV) console.error('Flight checkout recovery error:', error);
+      // Hotel and activity choices remain usable when live flight recovery fails.
+    } finally {
+      if (!signal.aborted) setLoadingFlight(false);
+    }
+  };
 
   const fetchHotels = async (context: TripContext, signal: AbortSignal) => {
     setLoadingHotels(true);
@@ -274,7 +311,7 @@ export default function Checkout() {
   // Calculate trip days from dates (safe - fields validated above)
   const tripDays = calculateTripDays(tripContext.startDate, tripContext.endDate);
   const formattedDates = formatDateRangeIT(tripContext.startDate, tripContext.endDate);
-  const aviasalesIsMonetized = isMonetizedAviasalesUrl(tripContext.aviasalesCheckoutUrl);
+  const aviasalesIsMonetized = isMonetizedAviasalesUrl(flightCheckoutUrl);
   const bookingIsMonetized = hasBookingAffiliateId();
 
   return (
@@ -343,21 +380,26 @@ export default function Checkout() {
             )}
             {aviasalesIsMonetized && <AffiliateNotice className="mb-3" showText={false} />}
             
-            {tripContext.aviasalesCheckoutUrl ? (
+            {loadingFlight ? (
+              <div className="flex items-center gap-2 text-sm text-white/70" data-testid="loading-flight-link">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('checkout.loadingFlights')}
+              </div>
+            ) : flightCheckoutUrl ? (
               <Button 
                 asChild
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                 data-testid="button-book-flight"
               >
                 <a 
-                  href={tripContext.aviasalesCheckoutUrl} 
+                  href={flightCheckoutUrl}
                   target="_blank" 
                   rel="noopener noreferrer"
                   onClick={() => trackAffiliateClick({
                     provider: 'aviasales',
                     placement: 'checkout_flight',
                     destination: tripContext.destination,
-                    monetized: isMonetizedAviasalesUrl(tripContext.aviasalesCheckoutUrl),
+                    monetized: isMonetizedAviasalesUrl(flightCheckoutUrl),
                   })}
                 >
                   <Plane className="w-4 h-4 mr-2" />

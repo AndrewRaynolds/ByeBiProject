@@ -89,6 +89,11 @@ export function buildAviasalesUrl(value: AviasalesUrlParams): string | null {
   return `https://www.aviasales.com/search/${originIata}${departure}${destinationIata}${returning}${adults}?marker=${encodeURIComponent(partnerId)}`;
 }
 
+export const flightCheckoutSearchResponseSchema = z.object({
+  checkoutUrl: z.string().max(2048).refine(isAviasalesCheckoutUrl),
+  flightDataStatus: z.enum(["live", "unavailable"]),
+}).passthrough();
+
 const flightDateTimeSchema = z
   .string()
   .min(16)

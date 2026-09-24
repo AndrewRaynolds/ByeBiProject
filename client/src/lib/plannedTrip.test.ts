@@ -62,4 +62,29 @@ describe("planned trip persistence", () => {
     expect(plannedTripMatchesSavedTrip(context, { ...savedTrip, participants: 8 })).toBe(false);
     expect(plannedTripMatchesSavedTrip(context, { ...savedTrip, departureCity: "Milano" })).toBe(false);
   });
+
+  it("preserves a reopened trip's exact numeric budget for deduplication", () => {
+    const context = {
+      destination: "Barcellona",
+      origin: "Roma",
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      people: 8,
+      partyType: "bachelor",
+      budget: 475,
+      activities: ["Kart"],
+    };
+    const savedTrip = {
+      participants: 8,
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      departureCity: "Roma",
+      destinations: ["Barcellona"],
+      experienceType: "bachelor",
+      budget: 475,
+    };
+
+    expect(buildPlannedTripPayload(context)).toMatchObject({ budget: 475, activities: ["Kart"] });
+    expect(plannedTripMatchesSavedTrip(context, savedTrip)).toBe(true);
+  });
 });

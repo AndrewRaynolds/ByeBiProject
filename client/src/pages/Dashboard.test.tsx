@@ -5,10 +5,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "./Dashboard";
 
-const { apiRequest, invalidateQueries, toast } = vi.hoisted(() => ({
+const { apiRequest, invalidateQueries, toast, navigate } = vi.hoisted(() => ({
   apiRequest: vi.fn(),
   invalidateQueries: vi.fn(),
   toast: vi.fn(),
+  navigate: vi.fn(),
 }));
 
 const trip = {
@@ -54,7 +55,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 vi.mock("wouter", () => ({
-  useLocation: () => ["/dashboard", vi.fn()],
+  useLocation: () => ["/dashboard", navigate],
 }));
 
 vi.mock("@/lib/queryClient", () => ({
@@ -110,6 +111,8 @@ describe("Dashboard trips", () => {
     invalidateQueries.mockReset();
     invalidateQueries.mockResolvedValue(undefined);
     toast.mockReset();
+    navigate.mockReset();
+    localStorage.clear();
   });
 
   it("shows saved planning details without presenting the default budget", () => {
@@ -122,6 +125,26 @@ describe("Dashboard trips", () => {
     expect(screen.getByText("Attività:").parentElement).toHaveTextContent("Tapas tour, Kart + altre 1");
     expect(screen.queryByText(/€\s*600/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
+  });
+
+  it("restores the saved planning context before opening checkout", () => {
+    render(<Dashboard />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Apri checkout" }));
+
+    expect(JSON.parse(localStorage.getItem("currentItinerary") ?? "null")).toMatchObject({
+      origin: "Roma",
+      originCity: "Roma",
+      destination: "Barcellona",
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      people: 8,
+      partyType: "bachelor",
+      budget: 600,
+      activities: ["Tapas tour", "Kart", "Beach club"],
+      aviasalesCheckoutUrl: "",
+    });
+    expect(navigate).toHaveBeenCalledWith("/checkout");
   });
 
   it("asks for confirmation, deletes the trip and invalidates its query", async () => {

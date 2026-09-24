@@ -11,7 +11,7 @@ export type PlannedTripContext = {
   endDate?: string;
   people?: number;
   partyType?: string;
-  budget?: string;
+  budget?: string | number;
   activities?: PlannedActivity[];
 };
 
@@ -59,7 +59,9 @@ export function buildPlannedTripPayload(context: PlannedTripContext) {
     departureCity,
     destinations: [destination],
     experienceType,
-    budget: budgetPerPerson[context.budget?.toLowerCase() ?? ""] ?? 600,
+    budget: typeof context.budget === "number"
+      ? context.budget
+      : budgetPerPerson[context.budget?.toLowerCase() ?? ""] ?? 600,
     activities,
     specialRequests: null,
     includeMerch: false,

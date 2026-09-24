@@ -44,6 +44,9 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "common.people": "persone",
       "common.passengers": "passeggeri",
       "checkout.largeGroupFlightNote": `Gruppo di ${values?.count} persone; massimo 9 adulti per ricerca.`,
+      "checkout.loadingFlights": "Ricerca voli disponibili...",
+      "checkout.flightUnavailable": "Ricerca voli temporaneamente non disponibile.",
+      "checkout.goToAviasales": "Vai su Aviasales",
       "checkout.hotelLoadError": "Servizio hotel temporaneamente irraggiungibile.",
       "checkout.noHotels": "Hotel non disponibili",
       "checkout.retryHotelSearch": "Riprova la ricerca",
@@ -102,6 +105,81 @@ describe("Checkout fallback experience", () => {
     expect(screen.getByText("12 persone")).toBeInTheDocument();
     expect(screen.getByText(/massimo 9 adulti/)).toBeInTheDocument();
     expect(await screen.findByText("Servizio hotel temporaneamente irraggiungibile.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cerca hotel su Booking.com" })).toBeInTheDocument();
+    expect(screen.getByText("GetYourGuide Barcellona")).toBeInTheDocument();
+  });
+
+  it("recovers a fresh flight checkout link for a reopened saved trip", async () => {
+    localStorage.setItem("currentItinerary", JSON.stringify({
+      origin: "Roma",
+      destination: "Barcellona",
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      people: 8,
+      partyType: "bachelorette",
+      budget: 475,
+      activities: ["Tapas tour"],
+      aviasalesCheckoutUrl: "",
+      flightLabel: "Roma → Barcellona",
+    }));
+    apiRequest.mockImplementation(async (_method: string, url: string) => ({
+      json: async () => url.startsWith("/api/flights/search?") ? {
+        checkoutUrl: "https://www.aviasales.com/search/ROM2011BCN23118?marker=685469",
+        flightDataStatus: "unavailable",
+      } : {
+        cityCode: "BCN",
+        checkInDate: "2026-11-20",
+        checkOutDate: "2026-11-23",
+        adults: 8,
+        currency: "EUR",
+        hotelDataStatus: "unavailable",
+        hotels: [],
+      },
+    }));
+
+    render(<Checkout />);
+
+    const flightLink = await screen.findByRole("link", { name: "Vai su Aviasales" });
+    expect(flightLink).toHaveAttribute(
+      "href",
+      "https://www.aviasales.com/search/ROM2011BCN23118?marker=685469",
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      "GET",
+      expect.stringContaining("/api/flights/search?origin=Roma&destination=Barcellona"),
+      undefined,
+      expect.objectContaining({ timeoutMs: 30_000 }),
+    );
+  });
+
+  it("keeps checkout usable when flight link recovery fails", async () => {
+    localStorage.setItem("currentItinerary", JSON.stringify({
+      origin: "Roma",
+      destination: "Barcellona",
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      people: 8,
+      aviasalesCheckoutUrl: "",
+      flightLabel: "Roma → Barcellona",
+    }));
+    apiRequest.mockImplementation(async (_method: string, url: string) => {
+      if (url.startsWith("/api/flights/search?")) throw new Error("temporarily unavailable");
+      return {
+        json: async () => ({
+          cityCode: "BCN",
+          checkInDate: "2026-11-20",
+          checkOutDate: "2026-11-23",
+          adults: 8,
+          currency: "EUR",
+          hotelDataStatus: "unavailable",
+          hotels: [],
+        }),
+      };
+    });
+
+    render(<Checkout />);
+
+    expect(await screen.findByText("Ricerca voli temporaneamente non disponibile.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerca hotel su Booking.com" })).toBeInTheDocument();
     expect(screen.getByText("GetYourGuide Barcellona")).toBeInTheDocument();
   });

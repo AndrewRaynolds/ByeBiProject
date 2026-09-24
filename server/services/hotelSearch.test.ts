@@ -51,4 +51,28 @@ describe("searchHotelsForCheckout", () => {
       hotels: [hotel],
     });
   });
+
+  it("orders hotels by total price with deterministic tie-breakers", async () => {
+    const hotel = (hotelId: string, name: string, priceTotal: number) => ({
+      hotelId,
+      name,
+      stars: "4",
+      priceTotal,
+      currency: "EUR",
+      offerId: `OFFER-${hotelId}`,
+      bookingFlow: "REDIRECT" as const,
+      paymentPolicy: "PREPAY" as const,
+      checkInDate: input.checkInDate,
+      checkOutDate: input.checkOutDate,
+    });
+    const result = await searchHotelsForCheckout(input, {
+      search: vi.fn().mockResolvedValue([
+        hotel("3", "Costoso", 500),
+        hotel("2", "Zeta", 250),
+        hotel("1", "Alfa", 250),
+      ]),
+    });
+
+    expect(result.hotels.map(({ hotelId }) => hotelId)).toEqual(["1", "2", "3"]);
+  });
 });

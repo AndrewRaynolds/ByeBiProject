@@ -68,6 +68,45 @@ describe("searchFlightsForCheckout", () => {
     expect(result?.flights[0]?.checkoutUrl).toBe(result?.checkoutUrl);
   });
 
+  it("orders offers by price, stops, duration and stable identifiers", async () => {
+    const offer = (
+      id: string,
+      airline: string,
+      price: number,
+      stops: number,
+      totalDuration: string,
+    ) => ({
+      id,
+      price,
+      currency: "EUR",
+      outbound: [{
+        departure: { iataCode: "FCO", at: "2026-11-20T10:00:00" },
+        arrival: { iataCode: "BCN", at: "2026-11-20T12:00:00" },
+        carrierCode: "VY",
+        flightNumber: "6101",
+        duration: "PT2H",
+      }],
+      airlines: [airline],
+      totalDuration,
+      stops,
+    });
+    const result = await searchFlightsForCheckout(input, {
+      search: vi.fn().mockResolvedValue([
+        offer("4", "Expensive", 250, 0, "PT2H"),
+        offer("3", "CheapStop", 150, 1, "PT1H"),
+        offer("2", "CheapDirectLong", 150, 0, "PT3H"),
+        offer("1", "CheapDirectShort", 150, 0, "PT2H"),
+      ]),
+    });
+
+    expect(result?.flights.map((flight) => flight.airline)).toEqual([
+      "CheapDirectShort",
+      "CheapDirectLong",
+      "CheapStop",
+      "Expensive",
+    ]);
+  });
+
   it("rejects an invalid partner identifier instead of emitting an unsafe URL", async () => {
     await expect(searchFlightsForCheckout({
       ...input,
