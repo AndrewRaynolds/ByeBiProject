@@ -6,8 +6,12 @@ import ExperienceTypes from "@/components/ExperienceTypes";
 import SecretBlog from "@/components/SecretBlog";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
+import { useEffect } from "react";
+import { trackProductEvent } from "@/lib/track";
 
 export default function HomeBride() {
+  useEffect(() => trackProductEvent("home_view"), []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />

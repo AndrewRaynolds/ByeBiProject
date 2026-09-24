@@ -14,13 +14,19 @@ import {
   merchandiseOrders,
   merchandiseNotifications,
   newsletterSubscribers,
+  productEvents,
   type MerchandiseOrder,
   type InsertMerchandiseOrder,
   type MerchandiseNotification,
   type MerchandiseNotificationType,
   type NewsletterSubscriber,
+  type InsertProductEvent,
 } from "@shared/schema";
-import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
+import {
+  productEventNames,
+  type AffiliateClickSummary,
+  type ProductAnalyticsSummary,
+} from "@shared/analyticsSchemas";
 import { and, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
@@ -94,6 +100,8 @@ export interface IStorage {
   // Privacy-preserving first-party affiliate analytics
   recordAffiliateClick(click: InsertAffiliateClick): Promise<void>;
   getAffiliateClickSummary(since: Date, days: number): Promise<AffiliateClickSummary>;
+  recordProductEvent(event: InsertProductEvent): Promise<void>;
+  getProductAnalyticsSummary(since: Date, days: 7 | 30): Promise<ProductAnalyticsSummary>;
 
   // Merchandise order lifecycle
   createMerchandiseOrder(order: InsertMerchandiseOrder): Promise<MerchandiseOrder>;
@@ -180,6 +188,10 @@ export class MemStorage implements IStorage {
     click: InsertAffiliateClick;
     createdAt: Date;
   }>;
+  private productEventItems: Array<{
+    event: InsertProductEvent;
+    createdAt: Date;
+  }>;
   private merchandiseOrderItems: Map<string, MerchandiseOrder>;
   private merchandiseNotificationItems: Map<string, MerchandiseNotification>;
   private newsletterSubscriberItems: Map<string, NewsletterSubscriber>;
@@ -200,6 +212,7 @@ export class MemStorage implements IStorage {
     this.expenseItems = new Map();
     this.processedStripeEventIds = new Set();
     this.affiliateClickEvents = [];
+    this.productEventItems = [];
     this.merchandiseOrderItems = new Map();
     this.merchandiseNotificationItems = new Map();
     this.newsletterSubscriberItems = new Map();
@@ -244,6 +257,37 @@ export class MemStorage implements IStorage {
         })),
       days,
     );
+  }
+
+  async recordProductEvent(event: InsertProductEvent): Promise<void> {
+    this.productEventItems.push({ event, createdAt: new Date() });
+  }
+
+  async getProductAnalyticsSummary(
+    since: Date,
+    days: 7 | 30,
+  ): Promise<ProductAnalyticsSummary> {
+    const recentEvents = this.productEventItems.filter((item) => item.createdAt >= since);
+    const eventCounts = productEventNames.map((eventName) => ({
+      eventName,
+      count: new Set(
+        recentEvents
+          .filter((item) => item.event.eventName === eventName)
+          .map((item) => item.event.sessionId),
+      ).size,
+    }));
+    const recentClicks = this.affiliateClickEvents.filter((item) => item.createdAt >= since);
+    const providerSessions = new Set(recentClicks.map((item) => item.click.sessionId)).size;
+    const affiliateSummary = summarizeAffiliateClicks(
+      recentClicks.map(({ click }) => ({
+        provider: click.provider,
+        placement: click.placement,
+        monetized: click.monetized,
+        count: 1,
+      })),
+      days,
+    );
+    return summarizeProductAnalytics(eventCounts, providerSessions, affiliateSummary, days);
   }
 
   async createMerchandiseOrder(
@@ -1222,6 +1266,40 @@ export class DatabaseStorage extends MemStorage {
     return summarizeAffiliateClicks(rows, days);
   }
 
+  override async recordProductEvent(event: InsertProductEvent): Promise<void> {
+    await this.db.insert(productEvents).values(event);
+  }
+
+  override async getProductAnalyticsSummary(
+    since: Date,
+    days: 7 | 30,
+  ): Promise<ProductAnalyticsSummary> {
+    const [eventRows, providerSessionRows, affiliateSummary] = await Promise.all([
+      this.db
+        .select({
+          eventName: productEvents.eventName,
+          count: sql<number>`count(distinct ${productEvents.sessionId})::int`,
+        })
+        .from(productEvents)
+        .where(gte(productEvents.createdAt, since))
+        .groupBy(productEvents.eventName),
+      this.db
+        .select({
+          count: sql<number>`count(distinct ${affiliateClicks.sessionId})::int`,
+        })
+        .from(affiliateClicks)
+        .where(gte(affiliateClicks.createdAt, since)),
+      this.getAffiliateClickSummary(since, days),
+    ]);
+
+    return summarizeProductAnalytics(
+      eventRows,
+      Number(providerSessionRows[0]?.count ?? 0),
+      affiliateSummary,
+      days,
+    );
+  }
+
   override async createMerchandiseOrder(
     order: InsertMerchandiseOrder,
   ): Promise<MerchandiseOrder> {
@@ -1665,6 +1743,35 @@ export function summarizeAffiliateClicks(
     providers: toRows(providers),
     placements: toRows(placements),
   };
+}
+
+type ProductEventCountRow = { eventName: string; count: number };
+
+export function summarizeProductAnalytics(
+  eventRows: ProductEventCountRow[],
+  providerSessions: number,
+  affiliateSummary: AffiliateClickSummary,
+  days: 7 | 30,
+): ProductAnalyticsSummary {
+  const counts = new Map(eventRows.map((row) => [row.eventName, Number(row.count)]));
+  const orderedSteps = [
+    ...productEventNames.slice(0, 8),
+    "provider_click" as const,
+    productEventNames[8],
+  ];
+  let previousCount: number | null = null;
+  const funnel = orderedSteps.map((eventName) => {
+    const count = eventName === "provider_click"
+      ? providerSessions
+      : (counts.get(eventName) ?? 0);
+    const previousStepRate = previousCount && previousCount > 0
+      ? Math.round((count / previousCount) * 1_000) / 10
+      : null;
+    previousCount = count;
+    return { eventName, count, previousStepRate };
+  });
+
+  return { days, funnel, providers: affiliateSummary.providers };
 }
 
 export function createStorageFromEnvironment(): IStorage {

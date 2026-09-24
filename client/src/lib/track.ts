@@ -2,6 +2,7 @@ import { debugLog } from "./debug";
 import type {
   AffiliatePlacement,
   AffiliateProvider,
+  ProductEventName,
 } from "@shared/analyticsSchemas";
 
 export function trackEvent(name: string, payload: Record<string, unknown>) {
@@ -31,18 +32,51 @@ function createPageSessionId(): string {
   ].join("-");
 }
 
-const pageSessionId = createPageSessionId();
+const SESSION_ID_KEY = "byebi.analytics.sessionId";
+const fallbackSessionId = createPageSessionId();
+
+function getAnonymousSessionId(): string {
+  try {
+    const existing = sessionStorage.getItem(SESSION_ID_KEY);
+    if (existing) return existing;
+    sessionStorage.setItem(SESSION_ID_KEY, fallbackSessionId);
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers.
+  }
+  return fallbackSessionId;
+}
+
+function getBrand(): "byebro" | "byebride" {
+  return localStorage.getItem("selectedBrand") === "byebride" ? "byebride" : "byebro";
+}
+
+export function trackProductEvent(eventName: ProductEventName): void {
+  const sessionId = getAnonymousSessionId();
+  const dedupeKey = `byebi.analytics.sent.${eventName}`;
+  try {
+    if (sessionStorage.getItem(dedupeKey) === sessionId) return;
+    sessionStorage.setItem(dedupeKey, sessionId);
+  } catch {
+    // Tracking remains best-effort when storage is unavailable.
+  }
+
+  void fetch("/api/analytics/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, eventName, brand: getBrand() }),
+    keepalive: true,
+  }).catch(() => {
+    // Analytics must never alter the product flow.
+  });
+}
 
 export function trackAffiliateClick(click: AffiliateClick): void {
-  const selectedBrand = localStorage.getItem("selectedBrand");
-  const brand = selectedBrand === "byebride" ? "byebride" : "byebro";
-
   void fetch("/api/analytics/affiliate-clicks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      sessionId: pageSessionId,
-      brand,
+      sessionId: getAnonymousSessionId(),
+      brand: getBrand(),
       ...click,
     }),
     keepalive: true,

@@ -15,6 +15,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { consumeJsonSse } from '@/lib/sse';
 import { createChatCheckoutContext } from '@/lib/chatCheckout';
 import { debugLog } from '@/lib/debug';
+import { trackProductEvent } from '@/lib/track';
 
 const messageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(2_000),
@@ -220,6 +221,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
               );
               pendingFlightSearchRef.current = null;
               if (checkoutContext) {
+                trackProductEvent('trip_plan_completed');
                 localStorage.setItem('currentItinerary', JSON.stringify(checkoutContext));
                 localStorage.removeItem('selectedFlight');
 
@@ -366,6 +368,7 @@ export default function ChatDialogCompactBride({ open, onOpenChange, initialMess
 
   const onSubmit = async (data: MessageFormValues) => {
     if (isLoading) return;
+    trackProductEvent('chat_started');
     form.reset();
     await sendChatRequest(data.message, true);
   };

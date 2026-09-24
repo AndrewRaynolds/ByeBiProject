@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import type { ExpenseGroup, Trip } from "@shared/schema";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { createSavedTripContext } from "@/lib/tripContext";
+import { trackProductEvent } from "@/lib/track";
 import {
   type BookingKind,
   loadTripBookingStatus,
@@ -54,6 +55,10 @@ export default function TripHub() {
     queryKey: [`/api/trips/${id}/expense-groups`],
     enabled: Boolean(trip),
   });
+
+  useEffect(() => {
+    if (trip) trackProductEvent("trip_hub_viewed");
+  }, [trip]);
 
   const openCheckout = () => {
     if (!trip) return;

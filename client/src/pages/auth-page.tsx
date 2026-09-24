@@ -18,6 +18,7 @@ import {
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { getSafePostAuthPath } from "@/lib/authNavigation";
+import { trackProductEvent } from "@/lib/track";
 
 const loginSchema = z.object({
   email: z.string().email("Email non valida"),
@@ -48,6 +49,12 @@ export default function AuthPage() {
     "h-12 border-gray-500 bg-white text-gray-950 caret-gray-950",
     isBride ? "focus-visible:ring-pink-500" : "focus-visible:ring-red-500",
   ].join(" ");
+
+  useEffect(() => trackProductEvent("auth_started"), []);
+
+  useEffect(() => {
+    if (registerMutation.isSuccess) trackProductEvent("signup_completed");
+  }, [registerMutation.isSuccess]);
 
   useEffect(() => {
     if (user) {

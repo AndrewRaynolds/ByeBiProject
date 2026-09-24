@@ -38,3 +38,42 @@ export const affiliateClickSummarySchema = z.object({
 });
 
 export type AffiliateClickSummary = z.infer<typeof affiliateClickSummarySchema>;
+
+export const productEventNames = [
+  "home_view",
+  "chat_started",
+  "trip_plan_completed",
+  "checkout_viewed",
+  "auth_started",
+  "signup_completed",
+  "trip_saved",
+  "trip_hub_viewed",
+  "splitta_opened",
+] as const;
+
+export const productEventNameSchema = z.enum(productEventNames);
+
+export const productEventSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    eventName: productEventNameSchema,
+    brand: z.enum(["byebro", "byebride"]),
+  })
+  .strict();
+
+export type ProductEvent = z.infer<typeof productEventSchema>;
+export type ProductEventName = ProductEvent["eventName"];
+
+export const productFunnelStepSchema = z.object({
+  eventName: z.enum([...productEventNames, "provider_click"]),
+  count: z.number().int().nonnegative(),
+  previousStepRate: z.number().nonnegative().nullable(),
+});
+
+export const productAnalyticsSummarySchema = z.object({
+  days: z.union([z.literal(7), z.literal(30)]),
+  funnel: z.array(productFunnelStepSchema),
+  providers: z.array(affiliateSummaryRowSchema),
+});
+
+export type ProductAnalyticsSummary = z.infer<typeof productAnalyticsSummarySchema>;
