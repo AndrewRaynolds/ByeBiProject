@@ -5,6 +5,7 @@ import {
   normalizeTripDate,
 } from "@shared/dateUtils";
 import { isAviasalesCheckoutUrl } from "@shared/flightSchemas";
+import type { Trip } from "@shared/schema";
 
 const dateOnlySchema = z.string().refine(
   (value) => normalizeTripDate(value) === value,
@@ -30,6 +31,11 @@ const storedTripContextSchema = z
     originCity: z.string().trim().max(100).optional(),
     destination: z.string().trim().min(1).max(100),
     partyType: z.enum(["bachelor", "bachelorette"]).optional(),
+    budget: z.union([
+      z.string().trim().min(1).max(30),
+      z.number().int().positive(),
+    ]).optional(),
+    activities: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
     startDate: dateOnlySchema,
     endDate: dateOnlySchema,
     people: z.number().int().min(1).max(50),
@@ -80,6 +86,8 @@ export interface TripContext {
   flightLabel: string;
   originCity?: string;
   partyType?: "bachelor" | "bachelorette";
+  budget?: string | number;
+  activities?: string[];
 }
 
 export function createTripContext(value: unknown): TripContext | null {
@@ -101,7 +109,30 @@ export function createTripContext(value: unknown): TripContext | null {
       `${origin} → ${result.data.destination}`,
     originCity: result.data.originCity,
     ...(result.data.partyType ? { partyType: result.data.partyType } : {}),
+    ...(result.data.budget !== undefined ? { budget: result.data.budget } : {}),
+    ...(result.data.activities ? { activities: result.data.activities } : {}),
   };
+}
+
+export function createSavedTripContext(
+  trip: Pick<Trip, "departureCity" | "destinations" | "startDate" | "endDate" | "participants" | "experienceType" | "budget" | "activities">,
+): TripContext | null {
+  const destination = trip.destinations?.[0] ?? "";
+  const origin = trip.departureCity;
+
+  return createTripContext({
+    destination,
+    origin,
+    originCity: origin,
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    people: trip.participants,
+    partyType: trip.experienceType === "bachelorette" ? "bachelorette" : "bachelor",
+    budget: trip.budget,
+    activities: trip.activities ?? [],
+    aviasalesCheckoutUrl: "",
+    flightLabel: `${origin} → ${destination}`,
+  });
 }
 
 export function parseStoredTripContext(serialized: string): TripContext | null {

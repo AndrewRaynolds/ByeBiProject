@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTripContext, parseStoredTripContext } from "./tripContext";
+import { createSavedTripContext, createTripContext, parseStoredTripContext } from "./tripContext";
 
 const validContext = {
   origin: "Milano",
@@ -44,6 +44,27 @@ describe("TripContext", () => {
       }),
     ).toMatchObject({
       aviasalesCheckoutUrl: "https://www.aviasales.com/search/legacy-flight?marker=685469",
+    });
+  });
+
+  it("restores all useful saved-trip fields without persisting a flight URL", () => {
+    expect(createSavedTripContext({
+      departureCity: "Roma",
+      destinations: ["Barcellona"],
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      participants: 8,
+      experienceType: "bachelorette",
+      budget: 475,
+      activities: ["Tapas tour", "Kart"],
+    })).toMatchObject({
+      origin: "Roma",
+      destination: "Barcellona",
+      people: 8,
+      partyType: "bachelorette",
+      budget: 475,
+      activities: ["Tapas tour", "Kart"],
+      aviasalesCheckoutUrl: "",
     });
   });
 

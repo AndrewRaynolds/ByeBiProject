@@ -49,6 +49,21 @@ type FlightSearchDependencies = {
   onProviderError?: (error: unknown) => void;
 };
 
+function durationMinutes(duration: string): number {
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(duration);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  return Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0);
+}
+
+export function compareCheckoutFlights(a: FlightResult, b: FlightResult): number {
+  return a.price - b.price
+    || a.stops - b.stops
+    || durationMinutes(a.totalDuration) - durationMinutes(b.totalDuration)
+    || a.airlines.join(", ").localeCompare(b.airlines.join(", "))
+    || (a.outbound[0]?.departure.at ?? "").localeCompare(b.outbound[0]?.departure.at ?? "")
+    || a.id.localeCompare(b.id);
+}
+
 export async function searchFlightsForCheckout(
   input: FlightCheckoutSearchInput,
   dependencies: FlightSearchDependencies = {},
@@ -85,7 +100,7 @@ export async function searchFlightsForCheckout(
       currency: input.currency,
     });
 
-    const flights = flightResults.slice(0, 5).map((flight, index) => ({
+    const flights = [...flightResults].sort(compareCheckoutFlights).slice(0, 5).map((flight, index) => ({
       flightId: `flight-${index + 1}`,
       airline: flight.airlines.join(", "),
       price: flight.price,

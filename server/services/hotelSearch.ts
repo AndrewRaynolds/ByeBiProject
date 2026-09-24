@@ -11,6 +11,12 @@ type HotelSearchDependencies = {
   onProviderError?: (error: unknown) => void;
 };
 
+export function compareCheckoutHotels(a: HotelResult, b: HotelResult): number {
+  return a.priceTotal - b.priceTotal
+    || a.name.localeCompare(b.name)
+    || a.hotelId.localeCompare(b.hotelId);
+}
+
 export async function searchHotelsForCheckout(
   input: HotelSearchQuery,
   dependencies: HotelSearchDependencies = {},
@@ -28,7 +34,7 @@ export async function searchHotelsForCheckout(
     return {
       ...baseResult,
       hotelDataStatus: "live",
-      hotels,
+      hotels: [...hotels].sort(compareCheckoutHotels),
     };
   } catch (error: unknown) {
     dependencies.onProviderError?.(error);

@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { createSavedTripContext } from "@/lib/tripContext";
 
 type MerchandiseOrderSummary = {
   id: string;
@@ -338,17 +339,9 @@ export default function Dashboard() {
                         <Button
                           className="w-full bg-primary hover:bg-accent sm:flex-1"
                           onClick={() => {
-                            const destination = trip.destinations?.[0] || "";
-                            const origin = trip.departureCity || "Italia";
-                            localStorage.setItem("currentItinerary", JSON.stringify({
-                              destination,
-                              origin,
-                              startDate: trip.startDate,
-                              endDate: trip.endDate,
-                              people: trip.participants,
-                              aviasalesCheckoutUrl: "",
-                              flightLabel: `${origin} → ${destination}`,
-                            }));
+                            const context = createSavedTripContext(trip);
+                            if (!context) return;
+                            localStorage.setItem("currentItinerary", JSON.stringify(context));
                             setLocation("/checkout");
                           }}
                         >
