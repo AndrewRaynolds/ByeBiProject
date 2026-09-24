@@ -346,3 +346,27 @@ export const insertAffiliateClickSchema = createInsertSchema(affiliateClicks)
 
 export type AffiliateClick = typeof affiliateClicks.$inferSelect;
 export type InsertAffiliateClick = z.infer<typeof insertAffiliateClickSchema>;
+
+export const productEvents = pgTable(
+  "product_events",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    eventName: text("event_name").notNull(),
+    brand: text("brand").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("product_events_created_at_idx").on(table.createdAt),
+    index("product_events_event_name_idx").on(table.eventName),
+  ],
+);
+
+export const insertProductEventSchema = createInsertSchema(productEvents).pick({
+  sessionId: true,
+  eventName: true,
+  brand: true,
+});
+
+export type ProductEventRecord = typeof productEvents.$inferSelect;
+export type InsertProductEvent = z.infer<typeof insertProductEventSchema>;

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { trackAffiliateClick } from "./track";
+import { trackAffiliateClick, trackProductEvent } from "./track";
 
 afterEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -42,5 +43,29 @@ describe("affiliate click tracking", () => {
       "provider",
       "sessionId",
     ]);
+  });
+
+  it("uses the same anonymous browser-session id and deduplicates product steps", () => {
+    const fetchMock = vi.fn().mockResolvedValue({});
+    vi.stubGlobal("fetch", fetchMock);
+
+    trackProductEvent("home_view");
+    trackProductEvent("home_view");
+    trackAffiliateClick({
+      provider: "booking",
+      placement: "checkout_hotel",
+      monetized: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const productBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const affiliateBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/analytics/events");
+    expect(productBody).toEqual({
+      sessionId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      eventName: "home_view",
+      brand: "byebro",
+    });
+    expect(affiliateBody.sessionId).toBe(productBody.sessionId);
   });
 });

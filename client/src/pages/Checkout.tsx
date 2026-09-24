@@ -16,7 +16,7 @@ import {
   hasBookingAffiliateId,
   isMonetizedAviasalesUrl,
 } from '@/lib/affiliateLinks';
-import { trackAffiliateClick } from '@/lib/track';
+import { trackAffiliateClick, trackProductEvent } from '@/lib/track';
 import { openExternalUrl } from '@/lib/externalNavigation';
 import { AffiliateNotice } from '@/components/AffiliateNotice';
 import { useAuth } from '@/hooks/use-auth';
@@ -60,6 +60,7 @@ export default function Checkout() {
     }
 
     setTripContext(context);
+    trackProductEvent('checkout_viewed');
     setFlightCheckoutUrl(context.aviasalesCheckoutUrl);
     const controller = new AbortController();
     fetchHotels(context, controller.signal);
@@ -252,6 +253,7 @@ export default function Checkout() {
     setSavingTrip(true);
     try {
       const { created } = await savePlannedTrip(tripContext);
+      if (created) trackProductEvent('trip_saved');
       await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
       setTripSaveStatus(created ? 'saved' : 'existing');
       toast({

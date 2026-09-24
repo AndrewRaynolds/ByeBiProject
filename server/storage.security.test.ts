@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createStorageFromEnvironment, MemStorage, summarizeAffiliateClicks } from './storage';
+import { createStorageFromEnvironment, MemStorage, summarizeAffiliateClicks, summarizeProductAnalytics } from './storage';
 
 const originalPersistenceMode = process.env.CRITICAL_DATA_PERSISTENCE;
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -459,6 +459,45 @@ describe('expense group ownership', () => {
         { key: 'experiences', total: 1, monetized: 1 },
       ],
     });
+  });
+
+  it('deduplicates product funnel counts by anonymous session', async () => {
+    const storage = new MemStorage();
+    const event = {
+      sessionId: '123e4567-e89b-42d3-a456-426614174000',
+      eventName: 'home_view' as const,
+      brand: 'byebro' as const,
+    };
+    await storage.recordProductEvent(event);
+    await storage.recordProductEvent(event);
+    await storage.recordProductEvent({
+      ...event,
+      sessionId: '223e4567-e89b-42d3-a456-426614174000',
+      eventName: 'chat_started',
+    });
+
+    const summary = await storage.getProductAnalyticsSummary(new Date(0), 7);
+    expect(summary.funnel.slice(0, 2)).toEqual([
+      { eventName: 'home_view', count: 1, previousStepRate: null },
+      { eventName: 'chat_started', count: 1, previousStepRate: 100 },
+    ]);
+  });
+
+  it('combines provider sessions without duplicating affiliate event storage', () => {
+    const summary = summarizeProductAnalytics(
+      [{ eventName: 'trip_hub_viewed', count: 4 }],
+      2,
+      {
+        days: 30,
+        totalClicks: 3,
+        monetizedClicks: 2,
+        providers: [{ key: 'booking', total: 3, monetized: 2 }],
+        placements: [],
+      },
+      30,
+    );
+    expect(summary.funnel.find((step) => step.eventName === 'provider_click')?.count).toBe(2);
+    expect(summary.providers).toEqual([{ key: 'booking', total: 3, monetized: 2 }]);
   });
 
   it('requires a database URL when database persistence is enabled', () => {

@@ -25,7 +25,7 @@ import { flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightS
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
 import { parsePositiveIntegerParam } from "./routeParams";
-import { affiliateClickEventSchema } from "@shared/analyticsSchemas";
+import { affiliateClickEventSchema, productEventSchema } from "@shared/analyticsSchemas";
 import { MerchandiseOrderRetryError, WebhookHandlers } from "./webhookHandlers";
 import { isValidPrintfulWebhookToken, processPrintfulWebhook } from "./printfulWebhookHandlers";
 import { drainMerchandiseNotifications } from "./services/transactionalEmail";
@@ -116,6 +116,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(202).json({ accepted: true });
     } catch (error: unknown) {
       console.error("Error recording affiliate click", getSafeErrorMetadata(error));
+      return res.status(503).json({ error: "Analytics temporarily unavailable" });
+    }
+  });
+
+  app.post("/api/analytics/events", async (req: Request, res: Response) => {
+    const event = productEventSchema.safeParse(req.body);
+    if (!event.success) {
+      return res.status(400).json({ error: "Invalid product analytics event" });
+    }
+
+    try {
+      await storage.recordProductEvent(event.data);
+      return res.status(202).json({ accepted: true });
+    } catch (error: unknown) {
+      console.error("Error recording product event", getSafeErrorMetadata(error));
       return res.status(503).json({ error: "Analytics temporarily unavailable" });
     }
   });
@@ -547,6 +562,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(summary);
       } catch (error: unknown) {
         console.error("Error loading affiliate summary", getSafeErrorMetadata(error));
+        return res.status(503).json({ error: "Analytics temporarily unavailable" });
+      }
+    },
+  );
+
+  app.get(
+    "/api/admin/product-analytics-summary",
+    isAuthenticated,
+    isAdmin,
+    async (req: Request, res: Response) => {
+      const parsedDays = z.enum(["7", "30"]).safeParse(String(req.query.days ?? "30"));
+      if (!parsedDays.success) {
+        return res.status(400).json({ error: "Invalid analytics period" });
+      }
+
+      try {
+        const days = Number(parsedDays.data) as 7 | 30;
+        const since = new Date();
+        since.setUTCDate(since.getUTCDate() - days);
+        return res.json(await storage.getProductAnalyticsSummary(since, days));
+      } catch (error: unknown) {
+        console.error("Error loading product analytics", getSafeErrorMetadata(error));
         return res.status(503).json({ error: "Analytics temporarily unavailable" });
       }
     },

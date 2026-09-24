@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Trip, type MerchandiseOrderItem } from "@shared/schema";
-import type { AffiliateClickSummary } from "@shared/analyticsSchemas";
+import type { ProductAnalyticsSummary } from "@shared/analyticsSchemas";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [adminOrderFilter, setAdminOrderFilter] = useState<"all" | "attention" | "active" | "completed">("all");
   const [adminOrderSearch, setAdminOrderSearch] = useState("");
+  const [analyticsDays, setAnalyticsDays] = useState<7 | 30>(30);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -105,9 +106,9 @@ export default function Dashboard() {
       refetchInterval: 60_000,
     });
 
-  const { data: affiliateSummary, isLoading: isLoadingAffiliateSummary } =
-    useQuery<AffiliateClickSummary>({
-      queryKey: ["/api/admin/affiliate-summary?days=30"],
+  const { data: productAnalytics, isLoading: isLoadingProductAnalytics } =
+    useQuery<ProductAnalyticsSummary>({
+      queryKey: [`/api/admin/product-analytics-summary?days=${analyticsDays}`],
       enabled: Boolean(user?.isAdmin),
     });
 
@@ -262,7 +263,7 @@ export default function Dashboard() {
                   </TabsTrigger>
                   <TabsTrigger value="affiliateAnalytics">
                     <BarChart3 className="mr-2 h-4 w-4" />
-                    {t('dashboard.affiliateAnalytics')}
+                    {t('dashboard.productAnalytics')}
                   </TabsTrigger>
                 </>
               )}
@@ -600,59 +601,79 @@ export default function Dashboard() {
 
             {user?.isAdmin && (
               <TabsContent value="affiliateAnalytics">
-                {isLoadingAffiliateSummary ? (
+                {isLoadingProductAnalytics ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Skeleton className="h-32 w-full" />
                     <Skeleton className="h-32 w-full" />
                   </div>
-                ) : affiliateSummary ? (
+                ) : productAnalytics ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <MousePointerClick className="h-5 w-5" />
-                            {t('dashboard.affiliateClicks')}
-                          </CardTitle>
-                          <CardDescription>{t('dashboard.last30Days')}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-3xl font-bold">
-                          {affiliateSummary.totalClicks}
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>{t('dashboard.monetizedClicks')}</CardTitle>
-                          <CardDescription>{t('dashboard.last30Days')}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="text-3xl font-bold text-green-700">
-                          {affiliateSummary.monetizedClicks}
-                        </CardContent>
-                      </Card>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-bold">{t('dashboard.productFunnel')}</h3>
+                        <p className="text-sm text-gray-600">{t('dashboard.anonymousSessions')}</p>
+                      </div>
+                      <div className="flex gap-2" aria-label={t('dashboard.analyticsPeriod')}>
+                        {([7, 30] as const).map((days) => (
+                          <Button
+                            key={days}
+                            type="button"
+                            variant={analyticsDays === days ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setAnalyticsDays(days)}
+                          >
+                            {t('dashboard.lastDays', { days: String(days) })}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
 
                     <Card>
                       <CardHeader>
-                        <CardTitle>{t('dashboard.clicksByProvider')}</CardTitle>
+                        <CardTitle>{t('dashboard.funnelSteps')}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {productAnalytics.funnel.map((step) => (
+                          <div key={step.eventName} className="rounded-lg border p-4">
+                            <p className="text-sm font-medium text-gray-600">
+                              {t(`dashboard.analyticsEvent.${step.eventName}`)}
+                            </p>
+                            <p className="mt-1 text-3xl font-bold">{step.count}</p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {step.previousStepRate === null
+                                ? t('dashboard.funnelStart')
+                                : t('dashboard.fromPreviousStep', { rate: String(step.previousStepRate) })}
+                            </p>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <MousePointerClick className="h-5 w-5" />
+                          {t('dashboard.clicksByProvider')}
+                        </CardTitle>
+                        <CardDescription>{t('dashboard.providerClicksDescription')}</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        {affiliateSummary.providers.length > 0 ? (
-                          affiliateSummary.providers.map((provider) => (
-                            <div key={provider.key} className="flex items-center justify-between border-b pb-3 last:border-0">
-                              <span className="font-medium capitalize">{provider.key}</span>
+                        {(["aviasales", "booking", "getyourguide"] as const).map((providerName) => {
+                          const provider = productAnalytics.providers.find((row) => row.key === providerName);
+                          return (
+                            <div key={providerName} className="flex items-center justify-between border-b pb-3 last:border-0">
+                              <span className="font-medium capitalize">{providerName}</span>
                               <span className="text-sm text-gray-600">
-                                {provider.total} {t('dashboard.clicks')} · {provider.monetized} {t('dashboard.monetized')}
+                                {provider?.total ?? 0} {t('dashboard.clicks')}
                               </span>
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-gray-600">{t('dashboard.noAffiliateClicks')}</p>
-                        )}
+                          );
+                        })}
                       </CardContent>
                     </Card>
                   </div>
                 ) : (
-                  <p className="text-red-600">{t('dashboard.affiliateAnalyticsError')}</p>
+                  <p className="text-red-600">{t('dashboard.productAnalyticsError')}</p>
                 )}
               </TabsContent>
             )}
