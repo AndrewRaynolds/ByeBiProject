@@ -1,0 +1,148 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import Dashboard from "./Dashboard";
+
+const { apiRequest, invalidateQueries, toast } = vi.hoisted(() => ({
+  apiRequest: vi.fn(),
+  invalidateQueries: vi.fn(),
+  toast: vi.fn(),
+}));
+
+const trip = {
+  id: 12,
+  userId: "user-a",
+  name: "Weekend a Barcellona",
+  participants: 8,
+  startDate: "2026-11-20",
+  endDate: "2026-11-23",
+  departureCity: "Roma",
+  destinations: ["Barcellona"],
+  experienceType: "bachelor",
+  budget: 600,
+  activities: ["Tapas tour", "Kart", "Beach club"],
+  specialRequests: null,
+  includeMerch: false,
+  createdAt: new Date("2026-09-01T10:00:00Z"),
+};
+
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: ({ queryKey }: { queryKey: string[] }) => {
+    if (queryKey[0].startsWith("/api/trips/user/")) {
+      return { data: [trip], isLoading: false, error: null };
+    }
+    return { data: [], isLoading: false, isFetching: false, error: null, refetch: vi.fn() };
+  },
+  useMutation: (options: {
+    mutationFn: (value: never) => Promise<unknown>;
+    onSuccess?: () => Promise<void> | void;
+    onError?: () => void;
+  }) => ({
+    mutate: async (value: never) => {
+      try {
+        await options.mutationFn(value);
+        await options.onSuccess?.();
+      } catch {
+        options.onError?.();
+      }
+    },
+    isPending: false,
+    variables: undefined,
+  }),
+}));
+
+vi.mock("wouter", () => ({
+  useLocation: () => ["/dashboard", vi.fn()],
+}));
+
+vi.mock("@/lib/queryClient", () => ({
+  apiRequest,
+  queryClient: { invalidateQueries },
+}));
+
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({
+    user: { id: "user-a", firstName: "Andrea", isAdmin: false },
+    isAuthenticated: true,
+  }),
+}));
+
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({ toast }),
+}));
+
+vi.mock("@/components/Header", () => ({ default: () => <div>Header</div> }));
+vi.mock("@/components/Footer", () => ({ default: () => <div>Footer</div> }));
+
+vi.mock("@/contexts/LanguageContext", () => ({
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, string | number>) => ({
+      "dashboard.welcome": `Ciao, ${values?.name}!`,
+      "dashboard.subtitle": "Gestisci i tuoi viaggi e preferenze.",
+      "dashboard.account": "Account",
+      "dashboard.accountDesc": "I tuoi viaggi e dettagli salvati.",
+      "dashboard.myTrips": "I miei viaggi",
+      "dashboard.myMerchandise": "Il mio merchandise",
+      "dashboard.experienceType.bachelor": "Addio al celibato",
+      "dashboard.destinations": "Destinazioni",
+      "dashboard.departure": "Partenza",
+      "dashboard.activities": "Attività",
+      "dashboard.participants": "Partecipanti",
+      "dashboard.moreActivities": `+ altre ${values?.count}`,
+      "dashboard.openCheckout": "Apri checkout",
+      "dashboard.deleteTrip": "Elimina",
+      "dashboard.deleteConfirmTitle": "Eliminare questo viaggio?",
+      "dashboard.deleteConfirmDesc": `Il viaggio “${values?.name}” verrà eliminato definitivamente dalla Dashboard.`,
+      "dashboard.deleteCancel": "Annulla",
+      "dashboard.deleteConfirm": "Elimina viaggio",
+      "dashboard.deleteSuccess": "Viaggio eliminato",
+      "dashboard.deleteSuccessDesc": "Il viaggio è stato rimosso dalla Dashboard.",
+    }[key] ?? key),
+  }),
+}));
+
+describe("Dashboard trips", () => {
+  beforeEach(() => {
+    apiRequest.mockReset();
+    apiRequest.mockResolvedValue(new Response(null, { status: 204 }));
+    invalidateQueries.mockReset();
+    invalidateQueries.mockResolvedValue(undefined);
+    toast.mockReset();
+  });
+
+  it("shows saved planning details without presenting the default budget", () => {
+    render(<Dashboard />);
+
+    expect(screen.getByText("Weekend a Barcellona")).toBeInTheDocument();
+    expect(screen.getByText("Partecipanti:").parentElement).toHaveTextContent("Partecipanti: 8");
+    expect(screen.getByText("Partenza:").parentElement).toHaveTextContent("Partenza: Roma");
+    expect(screen.getByText("Destinazioni:").parentElement).toHaveTextContent("Destinazioni: Barcellona");
+    expect(screen.getByText("Attività:").parentElement).toHaveTextContent("Tapas tour, Kart + altre 1");
+    expect(screen.queryByText(/€\s*600/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
+  });
+
+  it("asks for confirmation, deletes the trip and invalidates its query", async () => {
+    render(<Dashboard />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Elimina" }));
+    expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+    expect(screen.getByText(/Weekend a Barcellona.*eliminato definitivamente/)).toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Elimina viaggio" }));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith("DELETE", "/api/trips/12");
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["/api/trips/user/user-a"],
+      });
+    });
+    expect(toast).toHaveBeenCalledWith({
+      title: "Viaggio eliminato",
+      description: "Il viaggio è stato rimosso dalla Dashboard.",
+    });
+  });
+});

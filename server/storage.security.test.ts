@@ -138,6 +138,29 @@ describe('expense group ownership', () => {
     await expect(storage.getTripsByUserId('user-a')).resolves.toHaveLength(3);
   });
 
+  it('deletes trips only for their owner without revealing other users trips', async () => {
+    const storage = new MemStorage();
+    const trip = await storage.createTrip({
+      userId: 'user-a',
+      name: 'ByeBro · Barcellona',
+      participants: 8,
+      startDate: '2026-11-20',
+      endDate: '2026-11-23',
+      departureCity: 'Roma',
+      destinations: ['Barcellona'],
+      experienceType: 'bachelor',
+      budget: 600,
+      activities: [],
+      specialRequests: null,
+      includeMerch: false,
+    });
+
+    await expect(storage.deleteTripForUser(trip.id, 'user-b')).resolves.toBe(false);
+    await expect(storage.getTrip(trip.id)).resolves.toEqual(trip);
+    await expect(storage.deleteTripForUser(trip.id, 'user-a')).resolves.toBe(true);
+    await expect(storage.getTrip(trip.id)).resolves.toBeUndefined();
+  });
+
   it('records processed Stripe events idempotently', async () => {
     const storage = new MemStorage();
 
