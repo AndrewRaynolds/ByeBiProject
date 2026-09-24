@@ -1,14 +1,18 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Checkout from "./Checkout";
 
-const { navigate, apiRequest, savePlannedTrip } = vi.hoisted(() => ({
+const { navigate, apiRequest, savePlannedTrip, plannedTripMatchesSavedTrip, authState, toast, invalidateQueries } = vi.hoisted(() => ({
   navigate: vi.fn(),
   apiRequest: vi.fn(),
   savePlannedTrip: vi.fn(),
+  plannedTripMatchesSavedTrip: vi.fn(),
+  authState: { user: null as null | { id: string }, isAuthenticated: false },
+  toast: vi.fn(),
+  invalidateQueries: vi.fn(),
 }));
 
 vi.mock("wouter", () => ({
@@ -17,15 +21,15 @@ vi.mock("wouter", () => ({
 
 vi.mock("@/lib/queryClient", () => ({
   apiRequest,
-  queryClient: { invalidateQueries: vi.fn() },
+  queryClient: { invalidateQueries },
 }));
 
-vi.mock("@/lib/plannedTrip", () => ({ savePlannedTrip }));
+vi.mock("@/lib/plannedTrip", () => ({ savePlannedTrip, plannedTripMatchesSavedTrip }));
 vi.mock("@/hooks/use-auth", () => ({
-  useAuth: () => ({ user: null, isAuthenticated: false }),
+  useAuth: () => authState,
 }));
 vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({ toast }),
 }));
 vi.mock("@/components/Header", () => ({ default: () => <div>Header</div> }));
 vi.mock("@/components/GetYourGuideCta", () => ({
@@ -47,6 +51,13 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "checkout.saveTripTitle": "Salva questa pianificazione",
       "checkout.saveTripDesc": "Nulla viene salvato automaticamente.",
       "checkout.signInToSave": "Accedi per salvare",
+      "checkout.saveTrip": "Salva viaggio",
+      "checkout.tripSaved": "Viaggio salvato",
+      "checkout.tripAlreadySaved": "Già salvato",
+      "chat.tripSaved": "Viaggio salvato",
+      "chat.tripSavedDesc": "Disponibile nella Dashboard.",
+      "chat.tripAlreadySaved": "Viaggio già salvato",
+      "chat.tripAlreadySavedDesc": "Già presente nella Dashboard.",
     }[key] ?? key),
   }),
 }));
@@ -56,6 +67,11 @@ describe("Checkout fallback experience", () => {
     navigate.mockClear();
     apiRequest.mockReset();
     savePlannedTrip.mockReset();
+    plannedTripMatchesSavedTrip.mockReset();
+    toast.mockReset();
+    invalidateQueries.mockReset();
+    authState.user = null;
+    authState.isAuthenticated = false;
     localStorage.clear();
     localStorage.setItem("currentItinerary", JSON.stringify({
       origin: "Roma",
@@ -96,5 +112,64 @@ describe("Checkout fallback experience", () => {
     await waitFor(() => expect(apiRequest).toHaveBeenCalled());
     expect(savePlannedTrip).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Accedi per salvare" })).toBeInTheDocument();
+  });
+
+  it("keeps checkout context while sending an unauthenticated user to login", async () => {
+    render(<Checkout />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Accedi per salvare" }));
+
+    expect(navigate).toHaveBeenCalledWith("/auth?next=/checkout");
+    expect(localStorage.getItem("currentItinerary")).toContain("Barcellona");
+    expect(savePlannedTrip).not.toHaveBeenCalled();
+  });
+
+  it("saves once and disables repeated clicks", async () => {
+    authState.user = { id: "user-a" };
+    authState.isAuthenticated = true;
+    plannedTripMatchesSavedTrip.mockReturnValue(false);
+    savePlannedTrip.mockResolvedValue({ created: true });
+    apiRequest.mockImplementation(async (_method: string, url: string) => ({
+      json: async () => url.startsWith("/api/trips/user/") ? [] : ({
+        cityCode: "BCN",
+        checkInDate: "2026-11-20",
+        checkOutDate: "2026-11-23",
+        adults: 12,
+        currency: "EUR",
+        hotelDataStatus: "unavailable",
+        hotels: [],
+      }),
+    }));
+    render(<Checkout />);
+
+    const button = await screen.findByRole("button", { name: "Salva viaggio" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Viaggio salvato" })).toBeDisabled());
+    expect(savePlannedTrip).toHaveBeenCalledTimes(1);
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["/api/trips/user/user-a"] });
+  });
+
+  it("shows an already-saved state after returning to checkout", async () => {
+    authState.user = { id: "user-a" };
+    authState.isAuthenticated = true;
+    plannedTripMatchesSavedTrip.mockReturnValue(true);
+    apiRequest.mockImplementation(async (_method: string, url: string) => ({
+      json: async () => url.startsWith("/api/trips/user/") ? [{ id: 1 }] : ({
+        cityCode: "BCN",
+        checkInDate: "2026-11-20",
+        checkOutDate: "2026-11-23",
+        adults: 12,
+        currency: "EUR",
+        hotelDataStatus: "unavailable",
+        hotels: [],
+      }),
+    }));
+    render(<Checkout />);
+
+    expect(await screen.findByRole("button", { name: "Già salvato" })).toBeDisabled();
+    expect(savePlannedTrip).not.toHaveBeenCalled();
   });
 });

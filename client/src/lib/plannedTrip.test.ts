@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPlannedTripPayload } from "./plannedTrip";
+import { buildPlannedTripPayload, plannedTripMatchesSavedTrip } from "./plannedTrip";
 
 describe("planned trip persistence", () => {
   it("maps a completed chatbot itinerary to the dashboard trip model", () => {
@@ -36,5 +36,30 @@ describe("planned trip persistence", () => {
       endDate: "2027-06-10",
       people: 6,
     })).toBeNull();
+  });
+
+  it("recognizes only a saved trip with the same dashboard details", () => {
+    const context = {
+      destination: "Barcellona",
+      origin: "Roma",
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      people: 12,
+      partyType: "bachelor",
+      budget: "medio",
+    };
+    const savedTrip = {
+      participants: 12,
+      startDate: "2026-11-20",
+      endDate: "2026-11-23",
+      departureCity: "Roma",
+      destinations: ["Barcellona"],
+      experienceType: "bachelor",
+      budget: 600,
+    };
+
+    expect(plannedTripMatchesSavedTrip(context, savedTrip)).toBe(true);
+    expect(plannedTripMatchesSavedTrip(context, { ...savedTrip, participants: 8 })).toBe(false);
+    expect(plannedTripMatchesSavedTrip(context, { ...savedTrip, departureCity: "Milano" })).toBe(false);
   });
 });

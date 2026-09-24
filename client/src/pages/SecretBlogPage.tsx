@@ -481,8 +481,6 @@ export default function SecretBlogPage() {
     return Array.from(locs);
   }, [blogPosts]);
 
-  const totalStories = blogPosts?.length ?? 0;
-
   const accentColor = isBride ? 'from-purple-600 to-pink-500' : 'from-red-700 to-red-600';
   const accentText = isBride ? 'text-pink-400' : 'text-red-400';
 
@@ -528,7 +526,7 @@ export default function SecretBlogPage() {
             </p>
             <div className={`flex items-center justify-center gap-1.5 text-sm font-medium mb-8 ${isBride ? 'text-pink-400/70' : 'text-red-500/70'}`}>
               <Flame className="w-4 h-4" />
-              <span>{t('blog.storyCount', { count: totalStories })}</span>
+              <span>{t('blog.storyLabel')}</span>
             </div>
           </div>
         </section>
