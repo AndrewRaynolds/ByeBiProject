@@ -17,6 +17,7 @@ const SecretBlogPage = lazy(() => import("@/pages/SecretBlogPage"));
 const SecretBlogPostPage = lazy(() => import("@/pages/SecretBlogPostPage"));
 const MerchandisePage = lazy(() => import("@/pages/MerchandisePage"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
+const TripHub = lazy(() => import("@/pages/TripHub"));
 const SplittaBroPage = lazy(() => import("@/pages/SplittaBroPage"));
 const SplittaBridePage = lazy(() => import("@/pages/SplittaBridePage"));
 const DestinationsPage = lazy(() => import("@/pages/DestinationsPage"));
@@ -43,6 +44,7 @@ function Router({ selectedBrand }: BrandedAppProps) {
     <Switch>
       <Route path="/" component={HomePage} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/trips/:id" component={TripHub} />
       <Route path="/destinations" component={DestinationsPage} />
       <Route path="/experiences" component={ExperiencesPage} />
       <Route path="/secret-blog/:id" component={SecretBlogPostPage} />

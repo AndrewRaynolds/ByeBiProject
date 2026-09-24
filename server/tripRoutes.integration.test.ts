@@ -2,13 +2,14 @@ import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { deleteTripForUser, getUser } = vi.hoisted(() => ({
+const { deleteTripForUser, getTripForUser, getUser } = vi.hoisted(() => ({
   deleteTripForUser: vi.fn(),
+  getTripForUser: vi.fn(),
   getUser: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
-  storage: { deleteTripForUser },
+  storage: { deleteTripForUser, getTripForUser },
 }));
 
 vi.mock("./supabase", () => ({
@@ -19,7 +20,7 @@ vi.mock("./zapier-integration", () => ({
   registerZapierRoutes: vi.fn(),
 }));
 
-describe("DELETE /api/trips/:tripId", () => {
+describe("owner-scoped /api/trips/:tripId routes", () => {
   let baseUrl = "";
   let server: Awaited<ReturnType<typeof import("./routes").registerRoutes>>;
 
@@ -35,6 +36,7 @@ describe("DELETE /api/trips/:tripId", () => {
 
   beforeEach(() => {
     deleteTripForUser.mockReset();
+    getTripForUser.mockReset();
     getUser.mockReset();
     getUser.mockImplementation(async (token: string) => ({
       data: { user: token === "token-a" ? { id: "user-a" } : null },
@@ -53,6 +55,38 @@ describe("DELETE /api/trips/:tripId", () => {
 
     expect(response.status).toBe(401);
     expect(deleteTripForUser).not.toHaveBeenCalled();
+  });
+
+  it("loads a trip only through the authenticated owner scope", async () => {
+    getTripForUser.mockResolvedValue({ id: 12, userId: "user-a", name: "Barcelona" });
+
+    const response = await fetch(`${baseUrl}/api/trips/12`, {
+      headers: { Authorization: "Bearer token-a" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(getTripForUser).toHaveBeenCalledWith(12, "user-a");
+    expect(await response.json()).toMatchObject({ id: 12, name: "Barcelona" });
+  });
+
+  it("does not distinguish a missing trip from a non-owned trip", async () => {
+    getTripForUser.mockResolvedValue(undefined);
+
+    const response = await fetch(`${baseUrl}/api/trips/12`, {
+      headers: { Authorization: "Bearer token-a" },
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ message: "Trip not found" });
+  });
+
+  it("rejects malformed trip IDs on the read path", async () => {
+    const response = await fetch(`${baseUrl}/api/trips/nope`, {
+      headers: { Authorization: "Bearer token-a" },
+    });
+
+    expect(response.status).toBe(400);
+    expect(getTripForUser).not.toHaveBeenCalled();
   });
 
   it("deletes a trip only through the authenticated owner scope", async () => {

@@ -20,6 +20,7 @@ import { apiRequest } from '@/lib/queryClient';
 
 interface ExpenseGroup {
   id: number;
+  tripId?: number | null;
   name: string;
   description?: string;
   members: string[];
@@ -76,6 +77,9 @@ export function SplittaBride() {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const { toast } = useToast();
   const [location, navigate] = useLocation();
+  const linkedGroupId = Number(new URLSearchParams(window.location.search).get('groupId'));
+  const linkedTripId = Number(new URLSearchParams(window.location.search).get('tripId'));
+  const linkedTripName = new URLSearchParams(window.location.search).get('tripName')?.trim() || '';
 
   const groupForm = useForm<CreateGroupFormValues>({
     resolver: zodResolver(createGroupSchema),
@@ -115,8 +119,22 @@ export function SplittaBride() {
     try {
       const response = await apiRequest('GET', '/api/expense-groups');
       if (response.ok) {
-        const groupsData = await response.json();
+        const groupsData = await response.json() as ExpenseGroup[];
         setGroups(groupsData);
+        const linkedGroup = groupsData.find((group) =>
+          (Number.isInteger(linkedGroupId) && linkedGroupId > 0 && group.id === linkedGroupId) ||
+          (Number.isInteger(linkedTripId) && linkedTripId > 0 && group.tripId === linkedTripId),
+        );
+        if (linkedGroup) {
+          setSelectedGroup(linkedGroup);
+        } else if (Number.isInteger(linkedTripId) && linkedTripId > 0) {
+          groupForm.reset({
+            name: linkedTripName,
+            description: t('splittabro.linkedTripDescription'),
+            members: [],
+          });
+          setShowCreateGroup(true);
+        }
       }
     } catch (error) {
       console.error('Errore caricamento gruppi:', error);
@@ -142,6 +160,7 @@ export function SplittaBride() {
     
     try {
       const response = await apiRequest('POST', '/api/expense-groups', {
+        ...(Number.isInteger(linkedTripId) && linkedTripId > 0 ? { tripId: linkedTripId } : {}),
         name: data.name,
         description: data.description,
         members: data.members,

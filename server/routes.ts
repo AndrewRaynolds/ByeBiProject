@@ -635,6 +635,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/trips/:tripId", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) {
+      return res.status(400).json({ message: "Invalid trip ID" });
+    }
+
+    try {
+      const trip = await storage.getTripForUser(tripId, req.supabaseUser!.id);
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      return res.status(200).json(trip);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.delete("/api/trips/:tripId", isAuthenticated, async (req: Request, res: Response) => {
     const tripId = parsePositiveIntegerParam(req.params.tripId);
     if (tripId === null) {

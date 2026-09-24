@@ -92,7 +92,7 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "dashboard.activities": "Attività",
       "dashboard.participants": "Partecipanti",
       "dashboard.moreActivities": `+ altre ${values?.count}`,
-      "dashboard.openCheckout": "Apri checkout",
+      "dashboard.openTripHub": "Apri viaggio",
       "dashboard.deleteTrip": "Elimina",
       "dashboard.deleteConfirmTitle": "Eliminare questo viaggio?",
       "dashboard.deleteConfirmDesc": `Il viaggio “${values?.name}” verrà eliminato definitivamente dalla Dashboard.`,
@@ -127,24 +127,13 @@ describe("Dashboard trips", () => {
     expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
   });
 
-  it("restores the saved planning context before opening checkout", () => {
+  it("opens the dedicated Trip Hub from the saved-trip card", () => {
     render(<Dashboard />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Apri checkout" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apri viaggio" }));
 
-    expect(JSON.parse(localStorage.getItem("currentItinerary") ?? "null")).toMatchObject({
-      origin: "Roma",
-      originCity: "Roma",
-      destination: "Barcellona",
-      startDate: "2026-11-20",
-      endDate: "2026-11-23",
-      people: 8,
-      partyType: "bachelor",
-      budget: 600,
-      activities: ["Tapas tour", "Kart", "Beach club"],
-      aviasalesCheckoutUrl: "",
-    });
-    expect(navigate).toHaveBeenCalledWith("/checkout");
+    expect(localStorage.getItem("currentItinerary")).toBeNull();
+    expect(navigate).toHaveBeenCalledWith("/trips/12");
   });
 
   it("asks for confirmation, deletes the trip and invalidates its query", async () => {
