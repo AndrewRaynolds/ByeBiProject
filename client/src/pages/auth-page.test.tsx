@@ -36,6 +36,7 @@ vi.mock("@/contexts/LanguageContext", () => ({
         "auth.signup": "Registrati",
         "auth.email": "Email",
         "auth.password": "Password",
+        "auth.forgotPassword": "Password dimenticata?",
         "auth.usernameOptional": "Username (opzionale)",
         "auth.fullNameOptional": "Nome completo (opzionale)",
         "auth.createAccount": "Crea Account",
@@ -78,6 +79,10 @@ describe("AuthPage", () => {
     expect(screen.getByLabelText("Email")).toHaveAttribute("autocomplete", "email");
     expect(screen.getByLabelText("Email")).not.toHaveAttribute("placeholder");
     expect(screen.getByLabelText("Password")).not.toHaveAttribute("placeholder");
+    expect(screen.getByRole("link", { name: "Password dimenticata?" })).toHaveAttribute(
+      "href",
+      "/auth/forgot-password",
+    );
   });
 
   it("uses ByeBride content when that brand is selected", () => {

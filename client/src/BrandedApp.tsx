@@ -23,6 +23,8 @@ const DestinationsPage = lazy(() => import("@/pages/DestinationsPage"));
 const ExperiencesPage = lazy(() => import("@/pages/ExperiencesPage"));
 const ZapierWebhooksPage = lazy(() => import("@/pages/ZapierWebhooksPage"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password-page"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password-page"));
 const AffiliateDisclosurePage = lazy(() => import("@/pages/AffiliateDisclosurePage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
@@ -52,6 +54,8 @@ function Router({ selectedBrand }: BrandedAppProps) {
       <ProtectedRoute path="/splitta-bro" component={SplittaPage} />
       <ProtectedRoute path="/splitta-bride" component={SplittaPage} />
       <ProtectedRoute path="/zapier-webhooks" component={ZapierWebhooksPage} />
+      <Route path="/auth/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/auth/reset-password" component={ResetPasswordPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/affiliate-disclosure" component={AffiliateDisclosurePage} />
       <Route path="/terms" component={TermsPage} />

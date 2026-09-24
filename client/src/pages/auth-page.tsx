@@ -160,6 +160,15 @@ export default function AuthPage() {
                     )}
                   />
 
+                  <div className="flex justify-end">
+                    <Link
+                      href="/auth/forgot-password"
+                      className={`text-sm hover:underline ${isBride ? "text-pink-400" : "text-red-400"}`}
+                    >
+                      {t('auth.forgotPassword')}
+                    </Link>
+                  </div>
+
                   <Button
                     type="submit"
                     className={`w-full text-white ${isBride ? "bg-pink-600 hover:bg-pink-700" : "bg-red-600 hover:bg-red-700"}`}
