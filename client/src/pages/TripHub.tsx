@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import type { ExpenseGroup, Trip } from "@shared/schema";
 import Header from "@/components/Header";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { createSavedTripContext } from "@/lib/tripContext";
 import { trackProductEvent } from "@/lib/track";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   type BookingKind,
   loadTripBookingStatus,
@@ -22,11 +23,16 @@ import {
   Circle,
   Hotel,
   ListChecks,
+  Copy,
+  Link2Off,
   MapPin,
   Plane,
   ReceiptText,
   Users,
+  Share2,
 } from "lucide-react";
+
+type TripInviteStatus = { active: boolean };
 
 const bookingSections: Array<{ kind: BookingKind; icon: typeof Plane }> = [
   { kind: "flight", icon: Plane },
@@ -39,6 +45,9 @@ export default function TripHub() {
   const tripId = Number(id);
   const [, navigate] = useLocation();
   const { t } = useTranslation();
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const [bookingStatus, setBookingStatus] = useState(() =>
     Number.isInteger(tripId) && tripId > 0 ? loadTripBookingStatus(tripId) : null,
   );
@@ -54,6 +63,32 @@ export default function TripHub() {
   } = useQuery<ExpenseGroup[]>({
     queryKey: [`/api/trips/${id}/expense-groups`],
     enabled: Boolean(trip),
+  });
+  const inviteQueryKey = `/api/trips/${id}/invite`;
+  const { data: inviteStatus } = useQuery<TripInviteStatus>({
+    queryKey: [inviteQueryKey],
+    enabled: Boolean(trip),
+  });
+  const generateInvite = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", inviteQueryKey);
+      return response.json() as Promise<{ token: string }>;
+    },
+    onSuccess: ({ token }) => {
+      setInviteUrl(`${window.location.origin}/trips/shared/${token}`);
+      setCopied(false);
+      setCopyError(false);
+      queryClient.setQueryData([inviteQueryKey], { active: true });
+    },
+  });
+  const revokeInvite = useMutation({
+    mutationFn: () => apiRequest("DELETE", inviteQueryKey),
+    onSuccess: () => {
+      setInviteUrl("");
+      setCopied(false);
+      setCopyError(false);
+      queryClient.setQueryData([inviteQueryKey], { active: false });
+    },
   });
 
   useEffect(() => {
@@ -87,6 +122,18 @@ export default function TripHub() {
       ? new URLSearchParams({ groupId: String(existingGroup.id) })
       : new URLSearchParams({ tripId: String(trip.id), tripName: trip.name });
     navigate(`${path}?${params}`);
+  };
+
+  const copyInvite = async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setCopyError(false);
+    } catch {
+      setCopied(false);
+      setCopyError(true);
+    }
   };
 
   if (isLoading) {
@@ -144,6 +191,53 @@ export default function TripHub() {
             <div className="flex gap-2"><Users className="h-5 w-5 text-primary" /><span><strong>{t("tripHub.participants")}:</strong> {trip.participants}</span></div>
             <div className="flex gap-2"><ListChecks className="h-5 w-5 text-primary" /><span><strong>{t("tripHub.experience")}:</strong> {t(`dashboard.experienceType.${trip.experienceType}`)}</span></div>
             <div className="flex gap-2 sm:col-span-2 lg:col-span-1"><ListChecks className="h-5 w-5 text-primary" /><span><strong>{t("tripHub.savedActivities")}:</strong> {(trip.activities ?? []).join(", ") || t("tripHub.noActivities")}</span></div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-8 shadow-sm">
+          <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <Share2 className="h-7 w-7 shrink-0 text-primary" />
+              <div>
+                <h2 className="font-bold">{t("tripHub.shareTitle")}</h2>
+                <p className="text-sm text-gray-600">
+                  {inviteStatus?.active ? t("tripHub.shareActive") : t("tripHub.shareDesc")}
+                </p>
+                {inviteUrl && (
+                  <p className="mt-2 break-all rounded bg-gray-50 p-2 text-xs" aria-label={t("tripHub.shareLinkLabel")}>
+                    {inviteUrl}
+                  </p>
+                )}
+                {(generateInvite.isError || revokeInvite.isError || copyError) && (
+                  <p className="mt-2 text-sm text-red-700">{t("tripHub.shareError")}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              {inviteUrl && (
+                <Button variant="outline" onClick={copyInvite}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  {copied ? t("tripHub.copied") : t("tripHub.copyLink")}
+                </Button>
+              )}
+              <Button
+                onClick={() => generateInvite.mutate()}
+                disabled={generateInvite.isPending || revokeInvite.isPending}
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                {inviteStatus?.active ? t("tripHub.rotateLink") : t("tripHub.generateLink")}
+              </Button>
+              {inviteStatus?.active && (
+                <Button
+                  variant="destructive"
+                  onClick={() => revokeInvite.mutate()}
+                  disabled={generateInvite.isPending || revokeInvite.isPending}
+                >
+                  <Link2Off className="mr-2 h-4 w-4" />
+                  {t("tripHub.revokeLink")}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 

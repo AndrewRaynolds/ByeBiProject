@@ -48,4 +48,27 @@ describe("request observability", () => {
     expect(res.setHeader).toHaveBeenCalledOnce();
     expect(res.once).not.toHaveBeenCalled();
   });
+
+  it("redacts public trip tokens from completion logs", () => {
+    let finish: (() => void) | undefined;
+    const recognizableToken = "recognizable-secret-trip-token";
+    const req = {
+      method: "GET",
+      path: `/api/shared-trips/${recognizableToken}`,
+    } as any;
+    const res = {
+      statusCode: 200,
+      setHeader: vi.fn(),
+      once: vi.fn((event: string, callback: () => void) => {
+        if (event === "finish") finish = callback;
+      }),
+    } as any;
+
+    requestObservability(req, res, vi.fn());
+    finish?.();
+
+    const loggedMessage = vi.mocked(log).mock.calls[0]?.[0];
+    expect(loggedMessage).toContain("GET /api/shared-trips/[REDACTED] 200");
+    expect(loggedMessage).not.toContain(recognizableToken);
+  });
 });

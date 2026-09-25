@@ -1,4 +1,5 @@
 // Updated storage with only the 10 specified destinations
+import { randomUUID } from "node:crypto";
 import {
   Trip, BlogPost, Destination, Experience,
   InsertTrip, InsertBlogPost,
@@ -15,6 +16,9 @@ import {
   merchandiseNotifications,
   newsletterSubscribers,
   productEvents,
+  tripInvites as tripInvitesTable,
+  type TripInvite,
+  type PublicSharedTrip,
   type MerchandiseOrder,
   type InsertMerchandiseOrder,
   type MerchandiseNotification,
@@ -32,6 +36,18 @@ import { createDatabase, type DatabaseConnection } from "./db";
 
 function normalizeTripIdentity(value: string | null | undefined): string {
   return (value ?? "").trim().toLocaleLowerCase("en");
+}
+
+export function toPublicSharedTrip(trip: Trip): PublicSharedTrip {
+  return {
+    destinations: trip.destinations,
+    departureCity: trip.departureCity,
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    participants: trip.participants,
+    experienceType: trip.experienceType,
+    activities: trip.activities,
+  };
 }
 
 export function arePlannedTripsEquivalent(
@@ -63,6 +79,10 @@ export interface IStorage {
   createTrip(trip: InsertTrip): Promise<Trip>;
   createTripIfAbsent(trip: InsertTrip): Promise<{ trip: Trip; created: boolean }>;
   deleteTripForUser(id: number, userId: string): Promise<boolean>;
+  getActiveTripInviteForUser(tripId: number, ownerId: string): Promise<TripInvite | undefined>;
+  rotateTripInviteForUser(tripId: number, ownerId: string, tokenHash: string): Promise<TripInvite | undefined>;
+  revokeTripInviteForUser(tripId: number, ownerId: string): Promise<boolean>;
+  getSharedTripByTokenHash(tokenHash: string): Promise<PublicSharedTrip | undefined>;
 
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
@@ -195,6 +215,7 @@ export class MemStorage implements IStorage {
   private merchandiseOrderItems: Map<string, MerchandiseOrder>;
   private merchandiseNotificationItems: Map<string, MerchandiseNotification>;
   private newsletterSubscriberItems: Map<string, NewsletterSubscriber>;
+  private tripInviteItems: Map<string, TripInvite>;
 
   private tripId: number;
   private blogPostId: number;
@@ -216,6 +237,7 @@ export class MemStorage implements IStorage {
     this.merchandiseOrderItems = new Map();
     this.merchandiseNotificationItems = new Map();
     this.newsletterSubscriberItems = new Map();
+    this.tripInviteItems = new Map();
 
     this.tripId = 1;
     this.blogPostId = 1;
@@ -698,7 +720,66 @@ export class MemStorage implements IStorage {
   async deleteTripForUser(id: number, userId: string): Promise<boolean> {
     const trip = this.trips.get(id);
     if (!trip || trip.userId !== userId) return false;
+    for (const [inviteId, invite] of this.tripInviteItems) {
+      if (invite.tripId === id) this.tripInviteItems.delete(inviteId);
+    }
     return this.trips.delete(id);
+  }
+
+  async getActiveTripInviteForUser(
+    tripId: number,
+    ownerId: string,
+  ): Promise<TripInvite | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    return Array.from(this.tripInviteItems.values()).find(
+      (invite) => invite.tripId === tripId && invite.ownerId === ownerId && !invite.revokedAt,
+    );
+  }
+
+  async rotateTripInviteForUser(
+    tripId: number,
+    ownerId: string,
+    tokenHash: string,
+  ): Promise<TripInvite | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    const now = new Date();
+    for (const [inviteId, invite] of this.tripInviteItems) {
+      if (invite.tripId === tripId && !invite.revokedAt) {
+        this.tripInviteItems.set(inviteId, { ...invite, revokedAt: now });
+      }
+    }
+    const invite: TripInvite = {
+      id: randomUUID(),
+      tripId,
+      ownerId,
+      tokenHash,
+      createdAt: now,
+      revokedAt: null,
+    };
+    this.tripInviteItems.set(invite.id, invite);
+    return invite;
+  }
+
+  async revokeTripInviteForUser(tripId: number, ownerId: string): Promise<boolean> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return false;
+    let revoked = false;
+    const now = new Date();
+    for (const [inviteId, invite] of this.tripInviteItems) {
+      if (invite.tripId === tripId && invite.ownerId === ownerId && !invite.revokedAt) {
+        this.tripInviteItems.set(inviteId, { ...invite, revokedAt: now });
+        revoked = true;
+      }
+    }
+    return revoked;
+  }
+
+  async getSharedTripByTokenHash(tokenHash: string): Promise<PublicSharedTrip | undefined> {
+    const invite = Array.from(this.tripInviteItems.values()).find(
+      (candidate) => candidate.tokenHash === tokenHash && !candidate.revokedAt,
+    );
+    if (!invite) return undefined;
+    const trip = this.trips.get(invite.tripId);
+    return trip?.userId === invite.ownerId ? toPublicSharedTrip(trip) : undefined;
   }
 
   // Blog post operations
@@ -1080,6 +1161,88 @@ export class DatabaseStorage extends MemStorage {
       .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, userId)))
       .returning({ id: tripsTable.id });
     return deleted.length > 0;
+  }
+
+  override async getActiveTripInviteForUser(
+    tripId: number,
+    ownerId: string,
+  ): Promise<TripInvite | undefined> {
+    const [invite] = await this.db
+      .select({ invite: tripInvitesTable })
+      .from(tripInvitesTable)
+      .innerJoin(
+        tripsTable,
+        and(eq(tripInvitesTable.tripId, tripsTable.id), eq(tripsTable.userId, ownerId)),
+      )
+      .where(and(
+        eq(tripInvitesTable.tripId, tripId),
+        eq(tripInvitesTable.ownerId, ownerId),
+        isNull(tripInvitesTable.revokedAt),
+      ))
+      .limit(1);
+    return invite?.invite;
+  }
+
+  override async rotateTripInviteForUser(
+    tripId: number,
+    ownerId: string,
+    tokenHash: string,
+  ): Promise<TripInvite | undefined> {
+    return this.db.transaction(async (transaction) => {
+      const [trip] = await transaction
+        .select({ id: tripsTable.id })
+        .from(tripsTable)
+        .where(and(eq(tripsTable.id, tripId), eq(tripsTable.userId, ownerId)))
+        .for("update")
+        .limit(1);
+      if (!trip) return undefined;
+      await transaction
+        .update(tripInvitesTable)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(tripInvitesTable.tripId, tripId), isNull(tripInvitesTable.revokedAt)));
+      const [invite] = await transaction
+        .insert(tripInvitesTable)
+        .values({ tripId, ownerId, tokenHash })
+        .returning();
+      return invite;
+    });
+  }
+
+  override async revokeTripInviteForUser(tripId: number, ownerId: string): Promise<boolean> {
+    const [trip] = await this.db
+      .select({ id: tripsTable.id })
+      .from(tripsTable)
+      .where(and(eq(tripsTable.id, tripId), eq(tripsTable.userId, ownerId)))
+      .limit(1);
+    if (!trip) return false;
+    await this.db
+      .update(tripInvitesTable)
+      .set({ revokedAt: new Date() })
+      .where(and(
+        eq(tripInvitesTable.tripId, tripId),
+        eq(tripInvitesTable.ownerId, ownerId),
+        isNull(tripInvitesTable.revokedAt),
+      ));
+    return true;
+  }
+
+  override async getSharedTripByTokenHash(tokenHash: string): Promise<PublicSharedTrip | undefined> {
+    const [row] = await this.db
+      .select({ trip: tripsTable })
+      .from(tripInvitesTable)
+      .innerJoin(
+        tripsTable,
+        and(
+          eq(tripInvitesTable.tripId, tripsTable.id),
+          eq(tripInvitesTable.ownerId, tripsTable.userId),
+        ),
+      )
+      .where(and(
+        eq(tripInvitesTable.tokenHash, tokenHash),
+        isNull(tripInvitesTable.revokedAt),
+      ))
+      .limit(1);
+    return row ? toPublicSharedTrip(row.trip) : undefined;
   }
 
   override async getBlogPost(id: number): Promise<BlogPost | undefined> {

@@ -3,6 +3,7 @@ import {
   insertTripSchema,
   insertExpenseSchema,
   insertExpenseGroupSchema,
+  publicSharedTripSchema,
 } from './schema';
 
 describe('insertTripSchema', () => {
@@ -73,6 +74,29 @@ describe('insertTripSchema', () => {
       const result = insertTripSchema.safeParse(invalidTrip);
       expect(result.success).toBe(false);
     });
+  });
+});
+
+describe('publicSharedTripSchema', () => {
+  it('strips owner and private trip fields from the public contract', () => {
+    const parsed = publicSharedTripSchema.parse({
+      name: 'Mario bachelor party',
+      destinations: ['Barcelona'],
+      departureCity: 'Roma',
+      startDate: '2026-11-20',
+      endDate: '2026-11-23',
+      participants: 8,
+      experienceType: 'bachelor',
+      activities: ['Kart'],
+      userId: 'user-a',
+      specialRequests: 'private',
+      budget: 600,
+    });
+
+    expect(parsed).not.toHaveProperty('userId');
+    expect(parsed).not.toHaveProperty('name');
+    expect(parsed).not.toHaveProperty('specialRequests');
+    expect(parsed).not.toHaveProperty('budget');
   });
 });
 
