@@ -60,11 +60,11 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="py-16 bg-black text-white">
+    <section className="bg-surface-muted py-16 text-foreground">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-4">{t('newsletter.title')}</h2>
-          <p className="text-gray-300 mb-8">{t('newsletter.subtitle')}</p>
+          <p className="mb-8 text-muted-foreground">{t('newsletter.subtitle')}</p>
           
           <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-3">
             <Input
@@ -72,7 +72,7 @@ export default function Newsletter() {
               placeholder={t('newsletter.placeholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-ring bg-gray-900 text-white border border-gray-700"
+              className="flex-grow rounded-lg border-border bg-background px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <Button 
               type="submit" 
@@ -83,7 +83,7 @@ export default function Newsletter() {
             </Button>
           </form>
           
-          <p className="text-gray-400 text-sm mt-4">{t('newsletter.privacy')}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t('newsletter.privacy')}</p>
         </div>
       </div>
     </section>
