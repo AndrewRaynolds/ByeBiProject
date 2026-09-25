@@ -103,7 +103,7 @@ export default function ZapierWebhooksPage() {
           <p className="text-gray-500">Gestisci i webhook per l'integrazione con Zapier</p>
         </div>
         <Link href="/">
-          <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white">Torna alla Home</Button>
+          <Button>Torna alla Home</Button>
         </Link>
       </div>
       
@@ -148,7 +148,7 @@ export default function ZapierWebhooksPage() {
             </CardContent>
             <CardFooter>
               <Button 
-                className="w-full bg-red-600 hover:bg-red-700"
+                className="w-full"
                 onClick={handleSubmit}
                 disabled={addWebhookMutation.isPending}
               >

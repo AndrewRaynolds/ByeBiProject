@@ -207,7 +207,7 @@ export default function SecretBlogPostPage() {
         <div className="mt-8 text-center">
           <Link href="/secret-blog">
             <Button
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl px-6"
+              className="bg-primary text-primary-foreground hover:bg-primary-hover font-semibold rounded-xl px-6"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               Leggi altre storie

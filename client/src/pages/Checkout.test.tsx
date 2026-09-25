@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Checkout from "./Checkout";
 
@@ -75,6 +75,7 @@ describe("Checkout fallback experience", () => {
     invalidateQueries.mockReset();
     authState.user = null;
     authState.isAuthenticated = false;
+    delete document.documentElement.dataset.brand;
     localStorage.clear();
     localStorage.setItem("currentItinerary", JSON.stringify({
       origin: "Roma",
@@ -107,6 +108,46 @@ describe("Checkout fallback experience", () => {
     expect(await screen.findByText("Servizio hotel temporaneamente irraggiungibile.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerca hotel su Booking.com" })).toBeInTheDocument();
     expect(screen.getByText("GetYourGuide Barcellona")).toBeInTheDocument();
+  });
+
+  it("uses semantic brand accents while preserving provider price colors", async () => {
+    document.documentElement.dataset.brand = "byebride";
+    apiRequest.mockResolvedValue({
+      json: async () => ({
+        cityCode: "BCN",
+        checkInDate: "2026-11-20",
+        checkOutDate: "2026-11-23",
+        adults: 12,
+        currency: "EUR",
+        hotelDataStatus: "live",
+        hotels: [{
+          hotelId: "hotel-1",
+          name: "Hotel Test",
+          priceTotal: 420,
+          currency: "EUR",
+          offerId: "offer-1",
+          bookingFlow: "REDIRECT",
+          checkInDate: "2026-11-20",
+          checkOutDate: "2026-11-23",
+          roomDescription: "Camera doppia",
+          paymentPolicy: "PAY_AT_HOTEL",
+        }],
+      }),
+    });
+
+    render(<Checkout />);
+
+    const hotelOption = await screen.findByTestId("hotel-option-1");
+    fireEvent.click(hotelOption);
+
+    expect(hotelOption).toHaveClass("border-primary", "bg-primary/20");
+    expect(screen.getByRole("button", { name: "checkout.bookOnBooking" })).toHaveClass(
+      "bg-primary",
+      "hover:bg-primary-hover",
+      "text-primary-foreground",
+    );
+    expect(within(hotelOption).getByText(/420/)).toHaveClass("text-red-400");
+    expect(document.documentElement).toHaveAttribute("data-brand", "byebride");
   });
 
   it("recovers a fresh flight checkout link for a reopened saved trip", async () => {
