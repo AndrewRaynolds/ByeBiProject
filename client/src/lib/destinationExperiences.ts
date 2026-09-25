@@ -1,5 +1,16 @@
 import type { Destination } from "@shared/schema";
 
+export const DESTINATION_INTENTS = ["nightlife", "sport", "relax", "adventure"] as const;
+
+export type DestinationIntent = (typeof DESTINATION_INTENTS)[number];
+
+const INTENT_EXPERIENCE_NAMES: Record<DestinationIntent, string> = {
+  nightlife: "The Ultimate BroNight",
+  sport: "My Olympic Bro",
+  relax: "Chill and Feel the Bro",
+  adventure: "The Wild Broventure",
+};
+
 const EXPERIENCE_MATCHES: Record<string, string[]> = {
   "The Ultimate BroNight": [
     "amsterdam", "berlin", "prague", "barcelona", "budapest", "london",
@@ -67,6 +78,13 @@ export function getDestinationExperiences(destination: Destination): string[] {
   }
 
   return matchingExperiences.slice(0, 2);
+}
+
+export function destinationMatchesIntent(
+  destination: Destination,
+  intent: DestinationIntent,
+): boolean {
+  return getDestinationExperiences(destination).includes(INTENT_EXPERIENCE_NAMES[intent]);
 }
 
 const BRIDE_EXPERIENCE_NAMES: Record<string, string> = {
