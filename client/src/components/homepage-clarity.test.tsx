@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Header from "./Header";
 import HeroSection from "./HeroSection";
+import HeroSectionBride from "./HeroSectionBride";
 import HowItWorks from "./HowItWorks";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BrandProvider } from "@/contexts/BrandContext";
@@ -30,6 +31,11 @@ vi.mock("@/lib/performance", () => ({
 vi.mock("./ChatDialogCompact", () => ({
   default: ({ open, initialMessage }: { open: boolean; initialMessage?: string }) =>
     open ? <div data-testid="chat-dialog-message">{initialMessage}</div> : null,
+}));
+
+vi.mock("./ChatDialogCompactBride", () => ({
+  default: ({ open, initialMessage }: { open: boolean; initialMessage?: string }) =>
+    open ? <div data-testid="chat-dialog-message-bride">{initialMessage}</div> : null,
 }));
 
 function renderInItalian(component: React.ReactNode) {
@@ -107,6 +113,25 @@ describe("homepage clarity", () => {
     fireEvent.click(screen.getByRole("button", { name: "Inizia con l'AI" }));
 
     expect(screen.getByTestId("chat-dialog-message")).toHaveTextContent("Roma a ottobre");
+    expect(screen.queryByText("Raccontaci il viaggio")).not.toBeInTheDocument();
+    expect(screen.queryByText("Confronta voli, hotel e attività")).not.toBeInTheDocument();
+    expect(screen.queryByText("Salva e organizza il gruppo")).not.toBeInTheDocument();
+  });
+
+  it("keeps the same AI-first flow for ByeBride", () => {
+    localStorage.setItem("selectedBrand", "byebride");
+    renderInItalian(<HeroSectionBride />);
+
+    expect(screen.getByRole("heading", { name: "Last Fling Before The Ring! 💍" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Destinazioni" })).toHaveAttribute("href", "/destinations");
+    expect(screen.getByRole("link", { name: "Esperienze" })).toHaveAttribute("href", "/experiences");
+
+    fireEvent.change(screen.getByTestId("input-hero-chat-bride"), {
+      target: { value: "Lisbona a maggio" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Inizia con l'AI" }));
+
+    expect(screen.getByTestId("chat-dialog-message-bride")).toHaveTextContent("Lisbona a maggio");
   });
 
   it("exposes the real three-step flow at the anchored section", () => {
