@@ -566,7 +566,7 @@ export function SplittaBride() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
                 <Button
                   onClick={() => setSelectedGroup(null)}
-                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white w-full sm:w-auto"
+                  className="bg-primary text-primary-foreground hover:bg-primary-hover w-full sm:w-auto"
                   data-testid="button-back-to-groups"
                 >
                   ← Torna ai gruppi
