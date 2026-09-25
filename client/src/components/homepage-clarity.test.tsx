@@ -1,13 +1,13 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Header from "./Header";
 import HeroSection from "./HeroSection";
 import HeroSectionBride from "./HeroSectionBride";
 import HowItWorks from "./HowItWorks";
-import { LanguageProvider } from "@/contexts/LanguageContext";
+import { LanguageProvider, useTranslation } from "@/contexts/LanguageContext";
 import { BrandProvider } from "@/contexts/BrandContext";
 import en from "@/locales/en.json";
 import es from "@/locales/es.json";
@@ -43,6 +43,11 @@ function renderInItalian(component: React.ReactNode) {
   return render(<LanguageProvider><BrandProvider>{component}</BrandProvider></LanguageProvider>);
 }
 
+function LanguageSwitcher() {
+  const { setLocale } = useTranslation();
+  return <button onClick={() => setLocale("en")}>Switch to English</button>;
+}
+
 describe("homepage clarity", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -55,6 +60,7 @@ describe("homepage clarity", () => {
       {
         values: itTranslations,
         cta: "Inizia con l'AI",
+        prefill: "Organizza un viaggio a {{destination}}",
         steps: [
           "Raccontaci il viaggio",
           "Confronta voli, hotel e attività",
@@ -64,6 +70,7 @@ describe("homepage clarity", () => {
       {
         values: en,
         cta: "Start with AI",
+        prefill: "Plan a trip to {{destination}}",
         steps: [
           "Tell us about the trip",
           "Compare flights, hotels and activities",
@@ -73,6 +80,7 @@ describe("homepage clarity", () => {
       {
         values: es,
         cta: "Empieza con IA",
+        prefill: "Organiza un viaje a {{destination}}",
         steps: [
           "Cuéntanos el viaje",
           "Compara vuelos, hoteles y actividades",
@@ -81,12 +89,13 @@ describe("homepage clarity", () => {
       },
     ];
 
-    for (const { values: locale, cta, steps } of translations) {
+    for (const { values: locale, cta, prefill, steps } of translations) {
       expect(locale["hero.bro.title"]).toBe("One more Night, no more rights!");
       expect(locale["hero.bride.title"]).toBe("Last Fling Before The Ring! 💍");
       expect(locale["hero.bride.subtitle"]).toBe(locale["hero.bro.subtitle"]);
       expect(locale["hero.bro.startChat"]).toBe(cta);
       expect(locale["hero.bride.startChat"]).toBe(cta);
+      expect(locale["hero.planDestinationPrefill"]).toBe(prefill);
       expect([
         locale["howItWorks.step1.title"],
         locale["howItWorks.step2.title"],
@@ -132,6 +141,29 @@ describe("homepage clarity", () => {
     fireEvent.click(screen.getByRole("button", { name: "Inizia con l'AI" }));
 
     expect(screen.getByTestId("chat-dialog-message-bride")).toHaveTextContent("Lisbona a maggio");
+  });
+
+  it("consumes the planner prefill once while preserving unrelated URL state", async () => {
+    window.history.replaceState(null, "", "/?source=destinations&planDestination=Roma#planner");
+    renderInItalian(
+      <>
+        <HeroSection />
+        <LanguageSwitcher />
+      </>,
+    );
+
+    expect(screen.getByTestId("input-hero-chat")).toHaveValue("Organizza un viaggio a Roma");
+    expect(screen.queryByTestId("chat-dialog-message")).not.toBeInTheDocument();
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      "/?source=destinations#planner",
+    );
+
+    fireEvent.change(screen.getByTestId("input-hero-chat"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to English" }));
+
+    await waitFor(() => expect(document.documentElement.lang).toBe("en"));
+    expect(screen.getByTestId("input-hero-chat")).toHaveValue("");
+    expect(screen.queryByTestId("chat-dialog-message")).not.toBeInTheDocument();
   });
 
   it("exposes the real three-step flow at the anchored section", () => {

@@ -1,150 +1,47 @@
 import { useQuery } from "@tanstack/react-query";
-import { Destination, Experience } from "@shared/schema";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, Compass } from "lucide-react";
+import type { Destination } from "@shared/schema";
+import { ArrowRight, Compass } from "lucide-react";
+import { Link } from "wouter";
+import ReactCountryFlag from "react-country-flag";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import ReactCountryFlag from "react-country-flag";
-import { getGetYourGuideCityLink } from "@/lib/getyourguide";
-import { trackAffiliateClick } from "@/lib/track";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/contexts/LanguageContext";
+import {
+  adaptDestinationExperienceName,
+  getDestinationCountryCode,
+  getDestinationExperiences,
+} from "@/lib/destinationExperiences";
 import { localizeDestination } from "@/lib/localizeDestination";
-import { openExternalUrl } from "@/lib/externalNavigation";
-import { AffiliateNotice } from "@/components/AffiliateNotice";
 
 export default function DestinationsPage() {
   const { t } = useTranslation();
   const isBride = localStorage.getItem("selectedBrand") === "byebride";
-  const { data: destinations, isLoading: isLoadingDestinations } = useQuery<Destination[]>({
+  const { data: destinations, isLoading } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
 
-  const { data: experiences } = useQuery<Experience[]>({
-    queryKey: ["/api/experiences"],
-  });
-
-  // Helper function to convert country name to country code
-  const getCountryCode = (country: string): string => {
-    const countryMap: Record<string, string> = {
-      "Netherlands": "NL",
-      "Germany": "DE",
-      "Spain": "ES",
-      "Italy": "IT",
-      "France": "FR",
-      "United Kingdom": "GB",
-      "Czech Republic": "CZ",
-      "Croatia": "HR",
-      "Poland": "PL",
-      "Belgium": "BE",
-      "Portugal": "PT",
-      "Greece": "GR",
-      "Sweden": "SE",
-      "Denmark": "DK",
-      "Austria": "AT",
-      "Hungary": "HU",
-      "Ireland": "IE",
-      "Switzerland": "CH"
-    };
-    
-    return countryMap[country] || "EU"; // Usa l'UE come fallback
-  };
-
-  // Helper function to get best experience types for a destination
-  const getDestinationExperiences = (destination: Destination) => {
-    const destinationName = destination.name.toLowerCase();
-    const destinationCountry = destination.country.toLowerCase();
-    
-    // Experience matching logic
-    const experienceMatches = {
-      "The Ultimate BroNight": [
-        "amsterdam", "berlin", "prague", "barcelona", "budapest", "london",
-        "netherlands", "germany", "czech republic", "spain", "hungary", "united kingdom"
-      ],
-      "My Olympic Bro": [
-        "barcelona", "bilbao", "munich", "london", "milan", "rome", "paris",
-        "spain", "germany", "united kingdom", "italy", "france"
-      ],
-      "Chill & Feel the Bro": [
-        "rome", "florence", "paris", "barcelona", "lisbon", "copenhagen", "vienna",
-        "italy", "france", "spain", "portugal", "denmark", "austria"
-      ],
-      "The Wild Broventure": [
-        "interlaken", "barcelona", "split", "ibiza", "mykonos", "berlin", "prague",
-        "switzerland", "spain", "croatia", "greece", "germany", "czech republic"
-      ]
-    };
-    
-    // Find matching experiences
-    const matchingExperiences = [];
-    for (const [expName, locations] of Object.entries(experienceMatches)) {
-      if (locations.some(loc => 
-        destinationName.includes(loc) || 
-        destinationCountry.includes(loc)
-      )) {
-        matchingExperiences.push(expName);
-      }
-    }
-    
-    // Add special cases
-    if (destinationName === "amsterdam") {
-      // Amsterdam is the ultimate party city
-      if (!matchingExperiences.includes("The Ultimate BroNight")) {
-        matchingExperiences.unshift("The Ultimate BroNight");
-      }
-    } 
-    else if (destinationName === "bilbao") {
-      // Bilbao for sports
-      if (!matchingExperiences.includes("My Olympic Bro")) {
-        matchingExperiences.unshift("My Olympic Bro");
-      }
-    }
-    else if (destinationName === "paris") {
-      // Paris for culinary excellence
-      if (!matchingExperiences.includes("Chill & Feel the Bro")) {
-        matchingExperiences.unshift("Chill & Feel the Bro");
-      }
-    }
-    
-    return matchingExperiences.slice(0, 2); // Return top 2 matches
-  };
-
-  // Helper to get the experience color
-  const getExperienceColor = (expName: string) => {
-    const colorMap: Record<string, string> = {
-      "The Ultimate BroNight": "bg-red-600",
-      "My Olympic Bro": "bg-blue-600",
-      "Chill & Feel the Bro": "bg-green-600",
-      "The Wild Broventure": "bg-amber-600"
-    };
-    
-    return colorMap[expName] || "bg-gray-600";
-  };
-
-  if (isLoadingDestinations) {
+  if (isLoading) {
     return (
       <>
         <Header />
-        <main id="main-content" tabIndex={-1}>
-          <div className="container mx-auto px-4 py-12">
-            <div className="text-center mb-12">
-              <Skeleton className="h-12 w-64 mx-auto" />
-              <Skeleton className="h-5 w-full max-w-xl mx-auto mt-3" />
+        <main id="main-content" tabIndex={-1} className="bg-background">
+          <div className="page-container py-12 sm:py-16">
+            <div className="mb-12 text-center">
+              <Skeleton className="mx-auto h-12 w-64 bg-surface-muted" />
+              <Skeleton className="mx-auto mt-3 h-5 w-full max-w-xl bg-surface-muted" />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white rounded-xl overflow-hidden shadow-lg">
-                  <Skeleton className="h-64 w-full" />
-                  <div className="p-4">
-                    <Skeleton className="h-6 w-40 mb-2" />
-                    <Skeleton className="h-4 w-24 mb-4" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-3/4 mb-4" />
-                    <div className="flex justify-between">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-10 w-24" />
-                    </div>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <div
+                  key={item}
+                  className="overflow-hidden rounded-xl border border-border bg-surface shadow-soft"
+                >
+                  <Skeleton className="h-64 w-full bg-surface-muted" />
+                  <div className="space-y-3 p-6">
+                    <Skeleton className="h-6 w-40 bg-surface-muted" />
+                    <Skeleton className="h-4 w-full bg-surface-muted" />
+                    <Skeleton className="h-4 w-3/4 bg-surface-muted" />
                   </div>
                 </div>
               ))}
@@ -159,130 +56,103 @@ export default function DestinationsPage() {
   return (
     <>
       <Header />
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className={isBride ? "bg-pink-50" : "bg-gray-100"}
-      >
-        <section className={`${isBride ? "bg-gradient-to-r from-purple-950 to-pink-900" : "bg-black"} text-white py-20`}>
-          <div className="container mx-auto px-4">
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                {t(isBride ? "destinations.heroTitleBride" : "destinations.heroTitleBro")}
-              </h1>
-              <p className="text-xl max-w-3xl mx-auto">
-                {t(isBride ? "destinations.heroSubtitleBride" : "destinations.heroSubtitleBro")}
-              </p>
+      <main id="main-content" tabIndex={-1} className="bg-background">
+        <section className="relative isolate overflow-hidden border-b border-border bg-surface py-16 sm:py-20">
+          <div
+            className="pointer-events-none absolute -right-32 -top-40 h-96 w-96 rounded-full bg-brand-soft blur-3xl"
+            aria-hidden="true"
+          />
+          <div className="page-container relative text-center">
+            <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-soft">
+              <Compass className="h-6 w-6" aria-hidden="true" />
             </div>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
+              {t(isBride ? "destinations.heroTitleBride" : "destinations.heroTitleBro")}
+            </h1>
+            <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-muted-foreground sm:text-xl">
+              {t(isBride ? "destinations.heroSubtitleBride" : "destinations.heroSubtitleBro")}
+            </p>
           </div>
         </section>
-        
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="mb-12">
-              <h2 className="text-3xl font-bold mb-4">{t("destinations.allTitle")}</h2>
-              <p className="text-gray-600">
+
+        <section className="py-14 sm:py-16">
+          <div className="page-container">
+            <div className="mb-10 max-w-2xl">
+              <h2 className="text-3xl font-bold text-foreground">{t("destinations.allTitle")}</h2>
+              <p className="mt-3 leading-7 text-muted-foreground">
                 {t("destinations.allSubtitle")}
               </p>
-              <AffiliateNotice variant="light" className="mt-4" />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {destinations?.map((destination) => {
                 const localizedDestination = localizeDestination(destination, t);
                 const recommendedExperiences = getDestinationExperiences(destination);
-                const gygUrl = getGetYourGuideCityLink(destination.name);
-                const handleCardClick = () => {
-                  if (!gygUrl) return;
-                  trackAffiliateClick({
-                    provider: "getyourguide",
-                    placement: "destinations",
-                    destination: destination.name,
-                    monetized: true,
-                  });
-                  openExternalUrl(gygUrl);
-                };
-                const cardClickable = !!gygUrl;
-                
+
                 return (
-                  <div
+                  <Link
                     key={destination.id}
-                    role={cardClickable ? "link" : undefined}
-                    tabIndex={cardClickable ? 0 : undefined}
-                    aria-label={cardClickable ? t("destinations.cardAria", { city: localizedDestination.name }) : undefined}
-                    onClick={cardClickable ? handleCardClick : undefined}
-                    onKeyDown={(e) => {
-                      if (cardClickable && (e.key === "Enter" || e.key === " ")) {
-                        e.preventDefault();
-                        handleCardClick();
-                      }
-                    }}
+                    href={`/destinations/${destination.id}`}
+                    aria-label={t("destinations.cardAria", { city: localizedDestination.name })}
                     data-testid={`card-destination-${destination.name.toLowerCase().replace(/\s+/g, "-")}`}
-                    className={`group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition duration-300 ${cardClickable ? "cursor-pointer hover:-translate-y-1" : ""}`}
+                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-soft transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <div className="relative h-64 overflow-hidden">
-                      <img 
-                        src={destination.image} 
+                      <img
+                        src={destination.image}
                         alt={`${localizedDestination.name} - ${localizedDestination.country}`}
-                        className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute top-4 left-4 flex items-center space-x-2">
-                        <ReactCountryFlag 
-                          countryCode={getCountryCode(destination.country)}
-                          svg
-                          style={{
-                            width: '1.7em',
-                            height: '1.7em',
-                            border: '2px solid white',
-                            borderRadius: '50%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      </div>
-                      {cardClickable && (
-                        <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                          <Compass className="w-3 h-3" />
-                          GetYourGuide
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black to-transparent">
-                        <h3 className="text-white text-xl font-bold">{localizedDestination.name}</h3>
-                        <p className="text-white text-sm">{localizedDestination.country}</p>
+                      <ReactCountryFlag
+                        countryCode={getDestinationCountryCode(destination.country)}
+                        svg
+                        className="absolute left-4 top-4 h-7 w-7 rounded-full shadow-soft"
+                        aria-label={localizedDestination.country}
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-5 pt-16">
+                        <h3 className="text-xl font-bold text-primary-foreground">
+                          {localizedDestination.name}
+                        </h3>
+                        <p className="text-sm text-primary-foreground/80">
+                          {localizedDestination.country}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="p-6">
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {recommendedExperiences.map((expName, i) => (
-                          <span 
-                            key={i} 
-                            className={`${getExperienceColor(expName)} text-white text-xs px-3 py-1 rounded-full`}
+
+                    <div className="flex flex-1 flex-col p-6">
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {recommendedExperiences.map((experienceName) => (
+                          <span
+                            key={experienceName}
+                            className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-primary"
                           >
-                            {expName}
+                            {adaptDestinationExperienceName(
+                              experienceName,
+                              isBride ? "byebride" : "byebro",
+                            )}
                           </span>
                         ))}
-                        {localizedDestination.tags?.map((tag, i) => (
-                          <span 
-                            key={`tag-${i}`} 
-                            className="bg-gray-200 text-gray-800 text-xs px-3 py-1 rounded-full"
+                        {localizedDestination.tags?.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full border border-border bg-surface-muted px-3 py-1 text-xs text-foreground"
                           >
                             {tag}
                           </span>
                         ))}
                       </div>
-                      
-                      <p className="text-gray-700 mb-4">{localizedDestination.description}</p>
-                      
-                      <div className="flex items-center justify-end">
-                        {cardClickable && (
-                          <span className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600 group-hover:underline">
-                            {t('destinations.discoverActivities')}
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </span>
-                        )}
-                      </div>
+                      <p className="line-clamp-3 leading-7 text-muted-foreground">
+                        {localizedDestination.description}
+                      </p>
+                      <span className="mt-5 inline-flex items-center gap-1.5 self-start text-sm font-semibold text-primary">
+                        {t("destinations.viewDetails")}
+                        <ArrowRight
+                          className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
