@@ -58,6 +58,19 @@ const Header = memo(function Header() {
     window.location.href = '/';
   }, 300);
 
+  const handleHowItWorksClick = () => {
+    setMobileMenuOpen(false);
+
+    if (location === '/') {
+      window.requestAnimationFrame(() => {
+        document.getElementById('how-it-works')?.scrollIntoView?.({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      });
+    }
+  };
+
   // Chiude il menu mobile quando si clicca all'esterno
   useEffect(() => {
     // Ottimizzazione: utilizziamo un unico event listener con throttle
@@ -108,7 +121,7 @@ const Header = memo(function Header() {
         </div>
         
         <div className="hidden md:flex items-center space-x-6">
-          <Link href="/" className={`text-dark transition font-medium text-sm ${
+          <Link href="/#how-it-works" onClick={handleHowItWorksClick} className={`text-dark transition font-medium text-sm ${
             selectedBrand === 'byebride' 
               ? `hover:text-pink-600 ${location === "/" ? "text-pink-600" : ""}`
               : `hover:text-red-600 ${location === "/" ? "text-red-600" : ""}`
@@ -270,7 +283,7 @@ const Header = memo(function Header() {
               <ArrowLeft className="w-3 h-3" />
               {t('brand.changeBrand')}
             </Button>
-            <Link href="/" className={`text-dark transition font-medium ${
+            <Link href="/#how-it-works" onClick={handleHowItWorksClick} className={`text-dark transition font-medium ${
               selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
             }`}>{t('header.howItWorks')}</Link>
             <Link href="/destinations" className={`text-dark transition font-medium ${

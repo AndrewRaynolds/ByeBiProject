@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Building, Map, GlassWater } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -24,9 +25,20 @@ export default function HowItWorks({ brand = 'bro' }: HowItWorksProps) {
   const { t } = useTranslation();
   const copy = COPY[brand];
   const accentColor = brand === 'bride' ? 'border-pink-600 text-pink-600' : 'border-red-600 text-red-600';
+
+  useEffect(() => {
+    if (window.location.hash === '#how-it-works') {
+      window.requestAnimationFrame(() => {
+        document.getElementById('how-it-works')?.scrollIntoView?.({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      });
+    }
+  }, []);
   
   return (
-    <section className="py-16 bg-black">
+    <section id="how-it-works" className="scroll-mt-20 py-16 bg-black">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3 text-white">{t(copy.titleKey)}</h2>
