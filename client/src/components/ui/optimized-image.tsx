@@ -32,6 +32,7 @@ export const OptimizedImage = memo(function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(loadingMode === "eager");
   const imageRef = useRef<HTMLImageElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -50,8 +51,9 @@ export const OptimizedImage = memo(function OptimizedImage({
     if (src) {
       setIsLoaded(false);
       setError(false);
+      setShouldLoad(loadingMode === "eager");
     }
-  }, [src]);
+  }, [loadingMode, src]);
 
   useEffect(() => {
     // Lazy loading con IntersectionObserver
@@ -61,9 +63,9 @@ export const OptimizedImage = memo(function OptimizedImage({
       const handleIntersection: IntersectionObserverCallback = (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            if (img && img.dataset.src) {
+            if (img) {
               // Carica l'immagine quando diventa visibile
-              img.src = img.dataset.src;
+              setShouldLoad(true);
               observer.current?.unobserve(img);
             }
           }
@@ -112,7 +114,7 @@ export const OptimizedImage = memo(function OptimizedImage({
 
       <img
         ref={imageRef}
-        src={loadingMode === "lazy" ? fallback : optimizedSrc}
+        src={shouldLoad ? optimizedSrc : undefined}
         data-src={loadingMode === "lazy" ? optimizedSrc : undefined}
         alt={alt}
         width={width}

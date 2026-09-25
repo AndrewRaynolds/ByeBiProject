@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Flame } from "lucide-react";
 import { Link } from "wouter";
-import { useTranslation } from "@/contexts/LanguageContext";
+import { Locale, useTranslation } from "@/contexts/LanguageContext";
 
 export type Brand = 'bro' | 'bride';
 
@@ -61,6 +61,58 @@ export const DESTINATIONS_MAP: Record<string, string> = {
   Santorini: "🇬🇷 Santorini",
   Lisbona: "🇵🇹 Lisbona",
 };
+
+type LocalizedPost = { title: string; content: string };
+
+const BLOG_POST_COPY: Record<string, {
+  sourceContent: string;
+  it: LocalizedPost;
+  es: LocalizedPost;
+}> = {
+  "Roma: The Night We Can't Remember": {
+    sourceContent: "From Trastevere's wine bars to Testaccio's underground clubs, Rome offers an incredible nightlife scene. We started at a rooftop aperitivo with views of the Colosseum, then ended up in a basement club at 5am. The bachelor had no idea what hit him.",
+    it: {
+      title: "Roma: la notte che non ricordiamo",
+      content: "Dalle enoteche di Trastevere ai club underground di Testaccio, Roma offre una vita notturna incredibile. Abbiamo iniziato con un aperitivo in terrazza vista Colosseo e siamo finiti in un locale sotterraneo alle cinque del mattino. Lo sposo non ha capito cosa gli sia successo.",
+    },
+    es: {
+      title: "Roma: la noche que no recordamos",
+      content: "Desde las vinotecas de Trastevere hasta los clubes underground de Testaccio, Roma ofrece una vida nocturna increíble. Empezamos con un aperitivo en una terraza con vistas al Coliseo y acabamos en un club subterráneo a las cinco de la mañana. El novio no supo qué le había pasado.",
+    },
+  },
+  "Ibiza Uncovered: The Ultimate Party Guide": {
+    sourceContent: "From Amnesia to Pacha, we break down the best clubs, when to go, and how to do it right. We got VIP access to three clubs in one night, watched the sunrise from a yacht, and somehow everyone made the flight home. Barely.",
+    it: {
+      title: "Ibiza senza segreti: la guida definitiva alla festa",
+      content: "Da Amnesia a Pacha, ecco i club migliori, quando andarci e come vivere la serata al meglio. In una notte siamo entrati da VIP in tre locali, abbiamo visto l'alba da uno yacht e, non si sa come, tutti hanno preso il volo di ritorno. Per un soffio.",
+    },
+    es: {
+      title: "Ibiza al descubierto: la guía definitiva de la fiesta",
+      content: "De Amnesia a Pacha, repasamos los mejores clubes, cuándo ir y cómo disfrutar al máximo. En una noche entramos como VIP en tres locales, vimos amanecer desde un yate y, de algún modo, todos llegamos al vuelo de vuelta. Por los pelos.",
+    },
+  },
+  "Cracovia: Eastern Europe's Hidden Gem": {
+    sourceContent: "Affordable prices, incredible architecture, and a nightlife scene that rivals any major European city. We spent four days exploring the Old Town by day and the underground clubs by night. The vodka was cheaper than water and twice as dangerous.",
+    it: {
+      title: "Cracovia: la gemma nascosta dell'Europa dell'Est",
+      content: "Prezzi accessibili, architettura incredibile e una vita notturna all'altezza delle grandi città europee. Abbiamo passato quattro giorni tra il centro storico di giorno e i club sotterranei di notte. La vodka costava meno dell'acqua ed era due volte più pericolosa.",
+    },
+    es: {
+      title: "Cracovia: la joya oculta de Europa del Este",
+      content: "Precios asequibles, arquitectura increíble y una vida nocturna a la altura de cualquier gran ciudad europea. Pasamos cuatro días recorriendo el casco antiguo de día y los clubes subterráneos de noche. El vodka era más barato que el agua y el doble de peligroso.",
+    },
+  },
+};
+
+export function localizeHomepagePost<T extends { title: string; content: string }>(
+  post: T,
+  locale: Locale,
+): T {
+  if (locale === 'en') return post;
+  const copy = BLOG_POST_COPY[post.title];
+  if (!copy || copy.sourceContent !== post.content) return post;
+  return { ...post, ...copy[locale] };
+}
 
 export function extractLocation(title: string): string | null {
   const locations: Record<string, string> = {
@@ -244,7 +296,7 @@ function CardSkeleton() {
 }
 
 export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
-  const { t } = useTranslation();
+  const { locale, t } = useTranslation();
   const isBride = brand === 'bride';
   const subtitle = isBride ? t('blog.bride.subtitle') : t('blog.bro.subtitle');
 
@@ -283,7 +335,7 @@ export default function SecretBlog({ brand = 'bro' }: SecretBlogProps) {
     );
   }
 
-  const visiblePosts = blogPosts || [];
+  const visiblePosts = blogPosts?.map((post) => localizeHomepagePost(post, locale)) || [];
   const CardComponent = isBride ? BrideCard : BroCard;
 
   return (
