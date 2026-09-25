@@ -143,6 +143,10 @@ describe("homepage clarity", () => {
     expect(screen.getByText("Salva e organizza il gruppo")).toBeInTheDocument();
     expect(screen.getByText(/senza registrarti/i)).toBeInTheDocument();
     expect(screen.getByText(/Trip Hub.*partner/i)).toBeInTheDocument();
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("keeps planner, destinations, and experiences prominent on desktop and mobile", () => {
