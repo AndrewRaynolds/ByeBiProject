@@ -273,7 +273,7 @@ export default function Checkout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-primary-hover flex items-center justify-center">
         <div className="text-white text-xl">{t('common.loading')}</div>
       </div>
     );
@@ -282,7 +282,7 @@ export default function Checkout() {
   // Validate required TripContext fields
   if (!tripContext || !tripContext.destination || !tripContext.startDate || !tripContext.endDate || !tripContext.people) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-primary-hover">
         <Header />
         <main id="main-content" tabIndex={-1} className="container mx-auto px-4 py-16 max-w-2xl">
           <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-red-500/50">
@@ -298,7 +298,7 @@ export default function Checkout() {
               </p>
               <Button
                 onClick={() => setLocation('/')}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 text-lg"
+                className="bg-primary text-primary-foreground hover:bg-primary-hover px-8 py-3 text-lg"
                 data-testid="button-back-chatbot"
               >
                 {t('itinerary.backToChatbot')}
@@ -317,14 +317,14 @@ export default function Checkout() {
   const bookingIsMonetized = hasBookingAffiliateId();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-red-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-primary-hover">
       <Header />
       <main id="main-content" tabIndex={-1}>
         {/* Hero Header */}
-        <div className="relative py-12 bg-gradient-to-r from-black/50 to-red-900/50 backdrop-blur-sm border-b border-white/10">
+        <div className="relative py-12 bg-gradient-to-r from-black/50 to-primary-hover/50 backdrop-blur-sm border-b border-white/10">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-red-200 to-red-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-brand-soft to-primary bg-clip-text text-transparent">
               {t('checkout.title')}
             </h1>
             <p className="text-white/80 text-lg">{t('checkout.subtitle')}</p>
@@ -333,15 +333,15 @@ export default function Checkout() {
           {/* Trip Info Pills */}
           <div className="flex flex-wrap justify-center gap-4 text-white/90">
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-              <MapPin className="w-5 h-5 text-red-400" />
+              <MapPin className="w-5 h-5 text-primary" />
               <span className="font-medium" data-testid="text-destination">{tripContext.destination}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-              <Calendar className="w-5 h-5 text-red-400" />
+              <Calendar className="w-5 h-5 text-primary" />
               <span className="font-medium" data-testid="text-dates">{formattedDates}</span>
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-              <Users className="w-5 h-5 text-red-400" />
+              <Users className="w-5 h-5 text-primary" />
               <span className="font-medium" data-testid="text-people">{tripContext.people} {t('common.people')}</span>
             </div>
           </div>
@@ -419,8 +419,8 @@ export default function Checkout() {
         <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-gray-600 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-white text-xl">
-              <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg">
-                <Hotel className="w-5 h-5 text-white" />
+              <div className="p-2 bg-gradient-to-br from-primary to-primary-hover rounded-lg shadow-lg">
+                <Hotel className="w-5 h-5 text-primary-foreground" />
               </div>
               {t('checkout.selectHotel')}
             </CardTitle>
@@ -428,7 +428,7 @@ export default function Checkout() {
           <CardContent>
             {loadingHotels ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="w-10 h-10 animate-spin text-red-400 mb-4" />
+                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
                 <p className="text-white/70">{t('checkout.loadingHotels')}</p>
               </div>
             ) : hotelError ? (
@@ -450,7 +450,7 @@ export default function Checkout() {
                       </Button>
                     )}
                     <Button
-                      className="mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                      className="mt-4 bg-primary text-primary-foreground hover:bg-primary-hover"
                       onClick={() => openBookingSearch('checkout_hotel_fallback')}
                       data-testid="button-search-hotels-booking"
                     >
@@ -468,8 +468,8 @@ export default function Checkout() {
                     key={hotel.hotelId}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       selectedHotel?.hotelId === hotel.hotelId
-                        ? 'border-red-500 bg-red-500/20'
-                        : 'border-white/20 bg-white/5 hover:border-red-400'
+                        ? 'border-primary bg-primary/20'
+                        : 'border-white/20 bg-white/5 hover:border-primary/70'
                     }`}
                     onClick={() => setSelectedHotel(hotel)}
                     data-testid={`hotel-option-${index + 1}`}
@@ -500,7 +500,7 @@ export default function Checkout() {
             {selectedHotel && (
               <>
                 <Button
-                  className="w-full mt-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                  className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary-hover"
                   onClick={() => openBookingSearch('checkout_hotel', selectedHotel)}
                   data-testid="button-book-hotel"
                 >
@@ -515,7 +515,7 @@ export default function Checkout() {
 
         {/* Hotel Summary */}
         {selectedHotel && (
-          <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-red-500 shadow-2xl shadow-red-500/20">
+          <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-primary shadow-2xl shadow-primary/20">
             <CardContent className="pt-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-white/80">
@@ -571,7 +571,7 @@ export default function Checkout() {
         <div className="flex flex-col md:flex-row gap-4">
           <Button
             size="lg"
-            className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            className="flex-1 bg-primary text-primary-foreground hover:bg-primary-hover"
             onClick={() => setLocation('/')}
             data-testid="button-back-home"
           >

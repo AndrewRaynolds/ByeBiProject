@@ -72,11 +72,11 @@ export default function Newsletter() {
               placeholder={t('newsletter.placeholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-900 text-white border border-gray-700"
+              className="px-4 py-3 rounded-lg flex-grow focus:outline-none focus:ring-2 focus:ring-ring bg-gray-900 text-white border border-gray-700"
             />
             <Button 
               type="submit" 
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300"
+              className="font-bold py-3 px-6 rounded-lg transition duration-300"
               disabled={isSubmitting}
             >
               {isSubmitting ? t('newsletter.subscribing') : t('newsletter.subscribe')}

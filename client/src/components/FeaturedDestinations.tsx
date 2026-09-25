@@ -43,9 +43,9 @@ const DestinationCard = memo(({ destination, onExplore }: {
             <span 
               key={index} 
               className={`${
-                index === 0 ? 'bg-red-900 text-white' : 
-                index === 1 ? 'bg-gray-800 text-white' : 
-                'bg-red-900 text-white'
+                index === 0 ? 'bg-primary text-primary-foreground' :
+                index === 1 ? 'bg-gray-800 text-white' :
+                'bg-primary text-primary-foreground'
               } text-xs px-2 py-1 rounded-full font-medium ${index > 0 ? 'ml-2' : ''}`}
             >
               {tag}
@@ -56,7 +56,7 @@ const DestinationCard = memo(({ destination, onExplore }: {
         <div className="flex justify-end items-center">
           <Button
             variant="ghost"
-            className="text-red-600 hover:text-red-700 font-medium"
+            className="text-primary hover:text-primary-hover font-medium"
             onClick={handleExplore}
           >
             {t("destinations.explore")}
@@ -139,7 +139,7 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
             <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">{t("destinations.popularTitle")}</h2>
             <p className="text-gray-300 mt-2">{t(brand === "bride" ? "destinations.popularSubtitleBride" : "destinations.popularSubtitleBro")}</p>
           </div>
-          <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium hidden md:block">
+          <Link href="/destinations" className="text-primary hover:text-primary-hover font-medium hidden md:block">
             {t("destinations.viewAll")}
           </Link>
         </div>
@@ -155,7 +155,7 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
         </div>
         
         <div className="mt-8 text-center md:hidden">
-          <Link href="/destinations" className="text-red-600 hover:text-red-700 font-medium">
+          <Link href="/destinations" className="text-primary hover:text-primary-hover font-medium">
             {t("destinations.viewAll")}
           </Link>
         </div>

@@ -73,7 +73,6 @@ function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceIte
         <Button
           onClick={handleClick}
           size="sm"
-          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
           data-testid={`button-open-experience-${item.category}-${index}`}
         >
           {item.source === "getyourguide" ? t('experiences.bookGyg') : t('experiences.openMaps')}

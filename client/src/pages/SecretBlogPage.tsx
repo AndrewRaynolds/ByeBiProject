@@ -289,7 +289,7 @@ export function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
             <Textarea
               id="secret-blog-story"
               placeholder=""
-              className="min-h-[160px] mb-4 bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500 resize-none"
+              className="min-h-[160px] mb-4 bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-primary resize-none"
               value={storyContent}
               onChange={(e) => setStoryContent(e.target.value)}
             />
@@ -300,7 +300,7 @@ export function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
               <Input
                 id="secret-blog-title"
                 placeholder={autoTitle}
-                className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-red-500"
+                className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-600 focus:border-primary"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
                 maxLength={100}
@@ -386,7 +386,7 @@ export function StoryForm({ isAuthenticated, brand, t }: StoryFormProps) {
                 <ChevronLeft className="w-4 h-4 mr-1" /> {t('common.back')}
               </Button>
               <Button
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                className="bg-primary text-primary-foreground hover:bg-primary-hover"
                 onClick={() => setShowPreview(!showPreview)}
                 aria-expanded={showPreview}
                 aria-controls="secret-blog-preview"

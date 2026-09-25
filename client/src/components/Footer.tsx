@@ -2,32 +2,31 @@ import { Link } from "wouter";
 import { Mail } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { sellerConfig } from "@/lib/sellerConfig";
+import { useBrand } from "@/contexts/BrandContext";
 
 export default function Footer() {
   const { t } = useTranslation();
-  const isBride = localStorage.getItem("selectedBrand") === "byebride";
-  const accentClass = isBride ? "text-pink-500" : "text-primary";
-  const linkClass = isBride
-    ? "text-white/85 transition duration-200 hover:text-pink-300 hover:drop-shadow-[0_0_8px_rgba(244,114,182,0.8)]"
-    : "text-white/85 transition duration-200 hover:text-red-300 hover:drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]";
+  const { brand } = useBrand();
+  const isBride = brand === "byebride";
+  const linkClass = "text-white/70 transition-colors hover:text-white";
 
   return (
-    <footer className="bg-dark text-white/85 py-12">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+    <footer className="bg-surface-inverse py-12 text-white/80">
+      <div className="page-container">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <div>
-            <Link href="/" className="text-white font-poppins font-bold text-2xl mb-4 block">
-              <span className="text-white">Bye</span><span className={accentClass}>{isBride ? "Bride" : "Bro"}</span>
+            <Link href="/" className="mb-4 block font-display text-2xl font-bold text-white">
+              Bye<span className="text-primary">{isBride ? "Bride" : "Bro"}</span>
             </Link>
             <p className="text-white/75 mb-4 leading-relaxed">{t(isBride ? 'footer.taglineBride' : 'footer.taglineBro')}</p>
           </div>
           
           <div>
-            <h4 className="text-white font-bold text-lg mb-4">{t('footer.quickLinks')}</h4>
+            <h4 className="mb-4 font-display text-lg font-semibold text-white">{t('footer.quickLinks')}</h4>
             <ul className="space-y-2">
               <li>
                 <Link href="/" className={linkClass}>
-                  {t('header.howItWorks')}
+                  {t('header.planTrip')}
                 </Link>
               </li>
               <li>
@@ -51,11 +50,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/affiliate-disclosure" className={linkClass}>
-                  {t('footer.affiliateDisclosure')}
-                </Link>
-              </li>
-              <li>
                 <Link href="/privacy" className={linkClass}>
                   {t('footer.privacyPolicy')}
                 </Link>
@@ -70,15 +64,20 @@ export default function Footer() {
                   {t('footer.refundPolicy')}
                 </Link>
               </li>
+              <li>
+                <Link href="/affiliate-disclosure" className={linkClass}>
+                  {t('footer.commercialTransparency')}
+                </Link>
+              </li>
             </ul>
           </div>
           
           <div>
-            <h4 className="text-white font-bold text-lg mb-4">{t('footer.contact')}</h4>
+            <h4 className="mb-4 font-display text-lg font-semibold text-white">{t('footer.contact')}</h4>
             <ul className="space-y-2">
               {sellerConfig.contactEmail ? (
                 <li className="flex items-start">
-                  <Mail className={`${accentClass} mt-1 mr-3 h-4 w-4`} />
+                  <Mail className="mr-3 mt-1 h-4 w-4 text-primary" />
                   <a
                     href={`mailto:${sellerConfig.contactEmail}`}
                     className={linkClass}

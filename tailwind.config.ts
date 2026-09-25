@@ -6,19 +6,44 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Poppins", "ui-sans-serif", "system-ui", "sans-serif"],
+        poppins: ["Poppins", "ui-sans-serif", "system-ui", "sans-serif"],
         "bebas-neue": ["Bebas Neue", "sans-serif"],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius-lg)",
+        md: "var(--radius-md)",
+        sm: "var(--radius-sm)",
       },
       colors: {
         background: "hsl(var(--background))",
+        bg: "hsl(var(--bg))",
         foreground: "hsl(var(--foreground))",
+        text: "hsl(var(--text))",
+        "muted-text": "hsl(var(--muted-text))",
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          muted: "hsl(var(--surface-muted))",
+          inverse: "hsl(var(--surface-inverse))",
+        },
+        "border-strong": "hsl(var(--border-strong))",
+        "brand-soft": "hsl(var(--brand-soft))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        danger: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -28,6 +53,7 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        "primary-hover": "hsl(var(--primary-hover))",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -47,6 +73,7 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        "focus-ring": "hsl(var(--focus-ring))",
         chart: {
           "1": "hsl(var(--chart-1))",
           "2": "hsl(var(--chart-2))",
@@ -64,6 +91,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      boxShadow: {
+        soft: "0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.06)",
+        raised: "0 2px 4px rgb(15 23 42 / 0.05), 0 16px 40px rgb(15 23 42 / 0.09)",
       },
       keyframes: {
         "accordion-down": {
