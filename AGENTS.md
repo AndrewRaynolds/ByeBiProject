@@ -1,88 +1,44 @@
-# AGENTS.md
-
-# ByeBi
+# ByeBi Agent Guidance
 
 ByeBi is a full-stack bachelor/bachelorette trip planning application.
 
 Production: https://byebi.it
 
-GitHub `main` is the source of truth.
-Replit is the deployment environment, not the canonical Git history.
+GitHub `main` is the source of truth. Replit is the deployment environment, not the canonical Git history.
 
-## Stack
+## Instruction Scope
 
-- Frontend: React 18, TypeScript, Vite, Tailwind CSS, TanStack Query
-- Backend: Node.js 20, Express, TypeScript
-- Auth/Data: Supabase Auth, PostgreSQL, Drizzle ORM, Zod
-- Tests: Vitest, Testing Library
-- CI: GitHub Actions
-- Deployment: Replit Autoscale
+This file applies repository-wide. More specific `AGENTS.md` files under `client/`, `server/`, `shared/`, and `supabase/` add or override guidance for those subtrees. Follow every applicable file, with the closest file taking precedence when instructions differ.
 
-## Repository Map
+## Stack and Repository Map
 
-- `client/` — React frontend
-- `client/src/components/` — reusable UI/components
-- `client/src/pages/` — application pages
-- `client/src/lib/` — frontend business logic/helpers
-- `server/` — Express API and backend
-- `server/services/` — external service integrations
-- `shared/` — shared schemas/contracts
-- `supabase/migrations/` — versioned production database migrations
-- `scripts/` — smoke/deployment helper scripts
-- `.github/workflows/` — CI and production checks
+- `client/` — React 18, TypeScript, Vite, Tailwind CSS, TanStack Query, and Wouter frontend; see `client/AGENTS.md`.
+- `server/` — Node.js 20, Express, TypeScript, and external integrations; see `server/AGENTS.md`.
+- `server/services/` — external service integrations.
+- `shared/` — shared Drizzle, Zod, and TypeScript schemas/contracts; see `shared/AGENTS.md`.
+- `supabase/migrations/` — versioned production database migrations; see `supabase/AGENTS.md`.
+- `scripts/` — smoke and deployment helper scripts.
+- `.github/workflows/` — CI and production checks.
 
-Do not explore unrelated directories unless required by the task.
+Do not explore unrelated directories unless the task requires it. Avoid `node_modules/`, `dist/`, historical `thoughts/`, unrelated assets, and old project files unless directly relevant.
 
-Avoid inspecting:
-- `node_modules/`
-- `dist/`
-- historical `thoughts/` documents
-- unrelated assets
-- old project files
-
-unless directly relevant.
-
-## Main Product Flows
+## Product Invariants
 
 ### Travel
 
-User input
-→ chat validation
-→ checkout
-→ flights / hotels / activities
-→ external provider
-
-Travel providers include:
-
-- Amadeus
-- Aviasales
-- Booking.com
-- GetYourGuide
-
-Do not create fake travel results when providers are unavailable.
+Travel providers include Amadeus, Aviasales, Booking.com, and GetYourGuide. Do not create fake travel results when providers are unavailable.
 
 ### Saved Trips
 
-Checkout
-→ explicit "Salva viaggio"
-→ authentication if needed
-→ Dashboard
-
-Trips must NOT be automatically saved.
-
-Preserve trip context across login/register.
-
-Avoid duplicate saved trips.
+Trips are saved only after the explicit "Salva viaggio" action, with authentication when needed. Preserve trip context across login or registration and avoid duplicate saved trips. Do not save trips automatically.
 
 ### Merchandise
 
-Stripe Checkout is used for merchandise.
+Stripe Checkout is used for merchandise. Do not change `MERCHANDISE_SALES_MODE`, Stripe environment, or Printful confirmation/payment configuration without an explicit request.
 
-`MERCHANDISE_SALES_MODE` must remain `test` unless the user explicitly authorizes a change.
+Do not perform any real payment, refund, cancellation, or fulfillment operation without explicit authorization. Preserve webhook idempotency and retry safety, payment/order reconciliation, fulfillment safety, and refund/cancellation safeguards.
 
-Never activate Stripe live mode automatically.
-
-## Development Commands
+## Standard Commands
 
 Development:
 
@@ -112,173 +68,50 @@ Travel production smoke:
 
     npm run smoke:travel:production -- https://byebi.it
 
-## Task Scope
+## Scope and Dependencies
 
-Always make the smallest change that solves the requested problem.
+Make the smallest change that solves the requested problem. Start with the named file, component, or route, then its direct dependencies, and inspect additional files only when necessary.
 
-Start with:
-1. the file/component/route named in the task;
-2. its direct dependencies;
-3. additional files only when necessary.
+Do not perform unrelated refactors, renames, formatting, dependency upgrades, architecture changes, or redesigns. Do not install or upgrade dependencies unless the task requires it and the existing stack cannot solve it.
 
-Do NOT scan the entire repository by default.
+## Safety and External Systems
 
-Do NOT perform unrelated:
-- refactors;
-- renames;
-- formatting;
-- dependency upgrades;
-- architecture changes;
-- UI redesigns.
-
-If a task can be solved in two files, do not inspect twenty.
+- Never expose secrets, print complete API keys, hard-code credentials, commit `.env`, or modify production secrets without authorization.
+- Keep external credentials server-side where applicable.
+- Do not perform real bookings, purchases, payments, refunds, cancellations, fulfillments, or destructive operations on real user data without explicit authorization.
+- Do not fabricate successful results from unavailable external providers.
 
 ## Verification
 
-During normal development, run only checks relevant to the changed code.
-
-Prefer targeted tests such as:
+Run checks relevant to the changed files. Prefer targeted tests such as:
 
     npm test -- <relevant-test-file>
 
-Do not run the full test suite/build repeatedly after small changes.
+Do not repeatedly run the full suite or build after small changes. Use `npm run verify` only for broad changes, requested final verification, release preparation, or when targeted checks are insufficient. Run production smoke tests only when explicitly requested.
 
-Run:
-
-    npm run verify
-
-only when:
-- the change is broad;
-- final verification is requested;
-- preparing a release;
-- targeted checks are insufficient.
-
-Production smoke tests should only be run when production verification is explicitly required.
+If no relevant automated check exists, do not invent one; report the inspection performed.
 
 ## Git Rules
 
-Do NOT automatically:
+Do not automatically create branches, commit, push, open or merge pull requests, or modify `main`. Each action requires an explicit user request.
 
-- create branches;
-- commit;
-- push;
-- open pull requests;
-- merge pull requests;
-- modify `main`.
+A coding request means: inspect, make the scoped change, run targeted verification, report, and stop. Git publication and integration are separate tasks.
 
-These actions require an explicit user request.
+## Replit and Deployment
 
-A request such as:
+Do not automatically open or synchronize Replit, pull GitHub changes into it, publish, republish, change deployment settings, or inspect production through browser automation. Deployment requires an explicit separate request.
 
-    Fix the checkout bug
-
-means:
-
-    inspect → modify → targeted verification → report → STOP
-
-It does NOT mean:
-
-    commit → push → PR → merge
-
-After completing a coding task, report:
-
-1. files changed;
-2. what changed;
-3. checks run;
-4. whether the change is ready to commit;
-5. remaining risks.
-
-Then STOP.
-
-## Replit / Deployment Rules
-
-Do NOT automatically:
-
-- open Replit;
-- synchronize Replit;
-- pull GitHub changes into Replit;
-- publish;
-- republish;
-- change deployment settings;
-- inspect production through browser automation.
-
-Deployment requires an explicit separate request.
-
-GitHub `main` is authoritative.
-
-Replit may create local commits named:
-
-    Published your App
-
-Do not push these commits to GitHub automatically.
-
-If Replit and `origin/main` diverge, report the divergence and STOP rather than attempting to resolve or push it automatically.
-
-## Database Rules
-
-Production schema changes belong in:
-
-    supabase/migrations/
-
-Production migrations are deployed through the Supabase/GitHub integration.
-
-Do NOT run:
-
-    drizzle-kit push
-
-after merges or against production.
-
-Never perform destructive migrations without explicit authorization.
-
-## Secrets and External Services
-
-Never:
-- expose secrets;
-- print complete API keys;
-- hard-code credentials;
-- commit `.env`;
-- modify production secrets without authorization.
-
-External credentials must remain server-side where applicable.
-
-Do not perform:
-- real bookings;
-- real purchases;
-- live Stripe transactions;
-- destructive operations on real user data
-
-without explicit authorization.
-
-## Dependencies
-
-Do not install or upgrade dependencies unless necessary for the requested task.
-
-Before adding a package, check whether the existing stack already solves the problem.
-
-Never run broad dependency upgrades as part of an unrelated task.
-
-## UI
-
-Preserve the existing ByeBro / ByeBride design system.
-
-Do not redesign surrounding pages when fixing a local problem.
-
-Check mobile impact when changing:
-- checkout;
-- navigation;
-- dialogs;
-- CTAs;
-- travel cards.
+Replit may create local commits named `Published your App`. Do not push them automatically. If Replit and `origin/main` diverge, report the divergence and stop rather than resolving or pushing it automatically.
 
 ## Completion Rule
 
 Default workflow:
 
     understand
-    → inspect minimal relevant code
-    → implement
-    → targeted verification
-    → concise report
+    → inspect minimal relevant files
+    → implement the smallest change
+    → run targeted verification
+    → report files, changes, checks, readiness, and remaining risks
     → STOP
 
-Git operations and deployment are separate tasks.
+Commit, push, pull request, merge, and deployment actions remain separate and require explicit requests.
