@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/contexts/LanguageContext";
 import {
+  adaptDestinationExperienceName,
   getDestinationCountryCode,
   getDestinationExperiences,
 } from "@/lib/destinationExperiences";
@@ -125,7 +126,10 @@ export default function DestinationsPage() {
                             key={experienceName}
                             className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-primary"
                           >
-                            {experienceName}
+                            {adaptDestinationExperienceName(
+                              experienceName,
+                              isBride ? "byebride" : "byebro",
+                            )}
                           </span>
                         ))}
                         {localizedDestination.tags?.map((tag) => (

@@ -99,6 +99,16 @@ describe("destinations internal funnel", () => {
     ]);
   });
 
+  it("shows Bride experience names on the ByeBride destination list", () => {
+    localStorage.setItem("selectedBrand", "byebride");
+    renderInItalian(<DestinationsPage />);
+
+    expect(screen.getByText("My Olympic Bride")).toBeInTheDocument();
+    expect(screen.getByText("Chill and Feel the Bride")).toBeInTheDocument();
+    expect(screen.queryByText("My Olympic Bro")).not.toBeInTheDocument();
+    expect(screen.queryByText("Chill and Feel the Bro")).not.toBeInTheDocument();
+  });
+
   it("shows Bride experience names on a ByeBride destination detail", () => {
     localStorage.setItem("selectedBrand", "byebride");
     renderInItalian(<DestinationDetailPage />);
