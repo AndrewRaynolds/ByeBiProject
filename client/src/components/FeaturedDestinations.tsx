@@ -22,7 +22,7 @@ const DestinationCard = memo(({ destination, onExplore }: {
   }, [destination.id, onExplore]);
 
   return (
-    <div className="rounded-xl overflow-hidden shadow-lg group bg-black">
+    <article className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-soft transition-shadow hover:shadow-raised">
       <div className="relative h-64 overflow-hidden">
         <OptimizedImage 
           src={destination.image} 
@@ -32,38 +32,34 @@ const DestinationCard = memo(({ destination, onExplore }: {
           className="w-full h-full object-cover transition duration-500 group-hover:scale-110"
           loadingMode="lazy"
         />
-        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 to-transparent">
-          <h3 className="text-white text-xl font-bold font-poppins">{localizedDestination.name}</h3>
-          <p className="text-white text-sm">{localizedDestination.country}</p>
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/80 to-transparent p-5 pt-16">
+          <h3 className="text-xl font-bold text-background">{localizedDestination.name}</h3>
+          <p className="text-sm text-background/90">{localizedDestination.country}</p>
         </div>
       </div>
-      <div className="p-4">
-        <div className="flex items-center mb-2">
+      <div className="p-5">
+        <div className="flex flex-wrap items-center gap-2">
           {localizedDestination.tags?.map((tag, index) => (
             <span 
               key={index} 
-              className={`${
-                index === 0 ? 'bg-primary text-primary-foreground' :
-                index === 1 ? 'bg-gray-800 text-white' :
-                'bg-primary text-primary-foreground'
-              } text-xs px-2 py-1 rounded-full font-medium ${index > 0 ? 'ml-2' : ''}`}
+              className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-primary"
             >
               {tag}
             </span>
           ))}
         </div>
-        <p className="text-gray-300 text-sm mb-4 line-clamp-2">{localizedDestination.description}</p>
-        <div className="flex justify-end items-center">
+        <p className="mb-4 mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">{localizedDestination.description}</p>
+        <div className="flex items-center justify-end">
           <Button
-            variant="ghost"
-            className="text-primary hover:text-primary-hover font-medium"
+            variant="quiet"
+            className="text-primary hover:text-primary"
             onClick={handleExplore}
           >
             {t("destinations.explore")}
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 });
 
@@ -89,26 +85,27 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
 
   if (isLoading) {
     return (
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-end mb-8">
+      <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24">
+        <div className="page-container">
+          <div className="mb-10 flex items-end justify-between gap-6">
             <div>
               <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-5 w-48 mt-2" />
+              <Skeleton className="mt-3 h-5 w-48" />
             </div>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-xl overflow-hidden shadow-lg">
+              <div key={i} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-soft">
                 <Skeleton className="h-64 w-full" />
-                <div className="p-4">
-                  <Skeleton className="h-6 w-24 mb-2" />
-                  <Skeleton className="h-4 w-full mb-4" />
-                  <div className="flex justify-between items-center">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-16" />
+                <div className="p-5">
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
                   </div>
+                  <Skeleton className="mb-2 mt-4 h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="ml-auto mt-5 h-9 w-24" />
                 </div>
               </div>
             ))}
@@ -120,11 +117,11 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
 
   if (error) {
     return (
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins mb-3">{t("destinations.popularTitle")}</h2>
-            <p className="text-red-500">{t("destinations.errorLoading")}</p>
+      <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24">
+        <div className="page-container">
+          <div className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center shadow-soft">
+            <h2 className="text-3xl font-bold tracking-[-0.025em] text-foreground sm:text-4xl">{t("destinations.popularTitle")}</h2>
+            <p className="mt-3 text-muted-foreground">{t("destinations.errorLoading")}</p>
           </div>
         </div>
       </section>
@@ -132,19 +129,19 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
   }
 
   return (
-    <section className="py-16 bg-gray-900">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold font-poppins text-white">{t("destinations.popularTitle")}</h2>
-            <p className="text-gray-300 mt-2">{t(brand === "bride" ? "destinations.popularSubtitleBride" : "destinations.popularSubtitleBro")}</p>
+    <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24">
+      <div className="page-container">
+        <div className="mb-10 flex items-end justify-between gap-6">
+          <div className="max-w-2xl">
+            <h2 className="text-3xl font-bold tracking-[-0.025em] text-foreground sm:text-4xl">{t("destinations.popularTitle")}</h2>
+            <p className="mt-3 text-base leading-7 text-muted-foreground sm:text-lg">{t(brand === "bride" ? "destinations.popularSubtitleBride" : "destinations.popularSubtitleBro")}</p>
           </div>
-          <Link href="/destinations" className="text-primary hover:text-primary-hover font-medium hidden md:block">
-            {t("destinations.viewAll")}
-          </Link>
+          <Button variant="outline" asChild className="hidden shrink-0 md:inline-flex">
+            <Link href="/destinations">{t("destinations.viewAll")}</Link>
+          </Button>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {destinations?.slice(0, 3).map((destination) => (
             <DestinationCard 
               key={destination.id} 
@@ -155,9 +152,9 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
         </div>
         
         <div className="mt-8 text-center md:hidden">
-          <Link href="/destinations" className="text-primary hover:text-primary-hover font-medium">
-            {t("destinations.viewAll")}
-          </Link>
+          <Button variant="outline" asChild>
+            <Link href="/destinations">{t("destinations.viewAll")}</Link>
+          </Button>
         </div>
       </div>
     </section>
