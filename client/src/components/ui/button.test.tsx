@@ -42,6 +42,19 @@ describe('Button component', () => {
       const button = screen.getByRole('button');
       expect(button).toHaveClass('hover:bg-accent');
     });
+
+    it('keeps primary and quiet semantic variants available', () => {
+      const { rerender } = render(<Button variant="primary">Plan</Button>);
+      expect(screen.getByRole('button')).toHaveClass('bg-primary', 'hover:bg-primary-hover');
+
+      rerender(<Button variant="quiet">Quiet</Button>);
+      expect(screen.getByRole('button')).toHaveClass('hover:bg-surface-muted');
+    });
+
+    it('uses a neutral external-link treatment', () => {
+      render(<Button variant="external">Open provider</Button>);
+      expect(screen.getByRole('button')).toHaveClass('bg-surface', 'border-border-strong');
+    });
   });
 
   describe('sizes', () => {

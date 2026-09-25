@@ -7,6 +7,7 @@ import Header from "./Header";
 import HeroSection from "./HeroSection";
 import HowItWorks from "./HowItWorks";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { BrandProvider } from "@/contexts/BrandContext";
 import en from "@/locales/en.json";
 import es from "@/locales/es.json";
 import itTranslations from "@/locales/it.json";
@@ -33,7 +34,7 @@ vi.mock("./ChatDialogCompact", () => ({
 
 function renderInItalian(component: React.ReactNode) {
   localStorage.setItem("byebi_locale", "it");
-  return render(<LanguageProvider>{component}</LanguageProvider>);
+  return render(<LanguageProvider><BrandProvider>{component}</BrandProvider></LanguageProvider>);
 }
 
 describe("homepage clarity", () => {
@@ -119,16 +120,14 @@ describe("homepage clarity", () => {
     expect(screen.getByText(/Trip Hub.*partner/i)).toBeInTheDocument();
   });
 
-  it("links both desktop and mobile navigation to the home section", () => {
+  it("keeps planner, destinations, and experiences prominent on desktop and mobile", () => {
     window.history.replaceState(null, "", "/destinations");
     renderInItalian(<Header />);
 
     fireEvent.click(screen.getByRole("button", { name: "Apri menu di navigazione" }));
 
-    const links = screen.getAllByRole("link", { name: "Come Funziona" });
-    expect(links).toHaveLength(2);
-    for (const link of links) {
-      expect(link).toHaveAttribute("href", "/#how-it-works");
-    }
+    expect(screen.getAllByRole("link", { name: "Organizza viaggio" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Destinazioni" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Esperienze" })).toHaveLength(2);
   });
 });

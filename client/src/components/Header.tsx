@@ -1,263 +1,161 @@
-import { useState, useEffect, useRef, memo } from "react";
-import { Button } from "@/components/ui/button";
+import { memo, useEffect, useRef, useState } from "react";
+import { ChevronDown, Globe, Loader2, LogOut, Menu, User, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
-import { Menu, X, User, LogOut, Loader2, ArrowLeft, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/use-auth";
 import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
-import { throttle } from "@/lib/performance";
 import { useTranslation, type Locale } from "@/contexts/LanguageContext";
+import { useBrand } from "@/contexts/BrandContext";
+import { cn } from "@/lib/utils";
 
 const FLAG_LABELS: Record<Locale, { flag: string; label: string }> = {
-  it: { flag: '🇮🇹', label: 'Italiano' },
-  en: { flag: '🇬🇧', label: 'English' },
-  es: { flag: '🇪🇸', label: 'Español' },
+  it: { flag: "🇮🇹", label: "Italiano" },
+  en: { flag: "🇬🇧", label: "English" },
+  es: { flag: "🇪🇸", label: "Español" },
 };
 
-// Utilizziamo React.memo per evitare re-render inutili
 const Header = memo(function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<'byebro' | 'byebride' | null>(null);
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const { brand, clearBrand } = useBrand();
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const { t, locale, setLocale } = useTranslation();
+  const { isScrolled } = useOptimizedScroll({ throttleMs: 50 });
+  const isBride = brand === "byebride";
+  const splitPath = isBride ? "/splitta-bride" : "/splitta-bro";
 
-  // Check which brand is selected
   useEffect(() => {
-    const brand = localStorage.getItem('selectedBrand') as 'byebro' | 'byebride' | null;
-    setSelectedBrand(brand);
-  }, []);
-  
-  // Utilizziamo il nostro hook ottimizzato per lo scroll
-  const { isScrolled } = useOptimizedScroll({
-    throttleMs: 50 // Reattivo ma ottimizzato
-  });
-
-  // Utilizziamo throttle per limitare la frequenza delle chiamate
-  const toggleMobileMenu = throttle(() => {
-    setMobileMenuOpen(prev => !prev);
-  }, 200);
-
-  const navigateToAuth = throttle((defaultTab: string = "login") => {
-    navigate(`/auth?tab=${defaultTab}`);
-  }, 300);
-
-  const handleLogout = throttle(() => {
-    logoutMutation.mutate();
-  }, 300);
-
-  const handleChangeBrand = throttle(() => {
-    localStorage.removeItem('selectedBrand');
-    window.location.href = '/';
-  }, 300);
-
-  const handleHowItWorksClick = () => {
-    setMobileMenuOpen(false);
-
-    if (location === '/') {
-      window.requestAnimationFrame(() => {
-        document.getElementById('how-it-works')?.scrollIntoView?.({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      });
-    }
-  };
-
-  // Chiude il menu mobile quando si clicca all'esterno
-  useEffect(() => {
-    // Ottimizzazione: utilizziamo un unico event listener con throttle
-    const handleClickOutside = throttle((event: MouseEvent) => {
-      if (mobileMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        mobileMenuOpen
+        && menuRef.current
+        && !menuRef.current.contains(target)
+        && !menuTriggerRef.current?.contains(target)
+      ) {
         setMobileMenuOpen(false);
       }
-    }, 100);
-
-    // Utilizziamo passive: true per migliorare le performance
-    document.addEventListener("mousedown", handleClickOutside, { passive: true });
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [mobileMenuOpen]); // Dipendenza da mobileMenuOpen per evitare calcoli inutili
+    document.addEventListener("mousedown", handleClickOutside, { passive: true });
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobileMenuOpen]);
+
+  const handleChangeBrand = () => {
+    clearBrand();
+    window.location.href = "/";
+  };
+
+  const primaryLinkClass = (active: boolean) => cn(
+    "rounded-sm px-1 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    active && "text-primary",
+  );
 
   return (
-    <header className={`isolate overflow-visible bg-white sticky top-0 z-[60] py-2 transition-shadow duration-300 ${isScrolled ? 'shadow-md' : ''}`}>
+    <header className={cn(
+      "sticky top-0 z-[60] border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/90",
+      isScrolled && "shadow-soft",
+    )}>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-black focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-sm focus:bg-surface focus:px-4 focus:py-2 focus:text-foreground focus:shadow-raised focus:outline-none focus:ring-2 focus:ring-ring"
       >
-        {t('header.skipToContent')}
+        {t("header.skipToContent")}
       </a>
-      <div className="container mx-auto px-4 py-2 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="font-poppins font-bold text-2xl transform transition-transform hover:scale-105">
-            {selectedBrand === 'byebride' ? (
-              <>
-                <span className="text-black">Bye</span><span className="text-pink-600">Bride</span>
-              </>
-            ) : (
-              <>
-                <span className="text-black">Bye</span><span className="text-red-600">Bro</span>
-              </>
-            )}
+
+      <div className="page-container flex h-16 items-center gap-4">
+        <Link href="/" className="shrink-0 font-display text-2xl font-bold tracking-tight text-foreground" aria-label={isBride ? "ByeBride" : "ByeBro"}>
+          Bye<span className="text-primary">{isBride ? "Bride" : "Bro"}</span>
+        </Link>
+
+        <nav className="ml-auto hidden items-center gap-5 lg:flex" aria-label={t("header.primaryNavigation")}>
+          <Link href="/destinations" className={primaryLinkClass(location === "/destinations")}>
+            {t("header.destinations")}
           </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleChangeBrand}
-            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
-            data-testid="button-change-brand"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            {t('brand.changeBrand')}
-          </Button>
-        </div>
-        
-        <div className="hidden md:flex items-center space-x-6">
-          <Link href="/#how-it-works" onClick={handleHowItWorksClick} className={`text-dark transition font-medium text-sm ${
-            selectedBrand === 'byebride' 
-              ? `hover:text-pink-600 ${location === "/" ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${location === "/" ? "text-red-600" : ""}`
-          }`}>
-            {t('header.howItWorks')}
+          <Link href="/experiences" className={primaryLinkClass(location === "/experiences")}>
+            {t("header.experiences")}
           </Link>
-          <Link href="/destinations" className={`text-dark transition font-medium text-sm ${
-            selectedBrand === 'byebride'
-              ? `hover:text-pink-600 ${location === "/destinations" ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${location === "/destinations" ? "text-red-600" : ""}`
-          }`}>
-            {t('header.destinations')}
-          </Link>
-          <Link href="/experiences" className={`text-dark transition font-medium text-sm ${
-            selectedBrand === 'byebride'
-              ? `hover:text-pink-600 ${location === "/experiences" ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${location === "/experiences" ? "text-red-600" : ""}`
-          }`}>
-            {t('header.experiences')}
-          </Link>
-          <Link href="/secret-blog" className={`text-dark transition font-medium text-sm ${
-            selectedBrand === 'byebride'
-              ? `hover:text-pink-600 ${location === "/secret-blog" ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${location === "/secret-blog" ? "text-red-600" : ""}`
-          }`}>
-            {t('header.secretBlog')}
-          </Link>
-          <Link href="/merchandise" className={`text-dark transition font-medium text-sm ${
-            selectedBrand === 'byebride'
-              ? `hover:text-pink-600 ${location === "/merchandise" ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${location === "/merchandise" ? "text-red-600" : ""}`
-          }`}>
-            {t('header.merch')}
-          </Link>
-          <Link href={selectedBrand === 'byebride' ? "/splitta-bride" : "/splitta-bro"} className={`text-dark transition font-medium text-sm ${
-            selectedBrand === 'byebride'
-              ? `hover:text-pink-600 ${(location.startsWith("/splitta-bro") || location.startsWith("/splitta-bride")) ? "text-pink-600" : ""}`
-              : `hover:text-red-600 ${(location.startsWith("/splitta-bro") || location.startsWith("/splitta-bride")) ? "text-red-600" : ""}`
-          }`}>
-            {selectedBrand === 'byebride' ? 'SplittaBride' : 'SplittaBro'}
-          </Link>
-        </div>
-        
-        <div className="flex items-center space-x-2">
+          {user && (
+            <Link href="/dashboard" className={primaryLinkClass(location === "/dashboard" || location.startsWith("/trips/"))}>
+              {t("header.myTrips")}
+            </Link>
+          )}
+
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-sm gap-1 px-2"
-                aria-label={`Lingua: ${FLAG_LABELS[locale].label}`}
-              >
-                <span>{FLAG_LABELS[locale].flag}</span>
-                <Globe className="w-3.5 h-3.5 text-gray-500" />
+              <Button variant="quiet" size="sm" className="gap-1">
+                {t("header.more")} <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="z-[100]">
-              {(Object.keys(FLAG_LABELS) as Locale[]).map((loc) => (
-                <DropdownMenuItem
-                  key={loc}
-                  onClick={() => setLocale(loc)}
-                  className={locale === loc ? 'bg-gray-100 font-semibold' : ''}
-                >
-                  <span className="mr-2">{FLAG_LABELS[loc].flag}</span>
-                  {FLAG_LABELS[loc].label}
+            <DropdownMenuContent align="end" sideOffset={8} className="w-52">
+              <DropdownMenuItem asChild><Link href={splitPath}>{isBride ? "SplittaBride" : "SplittaBro"}</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/secret-blog">{t("header.secretBlog")}</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="/merchandise">{t("header.merch")}</Link></DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={handleChangeBrand}>{t("brand.changeBrand")}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-1 lg:ml-2">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="quiet" size="icon" className="hidden sm:inline-flex" aria-label={`${t("header.language")}: ${FLAG_LABELS[locale].label}`}>
+                <Globe className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={8}>
+              {Object.entries(FLAG_LABELS).map(([key, value]) => (
+                <DropdownMenuItem key={key} onSelect={() => setLocale(key as Locale)} className={cn(locale === key && "bg-surface-muted font-semibold")}>
+                  <span>{value.flag}</span>{value.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
           {user ? (
-            <div className="hidden md:block">
-              <DropdownMenu modal={false} open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="font-medium">
-                    <User className="mr-2 h-4 w-4" />
-                    {user.username}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="z-[100]">
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setProfileMenuOpen(false);
-                      navigate("/dashboard");
-                    }}
-                  >
-                    {t('header.dashboard')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
-                    {logoutMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t('header.loggingOut')}
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        {t('header.logout')}
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="quiet" size="icon" aria-label={t("header.account")}>
+                  <User className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={8} className="w-52">
+                <DropdownMenuLabel className="truncate">{user.username}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => navigate("/dashboard")}>{t("header.myTrips")}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
+                  {logoutMutation.isPending ? <Loader2 className="animate-spin" /> : <LogOut />}
+                  {logoutMutation.isPending ? t("header.loggingOut") : t("header.logout")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <>
-              <Button
-                variant="ghost"
-                className={`hidden md:block font-medium ${
-                  selectedBrand === 'byebride'
-                    ? 'text-pink-600 hover:text-pink-700'
-                    : 'text-red-600 hover:text-red-700'
-                }`}
-                onClick={() => navigateToAuth("login")}
-              >
-                {t('header.login')}
-              </Button>
-              <Button
-                className={`hidden md:block text-white px-4 py-2 rounded-lg font-medium transition ${
-                  selectedBrand === 'byebride'
-                    ? 'bg-pink-600 hover:bg-pink-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
-                onClick={() => navigateToAuth("register")}
-              >
-                {t('header.signup')}
-              </Button>
-            </>
+            <Button variant="quiet" size="sm" className="hidden sm:inline-flex" onClick={() => navigate("/auth?tab=login")}>
+              {t("header.login")}
+            </Button>
           )}
-          
+
+          <Button asChild size="sm">
+            <Link href="/">{t("header.planTrip")}</Link>
+          </Button>
+
           <Button
-            variant="ghost"
+            ref={menuTriggerRef}
+            variant="quiet"
             size="icon"
-            onClick={toggleMobileMenu}
-            className="md:hidden"
-            aria-label={mobileMenuOpen ? "Chiudi menu di navigazione" : "Apri menu di navigazione"}
+            className="lg:hidden"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            aria-label={mobileMenuOpen ? t("header.closeMenu") : t("header.openMenu")}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation"
           >
@@ -265,93 +163,28 @@ const Header = memo(function Header() {
           </Button>
         </div>
       </div>
-      
-      {/* Mobile menu */}
+
       {mobileMenuOpen && (
-        <div
-          id="mobile-navigation"
-          ref={menuRef}
-          className="md:hidden bg-white border-t border-gray-200 p-4"
-        >
-          <div className="flex flex-col space-y-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleChangeBrand}
-              className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 justify-start"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              {t('brand.changeBrand')}
-            </Button>
-            <Link href="/#how-it-works" onClick={handleHowItWorksClick} className={`text-dark transition font-medium ${
-              selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>{t('header.howItWorks')}</Link>
-            <Link href="/destinations" className={`text-dark transition font-medium ${
-              selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>{t('header.destinations')}</Link>
-            <Link href="/experiences" className={`text-dark transition font-medium ${
-              selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>{t('header.experiences')}</Link>
-            <Link href="/secret-blog" className={`text-dark transition font-medium ${
-              selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>{t('header.secretBlog')}</Link>
-            <Link href="/merchandise" className={`text-dark transition font-medium ${
-              selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>{t('header.merch')}</Link>
-            <Link href={selectedBrand === 'byebride' ? "/splitta-bride" : "/splitta-bro"} className={`text-dark transition font-medium ${
-              selectedBrand === 'byebride' ? 'hover:text-pink-600' : 'hover:text-red-600'
-            }`}>{selectedBrand === 'byebride' ? 'SplittaBride' : 'SplittaBro'}</Link>
-            
-            <div className="flex flex-col space-y-2 pt-2 border-t border-gray-200 mt-2">
-              {user ? (
-                <>
-                  <Link href="/dashboard" className="text-dark hover:text-red-600 transition font-medium">{t('header.dashboard')}</Link>
-                  <Button 
-                    variant="ghost" 
-                    className="text-left" 
-                    onClick={handleLogout}
-                    disabled={logoutMutation.isPending}
-                  >
-                    {logoutMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 inline animate-spin" />
-                        {t('header.loggingOut')}
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="mr-2 h-4 w-4 inline" />
-                        {t('header.logout')}
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    className={`font-medium transition text-left ${
-                      selectedBrand === 'byebride'
-                        ? 'text-pink-600 hover:text-pink-700'
-                        : 'text-red-600 hover:text-red-700'
-                    }`}
-                    onClick={() => navigateToAuth("login")}
-                  >
-                    {t('header.login')}
-                  </Button>
-                  <Button 
-                    className={`text-white px-4 py-2 rounded-lg font-medium transition ${
-                      selectedBrand === 'byebride'
-                        ? 'bg-pink-600 hover:bg-pink-700'
-                        : 'bg-red-600 hover:bg-red-700'
-                    }`}
-                    onClick={() => navigateToAuth("register")}
-                  >
-                    {t('header.signup')}
-                  </Button>
-                </>
-              )}
+        <div id="mobile-navigation" ref={menuRef} className="border-t border-border bg-surface lg:hidden">
+          <nav className="page-container flex flex-col gap-1 py-4" aria-label={t("header.mobileNavigation")}>
+            <Button asChild className="mb-3 w-full"><Link href="/" onClick={() => setMobileMenuOpen(false)}>{t("header.planTrip")}</Link></Button>
+            <Link href="/destinations" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(location === "/destinations")}>{t("header.destinations")}</Link>
+            <Link href="/experiences" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(location === "/experiences")}>{t("header.experiences")}</Link>
+            {user && <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(location === "/dashboard")}>{t("header.myTrips")}</Link>}
+            <div className="my-2 h-px bg-border" />
+            <Link href={splitPath} onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{isBride ? "SplittaBride" : "SplittaBro"}</Link>
+            <Link href="/secret-blog" onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{t("header.secretBlog")}</Link>
+            <Link href="/merchandise" onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{t("header.merch")}</Link>
+            <button type="button" onClick={handleChangeBrand} className="rounded-sm px-1 py-2 text-left text-sm font-medium text-muted-foreground hover:text-foreground">{t("brand.changeBrand")}</button>
+            <div className="mt-2 flex items-center gap-2 border-t border-border pt-3 sm:hidden" aria-label={t("header.language")}>
+              {(Object.entries(FLAG_LABELS) as [Locale, { flag: string; label: string }][]).map(([key, value]) => (
+                <Button key={key} variant={locale === key ? "secondary" : "quiet"} size="sm" onClick={() => setLocale(key)} aria-label={value.label}>
+                  {value.flag}
+                </Button>
+              ))}
             </div>
-          </div>
+            {!user && <Button variant="outline" className="mt-2 w-full" onClick={() => navigate("/auth?tab=login")}>{t("header.login")}</Button>}
+          </nav>
         </div>
       )}
     </header>

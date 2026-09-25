@@ -26,7 +26,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
               }}
             />
           </div>
-          <p className="text-gray-400 text-lg mt-6 font-light tracking-wide">
+          <p className="text-gray-400 text-lg mt-6 font-normal tracking-wide">
             {t('brand.subtitle')}
           </p>
         </div>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import BrandSelection from "@/components/BrandSelection";
 import RouteLoadingFallback from "@/components/RouteLoadingFallback";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
@@ -6,6 +6,7 @@ import {
   LanguageProvider,
   useTranslation,
 } from "@/contexts/LanguageContext";
+import { BrandProvider, useBrand } from "@/contexts/BrandContext";
 
 const BrandedApp = lazy(() => import("@/BrandedApp"));
 
@@ -34,47 +35,29 @@ function DocumentMetadata({
   return null;
 }
 
-function getSavedBrand(): "byebro" | "byebride" | null {
-  const savedBrand = localStorage.getItem("selectedBrand");
-  return savedBrand === "byebro" || savedBrand === "byebride"
-    ? savedBrand
-    : null;
+function AppContent() {
+  const { brand, selectBrand } = useBrand();
+
+  return (
+    <AppErrorBoundary>
+      <DocumentMetadata selectedBrand={brand} />
+      {!brand ? (
+        <BrandSelection onSelectBrand={selectBrand} />
+      ) : (
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <BrandedApp selectedBrand={brand} />
+        </Suspense>
+      )}
+    </AppErrorBoundary>
+  );
 }
 
 function App() {
-  const [selectedBrand, setSelectedBrand] = useState<
-    "byebro" | "byebride" | null
-  >(getSavedBrand);
-
-  useEffect(() => {
-    if (selectedBrand) {
-      document.documentElement.dataset.brand = selectedBrand;
-    } else {
-      delete document.documentElement.dataset.brand;
-    }
-
-    return () => {
-      delete document.documentElement.dataset.brand;
-    };
-  }, [selectedBrand]);
-
-  const handleBrandSelection = (brand: "byebro" | "byebride") => {
-    setSelectedBrand(brand);
-    localStorage.setItem("selectedBrand", brand);
-  };
-
   return (
     <LanguageProvider>
-      <AppErrorBoundary>
-        <DocumentMetadata selectedBrand={selectedBrand} />
-        {!selectedBrand ? (
-          <BrandSelection onSelectBrand={handleBrandSelection} />
-        ) : (
-          <Suspense fallback={<RouteLoadingFallback />}>
-            <BrandedApp selectedBrand={selectedBrand} />
-          </Suspense>
-        )}
-      </AppErrorBoundary>
+      <BrandProvider>
+        <AppContent />
+      </BrandProvider>
     </LanguageProvider>
   );
 }
