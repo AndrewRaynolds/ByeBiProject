@@ -18,6 +18,7 @@ const SecretBlogPostPage = lazy(() => import("@/pages/SecretBlogPostPage"));
 const MerchandisePage = lazy(() => import("@/pages/MerchandisePage"));
 const Checkout = lazy(() => import("@/pages/Checkout"));
 const TripHub = lazy(() => import("@/pages/TripHub"));
+const SharedTrip = lazy(() => import("@/pages/SharedTrip"));
 const SplittaBroPage = lazy(() => import("@/pages/SplittaBroPage"));
 const SplittaBridePage = lazy(() => import("@/pages/SplittaBridePage"));
 const DestinationsPage = lazy(() => import("@/pages/DestinationsPage"));
@@ -35,7 +36,7 @@ interface BrandedAppProps {
   selectedBrand: "byebro" | "byebride";
 }
 
-function Router({ selectedBrand }: BrandedAppProps) {
+export function Router({ selectedBrand }: BrandedAppProps) {
   const HomePage = selectedBrand === "byebride" ? HomeBride : Home;
   const SplittaPage =
     selectedBrand === "byebride" ? SplittaBridePage : SplittaBroPage;
@@ -44,6 +45,7 @@ function Router({ selectedBrand }: BrandedAppProps) {
     <Switch>
       <Route path="/" component={HomePage} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <Route path="/trips/shared/:token" component={SharedTrip} />
       <ProtectedRoute path="/trips/:id" component={TripHub} />
       <Route path="/destinations" component={DestinationsPage} />
       <Route path="/experiences" component={ExperiencesPage} />

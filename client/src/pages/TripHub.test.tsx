@@ -1,14 +1,16 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TripHub from "./TripHub";
 import { getTripBookingStatusKey } from "@/lib/tripBookingStatus";
 
-const { navigate, queryData } = vi.hoisted(() => ({
+const { navigate, queryData, apiRequest, setQueryData } = vi.hoisted(() => ({
   navigate: vi.fn(),
   queryData: new Map<string, unknown>(),
+  apiRequest: vi.fn(),
+  setQueryData: vi.fn(),
 }));
 
 const trip = {
@@ -34,6 +36,16 @@ vi.mock("@tanstack/react-query", () => ({
     isLoading: false,
     error: null,
   }),
+  useMutation: (options: { mutationFn: () => Promise<unknown>; onSuccess?: (data: unknown) => void }) => ({
+    mutate: () => options.mutationFn().then((data) => options.onSuccess?.(data)),
+    isPending: false,
+    isError: false,
+  }),
+}));
+
+vi.mock("@/lib/queryClient", () => ({
+  apiRequest,
+  queryClient: { setQueryData },
 }));
 
 vi.mock("wouter", () => ({
@@ -71,6 +83,16 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "tripHub.openExpenses": "Apri SplittaBro",
       "tripHub.startExpenses": "Avvia SplittaBro",
       "tripHub.continueCheckout": "Apri / continua checkout",
+      "tripHub.shareTitle": "Condividi viaggio",
+      "tripHub.shareDesc": "Crea link",
+      "tripHub.shareActive": "Link attivo",
+      "tripHub.generateLink": "Genera link",
+      "tripHub.rotateLink": "Genera nuovo link",
+      "tripHub.revokeLink": "Revoca link",
+      "tripHub.copyLink": "Copia link",
+      "tripHub.copied": "Copiato",
+      "tripHub.shareLinkLabel": "Link condivisibile",
+      "tripHub.shareError": "Errore link",
       "dashboard.experienceType.bachelor": "Addio al celibato",
     }[key] ?? key),
   }),
@@ -84,6 +106,13 @@ describe("TripHub", () => {
     queryData.clear();
     queryData.set("/api/trips/12", trip);
     queryData.set("/api/trips/12/expense-groups", []);
+    queryData.set("/api/trips/12/invite", { active: false });
+    apiRequest.mockReset();
+    setQueryData.mockReset();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn() },
+    });
   });
 
   it("rebuilds the saved-trip checkout context before opening checkout", () => {
@@ -133,5 +162,39 @@ describe("TripHub", () => {
     expect(navigate).toHaveBeenCalledWith(
       "/splitta-bro?tripId=12&tripName=Weekend+a+Barcellona",
     );
+  });
+
+  it("shows owner sharing actions and generates a fresh read-only link", async () => {
+    apiRequest.mockResolvedValue({ json: async () => ({ token: "A".repeat(43) }) });
+    render(<TripHub />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Genera link" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("POST", "/api/trips/12/invite"));
+    expect(await screen.findByLabelText("Link condivisibile")).toHaveTextContent(
+      `/trips/shared/${"A".repeat(43)}`,
+    );
+  });
+
+  it("shows revoke and rotation actions only when an invite is active", async () => {
+    queryData.set("/api/trips/12/invite", { active: true });
+    apiRequest.mockResolvedValue({});
+    render(<TripHub />);
+
+    expect(screen.getByRole("button", { name: "Genera nuovo link" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Revoca link" }));
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("DELETE", "/api/trips/12/invite"));
+  });
+
+  it("shows feedback when copying a generated invite fails", async () => {
+    apiRequest.mockResolvedValue({ json: async () => ({ token: "A".repeat(43) }) });
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValue(new Error("clipboard denied"));
+    render(<TripHub />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Genera link" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Copia link" }));
+
+    expect(await screen.findByText("Errore link")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copia link" })).toBeInTheDocument();
   });
 });

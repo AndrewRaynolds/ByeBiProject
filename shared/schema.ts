@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, index, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Trip model
@@ -37,6 +38,37 @@ export const insertTripSchema = createInsertSchema(trips).pick({
   activities: true,
   specialRequests: true,
   includeMerch: true,
+});
+
+export const tripInvites = pgTable(
+  "trip_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tripId: integer("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("trip_invites_token_hash_idx").on(table.tokenHash),
+    uniqueIndex("trip_invites_one_active_per_trip_idx")
+      .on(table.tripId)
+      .where(sql`${table.revokedAt} is null`),
+    index("trip_invites_owner_id_idx").on(table.ownerId),
+  ],
+);
+
+export const publicSharedTripSchema = z.object({
+  destinations: z.array(z.string()).nullable(),
+  departureCity: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  participants: z.number().int(),
+  experienceType: z.string(),
+  activities: z.array(z.string()).nullable(),
 });
 
 // Blog post model
@@ -156,6 +188,8 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
 // Export types
 export type Trip = typeof trips.$inferSelect;
 export type InsertTrip = z.infer<typeof insertTripSchema>;
+export type TripInvite = typeof tripInvites.$inferSelect;
+export type PublicSharedTrip = z.infer<typeof publicSharedTripSchema>;
 
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;

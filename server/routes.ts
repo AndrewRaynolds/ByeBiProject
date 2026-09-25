@@ -1,7 +1,7 @@
 import "./types";
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { randomUUID } from "crypto";
+import { createHash, randomBytes, randomUUID } from "crypto";
 import { storage } from "./storage";
 import { 
   insertTripSchema, 
@@ -69,6 +69,11 @@ const updateExpenseSchema = insertExpenseSchema
   .omit({ groupId: true })
   .partial()
   .strict();
+const sharedTripTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
+
+function hashTripInviteToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -668,6 +673,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const trips = await storage.getTripsByUserId(requestedUserId);
       return res.status(200).json(trips);
     } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/trips/:tripId/invite", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    try {
+      const ownerId = req.supabaseUser!.id;
+      if (!(await storage.getTripForUser(tripId, ownerId))) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      const invite = await storage.getActiveTripInviteForUser(tripId, ownerId);
+      return res.status(200).json({ active: Boolean(invite) });
+    } catch {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/trips/:tripId/invite", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    try {
+      const token = randomBytes(32).toString("base64url");
+      const invite = await storage.rotateTripInviteForUser(
+        tripId,
+        req.supabaseUser!.id,
+        hashTripInviteToken(token),
+      );
+      if (!invite) return res.status(404).json({ message: "Trip not found" });
+      return res.status(201).json({ token });
+    } catch {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/trips/:tripId/invite", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    try {
+      const ownerId = req.supabaseUser!.id;
+      if (!(await storage.getTripForUser(tripId, ownerId))) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      await storage.revokeTripInviteForUser(tripId, ownerId);
+      return res.status(204).send();
+    } catch {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/shared-trips/:token", async (req: Request, res: Response) => {
+    const parsedToken = sharedTripTokenSchema.safeParse(req.params.token);
+    res.setHeader("Cache-Control", "no-store");
+    if (!parsedToken.success) return res.status(404).json({ message: "Shared trip not found" });
+    try {
+      const trip = await storage.getSharedTripByTokenHash(hashTripInviteToken(parsedToken.data));
+      if (!trip) return res.status(404).json({ message: "Shared trip not found" });
+      return res.status(200).json(trip);
+    } catch {
       return res.status(500).json({ message: "Server error" });
     }
   });

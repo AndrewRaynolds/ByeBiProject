@@ -569,3 +569,47 @@ describe('expense group ownership', () => {
     );
   });
 });
+
+describe('trip invite security', () => {
+  const createTrip = (storage: MemStorage, userId = 'user-a') => storage.createTrip({
+    userId,
+    name: 'ByeBro · Barcellona',
+    participants: 8,
+    startDate: '2026-11-20',
+    endDate: '2026-11-23',
+    departureCity: 'Roma',
+    destinations: ['Barcellona'],
+    experienceType: 'bachelor',
+    budget: 600,
+    activities: ['Kart'],
+    specialRequests: 'Private note',
+    includeMerch: false,
+  });
+
+  it('creates, resolves, rotates, and revokes only owner-scoped invites', async () => {
+    const storage = new MemStorage();
+    const trip = await createTrip(storage);
+
+    await expect(storage.rotateTripInviteForUser(trip.id, 'user-b', 'hash-x')).resolves.toBeUndefined();
+    const first = await storage.rotateTripInviteForUser(trip.id, 'user-a', 'hash-one');
+    expect(first?.tokenHash).toBe('hash-one');
+    await expect(storage.getSharedTripByTokenHash('hash-one')).resolves.toEqual({
+      destinations: trip.destinations,
+      departureCity: trip.departureCity,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      participants: trip.participants,
+      experienceType: trip.experienceType,
+      activities: trip.activities,
+    });
+
+    const second = await storage.rotateTripInviteForUser(trip.id, 'user-a', 'hash-two');
+    expect(second?.id).not.toBe(first?.id);
+    await expect(storage.getSharedTripByTokenHash('hash-one')).resolves.toBeUndefined();
+    await expect(storage.getSharedTripByTokenHash('hash-two')).resolves.toBeDefined();
+
+    await expect(storage.revokeTripInviteForUser(trip.id, 'user-b')).resolves.toBe(false);
+    await expect(storage.revokeTripInviteForUser(trip.id, 'user-a')).resolves.toBe(true);
+    await expect(storage.getSharedTripByTokenHash('hash-two')).resolves.toBeUndefined();
+  });
+});
