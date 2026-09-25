@@ -42,7 +42,7 @@ const DestinationCard = memo(({ destination, onExplore }: {
           {localizedDestination.tags?.map((tag, index) => (
             <span 
               key={index} 
-              className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-primary"
+              className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
             >
               {tag}
             </span>
