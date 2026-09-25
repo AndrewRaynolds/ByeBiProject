@@ -22,6 +22,7 @@ const SharedTrip = lazy(() => import("@/pages/SharedTrip"));
 const SplittaBroPage = lazy(() => import("@/pages/SplittaBroPage"));
 const SplittaBridePage = lazy(() => import("@/pages/SplittaBridePage"));
 const DestinationsPage = lazy(() => import("@/pages/DestinationsPage"));
+const DestinationDetailPage = lazy(() => import("@/pages/DestinationDetailPage"));
 const ExperiencesPage = lazy(() => import("@/pages/ExperiencesPage"));
 const ZapierWebhooksPage = lazy(() => import("@/pages/ZapierWebhooksPage"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
@@ -48,6 +49,7 @@ export function Router({ selectedBrand }: BrandedAppProps) {
       <Route path="/trips/shared/:token" component={SharedTrip} />
       <ProtectedRoute path="/trips/:id" component={TripHub} />
       <Route path="/destinations" component={DestinationsPage} />
+      <Route path="/destinations/:id" component={DestinationDetailPage} />
       <Route path="/experiences" component={ExperiencesPage} />
       <Route path="/secret-blog/:id" component={SecretBlogPostPage} />
       <Route path="/secret-blog" component={SecretBlogPage} />
