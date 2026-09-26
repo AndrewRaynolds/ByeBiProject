@@ -6,7 +6,7 @@ import ChatDialogCompact from "./ChatDialogCompact";
 import ChatDialogCompactBride from "./ChatDialogCompactBride";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { createPlannerDraft, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
-const RETIRED_RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
+const RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
 import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import localeIt from "@/locales/it.json";
