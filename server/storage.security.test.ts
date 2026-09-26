@@ -482,6 +482,50 @@ describe('expense group ownership', () => {
     ]);
   });
 
+  it('reports discovery events separately from the linear funnel', async () => {
+    const storage = new MemStorage();
+    const baseEvent = {
+      sessionId: '123e4567-e89b-42d3-a456-426614174000',
+      brand: 'byebro' as const,
+    };
+    await storage.recordProductEvent({
+      ...baseEvent,
+      eventName: 'destination_detail_opened',
+    });
+    await storage.recordProductEvent({
+      ...baseEvent,
+      eventName: 'destination_detail_opened',
+    });
+    await storage.recordProductEvent({
+      ...baseEvent,
+      eventName: 'experience_item_clicked',
+    });
+
+    const summary = await storage.getProductAnalyticsSummary(new Date(0), 7);
+
+    expect(summary.funnel.map((step) => step.eventName)).toEqual([
+      'home_view',
+      'chat_started',
+      'trip_plan_completed',
+      'checkout_viewed',
+      'auth_started',
+      'signup_submitted',
+      'trip_saved',
+      'trip_hub_viewed',
+      'provider_click',
+      'splitta_opened',
+    ]);
+    expect(summary.funnel.some((step) => step.eventName === 'destination_detail_opened')).toBe(false);
+    expect(summary.discovery.find((event) => event.eventName === 'destination_detail_opened')).toEqual({
+      eventName: 'destination_detail_opened',
+      count: 1,
+    });
+    expect(summary.discovery.find((event) => event.eventName === 'experience_item_clicked')).toEqual({
+      eventName: 'experience_item_clicked',
+      count: 1,
+    });
+  });
+
   it('combines provider sessions without duplicating affiliate event storage', () => {
     const summary = summarizeProductAnalytics(
       [

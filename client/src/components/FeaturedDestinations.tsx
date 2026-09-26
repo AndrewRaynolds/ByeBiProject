@@ -67,13 +67,13 @@ interface FeaturedDestinationsProps {
 // Componente principale ottimizzato
 const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' }: FeaturedDestinationsProps) {
   const { t } = useTranslation();
-  const { data: destinations, isLoading, error } = useQuery<Destination[]>({
+  const { data: destinations, isLoading, error, refetch, isFetching } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
   
   if (isLoading) {
     return (
-      <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24">
+      <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24" role="status" aria-label={t("common.loading")}>
         <div className="page-container">
           <div className="mb-10 flex items-end justify-between gap-6">
             <div>
@@ -107,9 +107,10 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
     return (
       <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24">
         <div className="page-container">
-          <div className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center shadow-soft">
+          <div className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center shadow-soft" role="alert">
             <h2 className="text-3xl font-bold tracking-[-0.025em] text-foreground sm:text-4xl">{t("destinations.popularTitle")}</h2>
             <p className="mt-3 text-muted-foreground">{t("destinations.errorLoading")}</p>
+            <Button className="mt-5" disabled={isFetching} onClick={() => void refetch()}>{t("common.retry")}</Button>
           </div>
         </div>
       </section>
@@ -129,14 +130,19 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {destinations?.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center shadow-soft">
+            <h3 className="text-xl font-bold text-foreground">{t("destinations.emptyDatasetTitle")}</h3>
+            <p className="mt-2 text-muted-foreground">{t("destinations.emptyDatasetBody")}</p>
+          </div>
+        ) : <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {destinations?.slice(0, 3).map((destination) => (
             <DestinationCard 
               key={destination.id} 
               destination={destination} 
             />
           ))}
-        </div>
+        </div>}
         
         <div className="mt-8 text-center md:hidden">
           <Button variant="outline" asChild>

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { adaptExperienceForBrand, localizeExperience } from "./ExperienceTypes";
+import enLocale from "@/locales/en.json";
+import itLocale from "@/locales/it.json";
+import esLocale from "@/locales/es.json";
 
 const experience = {
   name: "The Wild Broventure",
@@ -20,21 +23,32 @@ describe("ExperienceTypes brand copy", () => {
 });
 
 describe("ExperienceTypes localized seed copy", () => {
-  it("localizes known ByeBro and ByeBride seed cards in Italian and Spanish", () => {
-    const seedExperience = {
-      name: "The Wild Broventure",
-      description: "One last wild adventure with your bros - outdoor activities, hiking, camping, and beers by the fire.",
-    };
-    const brideExperience = adaptExperienceForBrand(seedExperience, "bride");
+  const seedExperience = {
+    name: "The Wild Broventure",
+    description: "One last wild adventure with your bros - outdoor activities, hiking, camping, and beers by the fire.",
+  };
+  const translate = (values: Record<string, string>) => (key: string) => values[key] ?? key;
 
-    expect(localizeExperience(seedExperience, "it").name).toBe("La Bro-avventura selvaggia");
-    expect(localizeExperience(brideExperience, "es").name).toBe("La aventura salvaje de las amigas");
+  it("preserves canonical English API copy when the production translator is available", () => {
+    expect(localizeExperience(seedExperience, "en", translate(enLocale))).toBe(seedExperience);
   });
 
-  it("keeps English and unrecognized API content unchanged", () => {
+  it("localizes canonical ByeBro and ByeBride seed cards in Italian and Spanish", () => {
+    const brideExperience = adaptExperienceForBrand(seedExperience, "bride");
+
+    expect(localizeExperience(seedExperience, "it", translate(itLocale))).toMatchObject({
+      name: "La Bro-avventura selvaggia",
+      description: "Un'ultima avventura sfrenata: attività all'aperto, trekking, campeggio e birre attorno al fuoco.",
+    });
+    expect(localizeExperience(brideExperience, "es", translate(esLocale))).toMatchObject({
+      name: "La aventura salvaje de las amigas",
+      description: "Una última aventura salvaje: actividades al aire libre, senderismo, acampada y cervezas junto al fuego.",
+    });
+  });
+
+  it("keeps unrecognized API content unchanged", () => {
     const dynamicExperience = { name: "New experience", description: "Fresh API copy" };
 
-    expect(localizeExperience(experience, "en")).toBe(experience);
-    expect(localizeExperience(dynamicExperience, "it")).toBe(dynamicExperience);
+    expect(localizeExperience(dynamicExperience, "it", translate(itLocale))).toBe(dynamicExperience);
   });
 });

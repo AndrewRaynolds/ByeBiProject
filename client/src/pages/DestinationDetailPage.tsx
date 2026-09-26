@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Destination } from "@shared/schema";
 import { ArrowLeft, ArrowRight, ExternalLink, Sparkles } from "lucide-react";
+import { useEffect } from "react";
 import ReactCountryFlag from "react-country-flag";
 import { Link, useParams } from "wouter";
 import { AffiliateNotice } from "@/components/AffiliateNotice";
@@ -12,30 +13,34 @@ import { useBrand } from "@/contexts/BrandContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { getSupportedCityKey } from "@/lib/cityExperiences";
 import {
-  adaptDestinationExperienceName,
   getDestinationCountryCode,
   getDestinationExperiences,
 } from "@/lib/destinationExperiences";
 import { openExternalUrl } from "@/lib/externalNavigation";
 import { getGetYourGuideCityLink } from "@/lib/getyourguide";
 import { localizeDestination } from "@/lib/localizeDestination";
-import { trackAffiliateClick } from "@/lib/track";
+import { trackAffiliateClick, trackProductEvent } from "@/lib/track";
+import { getExperienceArchetypeLabel } from "@/lib/experienceArchetypes";
 
 export default function DestinationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { brand } = useBrand();
   const { t } = useTranslation();
-  const { data: destinations, isLoading } = useQuery<Destination[]>({
+  const { data: destinations, isLoading, isError, refetch, isFetching } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
 
   const destination = destinations?.find((item) => String(item.id) === id);
 
+  useEffect(() => {
+    if (destination) trackProductEvent("destination_detail_opened", { dedupe: false });
+  }, [destination]);
+
   if (isLoading) {
     return (
       <>
         <Header />
-        <main id="main-content" tabIndex={-1} className="bg-background">
+        <main id="main-content" tabIndex={-1} className="bg-background" role="status" aria-label={t("common.loading")}>
           <div className="page-container py-10 sm:py-14">
             <Skeleton className="mb-6 h-5 w-40 bg-surface-muted" />
             <Skeleton className="aspect-[16/9] w-full rounded-xl bg-surface-muted lg:aspect-[21/9]" />
@@ -48,12 +53,18 @@ export default function DestinationDetailPage() {
     );
   }
 
+  if (isError) {
+    return (
+      <><Header /><main id="main-content" tabIndex={-1} className="bg-background"><div className="page-container py-20 text-center" role="alert"><h1 className="text-3xl font-bold text-foreground">{t("destinations.errorLoading")}</h1><button type="button" disabled={isFetching} onClick={() => void refetch()} className="mt-6 rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">{t("common.retry")}</button></div></main><Footer /></>
+    );
+  }
+
   if (!destination) {
     return (
       <>
         <Header />
         <main id="main-content" tabIndex={-1} className="bg-background">
-          <div className="page-container py-20 text-center">
+          <div className="page-container py-20 text-center" role="status">
             <h1 className="text-3xl font-bold text-foreground">
               {t("destinations.detailNotFound")}
             </h1>
@@ -151,10 +162,7 @@ export default function DestinationDetailPage() {
                   </h2>
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     {recommendedExperiences.map((experienceName) => {
-                      const brandedExperienceName = adaptDestinationExperienceName(
-                        experienceName,
-                        brand,
-                      );
+                      const brandedExperienceName = getExperienceArchetypeLabel(experienceName, brand, t);
                       return (
                         <div
                           key={experienceName}
@@ -179,6 +187,7 @@ export default function DestinationDetailPage() {
                 <Link
                   href={plannerHref}
                   data-testid="destination-plan-with-ai"
+                  onClick={() => trackProductEvent("destination_ai_handoff", { dedupe: false })}
                   className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
@@ -191,6 +200,7 @@ export default function DestinationDetailPage() {
                     <Link
                       href={`/experiences?city=${experiencesCityKey}`}
                       data-testid="destination-experiences-link"
+                      onClick={() => trackProductEvent("destination_experiences_opened", { dedupe: false })}
                     >
                       {t("destinations.exploreExperiences", {
                         city: localizedDestination.name,

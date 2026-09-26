@@ -8,6 +8,7 @@ import {
   getAllCityExperiences,
   getItemsByCategory,
   getSupportedCityKey,
+  localizeCityExperienceItem,
   type ExperienceCategory,
   type CityExperienceItem,
 } from "@/lib/cityExperiences";
@@ -15,14 +16,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, ExternalLink, Utensils, Wine, Music, Compass, Sparkles } from "lucide-react";
-import { trackAffiliateClick, trackEvent } from "@/lib/track";
+import { trackAffiliateClick, trackProductEvent } from "@/lib/track";
 import { useBrand } from "@/contexts/BrandContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { openExternalUrl } from "@/lib/externalNavigation";
 import { AffiliateNotice } from "@/components/AffiliateNotice";
+import { getCityDefinitionByKey } from "@shared/cityMapping";
 
 const CATEGORY_ORDER: ExperienceCategory[] = ["restaurants", "bars", "nightlife", "activities"];
-const cityTranslationKey = (cityKey: string) => cityKey === "palma-de-mallorca" ? "palma" : cityKey;
+const cityTranslationKey = (cityKey: string) => getCityDefinitionByKey(cityKey)?.translationKey ?? cityKey;
 
 const CATEGORY_ICONS: Record<ExperienceCategory, JSX.Element> = {
   restaurants: <Utensils className="w-4 h-4" />,
@@ -31,16 +33,11 @@ const CATEGORY_ICONS: Record<ExperienceCategory, JSX.Element> = {
   activities: <Compass className="w-4 h-4" />,
 };
 
-function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceItem; index: number; cityName: string }) {
-  const { t, locale } = useTranslation();
+function ExperienceItemCard({ item, index, cityKey, cityName }: { item: CityExperienceItem; index: number; cityKey: string; cityName: string }) {
+  const { locale, t } = useTranslation();
+  const localizedItem = localizeCityExperienceItem(cityKey, item, locale);
   const handleClick = () => {
-    trackEvent("city_experience_click", {
-      itemName: item.name,
-      category: item.category,
-      isAffiliate: item.isAffiliate,
-      source: item.source,
-      url: item.url,
-    });
+    trackProductEvent("experience_item_clicked", { dedupe: false });
     if (item.source === "getyourguide" && item.isAffiliate) {
       trackAffiliateClick({
         provider: "getyourguide",
@@ -62,7 +59,7 @@ function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceIte
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h4 className="font-semibold leading-tight text-foreground">{item.name}</h4>
+          <h4 className="font-semibold leading-tight text-foreground">{localizedItem.name}</h4>
           {item.isAffiliate && (
             <Badge variant="brand" className="flex-shrink-0 text-[10px]">
               <Sparkles className="w-3 h-3 mr-1" />
@@ -71,7 +68,7 @@ function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceIte
           )}
         </div>
         <p className="mb-3 text-sm leading-6 text-muted-foreground">
-          {locale === "it" ? item.description : t(`experiences.itemDescription.${item.category}`, { name: item.name, city: cityName })}
+          {localizedItem.description}
         </p>
         <Button
           onClick={handleClick}
@@ -99,10 +96,31 @@ export default function ExperiencesPage() {
   const [activeCategory, setActiveCategory] = useState<ExperienceCategory>("restaurants");
 
   const selectedCity = cities.find((c) => c.cityKey === selectedCityKey) ?? cities[0];
+  const selectedCityName = selectedCity
+    ? t(`destinations.city.${cityTranslationKey(selectedCity.cityKey)}.name`)
+    : "";
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const requestedCity = new URLSearchParams(window.location.search).get("city");
+      setSelectedCityKey(getSupportedCityKey(requestedCity) ?? cities[0]?.cityKey ?? "");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [cities]);
+
+  const selectCity = (cityKey: string) => {
+    if (cityKey === selectedCityKey) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("city", cityKey);
+    window.history.pushState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    setSelectedCityKey(cityKey);
+    trackProductEvent("experience_city_selected", { dedupe: false });
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -163,8 +181,7 @@ export default function ExperiencesPage() {
                           type="button"
                           aria-pressed={isSelected}
                           onClick={() => {
-                            setSelectedCityKey(city.cityKey);
-                            trackEvent("city_experience_select", { cityKey: city.cityKey });
+                            selectCity(city.cityKey);
                           }}
                           data-testid={`button-select-city-${city.cityKey}`}
                           className={`rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
@@ -182,7 +199,12 @@ export default function ExperiencesPage() {
 
                 <Tabs
                   value={activeCategory}
-                  onValueChange={(v) => setActiveCategory(v as ExperienceCategory)}
+                  onValueChange={(v) => {
+                    const category = v as ExperienceCategory;
+                    if (category === activeCategory) return;
+                    setActiveCategory(category);
+                    trackProductEvent("experience_category_selected", { dedupe: false });
+                  }}
                   className="w-full"
                 >
                   <TabsList
@@ -232,6 +254,7 @@ export default function ExperiencesPage() {
                                 key={`${item.name}-${idx}`}
                                 item={item}
                                 index={idx}
+                                cityKey={selectedCity.cityKey}
                                 cityName={t(`destinations.city.${cityTranslationKey(selectedCity.cityKey)}.name`)}
                               />
                             ))}
@@ -245,18 +268,26 @@ export default function ExperiencesPage() {
                 <div className="mt-10 flex flex-col items-start justify-between gap-5 rounded-xl border border-border bg-brand-soft p-6 sm:flex-row sm:items-center">
                   <div>
                     <h3 className="text-xl font-bold text-foreground">
-                      {t('experiences.destinationsCtaTitle')}
+                      {t('experiences.planTitle')}
                     </h3>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                      {t('experiences.destinationsCtaDescription')}
+                      {t('experiences.planDescription', { city: selectedCityName })}
                     </p>
                   </div>
-                  <Button asChild className="shrink-0">
-                    <Link href="/destinations" data-testid="experiences-destinations-link">
-                      {t('experiences.destinationsCta')}
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                  </Button>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <Button asChild className="shrink-0">
+                      <Link href={`/?planDestination=${encodeURIComponent(selectedCityName)}`} data-testid="experiences-plan-with-ai" onClick={() => trackProductEvent("experiences_ai_handoff", { dedupe: false })}>
+                        <Sparkles className="h-4 w-4" aria-hidden="true" />
+                        {t('experiences.planWithAi', { city: selectedCityName })}
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="shrink-0">
+                      <Link href="/destinations" data-testid="experiences-destinations-link">
+                        {t('experiences.destinationsCta')}
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </>
             )}

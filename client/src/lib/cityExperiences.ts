@@ -1,4 +1,6 @@
 import { getGetYourGuideCityLink } from "./getyourguide";
+import { getLocalizedExperienceCopy } from "./cityExperienceCopy";
+import { getCanonicalCityKey } from "@shared/cityMapping";
 
 export type ExperienceCategory = "restaurants" | "bars" | "nightlife" | "activities";
 
@@ -17,29 +19,6 @@ export interface CityExperiences {
   displayName: string;
   items: CityExperienceItem[];
 }
-
-const CITY_KEY_SYNONYMS: Record<string, string> = {
-  "roma": "rome",
-  "rome": "rome",
-  "ibiza": "ibiza",
-  "barcellona": "barcelona",
-  "barcelona": "barcelona",
-  "praga": "prague",
-  "prague": "prague",
-  "budapest": "budapest",
-  "cracovia": "krakow",
-  "krakow": "krakow",
-  "amsterdam": "amsterdam",
-  "berlino": "berlin",
-  "berlin": "berlin",
-  "lisbona": "lisbon",
-  "lisbon": "lisbon",
-  "palma": "palma-de-mallorca",
-  "palma de mallorca": "palma-de-mallorca",
-  "palma di maiorca": "palma-de-mallorca",
-  "mallorca": "palma-de-mallorca",
-  "maiorca": "palma-de-mallorca",
-};
 
 function gm(name: string, city: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${city}`)}`;
@@ -622,9 +601,7 @@ const CITY_BY_KEY: Record<string, CityExperiences> = CITY_DATA.reduce((acc, c) =
 }, {} as Record<string, CityExperiences>);
 
 export function getCityExperiences(destinationCity: string | null | undefined): CityExperiences | null {
-  if (!destinationCity) return null;
-  const normalized = destinationCity.trim().toLowerCase();
-  const canonicalKey = CITY_KEY_SYNONYMS[normalized];
+  const canonicalKey = getCanonicalCityKey(destinationCity);
   if (!canonicalKey) return null;
   return CITY_BY_KEY[canonicalKey] ?? null;
 }
@@ -642,6 +619,19 @@ export function getItemsByCategory(
   category: ExperienceCategory,
 ): CityExperienceItem[] {
   return city.items.filter((it) => it.category === category);
+}
+
+export function localizeCityExperienceItem(
+  cityKey: string,
+  item: CityExperienceItem,
+  locale: "it" | "en" | "es",
+): CityExperienceItem {
+  const copy = getLocalizedExperienceCopy(cityKey, item.category, item.name, locale);
+  return {
+    ...item,
+    name: copy.name ?? item.name,
+    description: copy.description ?? item.description,
+  };
 }
 
 export const CATEGORY_LABELS: Record<ExperienceCategory, string> = {

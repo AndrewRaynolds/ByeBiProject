@@ -18,6 +18,13 @@ const mocks = vi.hoisted(() => ({
   openExternalUrl: vi.fn(),
   destinations: [] as Destination[],
   destinationId: "1",
+  trackProductEvent: vi.fn(),
+  queryState: {
+    isLoading: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  },
 }));
 
 function makeDestination(id: number, name: string, country: string): Destination {
@@ -42,7 +49,7 @@ const destinationFixtures = [
 ];
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ data: mocks.destinations, isLoading: false }),
+  useQuery: () => ({ data: mocks.destinations, ...mocks.queryState }),
 }));
 
 vi.mock("wouter", async (importOriginal) => {
@@ -55,7 +62,7 @@ vi.mock("@/components/Footer", () => ({ default: () => <footer /> }));
 vi.mock("@/components/AffiliateNotice", () => ({
   AffiliateNotice: () => <p>Affiliate notice</p>,
 }));
-vi.mock("@/lib/track", () => ({ trackAffiliateClick: mocks.trackAffiliateClick }));
+vi.mock("@/lib/track", () => ({ trackAffiliateClick: mocks.trackAffiliateClick, trackProductEvent: mocks.trackProductEvent }));
 vi.mock("@/lib/externalNavigation", () => ({ openExternalUrl: mocks.openExternalUrl }));
 
 function renderInItalian(component: React.ReactNode) {
@@ -74,19 +81,25 @@ describe("destinations internal funnel", () => {
     window.history.replaceState(null, "", "/destinations");
     mocks.trackAffiliateClick.mockClear();
     mocks.openExternalUrl.mockClear();
+    mocks.trackProductEvent.mockClear();
     mocks.destinations = [...destinationFixtures];
     mocks.destinationId = "1";
+    mocks.queryState.isLoading = false;
+    mocks.queryState.isError = false;
+    mocks.queryState.isFetching = false;
+    mocks.queryState.refetch.mockClear();
   });
 
   it("routes destination cards internally without affiliate tracking", () => {
     renderInItalian(<DestinationsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Nightlife" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vita notturna" }));
     const card = screen.getByTestId("card-destination-amsterdam");
     expect(card).toHaveAttribute("href", "/destinations/3");
     fireEvent.click(card);
 
     expect(mocks.trackAffiliateClick).not.toHaveBeenCalled();
+
     expect(mocks.openExternalUrl).not.toHaveBeenCalled();
   });
 
@@ -98,6 +111,8 @@ describe("destinations internal funnel", () => {
       "/?planDestination=Roma",
     );
     expect(mocks.trackAffiliateClick).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("destination-plan-with-ai"));
+    expect(mocks.trackProductEvent).toHaveBeenCalledWith("destination_ai_handoff", { dedupe: false });
 
     fireEvent.click(screen.getByTestId("destination-getyourguide"));
 
@@ -120,6 +135,8 @@ describe("destinations internal funnel", () => {
     expect(screen.getByTestId("destination-experiences-link")).toHaveTextContent(
       "Esplora le esperienze a Roma",
     );
+    fireEvent.click(screen.getByTestId("destination-experiences-link"));
+    expect(mocks.trackProductEvent).toHaveBeenCalledWith("destination_experiences_opened", { dedupe: false });
 
     unmount();
     mocks.destinationId = "2";
@@ -166,11 +183,11 @@ describe("destinations internal funnel", () => {
       screen.getAllByTestId(/^card-destination-/).map((card) => card.dataset.testid),
     ).toEqual(["card-destination-roma", "card-destination-paris"]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Nightlife" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vita notturna" }));
     expect(screen.getByTestId("card-destination-amsterdam")).toBeInTheDocument();
     expect(screen.getAllByTestId(/^card-destination-/)).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Adventure" }));
+    fireEvent.click(screen.getByRole("button", { name: "Avventura" }));
     expect(screen.getByTestId("card-destination-interlaken")).toBeInTheDocument();
     expect(screen.getAllByTestId(/^card-destination-/)).toHaveLength(1);
   });
@@ -178,7 +195,7 @@ describe("destinations internal funnel", () => {
   it("restores all destinations when Tutte is selected", () => {
     renderInItalian(<DestinationsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Adventure" }));
+    fireEvent.click(screen.getByRole("button", { name: "Avventura" }));
     expect(screen.getAllByTestId(/^card-destination-/)).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Tutte" }));
@@ -194,10 +211,10 @@ describe("destinations internal funnel", () => {
     localStorage.setItem("selectedBrand", "byebride");
     renderInItalian(<DestinationsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Adventure" }));
+    fireEvent.click(screen.getByRole("button", { name: "Avventura" }));
 
-    expect(screen.getByText("The Wild Brideventure")).toBeInTheDocument();
-    expect(screen.queryByText("The Wild Broventure")).not.toBeInTheDocument();
+    expect(screen.getByText("L'avventura selvaggia delle amiche")).toBeInTheDocument();
+    expect(screen.queryByText("La Bro-avventura selvaggia")).not.toBeInTheDocument();
   });
 
   it("shows an empty state and resets to all destinations", () => {
@@ -219,9 +236,34 @@ describe("destinations internal funnel", () => {
     localStorage.setItem("selectedBrand", "byebride");
     renderInItalian(<DestinationDetailPage />);
 
-    expect(screen.getByText("My Olympic Bride")).toBeInTheDocument();
-    expect(screen.getByText("Chill and Feel the Bride")).toBeInTheDocument();
-    expect(screen.queryByText("My Olympic Bro")).not.toBeInTheDocument();
-    expect(screen.queryByText("Chill and Feel the Bro")).not.toBeInTheDocument();
+    expect(screen.getByText("Le Olimpiadi delle amiche")).toBeInTheDocument();
+    expect(screen.getByText("Relax tra amiche")).toBeInTheDocument();
+    expect(screen.queryByText("Le Olimpiadi dei Bro")).not.toBeInTheDocument();
+    expect(screen.queryByText("Relax da Bro")).not.toBeInTheDocument();
+  });
+
+  it("distinguishes loading, API error with retry, empty API data, and not found", () => {
+    mocks.queryState.isLoading = true;
+    let view = renderInItalian(<DestinationsPage />);
+    expect(screen.getByRole("status", { name: "Caricamento..." })).toBeInTheDocument();
+
+    view.unmount();
+    mocks.queryState.isLoading = false;
+    mocks.queryState.isError = true;
+    view = renderInItalian(<DestinationsPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Riprova" }));
+    expect(mocks.queryState.refetch).toHaveBeenCalledOnce();
+
+    view.unmount();
+    mocks.queryState.isError = false;
+    mocks.destinations = [];
+    view = renderInItalian(<DestinationsPage />);
+    expect(screen.getByText("Le destinazioni non sono ancora disponibili")).toBeInTheDocument();
+
+    view.unmount();
+    mocks.destinations = [...destinationFixtures];
+    mocks.destinationId = "999";
+    renderInItalian(<DestinationDetailPage />);
+    expect(screen.getByRole("heading", { name: "Destinazione non trovata" })).toBeInTheDocument();
   });
 });

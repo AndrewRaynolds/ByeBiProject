@@ -9,7 +9,6 @@ import Footer from "@/components/Footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/contexts/LanguageContext";
 import {
-  adaptDestinationExperienceName,
   DESTINATION_INTENTS,
   destinationMatchesIntent,
   getDestinationCountryCode,
@@ -17,14 +16,18 @@ import {
   type DestinationIntent,
 } from "@/lib/destinationExperiences";
 import { localizeDestination } from "@/lib/localizeDestination";
+import { useBrand } from "@/contexts/BrandContext";
+import { getExperienceArchetypeLabel } from "@/lib/experienceArchetypes";
+import { trackProductEvent } from "@/lib/track";
 
 type DestinationIntentFilter = "all" | DestinationIntent;
 
 export default function DestinationsPage() {
   const { t } = useTranslation();
+  const { brand } = useBrand();
   const [selectedIntent, setSelectedIntent] = useState<DestinationIntentFilter>("all");
-  const isBride = localStorage.getItem("selectedBrand") === "byebride";
-  const { data: destinations, isLoading } = useQuery<Destination[]>({
+  const isBride = brand === "byebride";
+  const { data: destinations, isLoading, isError, refetch, isFetching } = useQuery<Destination[]>({
     queryKey: ["/api/destinations"],
   });
   const visibleDestinations =
@@ -39,7 +42,7 @@ export default function DestinationsPage() {
     return (
       <>
         <Header />
-        <main id="main-content" tabIndex={-1} className="bg-background">
+        <main id="main-content" tabIndex={-1} className="bg-background" role="status" aria-label={t("common.loading")}>
           <div className="page-container py-12 sm:py-16">
             <div className="mb-12 text-center">
               <Skeleton className="mx-auto h-12 w-64 bg-surface-muted" />
@@ -64,6 +67,12 @@ export default function DestinationsPage() {
         </main>
         <Footer />
       </>
+    );
+  }
+
+  if (isError) {
+    return (
+      <><Header /><main id="main-content" tabIndex={-1} className="bg-background"><div className="page-container py-20 text-center" role="alert"><h1 className="text-3xl font-bold text-foreground">{t("destinations.errorLoading")}</h1><button type="button" disabled={isFetching} onClick={() => void refetch()} className="mt-6 rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">{t("common.retry")}</button></div></main><Footer /></>
     );
   }
 
@@ -114,7 +123,10 @@ export default function DestinationsPage() {
                         key={intent}
                         type="button"
                         aria-pressed={isSelected}
-                        onClick={() => setSelectedIntent(intent)}
+                        onClick={() => {
+                          setSelectedIntent(intent);
+                          trackProductEvent("destination_filter_selected", { dedupe: false });
+                        }}
                         className={`rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                           isSelected
                             ? "border-primary bg-primary text-primary-foreground"
@@ -177,10 +189,7 @@ export default function DestinationsPage() {
                               key={experienceName}
                               className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-primary"
                             >
-                              {adaptDestinationExperienceName(
-                                experienceName,
-                                isBride ? "byebride" : "byebro",
-                              )}
+                              {getExperienceArchetypeLabel(experienceName, brand, t)}
                             </span>
                           ))}
                           {localizedDestination.tags?.map((tag) => (
@@ -206,6 +215,11 @@ export default function DestinationsPage() {
                     </Link>
                   );
                 })}
+              </div>
+            ) : destinations?.length === 0 ? (
+              <div className="rounded-xl border border-border bg-surface px-6 py-12 text-center shadow-soft">
+                <h3 className="text-xl font-bold text-foreground">{t("destinations.emptyDatasetTitle")}</h3>
+                <p className="mx-auto mt-2 max-w-lg text-muted-foreground">{t("destinations.emptyDatasetBody")}</p>
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-surface px-6 py-12 text-center shadow-soft">

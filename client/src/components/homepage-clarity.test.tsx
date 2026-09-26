@@ -182,13 +182,16 @@ describe("homepage clarity", () => {
   });
 
   it("keeps planner, destinations, and experiences prominent on desktop and mobile", () => {
-    window.history.replaceState(null, "", "/destinations");
+    window.history.replaceState(null, "", "/destinations/1");
     renderInItalian(<Header />);
 
     fireEvent.click(screen.getByRole("button", { name: "Apri menu di navigazione" }));
 
     expect(screen.getAllByRole("link", { name: "Organizza viaggio" })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: "Destinazioni" })).toHaveLength(2);
+    for (const link of screen.getAllByRole("link", { name: "Destinazioni" })) {
+      expect(link).toHaveAttribute("aria-current", "page");
+    }
     expect(screen.getAllByRole("link", { name: "Esperienze" })).toHaveLength(2);
   });
 });

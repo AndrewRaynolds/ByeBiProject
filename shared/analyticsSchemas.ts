@@ -39,7 +39,7 @@ export const affiliateClickSummarySchema = z.object({
 
 export type AffiliateClickSummary = z.infer<typeof affiliateClickSummarySchema>;
 
-export const productEventNames = [
+export const coreProductEventNames = [
   "home_view",
   "chat_started",
   "trip_plan_completed",
@@ -48,6 +48,32 @@ export const productEventNames = [
   "signup_submitted",
   "trip_saved",
   "trip_hub_viewed",
+  "splitta_opened",
+] as const;
+
+export const discoveryEventNames = [
+  "destination_filter_selected",
+  "destination_detail_opened",
+  "destination_experiences_opened",
+  "experience_city_selected",
+  "experience_category_selected",
+  "experience_item_clicked",
+  "destination_ai_handoff",
+  "experiences_ai_handoff",
+] as const;
+
+export const productEventNames = [...coreProductEventNames, ...discoveryEventNames] as const;
+
+export const productFunnelEventOrder = [
+  "home_view",
+  "chat_started",
+  "trip_plan_completed",
+  "checkout_viewed",
+  "auth_started",
+  "signup_submitted",
+  "trip_saved",
+  "trip_hub_viewed",
+  "provider_click",
   "splitta_opened",
 ] as const;
 
@@ -65,14 +91,20 @@ export type ProductEvent = z.infer<typeof productEventSchema>;
 export type ProductEventName = ProductEvent["eventName"];
 
 export const productFunnelStepSchema = z.object({
-  eventName: z.enum([...productEventNames, "provider_click"]),
+  eventName: z.enum(productFunnelEventOrder),
   count: z.number().int().nonnegative(),
   previousStepRate: z.number().nonnegative().nullable(),
+});
+
+export const discoveryEventSummarySchema = z.object({
+  eventName: z.enum(discoveryEventNames),
+  count: z.number().int().nonnegative(),
 });
 
 export const productAnalyticsSummarySchema = z.object({
   days: z.union([z.literal(7), z.literal(30)]),
   funnel: z.array(productFunnelStepSchema),
+  discovery: z.array(discoveryEventSummarySchema),
   providers: z.array(affiliateSummaryRowSchema),
 });
 

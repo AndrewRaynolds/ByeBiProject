@@ -33,6 +33,8 @@ const Header = memo(function Header() {
   const { isScrolled } = useOptimizedScroll({ throttleMs: 50 });
   const isBride = brand === "byebride";
   const splitPath = isBride ? "/splitta-bride" : "/splitta-bro";
+  const destinationsActive = location === "/destinations" || location.startsWith("/destinations/");
+  const experiencesActive = location.startsWith("/experiences");
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -78,10 +80,10 @@ const Header = memo(function Header() {
         </Link>
 
         <nav className="ml-auto hidden items-center gap-5 lg:flex" aria-label={t("header.primaryNavigation")}>
-          <Link href="/destinations" className={primaryLinkClass(location === "/destinations")}>
+          <Link href="/destinations" className={primaryLinkClass(destinationsActive)} aria-current={destinationsActive ? "page" : undefined}>
             {t("header.destinations")}
           </Link>
-          <Link href="/experiences" className={primaryLinkClass(location === "/experiences")}>
+          <Link href="/experiences" className={primaryLinkClass(experiencesActive)} aria-current={experiencesActive ? "page" : undefined}>
             {t("header.experiences")}
           </Link>
           {user && (
@@ -168,8 +170,8 @@ const Header = memo(function Header() {
         <div id="mobile-navigation" ref={menuRef} className="border-t border-border bg-surface lg:hidden">
           <nav className="page-container flex flex-col gap-1 py-4" aria-label={t("header.mobileNavigation")}>
             <Button asChild className="mb-3 w-full"><Link href="/" onClick={() => setMobileMenuOpen(false)}>{t("header.planTrip")}</Link></Button>
-            <Link href="/destinations" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(location === "/destinations")}>{t("header.destinations")}</Link>
-            <Link href="/experiences" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(location === "/experiences")}>{t("header.experiences")}</Link>
+            <Link href="/destinations" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(destinationsActive)} aria-current={destinationsActive ? "page" : undefined}>{t("header.destinations")}</Link>
+            <Link href="/experiences" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(experiencesActive)} aria-current={experiencesActive ? "page" : undefined}>{t("header.experiences")}</Link>
             {user && <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className={primaryLinkClass(location === "/dashboard")}>{t("header.myTrips")}</Link>}
             <div className="my-2 h-px bg-border" />
             <Link href={splitPath} onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{isBride ? "SplittaBride" : "SplittaBro"}</Link>
