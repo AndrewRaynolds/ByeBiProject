@@ -9,6 +9,15 @@ import {
 
 const LEGACY_ITINERARY_KEY = "currentItinerary";
 
+export const PLANNER_CHECKOUT_BRIDGE_VERSION = 1 as const;
+
+export const plannerCheckoutBridgeProvenanceSchema = z.object({
+  version: z.literal(PLANNER_CHECKOUT_BRIDGE_VERSION),
+  plannerBrand: z.enum(["byebro", "byebride"]),
+  plannerCreatedAt: z.string().datetime(),
+  plannerUpdatedAt: z.string().datetime(),
+}).strict();
+
 const legacyItinerarySchema = z.object({
   origin: z.string().trim().min(1).max(100).optional(),
   originCity: z.string().trim().min(1).max(100).optional(),
@@ -96,6 +105,12 @@ export function createLegacyCheckoutBridge(planner: PlannerDraft): Record<string
     partyType: planner.partyType,
     budget: planner.budgetPerPerson,
     activities,
+    plannerBridge: {
+      version: PLANNER_CHECKOUT_BRIDGE_VERSION,
+      plannerBrand: planner.brand,
+      plannerCreatedAt: planner.createdAt,
+      plannerUpdatedAt: planner.updatedAt,
+    },
     aviasalesCheckoutUrl: "",
     flightLabel: `${planner.origin.canonical} → ${planner.destination.canonical}`,
   };

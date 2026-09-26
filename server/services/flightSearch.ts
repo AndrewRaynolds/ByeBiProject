@@ -1,23 +1,13 @@
-import { buildAviasalesUrl } from "@shared/flightSchemas";
+import {
+  buildAviasalesUrl,
+  flightCheckoutSearchResponseSchema,
+  type FlightCheckoutSearchResponse,
+} from "@shared/flightSchemas";
 import {
   searchFlights,
   type FlightResult,
   type FlightSearchParams,
 } from "./amadeus-flights";
-
-export type CheckoutFlight = {
-  flightId: string;
-  airline: string;
-  price: number;
-  currency: string;
-  departureAt?: string;
-  returnAt?: string;
-  stops: number;
-  duration: string;
-  direct: boolean;
-  bookingFlow: "REDIRECT";
-  checkoutUrl: string;
-};
 
 export type FlightCheckoutSearchInput = {
   originIata: string;
@@ -30,19 +20,7 @@ export type FlightCheckoutSearchInput = {
   partnerId: string;
 };
 
-export type FlightCheckoutSearchResult = {
-  origin: string;
-  destination: string;
-  departDate: string;
-  returnDate?: string;
-  passengers: number;
-  checkoutAdults: number;
-  groupBookingRequired: boolean;
-  currency: string;
-  checkoutUrl: string;
-  flightDataStatus: "live" | "unavailable";
-  flights: CheckoutFlight[];
-};
+export type FlightCheckoutSearchResult = FlightCheckoutSearchResponse;
 
 type FlightSearchDependencies = {
   search?: (params: FlightSearchParams) => Promise<FlightResult[]>;
@@ -88,6 +66,11 @@ export async function searchFlightsForCheckout(
     groupBookingRequired: input.passengers > input.checkoutAdults,
     currency: input.currency,
     checkoutUrl,
+    handoff: {
+      provider: "aviasales" as const,
+      url: checkoutUrl,
+      exactOffer: false as const,
+    },
   };
 
   try {
@@ -100,31 +83,34 @@ export async function searchFlightsForCheckout(
       currency: input.currency,
     });
 
-    const flights = [...flightResults].sort(compareCheckoutFlights).slice(0, 5).map((flight, index) => ({
-      flightId: `flight-${index + 1}`,
-      airline: flight.airlines.join(", "),
+    const flights = [...flightResults].sort(compareCheckoutFlights).slice(0, 5).map((flight) => ({
+      provider: "amadeus" as const,
+      offerId: flight.id,
+      airlines: flight.airlines,
+      outbound: flight.outbound,
+      inbound: flight.inbound,
       price: flight.price,
       currency: flight.currency,
-      departureAt: flight.outbound[0]?.departure.at,
-      returnAt: flight.inbound?.[0]?.departure.at,
+      priceScope: "searched-passengers-total" as const,
+      quotedPassengers: input.checkoutAdults,
+      requestedPassengers: input.passengers,
       stops: flight.stops,
-      duration: flight.totalDuration,
-      direct: flight.stops === 0,
-      bookingFlow: "REDIRECT" as const,
-      checkoutUrl,
+      totalDuration: flight.totalDuration,
     }));
 
-    return {
+    return flightCheckoutSearchResponseSchema.parse({
       ...baseResult,
       flightDataStatus: "live",
+      fetchedAt: new Date().toISOString(),
       flights,
-    };
+    });
   } catch (error: unknown) {
     dependencies.onProviderError?.(error);
-    return {
+    return flightCheckoutSearchResponseSchema.parse({
       ...baseResult,
       flightDataStatus: "unavailable",
+      fetchedAt: new Date().toISOString(),
       flights: [],
-    };
+    });
   }
 }

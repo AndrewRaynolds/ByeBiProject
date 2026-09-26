@@ -65,7 +65,18 @@ describe("searchFlightsForCheckout", () => {
 
     expect(result?.flightDataStatus).toBe("live");
     expect(result?.flights).toHaveLength(1);
-    expect(result?.flights[0]?.checkoutUrl).toBe(result?.checkoutUrl);
+    expect(result?.handoff).toEqual({
+      provider: "aviasales",
+      url: result?.checkoutUrl,
+      exactOffer: false,
+    });
+    expect(result?.flights[0]).toMatchObject({
+      provider: "amadeus",
+      offerId: "offer-1",
+      quotedPassengers: 9,
+      requestedPassengers: 12,
+      priceScope: "searched-passengers-total",
+    });
   });
 
   it("orders offers by price, stops, duration and stable identifiers", async () => {
@@ -99,11 +110,11 @@ describe("searchFlightsForCheckout", () => {
       ]),
     });
 
-    expect(result?.flights.map((flight) => flight.airline)).toEqual([
-      "CheapDirectShort",
-      "CheapDirectLong",
-      "CheapStop",
-      "Expensive",
+    expect(result?.flights.map((flight) => flight.offerId)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
     ]);
   });
 

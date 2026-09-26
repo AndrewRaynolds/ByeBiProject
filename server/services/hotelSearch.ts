@@ -1,8 +1,13 @@
-import type { HotelResult, HotelSearchQuery } from "@shared/hotelSchemas";
+import {
+  hotelSearchResponseSchema,
+  type HotelResult,
+  type HotelSearchQuery,
+} from "@shared/hotelSchemas";
 import { searchHotels } from "./amadeus-hotels";
 
 export type HotelCheckoutSearchResult = HotelSearchQuery & {
   hotelDataStatus: "live" | "unavailable";
+  fetchedAt: string;
   hotels: HotelResult[];
 };
 
@@ -31,17 +36,19 @@ export async function searchHotelsForCheckout(
 
   try {
     const hotels = await (dependencies.search ?? searchHotels)(input);
-    return {
+    return hotelSearchResponseSchema.parse({
       ...baseResult,
       hotelDataStatus: "live",
+      fetchedAt: new Date().toISOString(),
       hotels: [...hotels].sort(compareCheckoutHotels),
-    };
+    });
   } catch (error: unknown) {
     dependencies.onProviderError?.(error);
-    return {
+    return hotelSearchResponseSchema.parse({
       ...baseResult,
       hotelDataStatus: "unavailable",
+      fetchedAt: new Date().toISOString(),
       hotels: [],
-    };
+    });
   }
 }

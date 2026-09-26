@@ -1,585 +1,327 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plane, Hotel, Calendar, Users, MapPin, ExternalLink, Loader2, AlertCircle, RefreshCw, Save, CheckCircle2 } from 'lucide-react';
-import Header from '@/components/Header';
-import { formatDateRangeIT, calculateTripDays } from '@shared/dateUtils';
-import { GetYourGuideCta } from '@/components/GetYourGuideCta';
-import { getCityCode } from '@shared/cityMapping';
-import { useTranslation } from '@/contexts/LanguageContext';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { parseStoredTripContext, type TripContext } from '@/lib/tripContext';
-import { hotelSearchResponseSchema, type HotelResult } from '@shared/hotelSchemas';
-import {
-  buildBookingSearchUrl,
-  hasBookingAffiliateId,
-  isMonetizedAviasalesUrl,
-} from '@/lib/affiliateLinks';
-import { trackAffiliateClick, trackProductEvent } from '@/lib/track';
-import { openExternalUrl } from '@/lib/externalNavigation';
-import { AffiliateNotice } from '@/components/AffiliateNotice';
-import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast';
-import { plannedTripMatchesSavedTrip, savePlannedTrip } from '@/lib/plannedTrip';
-import type { Trip } from '@shared/schema';
-import { flightCheckoutSearchResponseSchema } from '@shared/flightSchemas';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "wouter";
+import { AlertCircle, Calendar, CheckCircle2, ExternalLink, Hotel, Loader2, MapPin, Plane, RefreshCw, Save, Users } from "lucide-react";
+import Header from "@/components/Header";
+import { AffiliateNotice } from "@/components/AffiliateNotice";
+import { GetYourGuideCta } from "@/components/GetYourGuideCta";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/contexts/LanguageContext";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { buildBookingSearchUrl, hasBookingAffiliateId, isMonetizedAviasalesUrl } from "@/lib/affiliateLinks";
+import { openExternalUrl } from "@/lib/externalNavigation";
+import { plannedTripMatchesSavedTrip, savePlannedTrip } from "@/lib/plannedTrip";
+import { loadProviderSearchContext, type ProviderSearchContext } from "@/lib/providerSearchContext";
+import { loadProviderSelections, saveProviderSelections } from "@/lib/providerSelections";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { trackAffiliateClick, trackProductEvent } from "@/lib/track";
+import type { TripContext } from "@/lib/tripContext";
+import { getCityCode } from "@shared/cityMapping";
+import { calculateTripDays } from "@shared/dateUtils";
+import { flightCheckoutSearchResponseSchema, type FlightCheckoutOffer } from "@shared/flightSchemas";
+import { hotelSearchResponseSchema, type HotelResult } from "@shared/hotelSchemas";
+import type { SelectedFlight, SelectedHotel } from "@shared/providerSelectionSchemas";
+import type { Trip } from "@shared/schema";
 
+type ProviderState = "loading" | "live" | "empty" | "error" | "unsupported";
+
+function toSelectedFlight(offer: FlightCheckoutOffer, handoffUrl: string): SelectedFlight {
+  const first = offer.outbound[0];
+  const last = offer.outbound[offer.outbound.length - 1];
+  return {
+    provider: "amadeus",
+    offerId: offer.offerId,
+    airlineNames: offer.airlines,
+    departureAt: first.departure.at,
+    arrivalAt: last.arrival.at,
+    ...(offer.inbound?.[0]?.departure.at ? { returnDepartureAt: offer.inbound[0].departure.at } : {}),
+    price: offer.price,
+    currency: offer.currency,
+    priceScope: "searched-passengers-total",
+    quotedPassengers: offer.quotedPassengers,
+    externalHandoff: { provider: "aviasales", url: handoffUrl, exactOffer: false },
+  };
+}
+
+function toSelectedHotel(hotel: HotelResult): SelectedHotel {
+  return {
+    provider: "amadeus",
+    hotelId: hotel.hotelId,
+    offerId: hotel.offerId,
+    name: hotel.name,
+    checkInDate: hotel.checkInDate,
+    checkOutDate: hotel.checkOutDate,
+    priceTotal: hotel.priceTotal,
+    currency: hotel.currency,
+    priceScope: "quoted-occupancy-total-stay",
+    quotedAdults: hotel.quotedAdults,
+    requestedAdults: hotel.requestedAdults,
+  };
+}
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const { t } = useTranslation();
+  const { locale, t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const flightRequest = useRef<AbortController | null>(null);
+  const hotelRequest = useRef<AbortController | null>(null);
+  const flightRequestGeneration = useRef(0);
+  const hotelRequestGeneration = useRef(0);
   const [tripContext, setTripContext] = useState<TripContext | null>(null);
-  const [flightCheckoutUrl, setFlightCheckoutUrl] = useState("");
-  const [loadingFlight, setLoadingFlight] = useState(false);
-  const [hotels, setHotels] = useState<HotelResult[]>([]);
-  const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
-  const [loadingHotels, setLoadingHotels] = useState(true);
-  const [hotelError, setHotelError] = useState<string | null>(null);
-  const [hotelSearchFailed, setHotelSearchFailed] = useState(false);
+  const [searchContext, setSearchContext] = useState<ProviderSearchContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [flightState, setFlightState] = useState<ProviderState>("loading");
+  const [hotelState, setHotelState] = useState<ProviderState>("loading");
+  const [flights, setFlights] = useState<FlightCheckoutOffer[]>([]);
+  const [hotels, setHotels] = useState<HotelResult[]>([]);
+  const [flightCheckoutUrl, setFlightCheckoutUrl] = useState("");
+  const [selectedFlight, setSelectedFlight] = useState<SelectedFlight | null>(null);
+  const [selectedHotel, setSelectedHotel] = useState<SelectedHotel | null>(null);
+  const [selectionsReady, setSelectionsReady] = useState(false);
   const [savingTrip, setSavingTrip] = useState(false);
-  const [tripSaveStatus, setTripSaveStatus] = useState<'idle' | 'saved' | 'existing'>('idle');
+  const [tripSaveStatus, setTripSaveStatus] = useState<"idle" | "saved" | "existing">("idle");
   const [checkingSavedTrip, setCheckingSavedTrip] = useState(false);
 
-  useEffect(() => {
-    const data = localStorage.getItem('currentItinerary');
-    
-    if (!data) {
-      setLocation('/');
-      return;
-    }
-    
-    const context = parseStoredTripContext(data);
-    if (!context) {
-      setLocation('/');
-      setIsLoading(false);
-      return;
-    }
-
-    setTripContext(context);
-    trackProductEvent('checkout_viewed');
-    setFlightCheckoutUrl(context.aviasalesCheckoutUrl);
+  const fetchFlights = useCallback(async (context: ProviderSearchContext) => {
+    flightRequest.current?.abort();
     const controller = new AbortController();
-    fetchHotels(context, controller.signal);
-    if (!context.aviasalesCheckoutUrl) {
-      fetchFlightCheckoutUrl(context, controller.signal);
+    const requestGeneration = ++flightRequestGeneration.current;
+    flightRequest.current = controller;
+    setFlightState("loading");
+    setFlights([]);
+    try {
+      const params = new URLSearchParams({ origin: context.origin, destination: context.destination, departDate: context.startDate, returnDate: context.endDate, passengers: String(context.participants), currency: "EUR" });
+      const response = await apiRequest("GET", `/api/flights/search?${params}`, undefined, { signal: controller.signal, timeoutMs: 30_000 });
+      const parsed = flightCheckoutSearchResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Invalid flight response");
+      if (controller.signal.aborted || requestGeneration !== flightRequestGeneration.current) return;
+      setFlightCheckoutUrl(parsed.data.handoff.url);
+      setFlights(parsed.data.flights);
+      if (parsed.data.flightDataStatus === "live") {
+        setSelectedFlight((current) => {
+          if (!current) return null;
+          const matchingOffer = parsed.data.flights.find((offer) =>
+            offer.provider === current.provider && offer.offerId === current.offerId,
+          );
+          return matchingOffer ? toSelectedFlight(matchingOffer, parsed.data.handoff.url) : null;
+        });
+      }
+      setFlightState(parsed.data.flightDataStatus === "unavailable" ? "error" : parsed.data.flights.length ? "live" : "empty");
+    } catch (error: unknown) {
+      if (controller.signal.aborted || requestGeneration !== flightRequestGeneration.current) return;
+      if (import.meta.env.DEV) console.error("Flight search error:", error);
+      setFlightState("error");
     }
-    
-    setIsLoading(false);
-    return () => controller.abort();
+  }, []);
+
+  const fetchHotels = useCallback(async (context: ProviderSearchContext) => {
+    hotelRequest.current?.abort();
+    const controller = new AbortController();
+    const requestGeneration = ++hotelRequestGeneration.current;
+    hotelRequest.current = controller;
+    setHotelState("loading");
+    setHotels([]);
+    const cityCode = getCityCode(context.destination);
+    if (!cityCode) {
+      setHotelState("unsupported");
+      return;
+    }
+    try {
+      const params = new URLSearchParams({ cityCode, checkInDate: context.startDate, checkOutDate: context.endDate, adults: String(context.participants), currency: "EUR" });
+      const response = await apiRequest("GET", `/api/hotels/search?${params}`, undefined, { signal: controller.signal, timeoutMs: 30_000 });
+      const parsed = hotelSearchResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Invalid hotel response");
+      if (controller.signal.aborted || requestGeneration !== hotelRequestGeneration.current) return;
+      setHotels(parsed.data.hotels.slice(0, 5));
+      if (parsed.data.hotelDataStatus === "live") {
+        setSelectedHotel((current) => {
+          if (!current) return null;
+          const matchingOffer = parsed.data.hotels.find((hotel) =>
+            hotel.provider === current.provider &&
+            hotel.hotelId === current.hotelId &&
+            hotel.offerId === current.offerId,
+          );
+          return matchingOffer ? toSelectedHotel(matchingOffer) : null;
+        });
+      }
+      setHotelState(parsed.data.hotelDataStatus === "unavailable" ? "error" : parsed.data.hotels.length ? "live" : "empty");
+    } catch (error: unknown) {
+      if (controller.signal.aborted || requestGeneration !== hotelRequestGeneration.current) return;
+      if (import.meta.env.DEV) console.error("Hotel search error:", error);
+      setHotelState("error");
+    }
   }, []);
 
   useEffect(() => {
-    if (!tripContext || !isAuthenticated || !user?.id) {
-      setTripSaveStatus('idle');
+    const loaded = loadProviderSearchContext(localStorage);
+    if (!loaded) {
+      setLocation("/");
+      setIsLoading(false);
       return;
     }
+    setTripContext(loaded.legacyTripContext);
+    setSearchContext(loaded.searchContext);
+    setFlightCheckoutUrl(loaded.legacyTripContext.aviasalesCheckoutUrl);
+    const restored = loadProviderSelections(localStorage, loaded.searchContext.fingerprint);
+    setSelectedFlight(restored?.selectedFlight ?? null);
+    setSelectedHotel(restored?.selectedHotel ?? null);
+    setSelectionsReady(true);
+    trackProductEvent("checkout_viewed");
+    void fetchFlights(loaded.searchContext);
+    void fetchHotels(loaded.searchContext);
+    setIsLoading(false);
+    return () => {
+      flightRequestGeneration.current += 1;
+      hotelRequestGeneration.current += 1;
+      flightRequest.current?.abort();
+      hotelRequest.current?.abort();
+    };
+  }, [fetchFlights, fetchHotels, setLocation]);
 
+  useEffect(() => {
+    if (!searchContext || !selectionsReady) return;
+    saveProviderSelections(localStorage, {
+      searchFingerprint: searchContext.fingerprint,
+      ...(selectedFlight ? { selectedFlight } : {}),
+      ...(selectedHotel ? { selectedHotel } : {}),
+    });
+  }, [searchContext, selectedFlight, selectedHotel, selectionsReady]);
+
+  useEffect(() => {
+    if (!tripContext || !isAuthenticated || !user?.id) {
+      setTripSaveStatus("idle");
+      return;
+    }
     let cancelled = false;
     setCheckingSavedTrip(true);
-    apiRequest('GET', `/api/trips/user/${user.id}`)
+    apiRequest("GET", `/api/trips/user/${user.id}`)
       .then((response) => response.json() as Promise<Trip[]>)
       .then((trips) => {
-        if (!cancelled && trips.some((trip) => plannedTripMatchesSavedTrip(tripContext, trip))) {
-          setTripSaveStatus('existing');
-        }
+        if (!cancelled && trips.some((trip) => plannedTripMatchesSavedTrip(tripContext, trip))) setTripSaveStatus("existing");
       })
-      .catch(() => {
-        // Saving remains available if this optional status check is unavailable.
-      })
-      .finally(() => {
-        if (!cancelled) setCheckingSavedTrip(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => undefined)
+      .finally(() => { if (!cancelled) setCheckingSavedTrip(false); });
+    return () => { cancelled = true; };
   }, [isAuthenticated, tripContext, user?.id]);
 
-  const fetchFlightCheckoutUrl = async (context: TripContext, signal: AbortSignal) => {
-    setLoadingFlight(true);
-    try {
-      const params = new URLSearchParams({
-        origin: context.origin,
-        destination: context.destination,
-        departDate: context.startDate,
-        returnDate: context.endDate,
-        passengers: String(context.people),
-        currency: 'EUR',
-      });
-      const response = await apiRequest(
-        'GET',
-        `/api/flights/search?${params}`,
-        undefined,
-        { signal, timeoutMs: 30_000 },
-      );
-      const result = flightCheckoutSearchResponseSchema.safeParse(await response.json());
-      if (!result.success || signal.aborted) return;
+  const formatPrice = (amount: number, currency: string) => new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+  const formatDateTime = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 
-      setFlightCheckoutUrl(result.data.checkoutUrl);
-    } catch (error: unknown) {
-      if (signal.aborted) return;
-      if (import.meta.env.DEV) console.error('Flight checkout recovery error:', error);
-      // Hotel and activity choices remain usable when live flight recovery fails.
-    } finally {
-      if (!signal.aborted) setLoadingFlight(false);
-    }
-  };
-
-  const fetchHotels = async (context: TripContext, signal: AbortSignal) => {
-    setLoadingHotels(true);
-    setHotelError(null);
-    setHotelSearchFailed(false);
-    
-    try {
-      const cityCode = getCityCode(context.destination);
-      
-      if (!cityCode) {
-        if (import.meta.env.DEV) {
-          console.warn('[HOTEL-SEARCH] Unsupported destination:', context.destination);
-        }
-        setHotelError(t('checkout.unsupportedDest', { destination: context.destination }));
-        setLoadingHotels(false);
-        return;
-      }
-      
-      if (import.meta.env.DEV) {
-        console.log('[HOTEL-SEARCH] Request:', {
-          destinationCity: context.destination,
-          derivedCityCode: cityCode,
-          checkIn: context.startDate,
-          checkOut: context.endDate,
-          guests: context.people
-        });
-      }
-      
-      const params = new URLSearchParams({
-        cityCode,
-        checkInDate: context.startDate,
-        checkOutDate: context.endDate,
-        adults: String(context.people),
-        currency: 'EUR'
-      });
-      
-      const response = await apiRequest(
-        'GET',
-        `/api/hotels/search?${params}`,
-        undefined,
-        { signal, timeoutMs: 30_000 },
-      );
-
-      const result = hotelSearchResponseSchema.safeParse(await response.json());
-      if (!result.success) {
-        throw new Error('Invalid hotel search response');
-      }
-      
-      if (import.meta.env.DEV) {
-        console.log('[HOTEL-SEARCH] Response:', {
-          count: result.data.hotels.length,
-          top3: result.data.hotels.slice(0, 3).map((hotel) => hotel.name),
-          priceRange: result.data.hotels.length ? {
-            min: Math.min(...result.data.hotels.map((hotel) => hotel.priceTotal)),
-            max: Math.max(...result.data.hotels.map((hotel) => hotel.priceTotal))
-          } : null
-        });
-      }
-      
-      if (result.data.hotelDataStatus === 'unavailable') {
-        setHotels([]);
-        setHotelSearchFailed(true);
-        setHotelError(t('checkout.hotelLoadError'));
-      } else if (result.data.hotels.length > 0) {
-        setHotels(result.data.hotels.slice(0, 5));
-      } else {
-        setHotels([]);
-        setHotelError(t('checkout.noHotelsForDates'));
-      }
-    } catch (error: unknown) {
-      if (signal.aborted) return;
-      if (import.meta.env.DEV) console.error('Hotel fetch error:', error);
-      setHotelSearchFailed(true);
-      setHotelError(t('checkout.hotelLoadError'));
-    } finally {
-      if (!signal.aborted) setLoadingHotels(false);
-    }
-  };
-
-  const getHotelBookingUrl = (hotel: HotelResult): string => {
-    return buildBookingSearchUrl({
-      hotelName: hotel.name,
-      destination: tripContext?.destination || '',
-      checkInDate: hotel.checkInDate,
-      checkOutDate: hotel.checkOutDate,
-      adults: tripContext?.people || 2,
-    });
-  };
-
-  const getDestinationBookingUrl = (): string => {
-    return buildBookingSearchUrl({
-      destination: tripContext?.destination || '',
-      checkInDate: tripContext?.startDate,
-      checkOutDate: tripContext?.endDate,
-      adults: tripContext?.people || 2,
-    });
-  };
-
-  const openBookingSearch = (placement: 'checkout_hotel' | 'checkout_hotel_fallback', hotel?: HotelResult) => {
-    const url = hotel ? getHotelBookingUrl(hotel) : getDestinationBookingUrl();
-    trackAffiliateClick({
-      provider: 'booking',
-      placement,
-      destination: tripContext?.destination,
-      monetized: hasBookingAffiliateId(),
-    });
+  const openBookingSearch = (placement: "checkout_hotel" | "checkout_hotel_fallback", hotel?: SelectedHotel) => {
+    if (!searchContext) return;
+    const url = buildBookingSearchUrl({ ...(hotel ? { hotelName: hotel.name } : {}), destination: searchContext.destination, checkInDate: searchContext.startDate, checkOutDate: searchContext.endDate, adults: searchContext.participants });
+    trackAffiliateClick({ provider: "booking", placement, destination: searchContext.destination, monetized: hasBookingAffiliateId() });
     openExternalUrl(url);
   };
-
-  const formatHotelPrice = (hotel: HotelResult): string =>
-    new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: hotel.currency,
-    }).format(hotel.priceTotal);
 
   const handleSaveTrip = async () => {
     if (!tripContext) return;
     if (!isAuthenticated || !user?.id) {
-      setLocation('/auth?next=/checkout');
+      setLocation("/auth?next=/checkout");
       return;
     }
-
     setSavingTrip(true);
     try {
       const { created } = await savePlannedTrip(tripContext);
-      if (created) trackProductEvent('trip_saved');
+      if (created) trackProductEvent("trip_saved");
       await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
-      setTripSaveStatus(created ? 'saved' : 'existing');
-      toast({
-        title: t(created ? 'chat.tripSaved' : 'chat.tripAlreadySaved'),
-        description: t(created ? 'chat.tripSavedDesc' : 'chat.tripAlreadySavedDesc'),
-      });
+      setTripSaveStatus(created ? "saved" : "existing");
+      toast({ title: t(created ? "chat.tripSaved" : "chat.tripAlreadySaved"), description: t(created ? "chat.tripSavedDesc" : "chat.tripAlreadySavedDesc") });
     } catch {
-      toast({
-        title: t('chat.tripSaveError'),
-        description: t('chat.tripSaveErrorDesc'),
-        variant: 'destructive',
-      });
+      toast({ title: t("chat.tripSaveError"), description: t("chat.tripSaveErrorDesc"), variant: "destructive" });
     } finally {
       setSavingTrip(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-primary-hover flex items-center justify-center">
-        <div className="text-white text-xl">{t('common.loading')}</div>
-      </div>
-    );
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background">{t("common.loading")}</div>;
+  if (!tripContext || !searchContext) {
+    return <div className="min-h-screen bg-background"><Header /><main id="main-content" tabIndex={-1} className="product-container py-16"><Card><CardHeader><CardTitle>{t("checkout.missingData")}</CardTitle></CardHeader><CardContent><p className="mb-6 text-muted-foreground">{t("checkout.missingDataDesc")}</p><Button onClick={() => setLocation("/")}>{t("itinerary.backToChatbot")}</Button></CardContent></Card></main></div>;
   }
 
-  // Validate required TripContext fields
-  if (!tripContext || !tripContext.destination || !tripContext.startDate || !tripContext.endDate || !tripContext.people) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-primary-hover">
-        <Header />
-        <main id="main-content" tabIndex={-1} className="container mx-auto px-4 py-16 max-w-2xl">
-          <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-red-500/50">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 p-4 bg-red-500/20 rounded-full w-fit">
-                <AlertCircle className="w-12 h-12 text-red-400" />
-              </div>
-              <CardTitle className="text-2xl text-white">{t('checkout.missingData')}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-gray-300 mb-6">
-                {t('checkout.missingDataDesc')}
-              </p>
-              <Button
-                onClick={() => setLocation('/')}
-                className="bg-primary text-primary-foreground hover:bg-primary-hover px-8 py-3 text-lg"
-                data-testid="button-back-chatbot"
-              >
-                {t('itinerary.backToChatbot')}
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
-
-  // Calculate trip days from dates (safe - fields validated above)
-  const tripDays = calculateTripDays(tripContext.startDate, tripContext.endDate);
-  const formattedDates = formatDateRangeIT(tripContext.startDate, tripContext.endDate);
+  const tripDays = calculateTripDays(searchContext.startDate, searchContext.endDate);
+  const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
+  const formattedDates = `${dateFormatter.format(new Date(`${searchContext.startDate}T00:00:00Z`))} – ${dateFormatter.format(new Date(`${searchContext.endDate}T00:00:00Z`))}`;
   const aviasalesIsMonetized = isMonetizedAviasalesUrl(flightCheckoutUrl);
-  const bookingIsMonetized = hasBookingAffiliateId();
+  const currentSelectedFlight = flightState === "live" ? selectedFlight : null;
+  const currentSelectedHotel = hotelState === "live" ? selectedHotel : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-primary-hover">
+    <div className="min-h-screen bg-background">
       <Header />
-      <main id="main-content" tabIndex={-1}>
-        {/* Hero Header */}
-        <div className="relative py-12 bg-gradient-to-r from-black/50 to-primary-hover/50 backdrop-blur-sm border-b border-white/10">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="text-center mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-brand-soft to-primary bg-clip-text text-transparent">
-              {t('checkout.title')}
-            </h1>
-            <p className="text-white/80 text-lg">{t('checkout.subtitle')}</p>
-          </div>
-          
-          {/* Trip Info Pills */}
-          <div className="flex flex-wrap justify-center gap-4 text-white/90">
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-              <MapPin className="w-5 h-5 text-primary" />
-              <span className="font-medium" data-testid="text-destination">{tripContext.destination}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-              <Calendar className="w-5 h-5 text-primary" />
-              <span className="font-medium" data-testid="text-dates">{formattedDates}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-              <Users className="w-5 h-5 text-primary" />
-              <span className="font-medium" data-testid="text-people">{tripContext.people} {t('common.people')}</span>
-            </div>
-          </div>
-        </div>
-        </div>
+      <main id="main-content" tabIndex={-1} className="product-container space-y-6 py-8 sm:py-12">
+        <section aria-labelledby="travel-options-title" className="space-y-4">
+          <div><h1 id="travel-options-title" className="font-display text-3xl font-bold sm:text-4xl">{t("checkout.title")}</h1><p className="mt-2 text-muted-foreground">{t("checkout.subtitle")}</p></div>
+          <Card><CardHeader><CardTitle className="text-xl">{t("checkout.travelBrief")}</CardTitle></CardHeader><CardContent className="grid gap-3 text-sm sm:grid-cols-3"><p className="flex items-center gap-2"><MapPin aria-hidden="true" />{searchContext.origin} → {searchContext.destination}</p><p className="flex items-center gap-2"><Calendar aria-hidden="true" />{formattedDates}</p><p className="flex items-center gap-2"><Users aria-hidden="true" />{searchContext.participants} {t("common.people")}</p></CardContent></Card>
+        </section>
 
-        <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
-        
-        {/* Flight Section - Uses aviasalesCheckoutUrl directly */}
-        <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-green-500 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-white text-xl">
-              <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg">
-                <Plane className="w-5 h-5 text-white" />
-              </div>
-              {t('checkout.flight')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="pb-4">
-              <p className="font-semibold text-white text-lg" data-testid="text-flight-label">
-                {tripContext.flightLabel}
-              </p>
-              <p className="text-sm text-white/70 mt-1">
-                {formattedDates} • {tripContext.people} {t('common.passengers')}
-              </p>
-            </div>
-            <p className="text-xs text-white/50 mb-3 italic">
-              {t('checkout.bookOnAviasales')}
-            </p>
-            {tripContext.people > 9 && (
-              <div
-                className="mb-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-100"
-                data-testid="flight-large-group-note"
-              >
-                {t('checkout.largeGroupFlightNote', { count: String(tripContext.people) })}
-              </div>
-            )}
-            {aviasalesIsMonetized && <AffiliateNotice className="mb-3" showText={false} />}
-            
-            {loadingFlight ? (
-              <div className="flex items-center gap-2 text-sm text-white/70" data-testid="loading-flight-link">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t('checkout.loadingFlights')}
-              </div>
-            ) : flightCheckoutUrl ? (
-              <Button 
-                asChild
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-                data-testid="button-book-flight"
-              >
-                <a 
-                  href={flightCheckoutUrl}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  onClick={() => trackAffiliateClick({
-                    provider: 'aviasales',
-                    placement: 'checkout_flight',
-                    destination: tripContext.destination,
-                    monetized: isMonetizedAviasalesUrl(flightCheckoutUrl),
-                  })}
-                >
-                  <Plane className="w-4 h-4 mr-2" />
-                  {t('checkout.goToAviasales')}
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </a>
-              </Button>
-            ) : (
-              <p className="text-yellow-400 text-sm">{t('checkout.flightUnavailable')}</p>
-            )}
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-3 text-xl"><Plane aria-hidden="true" />{t("checkout.flightOptions")}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{t("checkout.flightProviderNote")}</p>
+            {searchContext.participants > 9 && <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm" data-testid="flight-large-group-note">{t("checkout.largeGroupFlightNote", { count: searchContext.participants })}</p>}
+            {flightState === "loading" && <ProviderLoading label={t("checkout.loadingFlights")} />}
+            {flightState === "error" && <ProviderMessage text={t("checkout.flightUnavailable")}><Button variant="outline" onClick={() => void fetchFlights(searchContext)} data-testid="button-retry-flights"><RefreshCw />{t("checkout.retryFlightSearch")}</Button></ProviderMessage>}
+            {flightState === "empty" && <ProviderMessage text={t("checkout.noFlightsForDates")} />}
+            {flightState === "live" && <div className="space-y-3">
+              {flights.map((flight, index) => {
+                const selected = selectedFlight?.offerId === flight.offerId;
+                const first = flight.outbound[0];
+                const last = flight.outbound[flight.outbound.length - 1];
+                return <button type="button" key={flight.offerId} aria-pressed={selected} onClick={() => setSelectedFlight(selected ? null : toSelectedFlight(flight, flightCheckoutUrl))} className={`w-full rounded-lg border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-border-strong"}`} data-testid={`flight-option-${index + 1}`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="font-semibold">{flight.airlines.join(", ")}</p><p className="mt-1 text-sm text-muted-foreground">{first.departure.iataCode} {formatDateTime(first.departure.at)} → {last.arrival.iataCode} {formatDateTime(last.arrival.at)}</p><p className="mt-1 text-sm">{flight.stops === 0 ? t("checkout.directFlight") : t("checkout.flightStops", { count: flight.stops })} · {flight.totalDuration}</p></div><div className="sm:text-right"><p className="text-lg font-bold">{formatPrice(flight.price, flight.currency)}</p><p className="text-xs text-muted-foreground">{t("checkout.flightPriceScope", { count: flight.quotedPassengers })}</p><p className="mt-1 text-sm font-medium">{selected ? t("checkout.selected") : t("checkout.selectOption")}</p></div></div>
+                </button>;
+              })}
+            </div>}
+            {flightCheckoutUrl && <div className="space-y-3 border-t pt-4"><p className="text-sm text-muted-foreground">{t("checkout.aviasalesHandoffNote")}</p>{aviasalesIsMonetized && <AffiliateNotice showText={false} />}<Button asChild variant="external" className="h-auto min-h-11 w-full whitespace-normal"><a href={flightCheckoutUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackAffiliateClick({ provider: "aviasales", placement: "checkout_flight", destination: searchContext.destination, monetized: aviasalesIsMonetized })}>{t("checkout.compareOnAviasales")}<ExternalLink /></a></Button></div>}
           </CardContent>
         </Card>
 
-        {/* Hotel Selection */}
-        <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-gray-600 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-white text-xl">
-              <div className="p-2 bg-gradient-to-br from-primary to-primary-hover rounded-lg shadow-lg">
-                <Hotel className="w-5 h-5 text-primary-foreground" />
-              </div>
-              {t('checkout.selectHotel')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingHotels ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-                <p className="text-white/70">{t('checkout.loadingHotels')}</p>
-              </div>
-            ) : hotelError ? (
-              <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-yellow-200 font-medium">{t('checkout.noHotels')}</p>
-                    <p className="text-yellow-200/70 text-sm mt-1">{hotelError}</p>
-                    {hotelSearchFailed && (
-                      <Button
-                        variant="outline"
-                        className="mt-4 mr-3 border-yellow-500/60 bg-transparent text-yellow-100 hover:bg-yellow-900/40 hover:text-white"
-                        onClick={() => fetchHotels(tripContext, new AbortController().signal)}
-                        data-testid="button-retry-hotels"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        {t('checkout.retryHotelSearch')}
-                      </Button>
-                    )}
-                    <Button
-                      className="mt-4 bg-primary text-primary-foreground hover:bg-primary-hover"
-                      onClick={() => openBookingSearch('checkout_hotel_fallback')}
-                      data-testid="button-search-hotels-booking"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      {t('checkout.searchHotelsBooking')}
-                    </Button>
-                    {bookingIsMonetized && <AffiliateNotice className="mt-3" showText={false} />}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {hotels.map((hotel, index) => (
-                  <div 
-                    key={hotel.hotelId}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedHotel?.hotelId === hotel.hotelId
-                        ? 'border-primary bg-primary/20'
-                        : 'border-white/20 bg-white/5 hover:border-primary/70'
-                    }`}
-                    onClick={() => setSelectedHotel(hotel)}
-                    data-testid={`hotel-option-${index + 1}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-white">{hotel.name}</p>
-                          {hotel.stars && (
-                            <span className="text-yellow-400 text-sm">{'⭐'.repeat(parseInt(hotel.stars))}</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-white/70 mt-1">{hotel.roomDescription || t('common.standardRoom')}</p>
-                        <p className="text-xs text-white/50 mt-1">
-                          {hotel.checkInDate} → {hotel.checkOutDate} | {hotel.paymentPolicy}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-red-400 text-xl">{formatHotelPrice(hotel)}</p>
-                        <p className="text-xs text-white/60">{t('common.totalStay')}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {selectedHotel && (
-              <>
-                <Button
-                  className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary-hover"
-                  onClick={() => openBookingSearch('checkout_hotel', selectedHotel)}
-                  data-testid="button-book-hotel"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  {t('checkout.bookOnBooking')}
-                </Button>
-                {bookingIsMonetized && <AffiliateNotice className="mt-3" showText={false} />}
-              </>
-            )}
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-3 text-xl"><Hotel aria-hidden="true" />{t("checkout.hotelOptions")}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{t("checkout.hotelProviderNote")}</p>
+            {hotelState === "loading" && <ProviderLoading label={t("checkout.loadingHotels")} />}
+            {hotelState === "unsupported" && <HotelFallback text={t("checkout.unsupportedDest", { destination: searchContext.destination })} onOpen={() => openBookingSearch("checkout_hotel_fallback")} t={t} />}
+            {hotelState === "error" && <HotelFallback text={t("checkout.hotelLoadError")} onRetry={() => void fetchHotels(searchContext)} onOpen={() => openBookingSearch("checkout_hotel_fallback")} t={t} />}
+            {hotelState === "empty" && <HotelFallback text={t("checkout.noHotelsForDates")} onOpen={() => openBookingSearch("checkout_hotel_fallback")} t={t} />}
+            {hotelState === "live" && <div className="space-y-3">
+              {hotels.map((hotel, index) => {
+                const selected = selectedHotel?.offerId === hotel.offerId;
+                return <button type="button" key={hotel.offerId} aria-pressed={selected} onClick={() => setSelectedHotel(selected ? null : toSelectedHotel(hotel))} className={`w-full rounded-lg border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-border-strong"}`} data-testid={`hotel-option-${index + 1}`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="font-semibold">{hotel.name}</p><p className="mt-1 text-sm text-muted-foreground">{hotel.roomDescription || t("common.standardRoom")}</p><p className="mt-1 text-xs text-muted-foreground">{hotel.checkInDate} → {hotel.checkOutDate}</p></div><div className="sm:text-right"><p className="text-lg font-bold">{formatPrice(hotel.priceTotal, hotel.currency)}</p><p className="max-w-xs text-xs text-muted-foreground">{t(hotel.requestedAdults === hotel.quotedAdults ? "checkout.hotelPriceScopeFullGroup" : "checkout.hotelPriceScopePartialGroup", { count: hotel.quotedAdults, nights: tripDays })}</p><p className="mt-1 text-sm font-medium">{selected ? t("checkout.selected") : t("checkout.selectOption")}</p></div></div>
+                </button>;
+              })}
+            </div>}
+            {currentSelectedHotel && <div className="space-y-3 border-t pt-4"><p className="text-sm text-muted-foreground">{t("checkout.bookingHandoffNote")}</p><Button className="h-auto min-h-11 w-full whitespace-normal" variant="external" onClick={() => openBookingSearch("checkout_hotel", currentSelectedHotel)} data-testid="button-book-hotel">{t("checkout.continueOnBooking")}<ExternalLink /></Button>{hasBookingAffiliateId() && <AffiliateNotice showText={false} />}</div>}
           </CardContent>
         </Card>
 
-        {/* Hotel Summary */}
-        {selectedHotel && (
-          <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-sm border-2 border-primary shadow-2xl shadow-primary/20">
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-white/80">
-                  <span>{t('checkout.hotelNights', { nights: String(tripDays) })}</span>
-                  <span className="font-semibold text-white">{formatHotelPrice(selectedHotel)}</span>
-                </div>
-              </div>
-              <p className="text-center text-white/50 text-xs mt-4">
-                {t('checkout.priceNote')}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        <section aria-labelledby="activities-title" className="space-y-3"><div><h2 id="activities-title" className="font-display text-2xl font-semibold">{t("checkout.activitiesTitle")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("checkout.activitiesHandoffNote")}</p></div><GetYourGuideCta destinationCity={searchContext.destination} placement="checkout" /></section>
 
-        <GetYourGuideCta 
-          destinationCity={tripContext.destination} 
-          placement="checkout" 
-        />
+        {(currentSelectedFlight || currentSelectedHotel) && <Card data-testid="selected-options-summary"><CardHeader><CardTitle className="text-xl">{t("checkout.selectedOptions")}</CardTitle></CardHeader><CardContent className="space-y-3 text-sm">{currentSelectedFlight && <SelectionRow label={t("checkout.flight")} value={`${currentSelectedFlight.airlineNames.join(", ")} · ${formatPrice(currentSelectedFlight.price, currentSelectedFlight.currency)}`} onRemove={() => setSelectedFlight(null)} removeLabel={t("checkout.deselectFlight")} />}{currentSelectedHotel && <SelectionRow label={t("checkout.hotel")} value={`${currentSelectedHotel.name} · ${formatPrice(currentSelectedHotel.priceTotal, currentSelectedHotel.currency)}`} onRemove={() => setSelectedHotel(null)} removeLabel={t("checkout.deselectHotel")} />}<p className="text-muted-foreground">{t("checkout.selectionDisclaimer")}</p></CardContent></Card>}
 
-        <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 border border-white/20">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-semibold text-white">{t('checkout.saveTripTitle')}</p>
-                <p className="mt-1 text-sm text-white/70">{t('checkout.saveTripDesc')}</p>
-              </div>
-              <Button
-                onClick={handleSaveTrip}
-                disabled={savingTrip || checkingSavedTrip || tripSaveStatus !== 'idle'}
-                className="min-h-11 w-full shrink-0 bg-white text-gray-950 hover:bg-gray-100 md:w-auto"
-                data-testid="button-save-trip"
-              >
-                {savingTrip ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : tripSaveStatus !== 'idle' ? (
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                {tripSaveStatus === 'saved'
-                  ? t('checkout.tripSaved')
-                  : tripSaveStatus === 'existing'
-                    ? t('checkout.tripAlreadySaved')
-                  : isAuthenticated
-                    ? t('checkout.saveTrip')
-                    : t('checkout.signInToSave')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Navigation */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <Button
-            size="lg"
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary-hover"
-            onClick={() => setLocation('/')}
-            data-testid="button-back-home"
-          >
-            {t('checkout.backToHome')}
-          </Button>
-        </div>
-        </div>
+        <Card><CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between"><div><p className="font-semibold">{t("checkout.saveTripTitle")}</p><p className="mt-1 text-sm text-muted-foreground">{t("checkout.saveTripDesc")}</p></div><Button onClick={handleSaveTrip} disabled={savingTrip || checkingSavedTrip || tripSaveStatus !== "idle"} className="min-h-11 w-full shrink-0 md:w-auto" data-testid="button-save-trip">{savingTrip ? <Loader2 className="animate-spin" /> : tripSaveStatus !== "idle" ? <CheckCircle2 /> : <Save />}{tripSaveStatus === "saved" ? t("checkout.tripSaved") : tripSaveStatus === "existing" ? t("checkout.tripAlreadySaved") : isAuthenticated ? t("checkout.saveTrip") : t("checkout.signInToSave")}</Button></CardContent></Card>
+        <Button size="lg" variant="outline" className="w-full" onClick={() => setLocation("/")} data-testid="button-back-home">{t("checkout.backToHome")}</Button>
       </main>
     </div>
   );
+}
+
+function ProviderLoading({ label }: { label: string }) {
+  return <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground" role="status"><Loader2 className="animate-spin" />{label}</div>;
+}
+
+function ProviderMessage({ text, children }: { text: string; children?: ReactNode }) {
+  return <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4"><p className="flex items-start gap-2 text-sm" role="status"><AlertCircle className="mt-0.5 shrink-0" />{text}</p>{children}</div>;
+}
+
+function HotelFallback({ text, onRetry, onOpen, t }: { text: string; onRetry?: () => void; onOpen: () => void; t: (key: string, params?: Record<string, string | number>) => string }) {
+  return <ProviderMessage text={text}><div className="flex flex-col gap-2 sm:flex-row">{onRetry && <Button variant="outline" onClick={onRetry} data-testid="button-retry-hotels"><RefreshCw />{t("checkout.retryHotelSearch")}</Button>}<Button variant="external" onClick={onOpen} data-testid="button-search-hotels-booking">{t("checkout.searchHotelsBooking")}<ExternalLink /></Button></div>{hasBookingAffiliateId() && <AffiliateNotice showText={false} />}</ProviderMessage>;
+}
+
+function SelectionRow({ label, value, onRemove, removeLabel }: { label: string; value: string; onRemove: () => void; removeLabel: string }) {
+  return <div className="flex flex-col gap-2 rounded-lg bg-surface-muted p-3 sm:flex-row sm:items-center sm:justify-between"><p><span className="font-semibold">{label}:</span> {value}</p><Button variant="quiet" size="sm" onClick={onRemove}>{removeLabel}</Button></div>;
 }

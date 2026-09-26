@@ -89,11 +89,6 @@ export function buildAviasalesUrl(value: AviasalesUrlParams): string | null {
   return `https://www.aviasales.com/search/${originIata}${departure}${destinationIata}${returning}${adults}?marker=${encodeURIComponent(partnerId)}`;
 }
 
-export const flightCheckoutSearchResponseSchema = z.object({
-  checkoutUrl: z.string().max(2048).refine(isAviasalesCheckoutUrl),
-  flightDataStatus: z.enum(["live", "unavailable"]),
-}).passthrough();
-
 const flightDateTimeSchema = z
   .string()
   .min(16)
@@ -128,5 +123,94 @@ export const flightResultSchema = z.object({
   stops: z.number().int().min(0).max(9),
 });
 
+export const flightCheckoutOfferSchema = z.object({
+  provider: z.literal("amadeus"),
+  offerId: z.string().trim().min(1).max(100),
+  airlines: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
+  outbound: z.array(flightSegmentSchema).min(1).max(10),
+  inbound: z.array(flightSegmentSchema).min(1).max(10).optional(),
+  price: z.number().finite().positive(),
+  currency: currencyCodeSchema,
+  priceScope: z.literal("searched-passengers-total"),
+  quotedPassengers: z.number().int().min(1).max(9),
+  requestedPassengers: z.number().int().min(1).max(50),
+  totalDuration: z.string().trim().regex(/^PT/).max(30),
+  stops: z.number().int().min(0).max(9),
+});
+
+export const flightCheckoutSearchResponseSchema = z.object({
+  origin: iataCodeSchema,
+  destination: iataCodeSchema,
+  departDate: dateOnlySchema,
+  returnDate: dateOnlySchema.optional(),
+  passengers: z.number().int().min(1).max(50),
+  checkoutAdults: z.number().int().min(1).max(9),
+  groupBookingRequired: z.boolean(),
+  currency: currencyCodeSchema,
+  checkoutUrl: z.string().max(2048).refine(isAviasalesCheckoutUrl),
+  handoff: z.object({
+    provider: z.literal("aviasales"),
+    url: z.string().max(2048).refine(isAviasalesCheckoutUrl),
+    exactOffer: z.literal(false),
+  }).strict(),
+  flightDataStatus: z.enum(["live", "unavailable"]),
+  fetchedAt: z.string().datetime(),
+  flights: z.array(flightCheckoutOfferSchema).max(5),
+}).strict().superRefine((response, context) => {
+  if (response.handoff.url !== response.checkoutUrl) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["handoff", "url"],
+      message: "Handoff URL must match checkout URL",
+    });
+  }
+  if (response.checkoutAdults !== Math.min(response.passengers, 9)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["checkoutAdults"],
+      message: "Checkout adult count must match the supported passenger scope",
+    });
+  }
+  if (response.groupBookingRequired !== (response.passengers > response.checkoutAdults)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["groupBookingRequired"],
+      message: "Group booking flag does not match passenger scope",
+    });
+  }
+  if (response.flightDataStatus === "unavailable" && response.flights.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["flights"],
+      message: "Unavailable responses cannot contain offers",
+    });
+  }
+  response.flights.forEach((offer, index) => {
+    if (offer.requestedPassengers !== response.passengers) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["flights", index, "requestedPassengers"],
+        message: "Offer requested passengers must match response scope",
+      });
+    }
+    if (offer.quotedPassengers !== response.checkoutAdults) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["flights", index, "quotedPassengers"],
+        message: "Offer quoted passengers must match checkout scope",
+      });
+    }
+    if (offer.currency !== response.currency) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["flights", index, "currency"],
+        message: "Offer currency must match response currency",
+      });
+    }
+  });
+});
+
 export type FlightSegment = z.infer<typeof flightSegmentSchema>;
 export type FlightResult = z.infer<typeof flightResultSchema>;
+export type FlightCheckoutOffer = z.infer<typeof flightCheckoutOfferSchema>;
+export type FlightCheckoutSearchResponse = z.infer<typeof flightCheckoutSearchResponseSchema>;

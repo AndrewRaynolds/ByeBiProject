@@ -187,7 +187,7 @@ Price labels must state what the number represents.
 
 - Planner budget: **per person**.
 - Flight result: provider-reported fare and currency; identify per-person or party scope from the contract before display.
-- Hotel result: current contract field `priceTotal`, displayed as total stay.
+- Hotel result: provider-reported `priceTotal`, displayed as the total stay for the contract's explicit quoted occupancy. When the quote covers fewer people than the Planner group, state that it is not the full-group total.
 - Merchandise: separate commerce flow; show item, shipping, and total amounts according to Stripe/Printful requirements.
 - Estimates are labeled estimates; live results are labeled with provider context; stale values are not presented as current.
 
