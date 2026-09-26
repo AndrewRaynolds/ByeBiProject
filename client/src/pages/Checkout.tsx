@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { buildBookingSearchUrl, hasBookingAffiliateId, isMonetizedAviasalesUrl } from "@/lib/affiliateLinks";
 import { openExternalUrl } from "@/lib/externalNavigation";
-import { plannedTripMatchesSavedTrip, savePlannedTrip } from "@/lib/plannedTrip";
+import { buildPlannedTripPayload, plannedTripMatchesSavedTrip, savePlannedTrip } from "@/lib/plannedTrip";
 import { loadProviderSearchContext, type ProviderSearchContext } from "@/lib/providerSearchContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { trackAffiliateClick, trackProductEvent } from "@/lib/track";
@@ -197,6 +197,17 @@ export default function Checkout() {
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
   const formattedDates = `${dateFormatter.format(new Date(`${searchContext.startDate}T00:00:00Z`))} – ${dateFormatter.format(new Date(`${searchContext.endDate}T00:00:00Z`))}`;
   const aviasalesIsMonetized = isMonetizedAviasalesUrl(flightHandoffUrl);
+  const plannedTripPayload = buildPlannedTripPayload(tripContext);
+  const formattedBudget = plannedTripPayload
+    ? new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: "EUR",
+        maximumFractionDigits: 0,
+      }).format(plannedTripPayload.budget)
+    : t("checkout.notSpecified");
+  const preferencesText = searchContext.preferences.length > 0
+    ? searchContext.preferences.join(", ")
+    : t("checkout.notSpecified");
 
   return (
     <div className="min-h-screen bg-background">
@@ -209,10 +220,18 @@ export default function Checkout() {
           </div>
           <Card>
             <CardHeader><CardTitle className="text-xl">{t("checkout.travelBrief")}</CardTitle></CardHeader>
-            <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
+            <CardContent className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
               <p className="flex items-center gap-2"><MapPin aria-hidden="true" />{searchContext.origin} → {searchContext.destination}</p>
               <p className="flex items-center gap-2"><Calendar aria-hidden="true" />{formattedDates}</p>
               <p className="flex items-center gap-2"><Users aria-hidden="true" />{searchContext.participants} {t("common.people")}</p>
+              <div>
+                <p className="text-xs text-muted-foreground">{t("checkout.budgetPerPerson")}</p>
+                <p className="mt-1 font-medium" data-testid="travel-brief-budget">{formattedBudget}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{t("checkout.preferences")}</p>
+                <p className="mt-1 font-medium" data-testid="travel-brief-preferences">{preferencesText}</p>
+              </div>
             </CardContent>
           </Card>
         </section>
@@ -294,22 +313,26 @@ export default function Checkout() {
           <CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-semibold">{t("checkout.saveTripTitle")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t("checkout.saveTripDesc")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t(plannedTripPayload ? "checkout.saveTripDesc" : "checkout.saveTripIncomplete")}
+              </p>
             </div>
             <Button
               onClick={handleSaveTrip}
-              disabled={savingTrip || checkingSavedTrip || tripSaveStatus !== "idle"}
+              disabled={!plannedTripPayload || savingTrip || checkingSavedTrip || tripSaveStatus !== "idle"}
               className="min-h-11 w-full shrink-0 md:w-auto"
               data-testid="button-save-trip"
             >
               {savingTrip ? <Loader2 className="animate-spin" /> : tripSaveStatus !== "idle" ? <CheckCircle2 /> : <Save />}
-              {tripSaveStatus === "saved"
-                ? t("checkout.tripSaved")
-                : tripSaveStatus === "existing"
-                  ? t("checkout.tripAlreadySaved")
-                  : isAuthenticated
-                    ? t("checkout.saveTrip")
-                    : t("checkout.signInToSave")}
+              {!plannedTripPayload
+                ? t("checkout.completePlanToSave")
+                : tripSaveStatus === "saved"
+                  ? t("checkout.tripSaved")
+                  : tripSaveStatus === "existing"
+                    ? t("checkout.tripAlreadySaved")
+                    : isAuthenticated
+                      ? t("checkout.saveTrip")
+                      : t("checkout.signInToSave")}
             </Button>
           </CardContent>
         </Card>

@@ -2,14 +2,15 @@ import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { deleteTripForUser, getTripForUser, getUser } = vi.hoisted(() => ({
+const { createTripIfAbsent, deleteTripForUser, getTripForUser, getUser } = vi.hoisted(() => ({
+  createTripIfAbsent: vi.fn(),
   deleteTripForUser: vi.fn(),
   getTripForUser: vi.fn(),
   getUser: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
-  storage: { deleteTripForUser, getTripForUser },
+  storage: { createTripIfAbsent, deleteTripForUser, getTripForUser },
 }));
 
 vi.mock("./supabase", () => ({
@@ -35,6 +36,7 @@ describe("owner-scoped /api/trips/:tripId routes", () => {
   });
 
   beforeEach(() => {
+    createTripIfAbsent.mockReset();
     deleteTripForUser.mockReset();
     getTripForUser.mockReset();
     getUser.mockReset();
@@ -48,6 +50,96 @@ describe("owner-scoped /api/trips/:tripId routes", () => {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => error ? reject(error) : resolve());
     });
+  });
+
+  it("requires authentication before creating a saved trip", async () => {
+    const response = await fetch(`${baseUrl}/api/trips`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "ByeBro · Barcelona",
+        participants: 6,
+        startDate: "2027-06-10",
+        endDate: "2027-06-13",
+        departureCity: "Rome",
+        destinations: ["Barcelona"],
+        experienceType: "bachelor",
+        budget: 700,
+        activities: ["nightlife"],
+        specialRequests: null,
+        includeMerch: false,
+      }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(createTripIfAbsent).not.toHaveBeenCalled();
+  });
+
+  it("creates an explicitly saved trip for the authenticated user", async () => {
+    const payload = {
+      userId: "client-supplied-user",
+      name: "ByeBro · Barcelona",
+      participants: 6,
+      startDate: "2027-06-10",
+      endDate: "2027-06-13",
+      departureCity: "Rome",
+      destinations: ["Barcelona"],
+      experienceType: "bachelor",
+      budget: 700,
+      activities: ["nightlife"],
+      specialRequests: null,
+      includeMerch: false,
+    };
+    createTripIfAbsent.mockResolvedValue({
+      trip: { id: 21, ...payload, userId: "user-a" },
+      created: true,
+    });
+
+    const response = await fetch(`${baseUrl}/api/trips`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer token-a",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    expect(response.status).toBe(201);
+    expect(createTripIfAbsent).toHaveBeenCalledWith(
+      expect.objectContaining({ ...payload, userId: "user-a" }),
+    );
+  });
+
+  it("returns the existing trip instead of creating a duplicate", async () => {
+    const payload = {
+      name: "ByeBro · Barcelona",
+      participants: 6,
+      startDate: "2027-06-10",
+      endDate: "2027-06-13",
+      departureCity: "Rome",
+      destinations: ["Barcelona"],
+      experienceType: "bachelor",
+      budget: 700,
+      activities: ["nightlife"],
+      specialRequests: null,
+      includeMerch: false,
+    };
+    createTripIfAbsent.mockResolvedValue({
+      trip: { id: 21, ...payload, userId: "user-a" },
+      created: false,
+    });
+
+    const response = await fetch(`${baseUrl}/api/trips`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer token-a",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    expect(response.status).toBe(200);
+    expect(createTripIfAbsent).toHaveBeenCalledTimes(1);
   });
 
   it("requires authentication", async () => {
