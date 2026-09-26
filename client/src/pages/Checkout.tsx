@@ -313,22 +313,26 @@ export default function Checkout() {
           <CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-semibold">{t("checkout.saveTripTitle")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t("checkout.saveTripDesc")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t(plannedTripPayload ? "checkout.saveTripDesc" : "checkout.saveTripIncomplete")}
+              </p>
             </div>
             <Button
               onClick={handleSaveTrip}
-              disabled={savingTrip || checkingSavedTrip || tripSaveStatus !== "idle"}
+              disabled={!plannedTripPayload || savingTrip || checkingSavedTrip || tripSaveStatus !== "idle"}
               className="min-h-11 w-full shrink-0 md:w-auto"
               data-testid="button-save-trip"
             >
               {savingTrip ? <Loader2 className="animate-spin" /> : tripSaveStatus !== "idle" ? <CheckCircle2 /> : <Save />}
-              {tripSaveStatus === "saved"
-                ? t("checkout.tripSaved")
-                : tripSaveStatus === "existing"
-                  ? t("checkout.tripAlreadySaved")
-                  : isAuthenticated
-                    ? t("checkout.saveTrip")
-                    : t("checkout.signInToSave")}
+              {!plannedTripPayload
+                ? t("checkout.completePlanToSave")
+                : tripSaveStatus === "saved"
+                  ? t("checkout.tripSaved")
+                  : tripSaveStatus === "existing"
+                    ? t("checkout.tripAlreadySaved")
+                    : isAuthenticated
+                      ? t("checkout.saveTrip")
+                      : t("checkout.signInToSave")}
             </Button>
           </CardContent>
         </Card>

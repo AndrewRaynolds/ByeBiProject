@@ -10,6 +10,8 @@ const requiredKeys = [
   "checkout.budgetPerPerson",
   "checkout.preferences",
   "checkout.notSpecified",
+  "checkout.saveTripIncomplete",
+  "checkout.completePlanToSave",
   "checkout.flightOptions",
   "checkout.hotelOptions",
   "checkout.flightProviderNote",

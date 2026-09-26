@@ -56,6 +56,8 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "checkout.activitiesHandoffNote": "Esplora le attività su GetYourGuide.",
       "checkout.saveTripTitle": "Salva questa pianificazione",
       "checkout.saveTripDesc": "Nulla viene salvato automaticamente.",
+      "checkout.saveTripIncomplete": "Completa o correggi i dati del viaggio prima di salvarlo.",
+      "checkout.completePlanToSave": "Completa il piano per salvare",
       "checkout.signInToSave": "Accedi per salvare",
       "checkout.saveTrip": "Salva viaggio",
       "checkout.tripSaved": "Viaggio salvato",
@@ -162,6 +164,17 @@ describe("travel handoffs", () => {
     expect(bookingUrl.searchParams.get("group_adults")).toBe("12");
     expect(bookingUrl.searchParams.get("checkin")).toBe("2026-11-20");
     expect(bookingUrl.searchParams.get("checkout")).toBe("2026-11-23");
+  });
+
+  it("blocks save when the trip no longer satisfies the explicit save contract", async () => {
+    buildPlannedTripPayload.mockReturnValue(null);
+
+    render(<Checkout />);
+
+    const button = await screen.findByRole("button", { name: "Completa il piano per salvare" });
+    expect(button).toBeDisabled();
+    expect(screen.getByText("Completa o correggi i dati del viaggio prima di salvarlo.")).toBeInTheDocument();
+    expect(savePlannedTrip).not.toHaveBeenCalled();
   });
 
   it("keeps save explicit and preserves auth return compatibility", async () => {

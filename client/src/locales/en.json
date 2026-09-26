@@ -855,6 +855,8 @@
   "checkout.priceNote": "Hotel prices are indicative. Confirm on the partner site.",
   "checkout.saveTripTitle": "Save this plan",
   "checkout.saveTripDesc": "Save this plan to your Dashboard only when you are ready. It does not book or purchase flights, hotels, or activities.",
+  "checkout.saveTripIncomplete": "Complete or correct the trip details in the Planner before saving.",
+  "checkout.completePlanToSave": "Complete the plan to save",
   "checkout.saveTrip": "Save trip",
   "checkout.signInToSave": "Sign in to save",
   "checkout.tripSaved": "Trip saved",

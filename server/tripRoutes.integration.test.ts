@@ -52,6 +52,29 @@ describe("owner-scoped /api/trips/:tripId routes", () => {
     });
   });
 
+  it("requires authentication before creating a saved trip", async () => {
+    const response = await fetch(`${baseUrl}/api/trips`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "ByeBro · Barcelona",
+        participants: 6,
+        startDate: "2027-06-10",
+        endDate: "2027-06-13",
+        departureCity: "Rome",
+        destinations: ["Barcelona"],
+        experienceType: "bachelor",
+        budget: 700,
+        activities: ["nightlife"],
+        specialRequests: null,
+        includeMerch: false,
+      }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(createTripIfAbsent).not.toHaveBeenCalled();
+  });
+
   it("creates an explicitly saved trip for the authenticated user", async () => {
     const payload = {
       userId: "client-supplied-user",

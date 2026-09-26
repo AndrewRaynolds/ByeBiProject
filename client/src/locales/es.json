@@ -855,6 +855,8 @@
   "checkout.priceNote": "Los precios de hotel son indicativos. Confirma en el sitio asociado.",
   "checkout.saveTripTitle": "Guarda esta planificación",
   "checkout.saveTripDesc": "Guarda esta planificación en tu panel solo cuando estés listo. No reserva ni compra vuelos, hoteles ni actividades.",
+  "checkout.saveTripIncomplete": "Completa o corrige los datos del viaje en el Planner antes de guardarlo.",
+  "checkout.completePlanToSave": "Completa el plan para guardar",
   "checkout.saveTrip": "Guardar viaje",
   "checkout.signInToSave": "Inicia sesión para guardar",
   "checkout.tripSaved": "Viaje guardado",
