@@ -557,6 +557,7 @@
   "destinations.planTitle": "Turn the idea into a trip",
   "destinations.planSubtitle": "Start with {{city}} and complete the plan with ByeBi's AI.",
   "destinations.planWithAi": "Plan with AI",
+  "destinations.exploreExperiences": "Explore experiences in {{city}}",
   "destinations.country.italy": "Italy", "destinations.country.spain": "Spain", "destinations.country.czechRepublic": "Czech Republic", "destinations.country.hungary": "Hungary", "destinations.country.poland": "Poland", "destinations.country.netherlands": "Netherlands", "destinations.country.germany": "Germany", "destinations.country.portugal": "Portugal",
   "destinations.city.rome.name": "Rome", "destinations.city.ibiza.name": "Ibiza", "destinations.city.barcelona.name": "Barcelona", "destinations.city.prague.name": "Prague", "destinations.city.budapest.name": "Budapest", "destinations.city.krakow.name": "Krakow", "destinations.city.amsterdam.name": "Amsterdam", "destinations.city.berlin.name": "Berlin", "destinations.city.lisbon.name": "Lisbon", "destinations.city.palma.name": "Palma de Mallorca",
   "destinations.city.rome.description": "The Eternal City: unforgettable history, culture and nightlife in Italy's capital.",

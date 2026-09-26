@@ -3,23 +3,15 @@ import { Destination } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import OptimizedImage from "@/components/ui/optimized-image";
-import { throttle } from "@/lib/performance";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { localizeDestination } from "@/lib/localizeDestination";
 
 // Ottimizzati i singoli componenti per evitare re-rendering
-const DestinationCard = memo(({ destination, onExplore }: { 
-  destination: Destination, 
-  onExplore: (id: number) => void 
-}) => {
+const DestinationCard = memo(({ destination }: { destination: Destination }) => {
   const { t } = useTranslation();
   const localizedDestination = localizeDestination(destination, t);
-  // Memorizziamo la funzione di callback
-  const handleExplore = useCallback(() => {
-    onExplore(destination.id);
-  }, [destination.id, onExplore]);
 
   return (
     <article className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-soft transition-shadow hover:shadow-raised">
@@ -50,12 +42,13 @@ const DestinationCard = memo(({ destination, onExplore }: {
         </div>
         <p className="mb-4 mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">{localizedDestination.description}</p>
         <div className="flex items-center justify-end">
-          <Button
-            variant="quiet"
-            className="text-primary hover:text-primary"
-            onClick={handleExplore}
-          >
-            {t("destinations.explore")}
+          <Button variant="quiet" asChild className="text-primary hover:text-primary">
+            <Link
+              href={`/destinations/${destination.id}`}
+              data-testid={`featured-destination-${destination.id}`}
+            >
+              {t("destinations.explore")}
+            </Link>
           </Button>
         </div>
       </div>
@@ -78,11 +71,6 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
     queryKey: ["/api/destinations"],
   });
   
-  // Throttle della funzione di navigazione
-  const handleExplore = useCallback(throttle(() => {
-    window.location.href = "/destinations";
-  }, 300), []);
-
   if (isLoading) {
     return (
       <section className="border-b border-border bg-background py-16 sm:py-20 lg:py-24">
@@ -146,7 +134,6 @@ const FeaturedDestinations = memo(function FeaturedDestinations({ brand = 'bro' 
             <DestinationCard 
               key={destination.id} 
               destination={destination} 
-              onExplore={handleExplore}
             />
           ))}
         </div>
