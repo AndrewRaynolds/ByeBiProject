@@ -7,6 +7,8 @@ These instructions apply to `client/` and take precedence over repository-wide g
 - Use the existing React, TypeScript, Vite, Tailwind CSS, TanStack Query, and Wouter patterns.
 - Keep server-owned business rules and authorization on the server. Do not duplicate business logic in the client; shared contracts belong in `shared/`.
 - Preserve existing analytics events, properties, and firing conditions unless the task explicitly changes tracking.
+- For client work, consult `docs/DESIGN_SYSTEM.md` for UI, responsive, accessibility, and branding rules; `docs/PRD.md` for user behavior; and `docs/ARCHITECTURE.md` for state, persistence, routing, and provider boundaries.
+- ByeBro and ByeBride share behavior. Use brand variants and shared components rather than duplicating feature logic.
 
 ## UX and Content
 

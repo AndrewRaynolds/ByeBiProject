@@ -10,6 +10,20 @@ GitHub `main` is the source of truth. Replit is the deployment environment, not 
 
 This file applies repository-wide. More specific `AGENTS.md` files under `client/`, `server/`, `shared/`, and `supabase/` add or override guidance for those subtrees. Follow every applicable file, with the closest file taking precedence when instructions differ.
 
+## Documentation Routing
+
+Use the smallest relevant authority set; do not read every document for every task.
+
+- `docs/PRD.md` — product behavior, scope, boundaries, and user journeys.
+- `docs/ARCHITECTURE.md` — state, APIs, providers, persistence, authentication, shared contracts, and technical boundaries.
+- `docs/DESIGN_SYSTEM.md` — UI, responsive behavior, branding, accessibility, and interactions.
+- `docs/adr/` — accepted rationale for relevant durable decisions.
+- Applicable `AGENTS.md` files — execution and workflow rules for any code or documentation change.
+
+Examples: read the PRD for new product behavior, the Design System for UI/UX work, Architecture for state/API/provider/persistence work, and the relevant ADR before changing an established architectural invariant. If domain authorities materially conflict, report the conflict instead of choosing silently. Existing code is evidence of current implementation, not automatically intended behavior.
+
+Update documentation only when a task intentionally changes durable product behavior or scope, domain ownership, persistence strategy, API/provider responsibility, the ByeBro/ByeBride behavioral relationship, the booking boundary, or deployment architecture. Routine implementation details do not require documentation updates.
+
 ## Stack and Repository Map
 
 - `client/` — React 18, TypeScript, Vite, Tailwind CSS, TanStack Query, and Wouter frontend; see `client/AGENTS.md`.
