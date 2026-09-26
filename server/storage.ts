@@ -16,6 +16,7 @@ import {
   merchandiseNotifications,
   newsletterSubscribers,
   productEvents,
+  tripOrganizationStatuses as tripOrganizationStatusesTable,
   tripInvites as tripInvitesTable,
   type TripInvite,
   type PublicSharedTrip,
@@ -27,6 +28,11 @@ import {
   type InsertProductEvent,
 } from "@shared/schema";
 import {
+  defaultTripOrganizationStatus,
+  tripOrganizationStatusSchema,
+  type TripOrganizationStatus,
+} from "@shared/tripOrganizationSchemas";
+import {
   discoveryEventNames,
   productFunnelEventOrder,
   type AffiliateClickSummary,
@@ -37,6 +43,18 @@ import { createDatabase, type DatabaseConnection } from "./db";
 
 function normalizeTripIdentity(value: string | null | undefined): string {
   return (value ?? "").trim().toLocaleLowerCase("en");
+}
+
+function toTripOrganizationStatus(row: {
+  flightStatus: string;
+  hotelStatus: string;
+  activitiesStatus: string;
+}): TripOrganizationStatus {
+  return tripOrganizationStatusSchema.parse({
+    flight: row.flightStatus,
+    hotel: row.hotelStatus,
+    activities: row.activitiesStatus,
+  });
 }
 
 export function toPublicSharedTrip(trip: Trip): PublicSharedTrip {
@@ -80,6 +98,15 @@ export interface IStorage {
   createTrip(trip: InsertTrip): Promise<Trip>;
   createTripIfAbsent(trip: InsertTrip): Promise<{ trip: Trip; created: boolean }>;
   deleteTripForUser(id: number, userId: string): Promise<boolean>;
+  getTripOrganizationStatusForUser(
+    tripId: number,
+    ownerId: string,
+  ): Promise<TripOrganizationStatus | undefined>;
+  upsertTripOrganizationStatusForUser(
+    tripId: number,
+    ownerId: string,
+    status: TripOrganizationStatus,
+  ): Promise<TripOrganizationStatus | undefined>;
   getActiveTripInviteForUser(tripId: number, ownerId: string): Promise<TripInvite | undefined>;
   rotateTripInviteForUser(tripId: number, ownerId: string, tokenHash: string): Promise<TripInvite | undefined>;
   revokeTripInviteForUser(tripId: number, ownerId: string): Promise<boolean>;
@@ -217,6 +244,7 @@ export class MemStorage implements IStorage {
   private merchandiseNotificationItems: Map<string, MerchandiseNotification>;
   private newsletterSubscriberItems: Map<string, NewsletterSubscriber>;
   private tripInviteItems: Map<string, TripInvite>;
+  private tripOrganizationItems: Map<number, TripOrganizationStatus>;
 
   private tripId: number;
   private blogPostId: number;
@@ -239,6 +267,7 @@ export class MemStorage implements IStorage {
     this.merchandiseNotificationItems = new Map();
     this.newsletterSubscriberItems = new Map();
     this.tripInviteItems = new Map();
+    this.tripOrganizationItems = new Map();
 
     this.tripId = 1;
     this.blogPostId = 1;
@@ -724,7 +753,27 @@ export class MemStorage implements IStorage {
     for (const [inviteId, invite] of this.tripInviteItems) {
       if (invite.tripId === id) this.tripInviteItems.delete(inviteId);
     }
+    this.tripOrganizationItems.delete(id);
     return this.trips.delete(id);
+  }
+
+  async getTripOrganizationStatusForUser(
+    tripId: number,
+    ownerId: string,
+  ): Promise<TripOrganizationStatus | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    return this.tripOrganizationItems.get(tripId);
+  }
+
+  async upsertTripOrganizationStatusForUser(
+    tripId: number,
+    ownerId: string,
+    status: TripOrganizationStatus,
+  ): Promise<TripOrganizationStatus | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    const validated = tripOrganizationStatusSchema.parse(status);
+    this.tripOrganizationItems.set(tripId, validated);
+    return validated;
   }
 
   async getActiveTripInviteForUser(
@@ -1162,6 +1211,71 @@ export class DatabaseStorage extends MemStorage {
       .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, userId)))
       .returning({ id: tripsTable.id });
     return deleted.length > 0;
+  }
+
+  override async getTripOrganizationStatusForUser(
+    tripId: number,
+    ownerId: string,
+  ): Promise<TripOrganizationStatus | undefined> {
+    const [row] = await this.db
+      .select({
+        flightStatus: tripOrganizationStatusesTable.flightStatus,
+        hotelStatus: tripOrganizationStatusesTable.hotelStatus,
+        activitiesStatus: tripOrganizationStatusesTable.activitiesStatus,
+      })
+      .from(tripOrganizationStatusesTable)
+      .innerJoin(
+        tripsTable,
+        and(
+          eq(tripOrganizationStatusesTable.tripId, tripsTable.id),
+          eq(tripsTable.userId, ownerId),
+        ),
+      )
+      .where(eq(tripOrganizationStatusesTable.tripId, tripId))
+      .limit(1);
+    return row ? toTripOrganizationStatus(row) : undefined;
+  }
+
+  override async upsertTripOrganizationStatusForUser(
+    tripId: number,
+    ownerId: string,
+    status: TripOrganizationStatus,
+  ): Promise<TripOrganizationStatus | undefined> {
+    const validated = tripOrganizationStatusSchema.parse(status);
+    return this.db.transaction(async (transaction) => {
+      const [trip] = await transaction
+        .select({ id: tripsTable.id })
+        .from(tripsTable)
+        .where(and(eq(tripsTable.id, tripId), eq(tripsTable.userId, ownerId)))
+        .limit(1);
+      if (!trip) return undefined;
+
+      const [row] = await transaction
+        .insert(tripOrganizationStatusesTable)
+        .values({
+          tripId,
+          flightStatus: validated.flight,
+          hotelStatus: validated.hotel,
+          activitiesStatus: validated.activities,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: tripOrganizationStatusesTable.tripId,
+          set: {
+            flightStatus: validated.flight,
+            hotelStatus: validated.hotel,
+            activitiesStatus: validated.activities,
+            updatedAt: new Date(),
+          },
+        })
+        .returning({
+          flightStatus: tripOrganizationStatusesTable.flightStatus,
+          hotelStatus: tripOrganizationStatusesTable.hotelStatus,
+          activitiesStatus: tripOrganizationStatusesTable.activitiesStatus,
+        });
+
+      return row ? toTripOrganizationStatus(row) : { ...defaultTripOrganizationStatus };
+    });
   }
 
   override async getActiveTripInviteForUser(
