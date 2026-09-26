@@ -82,11 +82,13 @@ Current compatibility behavior:
 
 - `currentItinerary` is the legacy checkout context.
 - A valid legacy value may be migrated into a Planner draft.
-- A `review-ready` Planner is explicitly converted into `currentItinerary` before navigating to `/checkout`.
+- A `review-ready` Planner is explicitly converted into `currentItinerary` before navigating to `/checkout`, with a small provenance marker tied to that Planner snapshot.
 - The bridge removes the legacy `selectedFlight` value.
 - Unknown or corrupt versioned Planner values are discarded rather than trusted.
 
 The compatibility bridge is transitional. New work should not expand `currentItinerary` into a canonical cross-domain model.
+
+The provider-options page now adapts these inputs into a narrow search context. It uses the valid `review-ready` Planner only when the checkout bridge carries matching Planner provenance. A bridge without matching provenance is treated as a legacy/Saved Trip flow even when its route, dates, and participant count happen to match a stored Planner. Provider Results and Selections are never written back into either input.
 
 Other current browser keys include `selectedBrand`, `byebi_locale`, per-trip booking-status keys, and a session-scoped analytics identifier. Each has a narrow owner and must not become a substitute for domain contracts.
 
@@ -111,31 +113,31 @@ Provider responsibilities are isolated from UI rendering:
 - `client/src/lib/affiliateLinks.ts` and `aviasales.ts` build approved external handoffs.
 - `client/src/lib/getyourguide.ts` resolves curated GetYourGuide city links.
 
-Booking.com and GetYourGuide are currently handoff destinations, not booking APIs. Aviasales receives the flight booking handoff; Amadeus supplies current search data where available.
+Booking.com and GetYourGuide are currently handoff destinations, not booking APIs. Aviasales receives the non-exact flight search handoff; Amadeus supplies current search data where available.
 
 ## Provider Results
 
 Shared response contracts live in `shared/flightSchemas.ts` and `shared/hotelSchemas.ts`.
 
-- Flight results include provider price/currency, schedule summary, stops, data status, and an external redirect flow.
-- Hotel results include total-stay price/currency and stay metadata.
+- Flight results include the provider-supplied Amadeus offer identifier, provider, segments, airlines, price/currency, searched-passenger price scope, requested group size, data status, fetch time, and a separate non-exact Aviasales search handoff.
+- Hotel results include the Amadeus hotel/offer identifiers, provider, total-stay price/currency, stay dates, requested group size, and explicit quoted occupancy. Amadeus currently quotes at most two adults per room, so `priceTotal` is not represented as a full-group total.
 - Results are sorted deterministically before presentation.
 - In canonical product flows, provider failures or empty results must surface as empty, error, or explicit `unavailable` states; fabricated provider offers are forbidden.
-- Known exception: legacy non-production hotel-search fallback code can synthesize mock hotel results and prices when Amadeus returns no hotel IDs, and may label them `live`. This is transitional technical debt, not valid provider inventory or a pattern for production semantics or new feature work.
+- Hotel search returns real provider results, an empty live result, or an unavailable state. The former non-production synthetic hotel inventory fallback is no longer part of the search path.
 - A valid handoff URL may still be provided when live flight data is unavailable; it must not be presented as confirmed availability.
 
-Provider Results are currently request-scoped. Hotel results are held in component state, while the checkout consumes the flight handoff URL and does not persist the returned flight list. Results are not saved as Planner or Saved Trip data.
+Provider Results remain request-scoped UI/query data and are not saved as Planner or Saved Trip data. Only the small canonical display/handoff subset required for an explicit selection may be persisted; raw provider payloads are not persisted.
 
 ## Selection state
 
-The current `/checkout` implementation stores hotel selection in component state. A flight handoff URL is derived from the validated trip context or recovered through `/api/flights/search`. Activity handoff is destination-based.
+The shared, versioned Selection contract is `shared/providerSelectionSchemas.ts`, currently version 1, and browser persistence uses `byebi:providerSelections:v1`.
 
-There is not yet a shared, versioned Selection contract. Until one is intentionally introduced:
-
-- do not persist raw provider payloads;
-- do not infer selection from a displayed result;
-- do not place provider selections inside the Planner contract;
-- do not claim selection or redirect as booking confirmation.
+- Flight and hotel choices are explicit, independently optional, and contain only canonical display and handoff metadata.
+- A deterministic provider-search fingerprint covers origin, destination, dates, and participants. Planner-only preference changes do not invalidate flight or hotel selections; material provider-search changes do. A corrupt, unknown-version, or non-matching persisted selection is discarded.
+- After each successful live provider response, a restored selection is reconciled by provider identity. Matching selections are refreshed from the current normalized result and disappeared offers are cleared. Transient unavailable/error states retain persisted choices but do not present their stored prices or handoff actions as current live data.
+- Selection does not modify Planner state, `currentItinerary`, or Saved Trip persistence and does not trigger authentication.
+- The Aviasales handoff remains a search handoff (`exactOffer: false`), even when an Amadeus offer is selected.
+- GetYourGuide remains a real city-level destination handoff. There is no persisted activity selection because no verified item-level inventory contract exists.
 
 ## Saved Trip persistence
 
@@ -223,10 +225,8 @@ Do not treat Replit-local history as canonical, and do not automatically sync, p
 
 - `/checkout` is named like an internal checkout but functions as a provider-options and external-handoff page.
 - `currentItinerary` remains the compatibility input for `/checkout` while the versioned Planner uses its own key.
-- Provider Results and Selections are separate in runtime behavior but do not yet share first-class cross-layer domain contracts.
-- Hotel selection is transient component state and is not included in Saved Trip persistence.
 - Saved Trip storage names the per-person value `budget`, so the semantic relies on product and conversion invariants.
-- **Non-production hotel mock fallback** — Legacy development/test hotel fallback can synthesize hotel results and prices and may mark them `live`. Remove or isolate it in a future functional task before treating hotel result provenance as trustworthy across all environments.
+- The unused internal `bookHotel()` service, including legacy non-production mock-booking behavior, remains dead code with no public API route. It is outside the external-handoff flow and should be removed in a separately scoped cleanup.
 - Some older UI surfaces use page-specific styling instead of only shared design primitives.
 
 These are documentation findings, not authorization to refactor or migrate them.

@@ -5,6 +5,7 @@ import {
   createLegacyCheckoutBridge,
   loadPlannerDraft,
   migrateLegacyItinerary,
+  persistCheckoutBridge,
   savePlannerDraft,
 } from "./plannerStorage";
 
@@ -49,7 +50,15 @@ describe("planner storage", () => {
     });
     expect(createLegacyCheckoutBridge(ready)).toMatchObject({
       budget: 700, activities: ["wellness", "spa"], partyType: "bachelorette",
+      plannerBridge: {
+        version: 1,
+        plannerBrand: "byebride",
+        plannerCreatedAt: ready.createdAt,
+        plannerUpdatedAt: ready.updatedAt,
+      },
     });
+    expect(persistCheckoutBridge(localStorage, ready)).toBe(true);
+    expect(JSON.parse(localStorage.getItem("currentItinerary")!).plannerBridge.plannerCreatedAt).toBe(ready.createdAt);
   });
 
   it("preserves an archetype-only preference in the legacy activities field", () => {

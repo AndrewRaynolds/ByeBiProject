@@ -55,6 +55,7 @@ describe("hotel search route fallback", () => {
       adults: 12,
       currency: "EUR",
       hotelDataStatus: "unavailable",
+      fetchedAt: expect.any(String),
       hotels: [],
     });
   });

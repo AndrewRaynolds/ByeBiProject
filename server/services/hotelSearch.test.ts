@@ -22,6 +22,7 @@ describe("searchHotelsForCheckout", () => {
     expect(result).toEqual({
       ...input,
       hotelDataStatus: "unavailable",
+      fetchedAt: expect.any(String),
       hotels: [],
     });
     expect(onProviderError).toHaveBeenCalledWith(providerError);
@@ -29,11 +30,15 @@ describe("searchHotelsForCheckout", () => {
 
   it("returns real provider results without changing the requested group", async () => {
     const hotel = {
+      provider: "amadeus" as const,
       hotelId: "HOTEL-1",
       name: "Hotel Test",
       stars: "4",
       priceTotal: 320,
       currency: "EUR",
+      priceScope: "quoted-occupancy-total-stay" as const,
+      quotedAdults: 2,
+      requestedAdults: 12,
       offerId: "OFFER-1",
       bookingFlow: "REDIRECT" as const,
       paymentPolicy: "PREPAY" as const,
@@ -48,17 +53,22 @@ describe("searchHotelsForCheckout", () => {
     expect(result).toEqual({
       ...input,
       hotelDataStatus: "live",
+      fetchedAt: expect.any(String),
       hotels: [hotel],
     });
   });
 
   it("orders hotels by total price with deterministic tie-breakers", async () => {
     const hotel = (hotelId: string, name: string, priceTotal: number) => ({
+      provider: "amadeus" as const,
       hotelId,
       name,
       stars: "4",
       priceTotal,
       currency: "EUR",
+      priceScope: "quoted-occupancy-total-stay" as const,
+      quotedAdults: 2,
+      requestedAdults: 12,
       offerId: `OFFER-${hotelId}`,
       bookingFlow: "REDIRECT" as const,
       paymentPolicy: "PREPAY" as const,

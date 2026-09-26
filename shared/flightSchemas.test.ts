@@ -4,6 +4,7 @@ import {
   getAviasalesAdultCount,
   isAviasalesCheckoutUrl,
   flightResultSchema,
+  flightCheckoutSearchResponseSchema,
   flightSearchQuerySchema,
 } from "./flightSchemas";
 
@@ -24,6 +25,37 @@ const validSegment = {
   flightNumber: "6101",
   duration: "PT2H",
 };
+
+function validCheckoutResponse() {
+  const checkoutUrl = "https://www.aviasales.com/search/FCO1008BCN13089?marker=685469";
+  return {
+    origin: "FCO",
+    destination: "BCN",
+    departDate: "2026-08-10",
+    returnDate: "2026-08-13",
+    passengers: 12,
+    checkoutAdults: 9,
+    groupBookingRequired: true,
+    currency: "EUR",
+    checkoutUrl,
+    handoff: { provider: "aviasales", url: checkoutUrl, exactOffer: false },
+    flightDataStatus: "live",
+    fetchedAt: "2026-08-01T10:00:00.000Z",
+    flights: [{
+      provider: "amadeus",
+      offerId: "amadeus-offer-42",
+      airlines: ["Vueling"],
+      outbound: [validSegment],
+      price: 899,
+      currency: "EUR",
+      priceScope: "searched-passengers-total",
+      quotedPassengers: 9,
+      requestedPassengers: 12,
+      totalDuration: "PT2H",
+      stops: 0,
+    }],
+  };
+}
 
 describe("flight schemas", () => {
   it("normalizes valid search parameters", () => {
@@ -139,5 +171,26 @@ describe("flight schemas", () => {
       ...override,
     };
     expect(flightResultSchema.safeParse(result).success).toBe(false);
+  });
+
+  it("validates normalized offers instead of passing unknown flight data through", () => {
+    const response = validCheckoutResponse();
+    expect(flightCheckoutSearchResponseSchema.safeParse(response).success).toBe(true);
+    expect(flightCheckoutSearchResponseSchema.safeParse({
+      ...response,
+      flights: [{ ...response.flights[0], offerId: "" }],
+    }).success).toBe(false);
+  });
+
+  it.each([
+    ["checkout adult cap", (response: ReturnType<typeof validCheckoutResponse>) => { response.checkoutAdults = 8; }],
+    ["group-booking flag", (response: ReturnType<typeof validCheckoutResponse>) => { response.groupBookingRequired = false; }],
+    ["requested passenger scope", (response: ReturnType<typeof validCheckoutResponse>) => { response.flights[0].requestedPassengers = 11; }],
+    ["quoted passenger scope", (response: ReturnType<typeof validCheckoutResponse>) => { response.flights[0].quotedPassengers = 8; }],
+    ["single-search currency", (response: ReturnType<typeof validCheckoutResponse>) => { response.flights[0].currency = "USD"; }],
+  ])("rejects conflicting flight response semantics: %s", (_label, mutate) => {
+    const response = validCheckoutResponse();
+    mutate(response);
+    expect(flightCheckoutSearchResponseSchema.safeParse(response).success).toBe(false);
   });
 });

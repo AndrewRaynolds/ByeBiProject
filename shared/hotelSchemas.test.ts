@@ -6,17 +6,34 @@ import {
 } from "./hotelSchemas";
 
 const validHotel = {
+  provider: "amadeus",
   hotelId: "HOTEL-1",
   name: "Hotel Test",
   stars: "4",
   priceTotal: 320,
   currency: "EUR",
+  priceScope: "quoted-occupancy-total-stay",
+  quotedAdults: 2,
+  requestedAdults: 4,
   offerId: "OFFER-1",
   bookingFlow: "REDIRECT",
   paymentPolicy: "PREPAY",
   checkInDate: "2026-08-10",
   checkOutDate: "2026-08-13",
 };
+
+function validHotelResponse() {
+  return {
+    cityCode: "BCN",
+    checkInDate: "2026-08-10",
+    checkOutDate: "2026-08-13",
+    adults: 4,
+    currency: "EUR",
+    hotelDataStatus: "live",
+    fetchedAt: "2026-08-01T10:00:00.000Z",
+    hotels: [{ ...validHotel }],
+  };
+}
 
 describe("hotel schemas", () => {
   it("normalizes valid search parameters", () => {
@@ -58,17 +75,7 @@ describe("hotel schemas", () => {
   });
 
   it("accepts a complete hotel response", () => {
-    expect(
-      hotelSearchResponseSchema.safeParse({
-        cityCode: "BCN",
-        checkInDate: "2026-08-10",
-        checkOutDate: "2026-08-13",
-        adults: 4,
-        currency: "EUR",
-        hotelDataStatus: "live",
-        hotels: [validHotel],
-      }).success,
-    ).toBe(true);
+    expect(hotelSearchResponseSchema.safeParse(validHotelResponse()).success).toBe(true);
   });
 
   it("accepts an unavailable provider response without fake hotel data", () => {
@@ -80,6 +87,7 @@ describe("hotel schemas", () => {
         adults: 12,
         currency: "EUR",
         hotelDataStatus: "unavailable",
+        fetchedAt: "2026-08-01T10:00:00.000Z",
         hotels: [],
       }).success,
     ).toBe(true);
@@ -92,9 +100,37 @@ describe("hotel schemas", () => {
     { name: "" },
     { stars: "8" },
     { bookingFlow: "UNKNOWN" },
+    { quotedAdults: 3 },
+    { priceScope: "full-group" },
     { checkOutDate: "not-a-date" },
     { checkOutDate: "2026-08-09" },
   ])("rejects malformed hotel data", (override) => {
     expect(hotelResultSchema.safeParse({ ...validHotel, ...override }).success).toBe(false);
+  });
+
+  it("rejects a response that mislabels unavailable data as live inventory", () => {
+    expect(hotelSearchResponseSchema.safeParse({
+      cityCode: "BCN",
+      checkInDate: "2026-08-10",
+      checkOutDate: "2026-08-13",
+      adults: 4,
+      currency: "EUR",
+      hotelDataStatus: "unavailable",
+      fetchedAt: "2026-08-01T10:00:00.000Z",
+      hotels: [validHotel],
+    }).success).toBe(false);
+  });
+
+  it.each([
+    ["quoted occupancy", (response: ReturnType<typeof validHotelResponse>) => { response.hotels[0].quotedAdults = 1; }],
+    ["requested occupancy", (response: ReturnType<typeof validHotelResponse>) => { response.hotels[0].requestedAdults = 3; }],
+    ["check-in scope", (response: ReturnType<typeof validHotelResponse>) => { response.hotels[0].checkInDate = "2026-08-11"; }],
+    ["check-out scope", (response: ReturnType<typeof validHotelResponse>) => { response.hotels[0].checkOutDate = "2026-08-14"; }],
+    ["single-search currency", (response: ReturnType<typeof validHotelResponse>) => { response.hotels[0].currency = "USD"; }],
+    ["price-scope metadata", (response: ReturnType<typeof validHotelResponse>) => { response.hotels[0].priceScope = "full-group"; }],
+  ])("rejects conflicting hotel response semantics: %s", (_label, mutate) => {
+    const response = validHotelResponse();
+    mutate(response);
+    expect(hotelSearchResponseSchema.safeParse(response).success).toBe(false);
   });
 });

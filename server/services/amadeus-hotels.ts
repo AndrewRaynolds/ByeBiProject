@@ -125,42 +125,7 @@ export async function searchHotels(
       .filter((id: any) => !!id)
       .slice(0, 30) || []; // limita per non bruciare chiamate
 
-  if (!hotelIds.length) {
-    // In produzione NON mockiamo, ritorniamo vuoto
-    if (isProd) {
-      return [];
-    }
-
-    // In sandbox possiamo restituire qualcosa di finto per testare la UI
-    return [
-      {
-        hotelId: "MOCK1",
-        name: `${cityCode} Test Hotel`,
-        stars: "3",
-        priceTotal: 100,
-        currency,
-        offerId: "MOCK_OFFER_1",
-        bookingFlow: "IN_APP" as BookingFlow,
-        paymentPolicy: "PAY_AT_HOTEL" as PaymentPolicy,
-        checkInDate,
-        checkOutDate,
-        roomDescription: "Standard Double Room",
-      },
-      {
-        hotelId: "MOCK2",
-        name: `${cityCode} Party Hostel`,
-        stars: "2",
-        priceTotal: 60,
-        currency,
-        offerId: "MOCK_OFFER_2",
-        bookingFlow: "REDIRECT" as BookingFlow,
-        paymentPolicy: "PREPAY" as PaymentPolicy,
-        checkInDate,
-        checkOutDate,
-        roomDescription: "Shared Dormitory",
-      },
-    ];
-  }
+  if (!hotelIds.length) return [];
 
   // STEP 2: offerte reali per quei hotelIds
   // Amadeus interpreta "adults" come adulti PER CAMERA, non per il gruppo.
@@ -202,6 +167,7 @@ export async function searchHotels(
       const bookingFlow: BookingFlow = paymentPolicy === "PAY_AT_HOTEL" ? "IN_APP" : "REDIRECT";
 
       const parsed = hotelResultSchema.safeParse({
+        provider: "amadeus",
         hotelId: item.hotel?.hotelId ?? item.hotelId,
         name: item.hotel?.name ?? "Unknown hotel",
         stars: item.hotel?.rating,
@@ -209,6 +175,9 @@ export async function searchHotels(
         longitude: item.hotel?.geoCode?.longitude,
         priceTotal: Number(offer.price.total),
         currency: offer.price.currency || currency,
+        priceScope: "quoted-occupancy-total-stay",
+        quotedAdults: adultsPerRoom,
+        requestedAdults: adults,
         offerId: offer.id,
         bookingFlow,
         paymentPolicy,
