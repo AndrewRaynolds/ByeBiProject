@@ -25,6 +25,10 @@ vi.mock("@/hooks/use-optimized-scroll", () => ({
   useOptimizedScroll: () => ({ isScrolled: false }),
 }));
 
+vi.mock("@/lib/sellerConfig", () => ({
+  sellerConfig: { contactEmail: "feedback@example.com" },
+}));
+
 function renderHeader(locale: Locale = "it", brand: "byebro" | "byebride" = "byebro") {
   localStorage.setItem("selectedBrand", brand);
   localStorage.setItem("byebi_locale", locale);
@@ -87,6 +91,18 @@ describe("Header navigation", () => {
     fireEvent.mouseDown(document.body);
 
     expect(screen.queryByRole("navigation", { name: "Navigazione mobile" })).not.toBeInTheDocument();
+  });
+
+  it("offers contextual beta feedback without leaking URL query data", () => {
+    window.history.replaceState({}, "", "/checkout?token=should-not-leak");
+    renderHeader();
+
+    fireEvent.click(screen.getByRole("button", { name: "Apri menu di navigazione" }));
+
+    const feedback = screen.getByRole("link", { name: "Invia feedback" });
+    expect(feedback).toHaveAttribute("href", expect.stringContaining("mailto:feedback@example.com"));
+    expect(decodeURIComponent(feedback.getAttribute("href") || "")).toContain("Page: /checkout");
+    expect(feedback.getAttribute("href")).not.toContain("should-not-leak");
   });
 
   it("exposes My trips for authenticated users", async () => {

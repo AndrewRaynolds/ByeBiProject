@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
-import { ChevronDown, Globe, Loader2, LogOut, Menu, User, X } from "lucide-react";
+import { ChevronDown, Globe, Loader2, LogOut, Menu, MessageSquareText, User, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,8 @@ import { useOptimizedScroll } from "@/hooks/use-optimized-scroll";
 import { useTranslation, type Locale } from "@/contexts/LanguageContext";
 import { useBrand } from "@/contexts/BrandContext";
 import { cn } from "@/lib/utils";
+import { sellerConfig } from "@/lib/sellerConfig";
+import { buildFeedbackMailto } from "@/lib/feedbackMailto";
 
 const FLAG_LABELS: Record<Locale, { flag: string; label: string }> = {
   it: { flag: "🇮🇹", label: "Italiano" },
@@ -35,6 +37,16 @@ const Header = memo(function Header() {
   const splitPath = isBride ? "/splitta-bride" : "/splitta-bro";
   const destinationsActive = location === "/destinations" || location.startsWith("/destinations/");
   const experiencesActive = location.startsWith("/experiences");
+  const feedbackHref = sellerConfig.contactEmail
+    ? buildFeedbackMailto({
+        email: sellerConfig.contactEmail,
+        subject: t("feedback.subject"),
+        message: t("feedback.message"),
+        brand: isBride ? "byebride" : "byebro",
+        locale,
+        pathname: window.location.pathname,
+      })
+    : null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -102,6 +114,14 @@ const Header = memo(function Header() {
               <DropdownMenuItem asChild><Link href={splitPath}>{isBride ? "SplittaBride" : "SplittaBro"}</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link href="/secret-blog">{t("header.secretBlog")}</Link></DropdownMenuItem>
               <DropdownMenuItem asChild><Link href="/merchandise">{t("header.merch")}</Link></DropdownMenuItem>
+              {feedbackHref && (
+                <DropdownMenuItem asChild>
+                  <a href={feedbackHref}>
+                    <MessageSquareText />
+                    {t("feedback.send")}
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleChangeBrand}>{t("brand.changeBrand")}</DropdownMenuItem>
             </DropdownMenuContent>
@@ -177,6 +197,15 @@ const Header = memo(function Header() {
             <Link href={splitPath} onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{isBride ? "SplittaBride" : "SplittaBro"}</Link>
             <Link href="/secret-blog" onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{t("header.secretBlog")}</Link>
             <Link href="/merchandise" onClick={() => setMobileMenuOpen(false)} className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">{t("header.merch")}</Link>
+            {feedbackHref && (
+              <a
+                href={feedbackHref}
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-sm px-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                {t("feedback.send")}
+              </a>
+            )}
             <button type="button" onClick={handleChangeBrand} className="rounded-sm px-1 py-2 text-left text-sm font-medium text-muted-foreground hover:text-foreground">{t("brand.changeBrand")}</button>
             <div className="mt-2 flex items-center gap-2 border-t border-border pt-3 sm:hidden" aria-label={t("header.language")}>
               {(Object.entries(FLAG_LABELS) as [Locale, { flag: string; label: string }][]).map(([key, value]) => (
