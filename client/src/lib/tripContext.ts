@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
   calculateTripDays,
-  isValidDateRange,
   normalizeTripDate,
 } from "@shared/dateUtils";
 import { isAviasalesCheckoutUrl } from "@shared/flightSchemas";
+import { isValidPlannerStartDate } from "@shared/plannerSchemas";
 import type { Trip } from "@shared/schema";
 
 const dateOnlySchema = z.string().refine(
@@ -58,11 +58,20 @@ const storedTripContextSchema = z
       return;
     }
 
-    if (!isValidDateRange(value.startDate, value.endDate)) {
+    if (!isValidPlannerStartDate(value.startDate)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["startDate"],
+        message: "Start date cannot be in the past",
+      });
+      return;
+    }
+
+    if (value.endDate < value.startDate) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["endDate"],
-        message: "End date must be after start date",
+        message: "End date cannot be before start date",
       });
       return;
     }

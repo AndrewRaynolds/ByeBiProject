@@ -1094,6 +1094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const {
         message,
+        planner,
         selectedDestination,
         tripDetails,
         conversationHistory,
@@ -1119,9 +1120,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
       const context = {
+        planner,
         selectedDestination,
         tripDetails,
-        partyType: partyType || 'bachelor',
+        partyType: planner?.partyType ?? partyType ?? 'bachelor',
         origin: originIata,
         originCityName,
       };

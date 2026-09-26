@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { plannerDraftSchema } from "./plannerSchemas";
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const chatHistoryMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -17,11 +18,20 @@ const chatTripDetailsSchema = z.object({
 
 export const chatStreamRequestSchema = z.object({
   message: z.string().trim().min(1).max(2_000),
+  planner: plannerDraftSchema.optional(),
   selectedDestination: optionalText(100),
   tripDetails: chatTripDetailsSchema.optional(),
   conversationHistory: z.array(chatHistoryMessageSchema).max(20).optional().default([]),
-  partyType: z.enum(["bachelor", "bachelorette"]).optional().default("bachelor"),
+  partyType: z.enum(["bachelor", "bachelorette"]).optional(),
   originCity: optionalText(100),
-}).strict();
+}).strict().superRefine((request, context) => {
+  if (request.planner && request.partyType && request.partyType !== request.planner.partyType) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["partyType"],
+      message: "Party type must match the planner",
+    });
+  }
+});
 
 export type ChatStreamRequest = z.infer<typeof chatStreamRequestSchema>;
