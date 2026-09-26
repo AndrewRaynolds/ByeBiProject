@@ -37,6 +37,17 @@ vi.mock("@tanstack/react-query", () => ({
     if (queryKey[0].startsWith("/api/trips/user/")) {
       return { data: [trip], isLoading: false, error: null };
     }
+    if (queryKey[0] === "/api/trips/organization-statuses") {
+      return {
+        data: [{
+          tripId: 12,
+          status: { flight: "done", hotel: "pending", activities: "done" },
+          persisted: true,
+        }],
+        isLoading: false,
+        error: null,
+      };
+    }
     if (queryKey[0].startsWith("/api/admin/product-analytics-summary")) {
       return {
         data: {
@@ -108,6 +119,9 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "dashboard.activities": "Attività",
       "dashboard.participants": "Partecipanti",
       "dashboard.moreActivities": `+ altre ${values?.count}`,
+      "dashboard.organizationProgress": `Organizzazione: ${values?.completed}/${values?.total} completata`,
+      "dashboard.organizationLoading": "Organizzazione: caricamento…",
+      "dashboard.organizationUnavailable": "Organizzazione non disponibile",
       "dashboard.openTripHub": "Apri viaggio",
       "dashboard.deleteTrip": "Elimina",
       "dashboard.deleteConfirmTitle": "Eliminare questo viaggio?",
@@ -169,6 +183,8 @@ describe("Dashboard trips", () => {
     expect(screen.getByText("Partenza:").parentElement).toHaveTextContent("Partenza: Roma");
     expect(screen.getByText("Destinazioni:").parentElement).toHaveTextContent("Destinazioni: Barcellona");
     expect(screen.getByText("Attività:").parentElement).toHaveTextContent("Tapas tour, Kart + altre 1");
+    expect(screen.getByText("Organizzazione: 2/3 completata")).toBeInTheDocument();
+    expect(queryKeys).toContain("/api/trips/organization-statuses");
     expect(screen.queryByText(/€\s*600/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Budget/i)).not.toBeInTheDocument();
   });
