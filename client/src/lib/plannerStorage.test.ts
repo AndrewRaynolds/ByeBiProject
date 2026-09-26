@@ -10,7 +10,7 @@ import {
   savePlannerDraft,
   startNewPlannerTrip,
 } from "./plannerStorage";
-const RETIRED_RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
+const RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
 
 describe("planner storage", () => {
   beforeEach(() => localStorage.clear());

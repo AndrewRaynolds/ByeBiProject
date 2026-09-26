@@ -240,45 +240,6 @@ export async function executeToolCall(
       };
     }
 
-    case "search_hotels": {
-      const { searchHotels } = await import("./amadeus-hotels");
-      const { cityToIata } = await import("./cityMapping");
-
-      const destCity = typeof args.destination === "string" ? args.destination : "";
-      const destIata = cityToIata(destCity) || destCity.substring(0, 3).toUpperCase();
-      const checkIn = typeof args.check_in_date === "string" ? args.check_in_date : "";
-      const checkOut = typeof args.check_out_date === "string" ? args.check_out_date : "";
-      const guests = typeof args.guests === "number" ? args.guests : 2;
-
-      try {
-        const hotelResults = await searchHotels({
-          cityCode: destIata,
-          checkInDate: checkIn,
-          checkOutDate: checkOut,
-          adults: guests,
-          currency: "EUR",
-        });
-
-        const hotels = (hotelResults || []).slice(0, 5).map((h) => ({
-          hotelId: h.hotelId,
-          name: h.name,
-          stars: h.stars,
-          priceTotal: h.priceTotal,
-          currency: h.currency,
-          offerId: h.offerId,
-          bookingFlow: h.bookingFlow,
-          paymentPolicy: h.paymentPolicy,
-          roomDescription: h.roomDescription,
-        }));
-
-        return { hotels, destination: destIata };
-      } catch (error) {
-        console.error("Hotel search error", getSafeErrorMetadata(error));
-        return { error: "Failed to search hotels. Please try again.", hotels: [] };
-      }
-    }
-
-
     default:
       return { error: `Unknown tool: ${name}` };
   }
