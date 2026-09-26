@@ -6,7 +6,7 @@ import ChatDialogCompact from "./ChatDialogCompact";
 import ChatDialogCompactBride from "./ChatDialogCompactBride";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { createPlannerDraft, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
-import { PROVIDER_SELECTION_STORAGE_KEY } from "@shared/providerSelectionSchemas";
+const RETIRED_RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
 import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import localeIt from "@/locales/it.json";
@@ -80,7 +80,7 @@ describe("PlannerDialog", () => {
   it("starts a visibly fresh trip and clears chat, bridge, and provider selections", () => {
     storeReady();
     localStorage.setItem("currentItinerary", JSON.stringify({ destination: "Ibiza" }));
-    localStorage.setItem(PROVIDER_SELECTION_STORAGE_KEY, "old selections");
+    localStorage.setItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY, "old selections");
     renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Nuovo viaggio" }));
@@ -88,7 +88,7 @@ describe("PlannerDialog", () => {
     expect(screen.queryByTestId("planner-review")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Scrivi il tuo messaggio..." })).toHaveValue("");
     expect(localStorage.getItem("currentItinerary")).toBeNull();
-    expect(localStorage.getItem(PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
     expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!)).toMatchObject({ status: "draft", destination: null });
   });
 
