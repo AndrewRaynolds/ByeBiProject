@@ -27,7 +27,8 @@ import {
   type InsertProductEvent,
 } from "@shared/schema";
 import {
-  productEventNames,
+  discoveryEventNames,
+  productFunnelEventOrder,
   type AffiliateClickSummary,
   type ProductAnalyticsSummary,
 } from "@shared/analyticsSchemas";
@@ -1920,13 +1921,8 @@ export function summarizeProductAnalytics(
     sessionsByEvent.set(row.eventName, sessions);
   }
   const providerSessions = new Set(providerSessionIds);
-  const orderedSteps = [
-    ...productEventNames.slice(0, 8),
-    "provider_click" as const,
-    productEventNames[8],
-  ];
   let previousSessions: Set<string> | null = null;
-  const funnel = orderedSteps.map((eventName) => {
+  const funnel = productFunnelEventOrder.map((eventName) => {
     const currentSessions = eventName === "provider_click"
       ? providerSessions
       : (sessionsByEvent.get(eventName) ?? new Set<string>());
@@ -1940,8 +1936,12 @@ export function summarizeProductAnalytics(
     previousSessions = currentSessions;
     return { eventName, count, previousStepRate };
   });
+  const discovery = discoveryEventNames.map((eventName) => ({
+    eventName,
+    count: sessionsByEvent.get(eventName)?.size ?? 0,
+  }));
 
-  return { days, funnel, providers: affiliateSummary.providers };
+  return { days, funnel, discovery, providers: affiliateSummary.providers };
 }
 
 export function createStorageFromEnvironment(): IStorage {

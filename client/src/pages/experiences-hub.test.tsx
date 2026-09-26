@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -10,7 +10,7 @@ import ExperiencesPage from "./ExperiencesPage";
 const mocks = vi.hoisted(() => ({
   openExternalUrl: vi.fn(),
   trackAffiliateClick: vi.fn(),
-  trackEvent: vi.fn(),
+  trackProductEvent: vi.fn(),
 }));
 
 vi.mock("@/components/Header", () => ({ default: () => <header /> }));
@@ -29,7 +29,7 @@ vi.mock("@/lib/externalNavigation", () => ({
 }));
 vi.mock("@/lib/track", () => ({
   trackAffiliateClick: mocks.trackAffiliateClick,
-  trackEvent: mocks.trackEvent,
+  trackProductEvent: mocks.trackProductEvent,
 }));
 
 function renderPage(brand: "byebro" | "byebride" = "byebro") {
@@ -58,7 +58,7 @@ describe("experiences hub", () => {
     window.history.replaceState(null, "", "/experiences");
     mocks.openExternalUrl.mockClear();
     mocks.trackAffiliateClick.mockClear();
-    mocks.trackEvent.mockClear();
+    mocks.trackProductEvent.mockClear();
     vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
   });
 
@@ -72,6 +72,7 @@ describe("experiences hub", () => {
 
     expect(screen.getByText("Roscioli")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ibiza" }));
+    expect(window.location.search).toBe("?city=ibiza");
     selectTab("Bar");
 
     expect(screen.getByRole("button", { name: "Ibiza" })).toHaveAttribute(
@@ -81,6 +82,7 @@ describe("experiences hub", () => {
     expect(screen.getByRole("heading", { name: "Bar a Ibiza" })).toBeInTheDocument();
     expect(screen.getByText("Lío Ibiza")).toBeInTheDocument();
     expect(screen.queryByText("Roscioli")).not.toBeInTheDocument();
+    expect(window.location.search).toBe("?city=ibiza");
   });
 
   it("preselects a valid city from the query without changing the initial category", () => {
@@ -120,6 +122,20 @@ describe("experiences hub", () => {
 
     expect(screen.getByRole("button", { name: "Ibiza" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Sa Capilla")).toBeInTheDocument();
+  });
+
+  it("responds to browser navigation without resetting the active category", () => {
+    window.history.replaceState(null, "", "/experiences?city=ibiza");
+    renderPage();
+    selectTab("Bar");
+
+    act(() => {
+      window.history.replaceState(null, "", "/experiences?city=rome");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(screen.getByRole("button", { name: "Roma" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("tab", { name: "Bar" })).toHaveAttribute("data-state", "active");
   });
 
   it("keeps Maps URLs unchanged and reserves affiliate tracking for GYG items", () => {
@@ -167,5 +183,15 @@ describe("experiences hub", () => {
       "href",
       "/destinations",
     );
+  });
+
+  it("prefills the selected city for the contextual AI handoff", () => {
+    window.history.replaceState(null, "", "/experiences?city=ibiza");
+    renderPage();
+
+    const aiLink = screen.getByTestId("experiences-plan-with-ai");
+    expect(aiLink).toHaveAttribute("href", "/?planDestination=Ibiza");
+    fireEvent.click(aiLink);
+    expect(mocks.trackProductEvent).toHaveBeenCalledWith("experiences_ai_handoff", { dedupe: false });
   });
 });

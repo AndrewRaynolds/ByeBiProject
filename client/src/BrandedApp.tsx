@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import RouteLoadingFallback from "@/components/RouteLoadingFallback";
 import PerformanceOptimizer from "@/lib/performance-optimizer";
+import RouteScrollToTop from "@/components/RouteScrollToTop";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Home = lazy(() => import("@/pages/Home"));
@@ -79,6 +80,7 @@ export default function BrandedApp({ selectedBrand }: BrandedAppProps) {
         <TooltipProvider>
           <Toaster />
           <PerformanceOptimizer />
+          <RouteScrollToTop />
           <Suspense fallback={<RouteLoadingFallback />}>
             <Router selectedBrand={selectedBrand} />
           </Suspense>

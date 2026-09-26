@@ -50,14 +50,19 @@ function getBrand(): "byebro" | "byebride" {
   return localStorage.getItem("selectedBrand") === "byebride" ? "byebride" : "byebro";
 }
 
-export function trackProductEvent(eventName: ProductEventName): void {
+export function trackProductEvent(
+  eventName: ProductEventName,
+  options: { dedupe?: boolean } = {},
+): void {
   const sessionId = getAnonymousSessionId();
   const dedupeKey = `byebi.analytics.sent.${eventName}`;
-  try {
-    if (sessionStorage.getItem(dedupeKey) === sessionId) return;
-    sessionStorage.setItem(dedupeKey, sessionId);
-  } catch {
-    // Tracking remains best-effort when storage is unavailable.
+  if (options.dedupe !== false) {
+    try {
+      if (sessionStorage.getItem(dedupeKey) === sessionId) return;
+      sessionStorage.setItem(dedupeKey, sessionId);
+    } catch {
+      // Tracking remains best-effort when storage is unavailable.
+    }
   }
 
   void fetch("/api/analytics/events", {

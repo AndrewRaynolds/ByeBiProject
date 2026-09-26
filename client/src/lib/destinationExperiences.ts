@@ -1,15 +1,13 @@
 import type { Destination } from "@shared/schema";
+import { EXPERIENCE_ARCHETYPES } from "@/lib/experienceArchetypes";
 
 export const DESTINATION_INTENTS = ["nightlife", "sport", "relax", "adventure"] as const;
 
 export type DestinationIntent = (typeof DESTINATION_INTENTS)[number];
 
-const INTENT_EXPERIENCE_NAMES: Record<DestinationIntent, string> = {
-  nightlife: "The Ultimate BroNight",
-  sport: "My Olympic Bro",
-  relax: "Chill and Feel the Bro",
-  adventure: "The Wild Broventure",
-};
+const INTENT_EXPERIENCE_NAMES: Record<DestinationIntent, string> = Object.fromEntries(
+  EXPERIENCE_ARCHETYPES.map((item) => [item.id, item.broName]),
+) as Record<DestinationIntent, string>;
 
 const EXPERIENCE_MATCHES: Record<string, string[]> = {
   "The Ultimate BroNight": [
@@ -87,12 +85,9 @@ export function destinationMatchesIntent(
   return getDestinationExperiences(destination).includes(INTENT_EXPERIENCE_NAMES[intent]);
 }
 
-const BRIDE_EXPERIENCE_NAMES: Record<string, string> = {
-  "The Ultimate BroNight": "The Ultimate BrideNight",
-  "My Olympic Bro": "My Olympic Bride",
-  "Chill and Feel the Bro": "Chill and Feel the Bride",
-  "The Wild Broventure": "The Wild Brideventure",
-};
+const BRIDE_EXPERIENCE_NAMES = Object.fromEntries(
+  EXPERIENCE_ARCHETYPES.map((item) => [item.broName, item.brideName]),
+) as Record<string, string>;
 
 export function adaptDestinationExperienceName(
   experienceName: string,

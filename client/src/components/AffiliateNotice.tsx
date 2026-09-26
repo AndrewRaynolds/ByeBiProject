@@ -11,7 +11,7 @@ export function AffiliateNotice({
   showText?: boolean;
 }) {
   const { t } = useTranslation();
-  const textClass = variant === "dark" ? "text-white/60" : "text-gray-600";
+  const textClass = variant === "dark" ? "text-primary-foreground/70" : "text-muted-foreground";
 
   return (
     <div
@@ -19,7 +19,7 @@ export function AffiliateNotice({
       className={`flex items-start gap-2 text-xs ${textClass} ${className}`}
       data-testid="affiliate-notice"
     >
-      <Badge className="bg-orange-500/90 text-white hover:bg-orange-500">
+      <Badge variant="outline" className="border-primary/30 bg-brand-soft text-primary">
         {t('affiliateNotice.badge')}
       </Badge>
       {showText && <span>{t('affiliateNotice.text')}</span>}

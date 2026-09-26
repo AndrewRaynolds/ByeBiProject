@@ -68,4 +68,19 @@ describe("affiliate click tracking", () => {
     });
     expect(affiliateBody.sessionId).toBe(productBody.sessionId);
   });
+
+  it("persists repeated discovery interactions without adding payload fields", () => {
+    const fetchMock = vi.fn().mockResolvedValue({});
+    vi.stubGlobal("fetch", fetchMock);
+
+    trackProductEvent("experience_category_selected", { dedupe: false });
+    trackProductEvent("experience_category_selected", { dedupe: false });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [, options] of fetchMock.mock.calls) {
+      expect(Object.keys(JSON.parse(options.body)).sort()).toEqual([
+        "brand", "eventName", "sessionId",
+      ]);
+    }
+  });
 });

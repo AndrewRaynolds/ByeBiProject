@@ -60,6 +60,23 @@ describe("product analytics routes", () => {
     expect(recordProductEvent).toHaveBeenCalledWith(event);
   });
 
+  it("persists a strict discovery event through the existing endpoint", async () => {
+    recordProductEvent.mockResolvedValue(undefined);
+    const event = {
+      sessionId: "123e4567-e89b-42d3-a456-426614174000",
+      eventName: "experience_item_clicked",
+      brand: "byebride",
+    };
+    const response = await fetch(`${baseUrl}/api/analytics/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+    });
+
+    expect(response.status).toBe(202);
+    expect(recordProductEvent).toHaveBeenCalledWith(event);
+  });
+
   it("rejects personal or arbitrary fields", async () => {
     const response = await fetch(`${baseUrl}/api/analytics/events`, {
       method: "POST",
@@ -81,7 +98,7 @@ describe("product analytics routes", () => {
       data: { user: { id: "admin", app_metadata: { role: "admin" } } },
       error: null,
     });
-    getProductAnalyticsSummary.mockResolvedValue({ days: 7, funnel: [], providers: [] });
+    getProductAnalyticsSummary.mockResolvedValue({ days: 7, funnel: [], discovery: [], providers: [] });
 
     const response = await fetch(`${baseUrl}/api/admin/product-analytics-summary?days=7`, {
       headers: { Authorization: "Bearer admin-token" },
