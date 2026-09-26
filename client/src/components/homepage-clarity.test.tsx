@@ -166,6 +166,18 @@ describe("homepage clarity", () => {
     expect(screen.queryByTestId("chat-dialog-message")).not.toBeInTheDocument();
   });
 
+  it("consumes planDestination on the ByeBride path without opening the dialog", () => {
+    localStorage.setItem("selectedBrand", "byebride");
+    window.history.replaceState(null, "", "/?source=experiences&planDestination=Ibiza#planner");
+    renderInItalian(<HeroSectionBride />);
+
+    expect(screen.getByTestId("input-hero-chat-bride")).toHaveValue("Organizza un viaggio a Ibiza");
+    expect(screen.queryByTestId("chat-dialog-message-bride")).not.toBeInTheDocument();
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      "/?source=experiences#planner",
+    );
+  });
+
   it("exposes the real three-step flow at the anchored section", () => {
     renderInItalian(<HowItWorks brand="bro" />);
 

@@ -1,4 +1,4 @@
-import { isValidDateRange } from "@shared/dateUtils";
+import { isValidPlannerDateRange } from "@shared/plannerSchemas";
 import type { Trip } from "@shared/schema";
 import { apiRequest } from "./queryClient";
 
@@ -35,7 +35,7 @@ export function buildPlannedTripPayload(context: PlannedTripContext) {
     !departureCity ||
     !startDate ||
     !endDate ||
-    !isValidDateRange(startDate, endDate) ||
+    !isValidPlannerDateRange(startDate, endDate) ||
     !Number.isInteger(participants) ||
     !participants ||
     participants < 1 ||

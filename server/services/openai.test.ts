@@ -60,6 +60,7 @@ vi.mock('./cityMapping', () => ({
 
 // Import after mocks are set up
 import { detectUserLanguage, enforceSelectedDestination, executeToolCall } from './openai';
+import { createPlannerDraft } from '@shared/plannerSchemas';
 
 describe('detectUserLanguage', () => {
   it.each([
@@ -90,6 +91,34 @@ describe('executeToolCall', () => {
   });
 
   afterEach(() => vi.unstubAllEnvs());
+
+  describe('update_planner tool', () => {
+    it('returns a review-ready planner only when every required detail is explicit', async () => {
+      const result = await executeToolCall('update_planner', {
+        origin: 'Rome', destination: 'Ibiza', startDate: '2099-10-10', endDate: '2099-10-13',
+        participants: 6, budgetPerPerson: 700, preferenceArchetype: 'nightlife', interests: ['music'],
+      }, { partyType: 'bachelor', planner: createPlannerDraft({ brand: 'byebro' }) });
+      expect(result).toMatchObject({ planner: { status: 'review-ready', budgetPerPerson: 700 }, missingFields: [] });
+      expect(result).not.toHaveProperty('checkoutUrl');
+    });
+
+    it('preserves an incomplete draft and reports only missing fields', async () => {
+      const result = await executeToolCall('update_planner', {
+        origin: null, destination: 'Ibiza', startDate: null, endDate: null,
+        participants: null, budgetPerPerson: null, preferenceArchetype: null, interests: null,
+      }, { partyType: 'bachelorette', planner: createPlannerDraft({ brand: 'byebride' }) });
+      expect(result).toMatchObject({ planner: { status: 'draft', budgetPerPerson: null, preferences: null } });
+      expect(result.missingFields).toEqual(expect.arrayContaining(['origin', 'budgetPerPerson', 'preferences']));
+    });
+
+    it('keeps the planner brand authoritative over a mismatched legacy context value', async () => {
+      const result = await executeToolCall('update_planner', {
+        origin: null, destination: 'Ibiza', startDate: null, endDate: null,
+        participants: null, budgetPerPerson: null, preferenceArchetype: null, interests: null,
+      }, { partyType: 'bachelor', planner: createPlannerDraft({ brand: 'byebride' }) });
+      expect(result).toMatchObject({ planner: { brand: 'byebride', partyType: 'bachelorette' } });
+    });
+  });
 
   describe('removed legacy tools', () => {
     it.each(['set_destination', 'set_origin', 'set_dates', 'set_participants', 'select_flight', 'unlock_checkout'])(

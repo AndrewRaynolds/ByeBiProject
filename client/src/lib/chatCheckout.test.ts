@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createChatCheckoutContext } from "./chatCheckout";
 
 const validArguments = {
@@ -16,6 +16,15 @@ const validResult = {
 };
 
 describe("createChatCheckoutContext", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 1, 12));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("uses the checkout URL verified by the server", () => {
     expect(createChatCheckoutContext(validArguments, validResult)).toEqual({
       origin: "Roma",

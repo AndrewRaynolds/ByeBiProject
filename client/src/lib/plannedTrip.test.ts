@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildPlannedTripPayload, plannedTripMatchesSavedTrip } from "./plannedTrip";
 
 describe("planned trip persistence", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 12));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it("maps a completed chatbot itinerary to the dashboard trip model", () => {
     expect(buildPlannedTripPayload({
       destination: "Barcellona",
@@ -36,6 +42,31 @@ describe("planned trip persistence", () => {
       endDate: "2027-06-10",
       people: 6,
     })).toBeNull();
+    expect(buildPlannedTripPayload({
+      destination: "Ibiza", origin: "Milano", startDate: "not-a-date",
+      endDate: "also-not-a-date", people: 6,
+    })).toBeNull();
+  });
+
+  it("rejects a past start date for the legacy save payload", () => {
+    expect(buildPlannedTripPayload({
+      destination: "Ibiza", origin: "Milano", startDate: "2026-01-14",
+      endDate: "2026-01-16", people: 6,
+    })).toBeNull();
+  });
+
+  it("accepts today for the legacy save payload", () => {
+    expect(buildPlannedTripPayload({
+      destination: "Ibiza", origin: "Milano", startDate: "2026-01-15",
+      endDate: "2026-01-16", people: 6,
+    })).toMatchObject({ startDate: "2026-01-15", endDate: "2026-01-16" });
+  });
+
+  it("keeps a same-day planner valid for the legacy save payload", () => {
+    expect(buildPlannedTripPayload({
+      destination: "Ibiza", origin: "Milano", startDate: "2026-01-20",
+      endDate: "2026-01-20", people: 6,
+    })).toMatchObject({ startDate: "2026-01-20", endDate: "2026-01-20" });
   });
 
   it("recognizes only a saved trip with the same dashboard details", () => {

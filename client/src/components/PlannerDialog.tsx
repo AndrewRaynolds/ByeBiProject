@@ -1,0 +1,189 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useLocation } from "wouter";
+import { Bot, Heart, Loader2, Send, Beer, Pencil } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useTranslation } from "@/contexts/LanguageContext";
+import { apiRequest } from "@/lib/queryClient";
+import { consumeJsonSse } from "@/lib/sse";
+import { trackProductEvent } from "@/lib/track";
+import { loadPlannerDraft, persistCheckoutBridge, savePlannerDraft } from "@/lib/plannerStorage";
+import { createPlannerDraft, getLocalDateOnly, plannerDraftSchema, type PlannerBrand, type PlannerDraft } from "@shared/plannerSchemas";
+
+const messageSchema = z.object({ message: z.string().trim().min(1).max(2_000) });
+type MessageForm = z.infer<typeof messageSchema>;
+type PlannerDialogProps = { brand: PlannerBrand; open: boolean; onOpenChange: (open: boolean) => void; initialMessage?: string };
+type ChatMessage = { id: string; content: string; sender: "user" | "assistant" };
+
+export default function PlannerDialog({ brand, open, onOpenChange, initialMessage }: PlannerDialogProps) {
+  const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+  const [planner, setPlanner] = useState<PlannerDraft>(() => loadPlannerDraft(localStorage, brand));
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const messagesRef = useRef(messages);
+  const abortRef = useRef<AbortController | null>(null);
+  const requestGenerationRef = useRef(0);
+  const wasOpenRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const form = useForm<MessageForm>({ resolver: zodResolver(messageSchema), defaultValues: { message: "" } });
+
+  const replacePlanner = useCallback((next: PlannerDraft) => {
+    savePlannerDraft(localStorage, next);
+    setPlanner(next);
+  }, []);
+
+  const acceptServerPlanner = useCallback((next: PlannerDraft) => {
+    savePlannerDraft(localStorage, next);
+    setPlanner((current) => {
+      if (current.status !== "review-ready" && next.status === "review-ready") {
+        trackProductEvent("trip_plan_completed");
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { scrollRef.current?.scrollTo?.({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }, [messages, isLoading]);
+  useEffect(() => () => {
+    requestGenerationRef.current += 1;
+    abortRef.current?.abort();
+  }, []);
+
+  const sendChatRequest = useCallback(async (rawMessage: string) => {
+    const message = rawMessage.trim();
+    if (!message || isLoading) return;
+    setMessages((current) => [...current, { id: crypto.randomUUID(), content: message, sender: "user" }]);
+    setIsLoading(true);
+    const controller = new AbortController();
+    const requestGeneration = ++requestGenerationRef.current;
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    const assistantId = crypto.randomUUID();
+    let assistantContent = "";
+    try {
+      const response = await apiRequest("POST", "/api/chat/openai-stream", {
+        message,
+        planner,
+        conversationHistory: messagesRef.current.slice(-12).map((item) => ({ role: item.sender, content: item.content.slice(0, 8_000) })),
+      }, { signal: controller.signal, timeoutMs: 30_000 });
+      if (requestGenerationRef.current !== requestGeneration) return;
+      setMessages((current) => [...current, { id: assistantId, content: "", sender: "assistant" }]);
+      await consumeJsonSse(response, { onEvent: (event: any) => {
+        if (requestGenerationRef.current !== requestGeneration) return;
+        if (event.tool_result?.name === "update_planner") {
+          const parsed = plannerDraftSchema.safeParse(event.tool_result.result?.planner);
+          if (parsed.success) {
+            acceptServerPlanner(parsed.data);
+          }
+        }
+        if (typeof event.content === "string") {
+          assistantContent += event.content;
+          setMessages((current) => current.map((item) => item.id === assistantId ? { ...item, content: assistantContent } : item));
+        }
+      } });
+    } catch {
+      if (requestGenerationRef.current === requestGeneration) {
+        setMessages((current) => current.filter((item) => item.id !== assistantId));
+        if (!controller.signal.aborted) setMessages((current) => [...current, { id: crypto.randomUUID(), content: t("chat.genericError"), sender: "assistant" }]);
+      }
+    } finally {
+      if (requestGenerationRef.current === requestGeneration) {
+        if (abortRef.current === controller) abortRef.current = null;
+        setIsLoading(false);
+      }
+    }
+  }, [acceptServerPlanner, isLoading, planner, t]);
+
+  useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!open) {
+      requestGenerationRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setIsLoading(false);
+      return;
+    }
+    if (justOpened && initialMessage) {
+      trackProductEvent("chat_started");
+      void sendChatRequest(initialMessage);
+    }
+  }, [initialMessage, open, sendChatRequest]);
+
+  const onSubmit = form.handleSubmit(({ message }) => {
+    trackProductEvent("chat_started");
+    form.reset();
+    void sendChatRequest(message);
+  });
+
+  const saveReviewEdits = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    try {
+      const next = createPlannerDraft({
+        brand, partyType: planner.partyType,
+        origin: String(data.get("origin") ?? ""), destination: String(data.get("destination") ?? ""),
+        startDate: String(data.get("startDate") ?? ""), endDate: String(data.get("endDate") ?? ""),
+        participants: Number(data.get("participants")), budgetPerPerson: Number(data.get("budgetPerPerson")),
+        preferenceArchetype: String(data.get("archetype") ?? ""),
+        interests: String(data.get("interests") ?? "").split(","), createdAt: planner.createdAt,
+      });
+      if (next.status !== "review-ready") throw new Error("Incomplete planner review");
+      replacePlanner(next);
+      setReviewError(null);
+      setIsEditing(false);
+    } catch {
+      setReviewError(t("planner.reviewValidationError"));
+      event.currentTarget.querySelector<HTMLInputElement>(":invalid")?.focus();
+    }
+  };
+
+  const continueToOptions = () => {
+    if (!persistCheckoutBridge(localStorage, planner)) return;
+    onOpenChange(false);
+    setLocation("/checkout");
+  };
+  const title = brand === "byebride" ? t("planner.brideTitle") : t("planner.broTitle");
+  const welcome = brand === "byebride" ? t("planner.brideWelcome") : t("planner.broWelcome");
+  const BrandIcon = brand === "byebride" ? Heart : Beer;
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="flex max-h-[92vh] w-[calc(100vw-1rem)] max-w-2xl flex-col overflow-hidden p-0 sm:w-full">
+      <DialogHeader className="border-b px-4 py-4 sm:px-6"><DialogTitle className="flex items-center gap-2"><Bot aria-hidden="true" />{title}</DialogTitle><DialogDescription className="sr-only">{t("planner.dialogDescription")}</DialogDescription></DialogHeader>
+      {planner.status === "review-ready" ? <section className="overflow-y-auto px-4 py-5 sm:px-6" aria-labelledby="planner-review-heading">
+        <div className="mb-5"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("planner.briefLabel")}</p><h2 id="planner-review-heading" className="text-2xl font-bold">{t("planner.reviewTitle")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("planner.reviewDisclaimer")}</p></div>
+        <form onSubmit={saveReviewEdits} className="grid grid-cols-1 gap-4 sm:grid-cols-2" data-testid="planner-review">
+          <ReviewField label={t("planner.origin")} name="origin" value={planner.origin?.displayLabel ?? planner.origin?.canonical ?? ""} editing={isEditing} />
+          <ReviewField label={t("planner.destination")} name="destination" value={planner.destination?.displayLabel ?? planner.destination?.canonical ?? ""} editing={isEditing} />
+          <ReviewField label={t("planner.startDate")} name="startDate" value={planner.startDate ?? ""} editing={isEditing} type="date" min={getLocalDateOnly()} />
+          <ReviewField label={t("planner.endDate")} name="endDate" value={planner.endDate ?? ""} editing={isEditing} type="date" min={planner.startDate ?? getLocalDateOnly()} />
+          <ReviewField label={t("planner.participants")} name="participants" value={String(planner.participants ?? "")} editing={isEditing} type="number" />
+          <ReviewField label={t("planner.budgetPerPerson")} name="budgetPerPerson" value={String(planner.budgetPerPerson ?? "")} editing={isEditing} type="number" suffix="€" />
+          <ReviewField label={t("planner.experienceType")} name="archetype" value={planner.preferences?.archetype ?? ""} editing={isEditing} required={false} />
+          <ReviewField label={t("planner.interests")} name="interests" value={planner.preferences?.interests.join(", ") ?? ""} editing={isEditing} required={false} />
+          {reviewError && <p className="col-span-full text-sm text-destructive" role="alert">{reviewError}</p>}
+          <div className="col-span-full flex flex-col gap-2 pt-2 sm:flex-row">{isEditing ? <Button type="submit" className="min-h-11 flex-1">{t("planner.saveChanges")}</Button> : <Button type="button" variant="outline" className="min-h-11 flex-1" onClick={() => { setReviewError(null); setIsEditing(true); }}><Pencil className="mr-2 h-4 w-4" aria-hidden="true" />{t("planner.edit")}</Button>}<Button type="button" className="min-h-11 flex-1" onClick={continueToOptions} disabled={isEditing}>{t("planner.continueOptions")}</Button></div>
+        </form>
+      </section> : <>
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6" aria-live="polite">
+          <div className="mb-4 flex gap-3"><Avatar><AvatarFallback><Bot className="h-4 w-4" /></AvatarFallback></Avatar><p className="max-w-[85%] rounded-lg bg-muted px-4 py-2 text-sm">{welcome}</p></div>
+          {messages.filter((message) => message.content.trim()).map((message) => <div key={message.id} className={`mb-4 flex gap-3 ${message.sender === "user" ? "flex-row-reverse" : ""}`}><Avatar><AvatarFallback>{message.sender === "user" ? <BrandIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}</AvatarFallback></Avatar><p className="max-w-[85%] whitespace-pre-wrap rounded-lg bg-muted px-4 py-2 text-sm">{message.content}</p></div>)}
+          {isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><Loader2 className="h-4 w-4 animate-spin" />{t("planner.thinking")}</div>}
+        </div>
+        <form onSubmit={onSubmit} className="flex gap-2 border-t px-4 py-4 sm:px-6"><Input {...form.register("message")} aria-label={t("chat.messagePlaceholder")} placeholder={t("chat.messagePlaceholder")} disabled={isLoading} /><Button type="submit" size="icon" disabled={isLoading} aria-label={t("planner.send")}><Send className="h-4 w-4" /></Button></form>
+      </>}
+    </DialogContent>
+  </Dialog>;
+}
+
+function ReviewField({ label, name, value, editing, type = "text", suffix, required = true, min }: { label: string; name: string; value: string; editing: boolean; type?: string; suffix?: string; required?: boolean; min?: string | number }) {
+  return <label className="block min-w-0 text-sm font-medium"><span className="mb-1 block">{label}</span>{editing ? <Input name={name} type={type} defaultValue={value} min={min ?? (type === "number" ? 1 : undefined)} required={required} /> : <span className="block min-h-11 break-words rounded-md border bg-muted/30 px-3 py-2 text-base font-normal">{value}{suffix ? ` ${suffix}` : ""}</span>}</label>;
+}
