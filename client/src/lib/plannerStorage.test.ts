@@ -10,7 +10,7 @@ import {
   savePlannerDraft,
   startNewPlannerTrip,
 } from "./plannerStorage";
-import { PROVIDER_SELECTION_STORAGE_KEY } from "@shared/providerSelectionSchemas";
+const RETIRED_RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
 
 describe("planner storage", () => {
   beforeEach(() => localStorage.clear());
@@ -39,7 +39,7 @@ describe("planner storage", () => {
     savePlannerDraft(localStorage, bro);
     savePlannerDraft(localStorage, bride);
     localStorage.setItem("currentItinerary", JSON.stringify({ destination: "Ibiza" }));
-    localStorage.setItem(PROVIDER_SELECTION_STORAGE_KEY, "old selections");
+    localStorage.setItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY, "old selections");
     localStorage.setItem("selectedFlight", "old flight");
     localStorage.setItem("unrelated", "keep me");
 
@@ -47,7 +47,7 @@ describe("planner storage", () => {
 
     expect(next).toMatchObject({ brand: "byebro", status: "draft", destination: null });
     expect(localStorage.getItem("currentItinerary")).toBeNull();
-    expect(localStorage.getItem(PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem("selectedFlight")).toBeNull();
     expect(localStorage.getItem("unrelated")).toBe("keep me");
     expect(JSON.parse(localStorage.getItem(getPlannerStorageKey("byebride"))!)).toMatchObject({ destination: { canonical: "Prague" } });
