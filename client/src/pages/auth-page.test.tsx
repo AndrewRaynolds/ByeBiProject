@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuthPage from "./auth-page";
 
 const { authState, navigate, trackProductEvent } = vi.hoisted(() => ({
-  authState: { registerSuccess: false },
+  authState: { registerSuccess: false, user: null as null | { id: string } },
   navigate: vi.fn(),
   trackProductEvent: vi.fn(),
 }));
@@ -26,7 +26,7 @@ vi.mock("wouter", () => ({
 
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
-    user: null,
+    user: authState.user,
     loginMutation: { mutate: vi.fn(), isPending: false },
     registerMutation: {
       mutate: vi.fn(),
@@ -63,6 +63,8 @@ describe("AuthPage", () => {
     navigate.mockClear();
     trackProductEvent.mockClear();
     authState.registerSuccess = false;
+    authState.user = null;
+    localStorage.clear();
     localStorage.setItem("selectedBrand", "byebro");
   });
 
@@ -107,6 +109,18 @@ describe("AuthPage", () => {
       screen.getByRole("heading", { name: "Unisciti a ByeBride oggi" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Descrizione ByeBride")).toBeInTheDocument();
+  });
+
+  it("returns to checkout after authentication without clearing the pending trip context", () => {
+    const pendingTrip = JSON.stringify({ destination: "Ibiza", people: 6 });
+    localStorage.setItem("currentItinerary", pendingTrip);
+    window.history.replaceState({}, "", "/auth?next=%2Fcheckout");
+    authState.user = { id: "user-a" };
+
+    render(<AuthPage />);
+
+    expect(navigate).toHaveBeenCalledWith("/checkout");
+    expect(localStorage.getItem("currentItinerary")).toBe(pendingTrip);
   });
 
   it("tracks a submitted signup after signUp succeeds", () => {

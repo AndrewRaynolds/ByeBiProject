@@ -3,24 +3,26 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Checkout from "./Checkout";
 
-const { navigate, apiRequest, savePlannedTrip, plannedTripMatchesSavedTrip, authState, toast, invalidateQueries, trackAffiliateClick, openExternalUrl } = vi.hoisted(() => ({
+const { navigate, apiRequest, buildPlannedTripPayload, savePlannedTrip, plannedTripMatchesSavedTrip, authState, toast, invalidateQueries, trackAffiliateClick, trackProductEvent, openExternalUrl } = vi.hoisted(() => ({
   navigate: vi.fn(),
   apiRequest: vi.fn(),
+  buildPlannedTripPayload: vi.fn(),
   savePlannedTrip: vi.fn(),
   plannedTripMatchesSavedTrip: vi.fn(),
   authState: { user: null as null | { id: string }, isAuthenticated: false },
   toast: vi.fn(),
   invalidateQueries: vi.fn(),
   trackAffiliateClick: vi.fn(),
+  trackProductEvent: vi.fn(),
   openExternalUrl: vi.fn(),
 }));
 
 vi.mock("wouter", () => ({ useLocation: () => ["/checkout", navigate] }));
 vi.mock("@/lib/queryClient", () => ({ apiRequest, queryClient: { invalidateQueries } }));
-vi.mock("@/lib/plannedTrip", () => ({ savePlannedTrip, plannedTripMatchesSavedTrip }));
+vi.mock("@/lib/plannedTrip", () => ({ buildPlannedTripPayload, savePlannedTrip, plannedTripMatchesSavedTrip }));
 vi.mock("@/hooks/use-auth", () => ({ useAuth: () => authState }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
-vi.mock("@/lib/track", () => ({ trackAffiliateClick, trackProductEvent: vi.fn() }));
+vi.mock("@/lib/track", () => ({ trackAffiliateClick, trackProductEvent }));
 vi.mock("@/lib/externalNavigation", () => ({ openExternalUrl }));
 vi.mock("@/components/Header", () => ({ default: () => <div>Header</div> }));
 vi.mock("@/components/GetYourGuideCta", () => ({ GetYourGuideCta: () => <div>GetYourGuide destination handoff</div> }));
@@ -35,6 +37,9 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "checkout.title": "Opzioni di viaggio",
       "checkout.subtitle": "Continua sui siti dei partner per verificare prezzi e disponibilità.",
       "checkout.travelBrief": "Riepilogo del viaggio",
+      "checkout.budgetPerPerson": "Budget per persona",
+      "checkout.preferences": "Preferenze",
+      "checkout.notSpecified": "Non specificato",
       "checkout.flightOptions": "Voli",
       "checkout.hotelOptions": "Hotel",
       "checkout.flightProviderNote": "ByeBi prepara la ricerca, mentre prezzi e disponibilità si verificano su Aviasales.",
@@ -109,7 +114,10 @@ describe("travel handoffs", () => {
     toast.mockReset();
     invalidateQueries.mockReset();
     trackAffiliateClick.mockReset();
+    trackProductEvent.mockReset();
     openExternalUrl.mockReset();
+    buildPlannedTripPayload.mockReset();
+    buildPlannedTripPayload.mockReturnValue({ budget: 700 });
 
     apiRequest.mockImplementation(async (_method: string, url: string) => ({
       status: 200,
@@ -123,6 +131,10 @@ describe("travel handoffs", () => {
     expect(await screen.findByRole("link", { name: "Confronta su Aviasales" })).toHaveAttribute("href", checkoutUrl);
     expect(screen.getByRole("button", { name: "Cerca hotel su Booking.com" })).toBeInTheDocument();
     expect(screen.getByText("GetYourGuide destination handoff")).toBeInTheDocument();
+    expect(screen.getByText("Budget per persona")).toBeInTheDocument();
+    expect(screen.getByTestId("travel-brief-budget")).toHaveTextContent("700");
+    expect(screen.getByText("Preferenze")).toBeInTheDocument();
+    expect(screen.getByTestId("travel-brief-preferences")).toHaveTextContent("nightlife");
     expect(screen.queryByText(/Amadeus/i)).not.toBeInTheDocument();
     expect(localStorage.getItem("byebi:providerSelections:v1")).toBeNull();
 
@@ -158,6 +170,8 @@ describe("travel handoffs", () => {
     expect(savePlannedTrip).not.toHaveBeenCalled();
     fireEvent.click(button);
     expect(navigate).toHaveBeenCalledWith("/auth?next=/checkout");
+    expect(trackProductEvent).toHaveBeenCalledWith("checkout_viewed");
+    expect(trackProductEvent).not.toHaveBeenCalledWith("trip_saved");
   });
 
   it("keeps authenticated explicit save functional", async () => {
@@ -173,6 +187,7 @@ describe("travel handoffs", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Viaggio salvato" })).toBeDisabled());
     expect(savePlannedTrip).toHaveBeenCalledTimes(1);
+    expect(trackProductEvent).toHaveBeenCalledWith("trip_saved");
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["/api/trips/user/user-a"] });
   });
 });
