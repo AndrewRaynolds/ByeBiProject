@@ -1,5 +1,4 @@
 import { plannerReviewSchema, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
-import { createProviderSearchFingerprint } from "@shared/providerSelectionSchemas";
 import { getPlannerStorageKey, plannerCheckoutBridgeProvenanceSchema } from "./plannerStorage";
 import { parseStoredTripContext, type TripContext } from "./tripContext";
 
@@ -11,7 +10,6 @@ export type ProviderSearchContext = {
   participants: number;
   preferences: string[];
   source: "planner" | "legacy";
-  fingerprint: string;
 };
 
 function fromTripContext(context: TripContext): ProviderSearchContext {
@@ -27,7 +25,6 @@ function fromTripContext(context: TripContext): ProviderSearchContext {
     ...searchInput,
     preferences,
     source: "legacy",
-    fingerprint: createProviderSearchFingerprint(searchInput),
   };
 }
 
@@ -79,7 +76,6 @@ export function loadProviderSearchContext(storage: Storage): {
             ...searchInput,
             preferences,
             source: "planner",
-            fingerprint: createProviderSearchFingerprint(searchInput),
           },
           legacyTripContext,
         };
