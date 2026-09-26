@@ -27,6 +27,7 @@ describe("ProtectedRoute", () => {
   it("preserves the requested protected route through authentication", () => {
     const location = memoryLocation({
       path: "/trips/42?tab=expenses",
+      record: true,
     });
 
     render(
@@ -35,7 +36,7 @@ describe("ProtectedRoute", () => {
       </Router>,
     );
 
-    expect(location.current).toBe(
+    expect(location.history.at(-1)).toBe(
       "/auth?next=%2Ftrips%2F42%3Ftab%3Dexpenses",
     );
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
@@ -43,7 +44,7 @@ describe("ProtectedRoute", () => {
 
   it("renders the protected page when the user is authenticated", () => {
     authState.user = { id: "user-a" };
-    const location = memoryLocation({ path: "/trips/42" });
+    const location = memoryLocation({ path: "/trips/42", record: true });
 
     render(
       <Router hook={location.hook}>
@@ -52,6 +53,6 @@ describe("ProtectedRoute", () => {
     );
 
     expect(screen.getByText("Protected content")).toBeInTheDocument();
-    expect(location.current).toBe("/trips/42");
+    expect(location.history.at(-1)).toBe("/trips/42");
   });
 });
