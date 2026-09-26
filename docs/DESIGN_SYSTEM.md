@@ -141,6 +141,8 @@ The Planner collects intent progressively and ends in a reviewable travel brief.
 - Distinguish conversational text from validated Planner state.
 - Do not enable continuation until required fields satisfy the shared contract.
 - Preserve a valid draft across refresh using the versioned Planner storage contract.
+- Closing and reopening resumes the current brand's draft. Keep an obvious **New trip** action available in both collection and review states; it starts fresh only after that explicit action and must not delete Saved Trips.
+- Review mode exposes clear **Edit**, **Save changes**, and **Cancel editing** actions. Cancel restores the last validated values, continuation stays disabled while editing or invalid, and field-specific validation remains adjacent to the affected control.
 
 The AI must not appear to have completed a booking or verified provider availability when it has only updated intent.
 

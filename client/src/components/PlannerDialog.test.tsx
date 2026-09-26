@@ -6,6 +6,7 @@ import ChatDialogCompact from "./ChatDialogCompact";
 import ChatDialogCompactBride from "./ChatDialogCompactBride";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { createPlannerDraft, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
+import { PROVIDER_SELECTION_STORAGE_KEY } from "@shared/providerSelectionSchemas";
 import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
 import localeIt from "@/locales/it.json";
@@ -65,6 +66,32 @@ describe("PlannerDialog", () => {
     expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!).budgetPerPerson).toBe(850);
   });
 
+  it("cancels review edits and restores the last saved values", () => {
+    storeReady();
+    renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Modifica dettagli" }));
+    fireEvent.change(screen.getByLabelText("Budget per persona"), { target: { value: "999" } });
+    fireEvent.click(screen.getByRole("button", { name: "Annulla modifiche" }));
+
+    expect(screen.getByText("700 €")).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!).budgetPerPerson).toBe(700);
+  });
+
+  it("starts a visibly fresh trip and clears chat, bridge, and provider selections", () => {
+    storeReady();
+    localStorage.setItem("currentItinerary", JSON.stringify({ destination: "Ibiza" }));
+    localStorage.setItem(PROVIDER_SELECTION_STORAGE_KEY, "old selections");
+    renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Nuovo viaggio" }));
+
+    expect(screen.queryByTestId("planner-review")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Scrivi il tuo messaggio..." })).toHaveValue("");
+    expect(localStorage.getItem("currentItinerary")).toBeNull();
+    expect(localStorage.getItem(PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!)).toMatchObject({ status: "draft", destination: null });
+  });
+
   it("blocks provider handoff until visible budget and date edits are saved", () => {
     storeReady();
     renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
@@ -104,6 +131,7 @@ describe("PlannerDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salva modifiche" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/campi essenziali/i);
     expect(screen.getByLabelText("Tipo di esperienza")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continua alle opzioni di viaggio" })).toBeDisabled();
   });
 
   it("keeps the collection view mobile-safe while required fields are missing", () => {
@@ -131,6 +159,38 @@ describe("PlannerDialog", () => {
     expect(apiRequest).toHaveBeenCalledWith("POST", "/api/chat/openai-stream", expect.objectContaining({
       planner: expect.objectContaining({ status: "draft", budgetPerPerson: null }),
     }), expect.any(Object));
+  });
+
+  it("edits every review field after completing the real chat flow", async () => {
+    const ready = createPlannerDraft({
+      brand: "byebro", origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13",
+      participants: 6, budgetPerPerson: 700, preferenceArchetype: "nightlife", interests: ["music"],
+    });
+    vi.mocked(apiRequest).mockResolvedValue({} as Response);
+    vi.mocked(consumeJsonSse).mockImplementation(async (_response, handlers) => {
+      handlers.onEvent({ tool_result: { name: "update_planner", result: { planner: ready, missingFields: [] } } });
+    });
+    renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Completa il viaggio" } });
+    fireEvent.click(screen.getByRole("button", { name: "Invia messaggio" }));
+    await waitFor(() => expect(screen.getByTestId("planner-review")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Modifica dettagli" }));
+    fireEvent.change(screen.getByLabelText("Città di partenza"), { target: { value: "Milan" } });
+    fireEvent.change(screen.getByLabelText("Destinazione"), { target: { value: "Prague" } });
+    fireEvent.change(screen.getByLabelText("Data di inizio"), { target: { value: "2099-11-10" } });
+    fireEvent.change(screen.getByLabelText("Data di fine"), { target: { value: "2099-11-14" } });
+    fireEvent.change(screen.getByLabelText("Partecipanti"), { target: { value: "8" } });
+    fireEvent.change(screen.getByLabelText("Budget per persona"), { target: { value: "900" } });
+    fireEvent.change(screen.getByLabelText("Tipo di esperienza"), { target: { value: "culture" } });
+    fireEvent.change(screen.getByLabelText("Preferenze del gruppo"), { target: { value: "food, museums" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salva modifiche" }));
+
+    expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!)).toMatchObject({
+      origin: { canonical: "Milan" }, destination: { canonical: "Prague" },
+      startDate: "2099-11-10", endDate: "2099-11-14", participants: 8, budgetPerPerson: 900,
+      preferences: { archetype: "culture", interests: ["food", "museums"] },
+    });
   });
 
   it("ignores stale events and finalization after close and reopen", async () => {
@@ -189,7 +249,7 @@ describe("PlannerDialog", () => {
   });
 
   it("keeps every new planner label aligned in Italian, English and Spanish", () => {
-    const keys = ["planner.reviewTitle", "planner.reviewDisclaimer", "planner.budgetPerPerson", "planner.continueOptions", "planner.thinking"] as const;
+    const keys = ["planner.reviewTitle", "planner.reviewDisclaimer", "planner.budgetPerPerson", "planner.continueOptions", "planner.thinking", "planner.newTrip", "planner.cancelEdit", "planner.errorStartDate"] as const;
     for (const key of keys) {
       expect(localeIt[key]).toBeTruthy();
       expect(localeEn[key]).toBeTruthy();

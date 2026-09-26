@@ -76,7 +76,7 @@ The version is an implementation fact, not a permanent architectural decision. B
 
 ## Planner persistence and compatibility
 
-The versioned Planner draft is stored locally under `byebi:plannerDraft:v1` by `client/src/lib/plannerStorage.ts`.
+The versioned Planner draft is stored locally by `client/src/lib/plannerStorage.ts`. `byebi:plannerDraft:v1` remains the active/backward-compatible value used by the checkout bridge, while brand-isolated resumable drafts use `byebi:plannerDraft:v1:byebro` and `byebi:plannerDraft:v1:byebride`.
 
 Current compatibility behavior:
 
@@ -85,6 +85,7 @@ Current compatibility behavior:
 - A `review-ready` Planner is explicitly converted into `currentItinerary` before navigating to `/checkout`, with a small provenance marker tied to that Planner snapshot.
 - The bridge removes the legacy `selectedFlight` value.
 - Unknown or corrupt versioned Planner values are discarded rather than trusted.
+- Closing the Planner preserves the current brand's draft. The explicit **New trip** action replaces only that brand's draft with a fresh one and clears the transient `currentItinerary`, `byebi:providerSelections:v1`, legacy `selectedFlight`, and in-memory chat/review-edit state. It never deletes Saved Trips.
 
 The compatibility bridge is transitional. New work should not expand `currentItinerary` into a canonical cross-domain model.
 
@@ -114,6 +115,8 @@ Provider responsibilities are isolated from UI rendering:
 - `client/src/lib/getyourguide.ts` resolves curated GetYourGuide city links.
 
 Booking.com and GetYourGuide are currently handoff destinations, not booking APIs. Aviasales receives the non-exact flight search handoff; Amadeus supplies current search data where available.
+
+Amadeus runtime selection is centralized in `server/services/amadeusConfig.ts`. `AMADEUS_ENV` accepts `production`, `prod`, or `live` for the live endpoint and `test`, `sandbox`, `development`, or `dev` for the test endpoint; when omitted, `NODE_ENV=production` selects live and other runtimes select test. Environment-specific credential pairs (`AMADEUS_API_KEY_LIVE` / `AMADEUS_API_SECRET_LIVE` and `AMADEUS_API_KEY_TEST` / `AMADEUS_API_SECRET_TEST`) are preferred. The legacy `AMADEUS_API_KEY` / `AMADEUS_API_SECRET` pair remains a backward-compatible fallback. Startup diagnostics log only the selected environment, credential source, and presence booleans; provider failures log sanitized status/code/title metadata and never credential values.
 
 ## Provider Results
 

@@ -48,7 +48,7 @@ describe("runtime environment validation", () => {
     expect(() =>
       validateRuntimeEnvironment({ NODE_ENV: "production" }),
     ).toThrow(
-      /APP_BASE_URL is required; DATABASE_URL is required; SUPABASE_URL is required; SUPABASE_SERVICE_ROLE_KEY is required; OPENAI_API_KEY is required; STRIPE_SECRET_KEY is required; STRIPE_PUBLISHABLE_KEY is required; STRIPE_WEBHOOK_SECRET is required; PRINTFUL_API_KEY is required; PRINTFUL_WEBHOOK_SECRET is required; AVIASALES_PARTNER_ID is required; AMADEUS_API_KEY_LIVE is required; AMADEUS_API_SECRET_LIVE is required; MERCHANDISE_SALES_MODE is required; CRITICAL_DATA_PERSISTENCE must be database; AMADEUS_ENV must be production/,
+      /APP_BASE_URL is required; DATABASE_URL is required; SUPABASE_URL is required; SUPABASE_SERVICE_ROLE_KEY is required; OPENAI_API_KEY is required; STRIPE_SECRET_KEY is required; STRIPE_PUBLISHABLE_KEY is required; STRIPE_WEBHOOK_SECRET is required; PRINTFUL_API_KEY is required; PRINTFUL_WEBHOOK_SECRET is required; AVIASALES_PARTNER_ID is required; AMADEUS_API_KEY_LIVE and AMADEUS_API_SECRET_LIVE are required.*; MERCHANDISE_SALES_MODE is required; CRITICAL_DATA_PERSISTENCE must be database; AMADEUS_ENV must select the production\/live environment/,
     );
   });
 
@@ -85,7 +85,17 @@ describe("runtime environment validation", () => {
         ...validProductionEnvironment,
         AMADEUS_ENV: "test",
       }),
-    ).toThrow("AMADEUS_ENV must be production");
+    ).toThrow("AMADEUS_ENV must select the production/live environment");
+  });
+
+  it("accepts live aliases and the legacy credential pair", () => {
+    const { AMADEUS_API_KEY_LIVE: _key, AMADEUS_API_SECRET_LIVE: _secret, ...environment } = validProductionEnvironment;
+    expect(() => validateRuntimeEnvironment({
+      ...environment,
+      AMADEUS_ENV: "live",
+      AMADEUS_API_KEY: "legacy-key",
+      AMADEUS_API_SECRET: "legacy-secret",
+    })).not.toThrow();
   });
 
   it("rejects invalid Aviasales partner identifiers", () => {

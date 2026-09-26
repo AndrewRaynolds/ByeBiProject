@@ -1,6 +1,6 @@
 import { plannerReviewSchema, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
 import { createProviderSearchFingerprint } from "@shared/providerSelectionSchemas";
-import { plannerCheckoutBridgeProvenanceSchema } from "./plannerStorage";
+import { getPlannerStorageKey, plannerCheckoutBridgeProvenanceSchema } from "./plannerStorage";
 import { parseStoredTripContext, type TripContext } from "./tripContext";
 
 export type ProviderSearchContext = {
@@ -48,7 +48,9 @@ export function loadProviderSearchContext(storage: Storage): {
     // The validated legacy context remains usable without Planner provenance.
   }
 
-  const plannerRaw = storage.getItem(PLANNER_STORAGE_KEY);
+  const plannerRaw = bridgeProvenance
+    ? storage.getItem(getPlannerStorageKey(bridgeProvenance.plannerBrand)) ?? storage.getItem(PLANNER_STORAGE_KEY)
+    : storage.getItem(PLANNER_STORAGE_KEY);
   if (plannerRaw) {
     try {
       const parsed = plannerReviewSchema.safeParse(JSON.parse(plannerRaw));

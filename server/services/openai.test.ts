@@ -59,7 +59,7 @@ vi.mock('./cityMapping', () => ({
 }));
 
 // Import after mocks are set up
-import { detectUserLanguage, enforceSelectedDestination, executeToolCall } from './openai';
+import { detectUserLanguage, enforceSelectedDestination, executeToolCall, getDeterministicPlannerFollowUp } from './openai';
 import { createPlannerDraft } from '@shared/plannerSchemas';
 
 describe('detectUserLanguage', () => {
@@ -69,6 +69,46 @@ describe('detectUserLanguage', () => {
     ['I want to leave from London for six people', 'en'],
   ])('detects the current message language', (message, expected) => {
     expect(detectUserLanguage(message)).toBe(expected);
+  });
+});
+
+describe('deterministic planner follow-up', () => {
+  it.each([
+    ['Voglio organizzare il viaggio', 'Quali sono le date di partenza e ritorno?'],
+    ['I want to organize the trip', 'What are your departure and return dates?'],
+    ['Quiero organizar el viaje', '¿Cuáles son las fechas de salida y regreso?'],
+  ])('asks for missing dates in the user language', (message, expected) => {
+    const planner = createPlannerDraft({
+      brand: 'byebro', origin: 'Rome', destination: 'Ibiza', participants: 6,
+      budgetPerPerson: 700, preferenceArchetype: 'nightlife',
+    });
+    expect(getDeterministicPlannerFollowUp(planner, message)).toBe(expected);
+    expect(planner.status).toBe('draft');
+  });
+
+  it('asks for budget before preferences when both remain missing', () => {
+    const planner = createPlannerDraft({
+      brand: 'byebro', origin: 'Rome', destination: 'Ibiza', startDate: '2099-10-10',
+      endDate: '2099-10-13', participants: 6,
+    });
+    expect(getDeterministicPlannerFollowUp(planner, 'Siamo pronti')).toBe('Qual è il budget per persona?');
+  });
+
+  it('asks for preferences when they are the last missing detail', () => {
+    const planner = createPlannerDraft({
+      brand: 'byebride', origin: 'Rome', destination: 'Ibiza', startDate: '2099-10-10',
+      endDate: '2099-10-13', participants: 6, budgetPerPerson: 700,
+    });
+    expect(getDeterministicPlannerFollowUp(planner, 'Quiero seguir')).toBe('¿Qué tipo de experiencia o actividades prefiere el grupo?');
+  });
+
+  it('announces review only for a complete validated planner', () => {
+    const planner = createPlannerDraft({
+      brand: 'byebro', origin: 'Rome', destination: 'Ibiza', startDate: '2099-10-10',
+      endDate: '2099-10-13', participants: 6, budgetPerPerson: 700, interests: ['food'],
+    });
+    expect(getDeterministicPlannerFollowUp(planner, 'All done')).toMatch(/travel brief is ready/i);
+    expect(planner.status).toBe('review-ready');
   });
 });
 

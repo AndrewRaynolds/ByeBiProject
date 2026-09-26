@@ -3,11 +3,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createPlannerDraft, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
 import {
   createLegacyCheckoutBridge,
+  getPlannerStorageKey,
   loadPlannerDraft,
   migrateLegacyItinerary,
   persistCheckoutBridge,
   savePlannerDraft,
+  startNewPlannerTrip,
 } from "./plannerStorage";
+import { PROVIDER_SELECTION_STORAGE_KEY } from "@shared/providerSelectionSchemas";
 
 describe("planner storage", () => {
   beforeEach(() => localStorage.clear());
@@ -17,6 +20,46 @@ describe("planner storage", () => {
     savePlannerDraft(localStorage, draft);
     expect(loadPlannerDraft(localStorage, "byebro")).toEqual(draft);
     expect(localStorage.getItem(PLANNER_STORAGE_KEY)).toContain('"version":1');
+    expect(localStorage.getItem(getPlannerStorageKey("byebro"))).toContain('"brand":"byebro"');
+  });
+
+  it("keeps resumable drafts isolated by brand", () => {
+    const bro = createPlannerDraft({ brand: "byebro", destination: "Ibiza" });
+    const bride = createPlannerDraft({ brand: "byebride", destination: "Prague" });
+    savePlannerDraft(localStorage, bro);
+    savePlannerDraft(localStorage, bride);
+
+    expect(loadPlannerDraft(localStorage, "byebro")).toMatchObject({ brand: "byebro", destination: { canonical: "Ibiza" } });
+    expect(loadPlannerDraft(localStorage, "byebride")).toMatchObject({ brand: "byebride", destination: { canonical: "Prague" } });
+  });
+
+  it("starts a fresh current-brand draft and clears transient provider state only", () => {
+    const bro = createPlannerDraft({ brand: "byebro", destination: "Ibiza" });
+    const bride = createPlannerDraft({ brand: "byebride", destination: "Prague" });
+    savePlannerDraft(localStorage, bro);
+    savePlannerDraft(localStorage, bride);
+    localStorage.setItem("currentItinerary", JSON.stringify({ destination: "Ibiza" }));
+    localStorage.setItem(PROVIDER_SELECTION_STORAGE_KEY, "old selections");
+    localStorage.setItem("selectedFlight", "old flight");
+    localStorage.setItem("unrelated", "keep me");
+
+    const next = startNewPlannerTrip(localStorage, "byebro");
+
+    expect(next).toMatchObject({ brand: "byebro", status: "draft", destination: null });
+    expect(localStorage.getItem("currentItinerary")).toBeNull();
+    expect(localStorage.getItem(PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem("selectedFlight")).toBeNull();
+    expect(localStorage.getItem("unrelated")).toBe("keep me");
+    expect(JSON.parse(localStorage.getItem(getPlannerStorageKey("byebride"))!)).toMatchObject({ destination: { canonical: "Prague" } });
+  });
+
+  it("does not migrate a checkout bridge into the other brand", () => {
+    localStorage.setItem("currentItinerary", JSON.stringify({
+      destination: "Ibiza",
+      partyType: "bachelor",
+      plannerBridge: { plannerBrand: "byebro" },
+    }));
+    expect(loadPlannerDraft(localStorage, "byebride")).toMatchObject({ brand: "byebride", destination: null });
   });
 
   it.each(["not-json", JSON.stringify({ version: 99 })])(

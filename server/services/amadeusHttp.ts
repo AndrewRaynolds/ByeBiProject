@@ -1,4 +1,5 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
+import { AmadeusConfigurationError } from "./amadeusConfig";
 
 // Three attempts stay below the frontend's 30-second request deadline.
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -31,11 +32,16 @@ export type SafeAmadeusErrorMetadata = {
   networkCode?: string;
   apiCode?: number | string;
   apiTitle?: string;
+  configurationCode?: "AMADEUS_CREDENTIALS_MISSING";
 };
 
 export function getSafeAmadeusErrorMetadata(error: unknown): SafeAmadeusErrorMetadata {
   const source = error instanceof AmadeusTemporaryError ? error.cause : error;
   const name = error instanceof Error ? error.name : "UnknownError";
+
+  if (source instanceof AmadeusConfigurationError) {
+    return { name, configurationCode: source.code };
+  }
 
   if (!axios.isAxiosError(source)) return { name };
 

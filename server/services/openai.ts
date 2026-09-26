@@ -603,6 +603,7 @@ interface LocalStrings {
   noFlightsError: (o: string, d: string) => string;
   noFlights: (o: string, d: string) => string;
   plannerReady: string;
+  missingPlannerField: Record<string, string>;
 }
 
 const STRINGS: Record<string, LocalStrings> = {
@@ -610,18 +611,64 @@ const STRINGS: Record<string, LocalStrings> = {
     noFlightsError: (o, d) => `Non sono riuscito a preparare il collegamento da ${o} a ${d}. Controlla città e date, poi riprova.`,
     noFlights: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
     plannerReady: "Il tuo travel brief è pronto. Controlla i dettagli e modificali se serve.",
+    missingPlannerField: {
+      origin: "Da quale città partite?",
+      destination: "Qual è la destinazione?",
+      dates: "Quali sono le date di partenza e ritorno?",
+      endDate: "Qual è la data di ritorno?",
+      participants: "Quante persone partecipano?",
+      budgetPerPerson: "Qual è il budget per persona?",
+      preferences: "Che tipo di esperienza o attività preferisce il gruppo?",
+    },
   },
   en: {
     noFlightsError: (o, d) => `I couldn't prepare the connection from ${o} to ${d}. Check the cities and dates, then try again.`,
     noFlights: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
     plannerReady: "Your travel brief is ready. Review the details and edit anything you need.",
+    missingPlannerField: {
+      origin: "Which city are you departing from?",
+      destination: "Where would you like to go?",
+      dates: "What are your departure and return dates?",
+      endDate: "What is your return date?",
+      participants: "How many people are traveling?",
+      budgetPerPerson: "What is the budget per person?",
+      preferences: "What kind of experience or activities does the group prefer?",
+    },
   },
   es: {
     noFlightsError: (o, d) => `No pude preparar la conexión de ${o} a ${d}. Comprueba las ciudades y las fechas e inténtalo de nuevo.`,
     noFlights: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
     plannerReady: "Tu resumen de viaje está listo. Revisa los datos y modifica lo que necesites.",
+    missingPlannerField: {
+      origin: "¿Desde qué ciudad salís?",
+      destination: "¿Cuál es el destino?",
+      dates: "¿Cuáles son las fechas de salida y regreso?",
+      endDate: "¿Cuál es la fecha de regreso?",
+      participants: "¿Cuántas personas viajan?",
+      budgetPerPerson: "¿Cuál es el presupuesto por persona?",
+      preferences: "¿Qué tipo de experiencia o actividades prefiere el grupo?",
+    },
   },
 };
+
+export function getDeterministicPlannerFollowUp(
+  planner: PlannerDraft,
+  userMessage: string,
+  conversationHistory: ChatMessage[] = [],
+): string {
+  const lang = detectUserLanguage(userMessage, conversationHistory);
+  const strings = STRINGS[lang] || STRINGS.en;
+  const missingFields = getMissingPlannerFields(planner);
+  if (missingFields.length === 0 && planner.status === "review-ready") return strings.plannerReady;
+
+  const nextField = missingFields[0];
+  const questionKey = nextField === "startDate"
+    ? "dates"
+    : nextField === "endDate"
+      ? "endDate"
+      : nextField;
+  return strings.missingPlannerField[questionKey] ?? strings.missingPlannerField.preferences;
+}
 
 function generateLocalToolResponse(
   toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }>,
@@ -636,7 +683,9 @@ function generateLocalToolResponse(
     switch (name) {
       case "update_planner": {
         const parsed = plannerDraftSchema.safeParse(result.planner);
-        if (parsed.success && parsed.data.status === "review-ready") return s.plannerReady;
+        if (parsed.success) {
+          return getDeterministicPlannerFollowUp(parsed.data, userMessage, conversationHistory);
+        }
         break;
       }
       case "search_flights": {
