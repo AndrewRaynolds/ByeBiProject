@@ -235,11 +235,11 @@ export default function Dashboard() {
     active: adminOrders.filter((order) => activeStatuses.has(order.fulfillmentStatus)).length,
     completed: adminOrders.filter((order) => completedStatuses.has(order.fulfillmentStatus)).length,
   };
-  const organizationProgressByTripId = new Map(
+  const organizationProgressByTripId = new globalThis.Map<number, number>(
     (tripOrganizationOverview ?? []).map((item) => [
       item.tripId,
       countCompletedTripOrganizationItems(item.status),
-    ]),
+    ] as const),
   );
 
   if (!isAuthenticated) {
