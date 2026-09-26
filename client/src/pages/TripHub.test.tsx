@@ -69,20 +69,20 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "tripHub.flight": "Volo",
       "tripHub.hotel": "Hotel",
       "tripHub.activities": "Attività",
-      "tripHub.flightDesc": "Voli",
-      "tripHub.hotelDesc": "Hotel",
-      "tripHub.activitiesDesc": "Attività",
-      "tripHub.flightCta": "Vai ai voli",
-      "tripHub.hotelCta": "Vai agli hotel",
-      "tripHub.activitiesCta": "Vai alle attività",
-      "tripHub.toBook": "Da prenotare",
+      "tripHub.organizationTitle": "Organizzazione del viaggio",
+      "tripHub.organizationDesc": "Segna manualmente cosa avete già gestito.",
+      "tripHub.organizationLocalNote": "Checklist personale salvata su questo dispositivo; non conferma prenotazioni.",
+      "tripHub.flightDesc": "Apri le opzioni di viaggio per cercare voli su Aviasales.",
+      "tripHub.hotelDesc": "Apri le opzioni di viaggio per cercare hotel su Booking.com.",
+      "tripHub.activitiesDesc": "Apri le opzioni di viaggio per esplorare GetYourGuide.",
+      "tripHub.toBook": "Da fare",
       "tripHub.done": "Fatto",
       "tripHub.toggleStatus": `Cambia stato di ${values?.section}`,
       "tripHub.expensesTitle": "Spese del gruppo",
       "tripHub.expensesDesc": "Gestisci spese",
       "tripHub.openExpenses": "Apri SplittaBro",
       "tripHub.startExpenses": "Avvia SplittaBro",
-      "tripHub.continueCheckout": "Apri / continua checkout",
+      "tripHub.continueCheckout": "Apri opzioni di viaggio",
       "tripHub.shareTitle": "Condividi viaggio",
       "tripHub.shareDesc": "Crea link",
       "tripHub.shareActive": "Link attivo",
@@ -118,7 +118,7 @@ describe("TripHub", () => {
   it("rebuilds the saved-trip checkout context before opening checkout", () => {
     render(<TripHub />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Apri / continua checkout" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apri opzioni di viaggio" }));
 
     expect(JSON.parse(localStorage.getItem("currentItinerary") ?? "null")).toMatchObject({
       origin: "Roma",
@@ -132,8 +132,12 @@ describe("TripHub", () => {
     expect(navigate).toHaveBeenCalledWith("/checkout");
   });
 
-  it("persists booking status per trip on this device", () => {
+  it("presents booking progress as a manual local checklist", () => {
     render(<TripHub />);
+
+    expect(screen.getByRole("heading", { name: "Organizzazione del viaggio" })).toBeInTheDocument();
+    expect(screen.getByText(/Checklist personale.*non conferma prenotazioni/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Da fare")).toHaveLength(3);
 
     fireEvent.click(screen.getByRole("button", { name: "Cambia stato di Volo" }));
 
@@ -143,6 +147,13 @@ describe("TripHub", () => {
       hotel: "pending",
       activities: "pending",
     });
+  });
+
+  it("uses one clear travel-options handoff instead of per-section booking CTAs", () => {
+    render(<TripHub />);
+
+    expect(screen.getByRole("button", { name: "Apri opzioni di viaggio" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Vai ai voli|Vai agli hotel|Vai alle attività/ })).not.toBeInTheDocument();
   });
 
   it("opens an existing linked expense group", () => {

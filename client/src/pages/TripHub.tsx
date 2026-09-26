@@ -241,7 +241,13 @@ export default function TripHub() {
           </CardContent>
         </Card>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
+        <section aria-labelledby="trip-organization-title" className="mb-8 space-y-4">
+          <div>
+            <h2 id="trip-organization-title" className="text-2xl font-bold">{t("tripHub.organizationTitle")}</h2>
+            <p className="mt-1 text-sm text-gray-600">{t("tripHub.organizationDesc")}</p>
+            <p className="mt-2 text-xs text-gray-500">{t("tripHub.organizationLocalNote")}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
           {bookingSections.map(({ kind, icon: Icon }) => {
             const done = bookingStatus[kind] === "done";
             return (
@@ -262,13 +268,13 @@ export default function TripHub() {
                   <CardTitle>{t(`tripHub.${kind}`)}</CardTitle>
                 </CardHeader>
                 <CardContent className="mt-auto">
-                  <p className="mb-4 text-sm text-gray-600">{t(`tripHub.${kind}Desc`)}</p>
-                  <Button className="w-full" onClick={openCheckout}>{t(`tripHub.${kind}Cta`)}</Button>
+                  <p className="text-sm text-gray-600">{t(`tripHub.${kind}Desc`)}</p>
                 </CardContent>
               </Card>
             );
           })}
-        </div>
+          </div>
+        </section>
 
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <Card className="shadow-sm">
