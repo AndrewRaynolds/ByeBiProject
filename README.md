@@ -22,7 +22,7 @@ ByeBi is a full-stack web application for planning bachelor and bachelorette tri
 | Backend | Node.js, Express, TypeScript |
 | Data and authentication | PostgreSQL, Supabase Auth, Drizzle ORM, Zod |
 | Testing and delivery | Vitest, Testing Library, GitHub Actions |
-| Travel services | OpenAI, Amadeus, Aviasales, Booking.com, GetYourGuide |
+| Travel services | OpenAI, Aviasales, Booking.com, GetYourGuide |
 | Commerce and communications | Stripe Checkout, Printful, Resend |
 
 ## My contribution
@@ -56,10 +56,11 @@ The frontend sends authenticated API requests using the Supabase access token. E
 ### Travel planning
 
 1. The user describes a trip in natural language.
-2. The assistant collects any missing origin, destination, dates and passenger count.
-3. The server validates the request and calls the relevant travel service.
-4. The application creates a verified affiliate link.
-5. The user completes the booking on the provider's website.
+2. The assistant collects and validates the required planning context.
+3. ByeBi produces a reviewable travel brief and transparent external handoffs.
+4. Flights open an Aviasales search; hotels open Booking.com; activities open GetYourGuide.
+5. Current prices, availability, terms and travel booking are confirmed on the external provider.
+6. The user may explicitly save the trip and continue coordination in the authenticated Trip Hub.
 
 ### Merchandise checkout
 
@@ -92,9 +93,9 @@ The application starts through the Express server, which also serves the fronten
 ## Quality checks
 
 ```bash
-npm run check
-npm test
-npm run build
+npm run verify
+npm run smoke:production -- https://byebi.it
+npm run smoke:travel:production -- https://byebi.it
 ```
 
 The repository contains unit and integration tests for frontend components, shared schemas, security controls and server-side services. GitHub Actions runs the project checks on repository changes.

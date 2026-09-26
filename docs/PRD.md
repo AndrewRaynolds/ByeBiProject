@@ -188,7 +188,10 @@ ByeBi does not:
 - Phase 3 — Discovery
 - Phase 4 — Planner + Provider Flow
 - Phase 5 — Dashboard + Trip Hub
+- Phase 6 — Beta Readiness
 
-Current development focus: **Phase 5 — Dashboard + Trip Hub**.
+Current development focus: **Phase 6 — Beta Readiness**.
+
+Beta Readiness focuses on production truthfulness and tester confidence: release checks must match the current product model, documentation must not describe retired integrations as active, and production smoke tests must verify only behavior ByeBi actually owns.
 
 GitHub is the operational source for current tasks and pull-request status. Volatile delivery status does not belong in this document.
