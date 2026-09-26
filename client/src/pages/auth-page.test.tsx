@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuthPage from "./auth-page";
 
@@ -46,6 +46,9 @@ vi.mock("@/contexts/LanguageContext", () => ({
         "auth.signup": "Registrati",
         "auth.email": "Email",
         "auth.password": "Password",
+        "auth.emailInvalid": "Email non valida",
+        "auth.passwordRequired": "Password richiesta",
+        "auth.passwordTooShort": "La password deve contenere almeno 6 caratteri.",
         "auth.forgotPassword": "Password dimenticata?",
         "auth.usernameOptional": "Username (opzionale)",
         "auth.fullNameOptional": "Nome completo (opzionale)",
@@ -97,6 +100,21 @@ describe("AuthPage", () => {
       "href",
       "/auth/forgot-password",
     );
+  });
+
+  it("shows localized validation messages before sending invalid login data", async () => {
+    window.history.replaceState({}, "", "/auth");
+
+    render(<AuthPage />);
+
+    const emailInput = screen.getByLabelText("Email");
+    fireEvent.change(emailInput, { target: { value: "not-an-email" } });
+    const form = emailInput.closest("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+
+    expect(await screen.findByText("Email non valida")).toBeInTheDocument();
+    expect(screen.getByText("Password richiesta")).toBeInTheDocument();
   });
 
   it("uses ByeBride content when that brand is selected", () => {
