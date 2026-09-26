@@ -6,7 +6,7 @@ This document is the product authority for ByeBi. It defines intended behavior, 
 
 ## Product vision
 
-ByeBi helps groups turn an early bachelor or bachelorette trip idea into a clear, actionable travel brief. It combines guided discovery, conversational planning, real provider options, explicit selection, external booking handoff, and an optional saved Trip Hub.
+ByeBi helps groups turn an early bachelor or bachelorette trip idea into a clear, actionable travel brief. It combines guided discovery, conversational planning, transparent external provider handoffs, and an optional saved Trip Hub. Live provider options and explicit result selection may be added again only when a verified provider integration is available.
 
 The product should reduce coordination work without pretending to be a travel agency or booking engine.
 
@@ -34,9 +34,9 @@ Brand variants may change accents, imagery, icons, examples, copy, and tone. The
 2. The user discovers destinations or experiences, or starts with the AI Planner.
 3. The Planner collects and validates the trip intent.
 4. The product presents a reviewable travel brief before provider handoff.
-5. Provider options are searched, normalized, and displayed without fabricated inventory.
-6. The user explicitly selects an option or chooses a provider handoff.
-7. Travel booking and payment take place on the identified external provider.
+5. The product presents transparent external handoffs for flights, hotels, and activities using the validated trip context.
+6. The user continues to the identified external provider to inspect current prices, availability, and options.
+7. Travel booking and payment take place on that external provider.
 8. The user may explicitly save the trip; authentication is requested only when persistence requires it.
 9. Saved trips are available in the Trip Hub for later coordination and related tools.
 
@@ -82,25 +82,27 @@ When all essential Planner fields are valid, the product produces a reviewable t
 
 ## Providers and results
 
-ByeBi may search, normalize, compare, rank, and display results from supported external providers. Current integrations include Amadeus-backed travel search and handoffs to Aviasales, Booking.com, and GetYourGuide; the technical shape is documented in Architecture.
+The current runtime does not expose live flight or hotel inventory inside ByeBi. The active travel integrations are external handoffs to Aviasales, Booking.com, and GetYourGuide.
 
-Provider Results represent externally sourced options and must remain separate from the Planner.
+- Flight search context is handed to Aviasales; ByeBi does not display or guarantee a live fare.
+- Hotel search context is handed to Booking.com; ByeBi does not display or guarantee live hotel prices or availability.
+- Activities use a real GetYourGuide destination-level handoff; ByeBi does not invent item-level inventory.
+- Prices, availability, terms, and final booking details are confirmed on the external provider.
+- Provider failure or retirement must never be replaced with fabricated prices, availability, inventory, or booking confirmation.
 
-- Identify the provider and data status.
-- Preserve provider currency, price scope, and timestamps when available.
-- Label unavailable or incomplete data honestly.
-- Never fabricate prices, availability, inventory, or booking confirmation.
-- Never imply that a redirect URL guarantees the displayed offer remains available.
+The Provider Results domain remains an architectural boundary for a future verified live provider integration. If live results return in the future, they must remain separate from Planner intent and carry truthful provider, price-scope, freshness, and availability semantics.
 
 ## Selections
 
-Selections represent options the user explicitly chooses from Provider Results.
+There is currently no persisted flight or hotel selection because ByeBi does not expose verified live flight or hotel inventory.
 
-- Selection is distinct from viewing or ranking a result.
-- A selection does not mutate the Planner's intent.
-- A selection does not create a Saved Trip automatically.
-- A selection does not confirm an external booking.
-- Changing search inputs may invalidate prior results or selections and must be handled explicitly.
+If live Provider Results are reintroduced later:
+
+- selection must be explicit and separate from viewing or ranking a result;
+- selection must not mutate Planner intent;
+- selection must not create a Saved Trip automatically;
+- selection must not imply an external booking;
+- stale or invalidated selections must never be presented as current.
 
 ## External travel booking boundary
 
