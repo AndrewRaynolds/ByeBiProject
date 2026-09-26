@@ -6,6 +6,7 @@ import {
   amadeusGet,
   amadeusTokenPost,
 } from "./amadeusHttp";
+import { AmadeusConfigurationError, resolveAmadeusConfig } from "./amadeusConfig";
 
 type SearchHotelsParams = {
   cityCode: string;      // es. "BCN"
@@ -20,52 +21,33 @@ export type PaymentPolicy = "PAY_AT_HOTEL" | "PREPAY" | "DEPOSIT" | "UNKNOWN";
 
 export type { HotelResult } from "@shared/hotelSchemas";
 
-// In produzione: NODE_ENV è l'unica fonte di verità per mock/debug
-// AMADEUS_ENV serve solo per selezionare le credenziali API
 const isProd = process.env.NODE_ENV === "production";
-const useAmadeusLive = process.env.AMADEUS_ENV === "production";
-
-const AMADEUS_API_KEY = useAmadeusLive
-  ? process.env.AMADEUS_API_KEY_LIVE
-  : process.env.AMADEUS_API_KEY_TEST;
-
-const AMADEUS_API_SECRET = useAmadeusLive
-  ? process.env.AMADEUS_API_SECRET_LIVE
-  : process.env.AMADEUS_API_SECRET_TEST;
-
-if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
-  console.error(
-    `[Amadeus Hotels] Missing credentials for ${useAmadeusLive ? "LIVE" : "TEST"} environment`
-  );
-}
-
-const AMADEUS_BASE_URL = useAmadeusLive
-  ? "https://api.amadeus.com"
-  : "https://test.api.amadeus.com";
-
-let tokenCache: { token: string | null; expiresAt: number } = {
+let tokenCache: { token: string | null; expiresAt: number; configMarker: string | null } = {
   token: null,
   expiresAt: 0,
+  configMarker: null,
 };
 
 async function getAmadeusToken(): Promise<string> {
+  const config = resolveAmadeusConfig();
+  const configMarker = `${config.environment}:${config.credentialSource}`;
   // se il token è ancora valido, riusalo
-  if (tokenCache.token && tokenCache.expiresAt > Date.now() + 10_000) {
+  if (tokenCache.token && tokenCache.configMarker === configMarker && tokenCache.expiresAt > Date.now() + 10_000) {
     return tokenCache.token;
   }
 
-  if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
-    throw new Error("Amadeus credentials are not configured");
+  if (!config.apiKey || !config.apiSecret) {
+    throw new AmadeusConfigurationError(config.environment);
   }
 
   const body = new URLSearchParams({
     grant_type: "client_credentials",
-    client_id: AMADEUS_API_KEY,
-    client_secret: AMADEUS_API_SECRET,
+    client_id: config.apiKey,
+    client_secret: config.apiSecret,
   });
 
   const resp = await amadeusTokenPost<{ access_token: string; expires_in: number }>(
-    `${AMADEUS_BASE_URL}/v1/security/oauth2/token`,
+    `${config.baseUrl}/v1/security/oauth2/token`,
     body,
     {
       headers: {
@@ -81,6 +63,7 @@ async function getAmadeusToken(): Promise<string> {
     token: accessToken,
     // un filo prima della scadenza reale
     expiresAt: Date.now() + (expiresIn - 60) * 1000,
+    configMarker,
   };
 
   return accessToken;
@@ -103,10 +86,11 @@ export async function searchHotels(
   } = params;
 
   const token = await getAmadeusToken();
+  const { baseUrl } = resolveAmadeusConfig();
 
   // STEP 1: lista hotel per città (hotelIds)
   const hotelListResp = await amadeusGet<{ data?: Array<{ hotelId?: string }> }>(
-    `${AMADEUS_BASE_URL}/v1/reference-data/locations/hotels/by-city`,
+    `${baseUrl}/v1/reference-data/locations/hotels/by-city`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -134,7 +118,7 @@ export async function searchHotels(
   const adultsPerRoom = Math.min(adults, 2);
 
   const offersResp = await amadeusGet<{ data?: any[] }>(
-    `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers`,
+    `${baseUrl}/v3/shopping/hotel-offers`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -298,10 +282,11 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
 
   try {
     const token = await getAmadeusToken();
+    const { baseUrl } = resolveAmadeusConfig();
 
     // Prima verifichiamo che l'offerta sia ancora disponibile
     const offerCheckResp = await amadeusGet<{ data?: any }>(
-      `${AMADEUS_BASE_URL}/v3/shopping/hotel-offers/${offerId}`,
+      `${baseUrl}/v3/shopping/hotel-offers/${offerId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -328,7 +313,7 @@ export async function bookHotel(params: BookHotelParams): Promise<BookingResult>
 
     // Procedi con la prenotazione PAY_AT_HOTEL (NO carta richiesta)
     const bookingResp = await amadeusBookingPost<{ data?: any[] }>(
-      `${AMADEUS_BASE_URL}/v2/booking/hotel-orders`,
+      `${baseUrl}/v2/booking/hotel-orders`,
       {
         data: {
           type: "hotel-order",

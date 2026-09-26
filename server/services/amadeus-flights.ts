@@ -5,6 +5,7 @@ import {
   type FlightSegment,
 } from "@shared/flightSchemas";
 import { amadeusGet, amadeusTokenPost } from "./amadeusHttp";
+import { AmadeusConfigurationError, resolveAmadeusConfig } from "./amadeusConfig";
 
 export type FlightSearchParams = {
   originCode: string;      // IATA code, e.g., "FCO"
@@ -17,49 +18,31 @@ export type FlightSearchParams = {
 
 export type { FlightResult, FlightSegment } from "@shared/flightSchemas";
 
-const isProd = process.env.NODE_ENV === "production";
-const useAmadeusLive = process.env.AMADEUS_ENV === "production";
-
-const AMADEUS_API_KEY = useAmadeusLive
-  ? process.env.AMADEUS_API_KEY_LIVE
-  : process.env.AMADEUS_API_KEY_TEST;
-
-const AMADEUS_API_SECRET = useAmadeusLive
-  ? process.env.AMADEUS_API_SECRET_LIVE
-  : process.env.AMADEUS_API_SECRET_TEST;
-
-if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
-  console.error(
-    `[Amadeus Flights] Missing credentials for ${useAmadeusLive ? "LIVE" : "TEST"} environment`
-  );
-}
-
-const AMADEUS_BASE_URL = useAmadeusLive
-  ? "https://api.amadeus.com"
-  : "https://test.api.amadeus.com";
-
-let tokenCache: { token: string | null; expiresAt: number } = {
+let tokenCache: { token: string | null; expiresAt: number; configMarker: string | null } = {
   token: null,
   expiresAt: 0,
+  configMarker: null,
 };
 
 async function getAmadeusToken(): Promise<string> {
-  if (tokenCache.token && tokenCache.expiresAt > Date.now() + 10_000) {
+  const config = resolveAmadeusConfig();
+  const configMarker = `${config.environment}:${config.credentialSource}`;
+  if (tokenCache.token && tokenCache.configMarker === configMarker && tokenCache.expiresAt > Date.now() + 10_000) {
     return tokenCache.token;
   }
 
-  if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
-    throw new Error("Amadeus credentials are not configured");
+  if (!config.apiKey || !config.apiSecret) {
+    throw new AmadeusConfigurationError(config.environment);
   }
 
   const body = new URLSearchParams({
     grant_type: "client_credentials",
-    client_id: AMADEUS_API_KEY,
-    client_secret: AMADEUS_API_SECRET,
+    client_id: config.apiKey,
+    client_secret: config.apiSecret,
   });
 
   const resp = await amadeusTokenPost<{ access_token: string; expires_in: number }>(
-    `${AMADEUS_BASE_URL}/v1/security/oauth2/token`,
+    `${config.baseUrl}/v1/security/oauth2/token`,
     body,
     { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
   );
@@ -67,6 +50,7 @@ async function getAmadeusToken(): Promise<string> {
   tokenCache = {
     token: resp.data.access_token,
     expiresAt: Date.now() + (resp.data.expires_in - 60) * 1000,
+    configMarker,
   };
 
   return tokenCache.token!;
@@ -107,6 +91,7 @@ export async function searchFlights(
   } = params;
 
   const token = await getAmadeusToken();
+  const { baseUrl } = resolveAmadeusConfig();
 
   try {
     const queryParams: Record<string, string | number> = {
@@ -123,7 +108,7 @@ export async function searchFlights(
     }
 
     const resp = await amadeusGet<{ data?: any[]; dictionaries?: Record<string, unknown> }>(
-      `${AMADEUS_BASE_URL}/v2/shopping/flight-offers`,
+      `${baseUrl}/v2/shopping/flight-offers`,
       {
         headers: { Authorization: `Bearer ${token}` },
         params: queryParams,

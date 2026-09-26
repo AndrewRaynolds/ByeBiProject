@@ -46,14 +46,22 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     "PRINTFUL_API_KEY",
     "PRINTFUL_WEBHOOK_SECRET",
     "AVIASALES_PARTNER_ID",
-    "AMADEUS_API_KEY_LIVE",
-    "AMADEUS_API_SECRET_LIVE",
   ] as const;
 
   for (const variable of requiredVariables) {
     if (!env[variable]?.trim()) {
       errors.push(`${variable} is required`);
     }
+  }
+
+  const hasLiveAmadeusPair = Boolean(
+    env.AMADEUS_API_KEY_LIVE?.trim() && env.AMADEUS_API_SECRET_LIVE?.trim(),
+  );
+  const hasLegacyAmadeusPair = Boolean(
+    env.AMADEUS_API_KEY?.trim() && env.AMADEUS_API_SECRET?.trim(),
+  );
+  if (!hasLiveAmadeusPair && !hasLegacyAmadeusPair) {
+    errors.push("AMADEUS_API_KEY_LIVE and AMADEUS_API_SECRET_LIVE are required (legacy AMADEUS_API_KEY and AMADEUS_API_SECRET are also accepted as a pair)");
   }
 
   if (
@@ -157,8 +165,8 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     errors.push("CRITICAL_DATA_PERSISTENCE must be database");
   }
 
-  if (env.AMADEUS_ENV !== "production") {
-    errors.push("AMADEUS_ENV must be production");
+  if (!env.AMADEUS_ENV || !["production", "prod", "live"].includes(env.AMADEUS_ENV.trim().toLowerCase())) {
+    errors.push("AMADEUS_ENV must select the production/live environment");
   }
 
   if (

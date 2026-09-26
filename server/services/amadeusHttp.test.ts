@@ -6,6 +6,7 @@ import {
   isRetryableAmadeusError,
   withAmadeusRetry,
 } from "./amadeusHttp";
+import { AmadeusConfigurationError } from "./amadeusConfig";
 
 function axiosError(code?: string, status?: number) {
   return new axios.AxiosError(
@@ -68,6 +69,13 @@ describe("Amadeus HTTP resilience", () => {
 
 
 describe("safe Amadeus error metadata", () => {
+  it("identifies missing credentials without exposing values", () => {
+    expect(getSafeAmadeusErrorMetadata(new AmadeusConfigurationError("production"))).toEqual({
+      name: "AmadeusConfigurationError",
+      configurationCode: "AMADEUS_CREDENTIALS_MISSING",
+    });
+  });
+
   it("exposes status and Amadeus error identifiers without response details", () => {
     const error = new axios.AxiosError(
       "Request failed",
