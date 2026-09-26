@@ -91,7 +91,7 @@ The compatibility bridge is transitional. New work should not expand `currentIti
 
 The provider-options page now adapts these inputs into a narrow handoff context. It uses the valid `review-ready` Planner only when the checkout bridge carries matching Planner provenance. A bridge without matching provenance is treated as a legacy/Saved Trip flow even when its route, dates, and participant count happen to match a stored Planner. External handoff state is never written back into either input.
 
-Other current browser keys include `selectedBrand`, `byebi_locale`, per-trip booking-status keys, and a session-scoped analytics identifier. Each has a narrow owner and must not become a substitute for domain contracts.
+Other current browser keys include `selectedBrand`, `byebi_locale`, the retired per-trip booking-status key used only for one-time migration, and a session-scoped analytics identifier. Each has a narrow owner and must not become a substitute for domain contracts.
 
 ## OpenAI boundary
 
@@ -143,6 +143,11 @@ Saved Trips are represented by the `trips` table and `shared/schema.ts`.
 - Equivalent saved trips are detected to avoid duplicates.
 - User trip reads, deletes, and invite management enforce ownership.
 - Public sharing exposes a constrained `publicSharedTripSchema` through a revocable token.
+- Manual Trip Hub organization state is stored separately in `trip_organization_statuses`, one row per trip, with `pending | done` values for flight, hotel, and activities.
+- `GET/PUT /api/trips/:tripId/organization-status` require authentication and enforce ownership through the Saved Trip.
+- A missing organization-status row is represented as a non-persisted all-`pending` default; the first user change creates the durable row.
+- The retired browser key `byebi:trip-booking-status:v1:<tripId>` is migrated once only when no server status exists, then removed.
+- Public shared-trip responses never include the owner's organization checklist.
 
 The current Saved Trip schema uses a `budget` column. At the product boundary this value is per person; future schema evolution should make that semantic explicit without silently changing stored meaning.
 

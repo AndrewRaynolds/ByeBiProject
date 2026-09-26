@@ -153,9 +153,10 @@ Saved Trip surfaces summarize durable planning context and coordination state, n
 - The Dashboard should route users into the dedicated Trip Hub rather than recreating provider workflows inside each trip card.
 - The Trip Hub may expose a manual organization checklist for flights, hotels, and activities.
 - Checklist state means only that the owner marked an item as handled; it must never be presented as provider-verified booking status.
-- If checklist state is stored only on the current device, say so in the UI.
+- Checklist state for authenticated Saved Trips is durable account-owned coordination state and should survive browser/device changes.
+- The checklist is still manual user state, not provider evidence; persistence must not make it look provider-verified.
 - Use **Travel Options / Opzioni di viaggio** for the current partner-handoff surface. Avoid user-facing “checkout” language for travel.
-- Sharing remains read-only and must not expose the owner's private local checklist state.
+- Sharing remains read-only and must not expose the owner's private organization checklist state.
 
 ## Provider UI
 
