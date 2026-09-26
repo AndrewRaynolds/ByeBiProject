@@ -32,9 +32,12 @@ vi.mock("@/lib/track", () => ({
   trackProductEvent: mocks.trackProductEvent,
 }));
 
-function renderPage(brand: "byebro" | "byebride" = "byebro") {
+function renderPage(
+  brand: "byebro" | "byebride" = "byebro",
+  locale: "it" | "en" | "es" = "it",
+) {
   localStorage.setItem("selectedBrand", brand);
-  localStorage.setItem("byebi_locale", "it");
+  localStorage.setItem("byebi_locale", locale);
 
   return render(
     <LanguageProvider>
@@ -193,5 +196,32 @@ describe("experiences hub", () => {
     expect(aiLink).toHaveAttribute("href", "/?planDestination=Ibiza");
     fireEvent.click(aiLink);
     expect(mocks.trackProductEvent).toHaveBeenCalledWith("experiences_ai_handoff", { dedupe: false });
+  });
+
+  it("renders canonical venue names and localized editorial copy in English", () => {
+    renderPage("byebro", "en");
+
+    expect(screen.getByText("Roscioli")).toBeInTheDocument();
+    expect(screen.getByText("Historic deli and restaurant serving refined Roman cuisine")).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getAllByRole("tab")[3], { button: 0, ctrlKey: false });
+    expect(screen.getByText("Colosseum and Roman Forum tour")).toBeInTheDocument();
+    expect(screen.getByText("Skip-the-line guided tour of Rome’s most iconic monuments")).toBeInTheDocument();
+  });
+
+  it("renders localized venue descriptions and activity copy in Spanish for another city", async () => {
+    window.history.replaceState(null, "", "/experiences?city=ibiza");
+    renderPage("byebro", "es");
+
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: "Vida nocturna" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    expect(screen.getByText("Pacha Ibiza")).toBeInTheDocument();
+    expect(screen.getByText("Club legendario abierto desde 1973")).toBeInTheDocument();
+
+    selectTab("Actividades");
+    expect(screen.getByText("Excursión a Formentera")).toBeInTheDocument();
+    expect(screen.getByText("Excursión en catamarán a la isla vecina y sus playas blancas")).toBeInTheDocument();
   });
 });

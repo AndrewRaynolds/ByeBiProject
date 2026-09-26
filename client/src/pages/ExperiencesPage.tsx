@@ -8,6 +8,7 @@ import {
   getAllCityExperiences,
   getItemsByCategory,
   getSupportedCityKey,
+  localizeCityExperienceItem,
   type ExperienceCategory,
   type CityExperienceItem,
 } from "@/lib/cityExperiences";
@@ -32,8 +33,9 @@ const CATEGORY_ICONS: Record<ExperienceCategory, JSX.Element> = {
   activities: <Compass className="w-4 h-4" />,
 };
 
-function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceItem; index: number; cityName: string }) {
-  const { t } = useTranslation();
+function ExperienceItemCard({ item, index, cityKey, cityName }: { item: CityExperienceItem; index: number; cityKey: string; cityName: string }) {
+  const { locale, t } = useTranslation();
+  const localizedItem = localizeCityExperienceItem(cityKey, item, locale);
   const handleClick = () => {
     trackProductEvent("experience_item_clicked", { dedupe: false });
     if (item.source === "getyourguide" && item.isAffiliate) {
@@ -57,7 +59,7 @@ function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceIte
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h4 className="font-semibold leading-tight text-foreground">{item.name}</h4>
+          <h4 className="font-semibold leading-tight text-foreground">{localizedItem.name}</h4>
           {item.isAffiliate && (
             <Badge variant="brand" className="flex-shrink-0 text-[10px]">
               <Sparkles className="w-3 h-3 mr-1" />
@@ -66,7 +68,7 @@ function ExperienceItemCard({ item, index, cityName }: { item: CityExperienceIte
           )}
         </div>
         <p className="mb-3 text-sm leading-6 text-muted-foreground">
-          {item.description}
+          {localizedItem.description}
         </p>
         <Button
           onClick={handleClick}
@@ -252,6 +254,7 @@ export default function ExperiencesPage() {
                                 key={`${item.name}-${idx}`}
                                 item={item}
                                 index={idx}
+                                cityKey={selectedCity.cityKey}
                                 cityName={t(`destinations.city.${cityTranslationKey(selectedCity.cityKey)}.name`)}
                               />
                             ))}

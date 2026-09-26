@@ -1,4 +1,5 @@
 import { getGetYourGuideCityLink } from "./getyourguide";
+import { getLocalizedExperienceCopy } from "./cityExperienceCopy";
 import { getCanonicalCityKey } from "@shared/cityMapping";
 
 export type ExperienceCategory = "restaurants" | "bars" | "nightlife" | "activities";
@@ -618,6 +619,19 @@ export function getItemsByCategory(
   category: ExperienceCategory,
 ): CityExperienceItem[] {
   return city.items.filter((it) => it.category === category);
+}
+
+export function localizeCityExperienceItem(
+  cityKey: string,
+  item: CityExperienceItem,
+  locale: "it" | "en" | "es",
+): CityExperienceItem {
+  const copy = getLocalizedExperienceCopy(cityKey, item.category, item.name, locale);
+  return {
+    ...item,
+    name: copy.name ?? item.name,
+    description: copy.description ?? item.description,
+  };
 }
 
 export const CATEGORY_LABELS: Record<ExperienceCategory, string> = {
