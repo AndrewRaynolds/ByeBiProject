@@ -1209,20 +1209,25 @@ export class DatabaseStorage extends MemStorage {
       .where(eq(tripsTable.userId, userId));
 
     return rows.map((row) => {
-      const persisted =
-        row.flightStatus !== null &&
-        row.hotelStatus !== null &&
-        row.activitiesStatus !== null;
+      if (
+        row.flightStatus === null ||
+        row.hotelStatus === null ||
+        row.activitiesStatus === null
+      ) {
+        return {
+          tripId: row.tripId,
+          status: { ...defaultTripOrganizationStatus },
+          persisted: false,
+        };
+      }
       return {
         tripId: row.tripId,
-        status: persisted
-          ? toTripOrganizationStatus({
-              flightStatus: row.flightStatus,
-              hotelStatus: row.hotelStatus,
-              activitiesStatus: row.activitiesStatus,
-            })
-          : { ...defaultTripOrganizationStatus },
-        persisted,
+        status: toTripOrganizationStatus({
+          flightStatus: row.flightStatus,
+          hotelStatus: row.hotelStatus,
+          activitiesStatus: row.activitiesStatus,
+        }),
+        persisted: true,
       };
     });
   }
