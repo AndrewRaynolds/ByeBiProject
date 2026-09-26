@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import type { ExpenseGroup, Trip } from "@shared/schema";
+import {
+  defaultTripOrganizationStatus,
+  tripOrganizationStatusResponseSchema,
+  type TripOrganizationKind,
+  type TripOrganizationStatus,
+  type TripOrganizationStatusResponse,
+} from "@shared/tripOrganizationSchemas";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -12,10 +19,9 @@ import { createSavedTripContext } from "@/lib/tripContext";
 import { trackProductEvent } from "@/lib/track";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
-  type BookingKind,
-  loadTripBookingStatus,
-  saveTripBookingStatus,
-} from "@/lib/tripBookingStatus";
+  clearLegacyTripOrganizationStatus,
+  loadLegacyTripOrganizationStatus,
+} from "@/lib/tripOrganizationMigration";
 import {
   ArrowLeft,
   CalendarDays,
@@ -34,7 +40,7 @@ import {
 
 type TripInviteStatus = { active: boolean };
 
-const bookingSections: Array<{ kind: BookingKind; icon: typeof Plane }> = [
+const bookingSections: Array<{ kind: TripOrganizationKind; icon: typeof Plane }> = [
   { kind: "flight", icon: Plane },
   { kind: "hotel", icon: Hotel },
   { kind: "activities", icon: ListChecks },
@@ -48,9 +54,7 @@ export default function TripHub() {
   const [inviteUrl, setInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState(() =>
-    Number.isInteger(tripId) && tripId > 0 ? loadTripBookingStatus(tripId) : null,
-  );
+  const legacyMigrationStarted = useRef(false);
 
   const { data: trip, isLoading, error } = useQuery<Trip>({
     queryKey: [`/api/trips/${id}`],
@@ -64,10 +68,31 @@ export default function TripHub() {
     queryKey: [`/api/trips/${id}/expense-groups`],
     enabled: Boolean(trip),
   });
+  const organizationQueryKey = `/api/trips/${id}/organization-status`;
+  const {
+    data: organizationResponse,
+    isLoading: isLoadingOrganization,
+    error: organizationError,
+  } = useQuery<TripOrganizationStatusResponse>({
+    queryKey: [organizationQueryKey],
+    enabled: Boolean(trip),
+  });
   const inviteQueryKey = `/api/trips/${id}/invite`;
   const { data: inviteStatus } = useQuery<TripInviteStatus>({
     queryKey: [inviteQueryKey],
     enabled: Boolean(trip),
+  });
+  const updateOrganizationStatus = useMutation({
+    mutationFn: async (status: TripOrganizationStatus) => {
+      const response = await apiRequest("PUT", organizationQueryKey, status);
+      const parsed = tripOrganizationStatusResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Invalid trip organization response");
+      return parsed.data;
+    },
+    onSuccess: (response) => {
+      queryClient.setQueryData([organizationQueryKey], response);
+      clearLegacyTripOrganizationStatus(tripId);
+    },
   });
   const generateInvite = useMutation({
     mutationFn: async () => {
@@ -95,6 +120,18 @@ export default function TripHub() {
     if (trip) trackProductEvent("trip_hub_viewed");
   }, [trip]);
 
+  useEffect(() => {
+    if (!organizationResponse || legacyMigrationStarted.current) return;
+    if (organizationResponse.persisted) {
+      clearLegacyTripOrganizationStatus(tripId);
+      legacyMigrationStarted.current = true;
+      return;
+    }
+    const legacyStatus = loadLegacyTripOrganizationStatus(tripId);
+    legacyMigrationStarted.current = true;
+    if (legacyStatus) updateOrganizationStatus.mutate(legacyStatus);
+  }, [organizationResponse, tripId]);
+
   const openCheckout = () => {
     if (!trip) return;
     const context = createSavedTripContext(trip);
@@ -103,14 +140,14 @@ export default function TripHub() {
     navigate("/checkout");
   };
 
-  const toggleBookingStatus = (kind: BookingKind) => {
-    if (!bookingStatus) return;
-    const next = {
-      ...bookingStatus,
-      [kind]: bookingStatus[kind] === "done" ? "pending" : "done",
+  const toggleOrganizationStatus = (kind: TripOrganizationKind) => {
+    if (!organizationResponse || updateOrganizationStatus.isPending) return;
+    const current = organizationResponse.status;
+    const next: TripOrganizationStatus = {
+      ...current,
+      [kind]: current[kind] === "done" ? "pending" : "done",
     };
-    setBookingStatus(next);
-    saveTripBookingStatus(tripId, next);
+    updateOrganizationStatus.mutate(next);
   };
 
   const openExpenses = () => {
@@ -152,7 +189,7 @@ export default function TripHub() {
     );
   }
 
-  if (error || !trip || !bookingStatus) {
+  if (error || !trip) {
     return (
       <div className="min-h-screen flex flex-col bg-light">
         <Header />
@@ -245,11 +282,15 @@ export default function TripHub() {
           <div>
             <h2 id="trip-organization-title" className="text-2xl font-bold">{t("tripHub.organizationTitle")}</h2>
             <p className="mt-1 text-sm text-gray-600">{t("tripHub.organizationDesc")}</p>
-            <p className="mt-2 text-xs text-gray-500">{t("tripHub.organizationLocalNote")}</p>
+            <p className="mt-2 text-xs text-gray-500">{t("tripHub.organizationStatusNote")}</p>
+            {(organizationError || updateOrganizationStatus.isError) && (
+              <p className="mt-2 text-sm text-red-700" role="status">{t("tripHub.organizationError")}</p>
+            )}
           </div>
           <div className="grid gap-4 md:grid-cols-3">
           {bookingSections.map(({ kind, icon: Icon }) => {
-            const done = bookingStatus[kind] === "done";
+            const status = organizationResponse?.status ?? defaultTripOrganizationStatus;
+            const done = status[kind] === "done";
             return (
               <Card key={kind} className="flex flex-col shadow-sm">
                 <CardHeader>
@@ -257,8 +298,9 @@ export default function TripHub() {
                     <Icon className="h-7 w-7 text-primary" />
                     <button
                       type="button"
-                      onClick={() => toggleBookingStatus(kind)}
-                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${done ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}
+                      onClick={() => toggleOrganizationStatus(kind)}
+                      disabled={isLoadingOrganization || Boolean(organizationError) || updateOrganizationStatus.isPending}
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${done ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}
                       aria-label={t("tripHub.toggleStatus", { section: t(`tripHub.${kind}`) })}
                     >
                       {done ? <CheckCircle2 className="mr-1 h-4 w-4" /> : <Circle className="mr-1 h-4 w-4" />}
