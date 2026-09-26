@@ -40,18 +40,6 @@ interface ChatContext {
   origin?: string;
   originCityName?: string;
 
-
-  hotels?: {
-    hotelId: string;
-    name: string;
-    stars?: string;
-    priceTotal: number;
-    currency: string;
-    offerId: string;
-    bookingFlow: "IN_APP" | "REDIRECT";
-    paymentPolicy: string;
-    roomDescription?: string;
-  }[];
 }
 
 export interface ToolCall {
@@ -70,7 +58,7 @@ export function enforceSelectedDestination(
 ): ToolCall {
   if (
     !(context.planner?.destination?.canonical || context.selectedDestination) ||
-    (toolCall.name !== "search_flights" && toolCall.name !== "search_hotels")
+    toolCall.name !== "search_flights"
   ) {
     return toolCall;
   }
@@ -159,32 +147,6 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
         return {
           valid: false,
           message: "How many people are traveling? ByeBi supports groups from 1 to 50 people.",
-        };
-      }
-      return { valid: true };
-    }
-    case "search_hotels": {
-      const destination = typeof args.destination === "string" ? args.destination.trim() : "";
-      const checkIn = typeof args.check_in_date === "string" ? args.check_in_date.trim() : "";
-      const checkOut = typeof args.check_out_date === "string" ? args.check_out_date.trim() : "";
-      const guests = Number(args.guests);
-
-      if (!destination) {
-        return {
-          valid: false,
-          message: "Which city should I search hotels in?",
-        };
-      }
-      if (!checkIn || !checkOut || !isValidISODate(checkIn) || !isValidISODate(checkOut)) {
-        return {
-          valid: false,
-          message: "I need your check-in and check-out dates to search hotels. When are you arriving and leaving?",
-        };
-      }
-      if (!Number.isInteger(guests) || guests <= 0) {
-        return {
-          valid: false,
-          message: "How many guests will be staying?",
         };
       }
       return { valid: true };
