@@ -217,7 +217,7 @@ The repository uses Vitest and Testing Library plus integration tests for routes
 - `npm run build` — Vite client plus bundled Express server.
 - `npm run verify` — check, tests, and build.
 - `npm run smoke:production -- https://byebi.it` — explicitly requested production smoke.
-- `npm run smoke:travel:production -- https://byebi.it` — explicitly requested travel smoke.
+- `npm run smoke:travel:production -- https://byebi.it` — explicitly requested travel-handoff smoke. It validates the Travel Options application shell and the Aviasales handoff contract; it does not require retired live flight/hotel inventory APIs.
 
 CI runs `npm run verify` on pull requests and pushes to `main` with Node.js 20.
 
