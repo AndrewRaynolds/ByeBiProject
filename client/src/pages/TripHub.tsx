@@ -91,6 +91,7 @@ export default function TripHub() {
     },
     onSuccess: (response) => {
       queryClient.setQueryData([organizationQueryKey], response);
+      void queryClient.invalidateQueries({ queryKey: ["/api/trips/organization-statuses"] });
       clearLegacyTripOrganizationStatus(tripId);
     },
   });
