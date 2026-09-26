@@ -26,7 +26,7 @@ const sellerIdentity = (locale: Locale): string => {
   ].filter(Boolean).join(" — ");
 };
 
-const content: Record<Locale, Record<LegalDocument, DocumentContent>> = {
+export const legalDocumentContent: Record<Locale, Record<LegalDocument, DocumentContent>> = {
   it: {
     terms: {
       title: "Termini e condizioni di vendita",
@@ -47,7 +47,7 @@ const content: Record<Locale, Record<LegalDocument, DocumentContent>> = {
       sections: [
         { title: "Titolare e contatti", paragraphs: ["{{seller}}"] },
         { title: "Dati e finalità", paragraphs: ["Possiamo trattare dati di account e accesso, richieste di viaggio, ordini, indirizzi di consegna, comunicazioni di assistenza e dati tecnici necessari a sicurezza e funzionamento. Li usiamo per fornire il servizio richiesto, gestire account e ordini, prevenire abusi e adempiere agli obblighi di legge."] },
-        { title: "Fornitori coinvolti", paragraphs: ["Supabase supporta autenticazione e database; Stripe elabora i pagamenti; Printful produce e spedisce il merchandise; Resend invia le comunicazioni transazionali sugli ordini; OpenAI può elaborare le richieste rivolte all'assistente di viaggio; Amadeus e i partner di affiliazione supportano ricerche e collegamenti esterni. Ogni fornitore tratta i dati secondo il proprio ruolo e le proprie condizioni."] },
+        { title: "Fornitori coinvolti", paragraphs: ["Supabase supporta autenticazione e database; Stripe elabora i pagamenti; Printful produce e spedisce il merchandise; Resend invia le comunicazioni transazionali sugli ordini; OpenAI può elaborare le richieste rivolte all'assistente di viaggio; Aviasales, Booking.com e GetYourGuide gestiscono i collegamenti esterni per voli, hotel e attività. Ogni fornitore tratta i dati secondo il proprio ruolo e le proprie condizioni."] },
         { title: "Conservazione e sicurezza", paragraphs: ["I dati sono conservati per il tempo necessario alle finalità indicate e agli obblighi legali. Prima del lancio commerciale saranno definiti periodi specifici e procedure di cancellazione, accesso e gestione degli incidenti."] },
         { title: "Diritti", paragraphs: ["Nei casi previsti è possibile chiedere accesso, rettifica, cancellazione, limitazione, portabilità o opposizione e presentare reclamo all'autorità competente. Le richieste vanno inviate al contatto del titolare."] },
       ],
@@ -84,7 +84,7 @@ const content: Record<Locale, Record<LegalDocument, DocumentContent>> = {
       sections: [
         { title: "Controller and contact details", paragraphs: ["{{seller}}"] },
         { title: "Data and purposes", paragraphs: ["We may process account and login data, travel requests, orders, delivery addresses, support communications and technical data needed for security and operation. We use it to provide requested services, manage accounts and orders, prevent abuse and meet legal obligations."] },
-        { title: "Service providers", paragraphs: ["Supabase supports authentication and the database; Stripe processes payments; Printful produces and ships merchandise; Resend sends transactional order communications; OpenAI may process requests sent to the travel assistant; Amadeus and affiliate partners support searches and external links. Each provider processes data according to its role and terms."] },
+        { title: "Service providers", paragraphs: ["Supabase supports authentication and the database; Stripe processes payments; Printful produces and ships merchandise; Resend sends transactional order communications; OpenAI may process requests sent to the travel assistant; Aviasales, Booking.com and GetYourGuide handle the external handoffs for flights, hotels and activities. Each provider processes data according to its role and terms."] },
         { title: "Retention and security", paragraphs: ["Data is kept for as long as necessary for the stated purposes and legal obligations. Specific periods and procedures for deletion, access and incident handling will be defined before commercial launch."] },
         { title: "Your rights", paragraphs: ["Where applicable, you may request access, correction, deletion, restriction, portability or objection and complain to the competent authority. Send requests to the controller contact."] },
       ],
@@ -121,7 +121,7 @@ const content: Record<Locale, Record<LegalDocument, DocumentContent>> = {
       sections: [
         { title: "Responsable y contacto", paragraphs: ["{{seller}}"] },
         { title: "Datos y finalidades", paragraphs: ["Podemos tratar datos de cuenta y acceso, solicitudes de viaje, pedidos, direcciones de entrega, comunicaciones de soporte y datos técnicos necesarios para seguridad y funcionamiento. Se usan para prestar servicios, gestionar cuentas y pedidos, prevenir abusos y cumplir obligaciones legales."] },
-        { title: "Proveedores", paragraphs: ["Supabase presta autenticación y base de datos; Stripe procesa pagos; Printful produce y envía productos; Resend envía comunicaciones transaccionales de los pedidos; OpenAI puede procesar solicitudes al asistente de viajes; Amadeus y socios afiliados apoyan búsquedas y enlaces externos. Cada proveedor trata los datos según su función y condiciones."] },
+        { title: "Proveedores", paragraphs: ["Supabase presta autenticación y base de datos; Stripe procesa pagos; Printful produce y envía productos; Resend envía comunicaciones transaccionales de los pedidos; OpenAI puede procesar solicitudes al asistente de viajes; Aviasales, Booking.com y GetYourGuide gestionan los enlaces externos para vuelos, hoteles y actividades. Cada proveedor trata los datos según su función y condiciones."] },
         { title: "Conservación y seguridad", paragraphs: ["Los datos se conservan durante el tiempo necesario para las finalidades indicadas y las obligaciones legales. Antes del lanzamiento comercial se definirán plazos y procedimientos específicos de eliminación, acceso e incidentes."] },
         { title: "Derechos", paragraphs: ["Cuando corresponda, puedes solicitar acceso, rectificación, supresión, limitación, portabilidad u oposición y reclamar ante la autoridad competente. Envía las solicitudes al contacto del responsable."] },
       ],
@@ -142,7 +142,7 @@ const content: Record<Locale, Record<LegalDocument, DocumentContent>> = {
 
 export default function LegalDocumentPage({ document }: { document: LegalDocument }) {
   const { locale } = useTranslation();
-  const page = content[locale][document];
+  const page = legalDocumentContent[locale][document];
   const identity = sellerIdentity(locale);
 
   return (
