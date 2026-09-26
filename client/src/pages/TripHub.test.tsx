@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TripHub from "./TripHub";
-import { getTripBookingStatusKey } from "@/lib/tripBookingStatus";
+import { getLegacyTripOrganizationStatusKey } from "@/lib/tripOrganizationMigration";
 
 const { navigate, queryData, apiRequest, setQueryData } = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -36,8 +36,13 @@ vi.mock("@tanstack/react-query", () => ({
     isLoading: false,
     error: null,
   }),
-  useMutation: (options: { mutationFn: () => Promise<unknown>; onSuccess?: (data: unknown) => void }) => ({
-    mutate: () => options.mutationFn().then((data) => options.onSuccess?.(data)),
+  useMutation: (options: {
+    mutationFn: (value?: unknown) => Promise<unknown>;
+    onSuccess?: (data: any) => void;
+  }) => ({
+    mutate: (value?: unknown) => {
+      void options.mutationFn(value).then((data) => options.onSuccess?.(data));
+    },
     isPending: false,
     isError: false,
   }),
@@ -71,7 +76,8 @@ vi.mock("@/contexts/LanguageContext", () => ({
       "tripHub.activities": "Attività",
       "tripHub.organizationTitle": "Organizzazione del viaggio",
       "tripHub.organizationDesc": "Segna manualmente cosa avete già gestito.",
-      "tripHub.organizationLocalNote": "Checklist personale salvata su questo dispositivo; non conferma prenotazioni.",
+      "tripHub.organizationStatusNote": "Checklist personale salvata nel tuo viaggio; non conferma prenotazioni.",
+      "tripHub.organizationError": "Checklist non disponibile.",
       "tripHub.flightDesc": "Apri le opzioni di viaggio per cercare voli su Aviasales.",
       "tripHub.hotelDesc": "Apri le opzioni di viaggio per cercare hotel su Booking.com.",
       "tripHub.activitiesDesc": "Apri le opzioni di viaggio per esplorare GetYourGuide.",
@@ -107,6 +113,10 @@ describe("TripHub", () => {
     queryData.set("/api/trips/12", trip);
     queryData.set("/api/trips/12/expense-groups", []);
     queryData.set("/api/trips/12/invite", { active: false });
+    queryData.set("/api/trips/12/organization-status", {
+      status: { flight: "pending", hotel: "pending", activities: "pending" },
+      persisted: true,
+    });
     apiRequest.mockReset();
     setQueryData.mockReset();
     Object.defineProperty(navigator, "clipboard", {
@@ -132,7 +142,14 @@ describe("TripHub", () => {
     expect(navigate).toHaveBeenCalledWith("/checkout");
   });
 
-  it("presents booking progress as a manual local checklist", () => {
+  it("persists manual organization progress through the owner-scoped API", async () => {
+    apiRequest.mockImplementation(async (method: string, url: string, body?: unknown) => {
+      if (method === "PUT" && url === "/api/trips/12/organization-status") {
+        return { json: async () => ({ status: body, persisted: true }) };
+      }
+      throw new Error("Unexpected API call");
+    });
+
     render(<TripHub />);
 
     expect(screen.getByRole("heading", { name: "Organizzazione del viaggio" })).toBeInTheDocument();
@@ -141,12 +158,46 @@ describe("TripHub", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cambia stato di Volo" }));
 
-    expect(screen.getByText("Fatto")).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem(getTripBookingStatusKey(12)) ?? "null")).toEqual({
-      flight: "done",
-      hotel: "pending",
-      activities: "pending",
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
+      "PUT",
+      "/api/trips/12/organization-status",
+      { flight: "done", hotel: "pending", activities: "pending" },
+    ));
+    expect(setQueryData).toHaveBeenCalledWith(
+      ["/api/trips/12/organization-status"],
+      {
+        status: { flight: "done", hotel: "pending", activities: "pending" },
+        persisted: true,
+      },
+    );
+  });
+
+  it("migrates the retired local checklist once when no server state exists", async () => {
+    queryData.set("/api/trips/12/organization-status", {
+      status: { flight: "pending", hotel: "pending", activities: "pending" },
+      persisted: false,
     });
+    localStorage.setItem(
+      getLegacyTripOrganizationStatusKey(12),
+      JSON.stringify({ flight: "done", hotel: "pending", activities: "done" }),
+    );
+    apiRequest.mockImplementation(async (method: string, url: string, body?: unknown) => {
+      if (method === "PUT" && url === "/api/trips/12/organization-status") {
+        return { json: async () => ({ status: body, persisted: true }) };
+      }
+      throw new Error("Unexpected API call");
+    });
+
+    render(<TripHub />);
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
+      "PUT",
+      "/api/trips/12/organization-status",
+      { flight: "done", hotel: "pending", activities: "done" },
+    ));
+    await waitFor(() =>
+      expect(localStorage.getItem(getLegacyTripOrganizationStatusKey(12))).toBeNull(),
+    );
   });
 
   it("uses one clear travel-options handoff instead of per-section booking CTAs", () => {

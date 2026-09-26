@@ -134,9 +134,12 @@ It may provide:
 - links back to provider options;
 - sharing through revocable invite links;
 - group coordination and expense tools;
+- an owner-controlled manual organization checklist for flights, hotels, and activities;
 - clear status that distinguishes planning from external booking.
 
-The Trip Hub must not infer that a provider option was booked merely because it was selected or opened. Saved Trip data is durable user intent and coordination context, not a booking record.
+The organization checklist is durable coordination state for the authenticated owner. It must not be exposed as provider-verified booking data and is not included in the public shared-trip payload.
+
+The Trip Hub must not infer that a provider option was booked merely because it was selected, opened, or manually marked as handled. Saved Trip data is durable user intent and coordination context, not a booking record.
 
 ## Localization
 
@@ -186,6 +189,6 @@ ByeBi does not:
 - Phase 4 — Planner + Provider Flow
 - Phase 5 — Dashboard + Trip Hub
 
-Current development focus: **Phase 4 — Planner + Provider Flow**.
+Current development focus: **Phase 5 — Dashboard + Trip Hub**.
 
 GitHub is the operational source for current tasks and pull-request status. Volatile delivery status does not belong in this document.

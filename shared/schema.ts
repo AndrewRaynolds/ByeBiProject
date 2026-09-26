@@ -40,6 +40,19 @@ export const insertTripSchema = createInsertSchema(trips).pick({
   includeMerch: true,
 });
 
+export const tripOrganizationStatuses = pgTable(
+  "trip_organization_statuses",
+  {
+    tripId: integer("trip_id")
+      .primaryKey()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    flightStatus: text("flight_status").notNull().default("pending"),
+    hotelStatus: text("hotel_status").notNull().default("pending"),
+    activitiesStatus: text("activities_status").notNull().default("pending"),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+);
+
 export const tripInvites = pgTable(
   "trip_invites",
   {
