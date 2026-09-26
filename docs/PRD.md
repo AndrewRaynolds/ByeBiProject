@@ -192,6 +192,6 @@ ByeBi does not:
 
 Current development focus: **Phase 6 — Beta Readiness**.
 
-Beta Readiness focuses on production truthfulness and tester confidence: release checks must match the current product model, documentation must not describe retired integrations as active, and production smoke tests must verify only behavior ByeBi actually owns.
+Beta Readiness focuses on production truthfulness and tester confidence: release checks must match the current product model, documentation must not describe retired integrations as active, production smoke tests must verify only behavior ByeBi actually owns, and critical tester journeys such as authentication must expose localized, actionable errors rather than raw provider messages.
 
 GitHub is the operational source for current tasks and pull-request status. Volatile delivery status does not belong in this document.

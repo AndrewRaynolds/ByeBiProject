@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -20,20 +20,35 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { getSafePostAuthPath } from "@/lib/authNavigation";
 import { trackProductEvent } from "@/lib/track";
 
-const loginSchema = z.object({
-  email: z.string().email("Email non valida"),
-  password: z.string().min(1, "Password richiesta"),
-});
+type Translate = (key: string, params?: Record<string, string | number>) => string;
 
-const registerSchema = z.object({
-  email: z.string().email("Email non valida"),
-  password: z.string().min(6, "La password deve essere di almeno 6 caratteri"),
-  username: z.string().optional(),
-  fullName: z.string().optional(),
-});
+function createLoginSchema(t: Translate) {
+  return z.object({
+    email: z.string().email(t("auth.emailInvalid")),
+    password: z.string().min(1, t("auth.passwordRequired")),
+  });
+}
 
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
+function createRegisterSchema(t: Translate) {
+  return z.object({
+    email: z.string().email(t("auth.emailInvalid")),
+    password: z.string().min(6, t("auth.passwordTooShort")),
+    username: z.string().optional(),
+    fullName: z.string().optional(),
+  });
+}
+
+type LoginFormValues = {
+  email: string;
+  password: string;
+};
+
+type RegisterFormValues = {
+  email: string;
+  password: string;
+  username?: string;
+  fullName?: string;
+};
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -44,6 +59,8 @@ export default function AuthPage() {
       : "login",
   );
   const { t } = useTranslation();
+  const loginSchema = useMemo(() => createLoginSchema(t), [t]);
+  const registerSchema = useMemo(() => createRegisterSchema(t), [t]);
   const isBride = localStorage.getItem("selectedBrand") === "byebride";
   const authInputClassName = [
     "h-12 border-gray-500 bg-white text-gray-950 caret-gray-950",

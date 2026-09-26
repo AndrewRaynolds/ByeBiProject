@@ -2,6 +2,8 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/contexts/LanguageContext";
+import { getAuthErrorTranslationKey } from "@/lib/authErrors";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export type AuthUser = {
@@ -48,6 +50,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -78,16 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (err) throw new Error(err.message);
       return data.user ? mapSupabaseUser(data.user) : null;
     },
-    onSuccess: (userData) => {
+    onSuccess: () => {
       toast({
-        title: "Login effettuato",
-        description: userData ? `Bentornato, ${userData.username}!` : "Benvenuto!",
+        title: t("auth.loginSuccess"),
+        description: t("auth.loginSuccessDesc"),
       });
     },
     onError: (err: Error) => {
       toast({
-        title: "Login fallito",
-        description: err.message,
+        title: t("auth.loginFailed"),
+        description: t(getAuthErrorTranslationKey(err.message, "login")),
         variant: "destructive",
       });
     },
@@ -111,14 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       toast({
-        title: "Registrazione completata",
-        description: "Benvenuto! Controlla la tua email per confermare l'account.",
+        title: t("auth.registerSuccess"),
+        description: t("auth.registerSuccessDesc"),
       });
     },
     onError: (err: Error) => {
       toast({
-        title: "Registrazione fallita",
-        description: err.message,
+        title: t("auth.registerFailed"),
+        description: t(getAuthErrorTranslationKey(err.message, "register")),
         variant: "destructive",
       });
     },
@@ -131,12 +134,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       setUser(null);
-      toast({ title: "Disconnesso", description: "Arrivederci!" });
+      toast({
+        title: t("auth.logoutSuccess"),
+        description: t("auth.logoutSuccessDesc"),
+      });
     },
     onError: (err: Error) => {
       toast({
-        title: "Errore logout",
-        description: err.message,
+        title: t("auth.logoutError"),
+        description: t(getAuthErrorTranslationKey(err.message, "logout")),
         variant: "destructive",
       });
     },
