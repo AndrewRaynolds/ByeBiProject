@@ -107,8 +107,11 @@ describe("AuthPage", () => {
 
     render(<AuthPage />);
 
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "not-an-email" } });
-    fireEvent.click(screen.getByRole("button", { name: "Accedi" }));
+    const emailInput = screen.getByLabelText("Email");
+    fireEvent.change(emailInput, { target: { value: "not-an-email" } });
+    const form = emailInput.closest("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
 
     expect(await screen.findByText("Email non valida")).toBeInTheDocument();
     expect(screen.getByText("Password richiesta")).toBeInTheDocument();
