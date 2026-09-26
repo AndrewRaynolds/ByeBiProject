@@ -24,7 +24,6 @@ export const flightSearchQuerySchema = z
   })
   .superRefine((value, context) => {
     if (!value.returnDate) return;
-
     if (!isValidDateRange(value.departDate, value.returnDate)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -33,7 +32,6 @@ export const flightSearchQuerySchema = z
       });
       return;
     }
-
     if (calculateTripDays(value.departDate, value.returnDate) > 30) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -60,9 +58,7 @@ const aviasalesUrlParamsSchema = z
 export type AviasalesUrlParams = z.input<typeof aviasalesUrlParamsSchema>;
 
 export function getAviasalesAdultCount(passengers: number): number | null {
-  if (!Number.isInteger(passengers) || passengers < 1 || passengers > 50) {
-    return null;
-  }
+  if (!Number.isInteger(passengers) || passengers < 1 || passengers > 50) return null;
   return Math.min(passengers, 9);
 }
 
@@ -89,56 +85,7 @@ export function buildAviasalesUrl(value: AviasalesUrlParams): string | null {
   return `https://www.aviasales.com/search/${originIata}${departure}${destinationIata}${returning}${adults}?marker=${encodeURIComponent(partnerId)}`;
 }
 
-const flightDateTimeSchema = z
-  .string()
-  .min(16)
-  .max(35)
-  .refine((value) => Number.isFinite(Date.parse(value)), "Invalid flight date-time");
-
-export const flightSegmentSchema = z.object({
-  departure: z.object({
-    iataCode: iataCodeSchema,
-    terminal: z.string().trim().max(10).optional(),
-    at: flightDateTimeSchema,
-  }),
-  arrival: z.object({
-    iataCode: iataCodeSchema,
-    terminal: z.string().trim().max(10).optional(),
-    at: flightDateTimeSchema,
-  }),
-  carrierCode: z.string().trim().regex(/^[A-Z0-9]{2,3}$/),
-  carrierName: z.string().trim().min(1).max(100).optional(),
-  flightNumber: z.string().trim().min(1).max(10),
-  duration: z.string().trim().regex(/^PT/).max(30),
-});
-
-export const flightResultSchema = z.object({
-  id: z.string().trim().min(1).max(100),
-  price: z.number().finite().positive(),
-  currency: currencyCodeSchema,
-  outbound: z.array(flightSegmentSchema).min(1).max(10),
-  inbound: z.array(flightSegmentSchema).min(1).max(10).optional(),
-  airlines: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
-  totalDuration: z.string().trim().regex(/^PT/).max(30),
-  stops: z.number().int().min(0).max(9),
-});
-
-export const flightCheckoutOfferSchema = z.object({
-  provider: z.literal("amadeus"),
-  offerId: z.string().trim().min(1).max(100),
-  airlines: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
-  outbound: z.array(flightSegmentSchema).min(1).max(10),
-  inbound: z.array(flightSegmentSchema).min(1).max(10).optional(),
-  price: z.number().finite().positive(),
-  currency: currencyCodeSchema,
-  priceScope: z.literal("searched-passengers-total"),
-  quotedPassengers: z.number().int().min(1).max(9),
-  requestedPassengers: z.number().int().min(1).max(50),
-  totalDuration: z.string().trim().regex(/^PT/).max(30),
-  stops: z.number().int().min(0).max(9),
-});
-
-export const flightCheckoutSearchResponseSchema = z.object({
+export const flightHandoffResponseSchema = z.object({
   origin: iataCodeSchema,
   destination: iataCodeSchema,
   departDate: dateOnlySchema,
@@ -146,16 +93,12 @@ export const flightCheckoutSearchResponseSchema = z.object({
   passengers: z.number().int().min(1).max(50),
   checkoutAdults: z.number().int().min(1).max(9),
   groupBookingRequired: z.boolean(),
-  currency: currencyCodeSchema,
   checkoutUrl: z.string().max(2048).refine(isAviasalesCheckoutUrl),
   handoff: z.object({
     provider: z.literal("aviasales"),
     url: z.string().max(2048).refine(isAviasalesCheckoutUrl),
     exactOffer: z.literal(false),
   }).strict(),
-  flightDataStatus: z.enum(["live", "unavailable"]),
-  fetchedAt: z.string().datetime(),
-  flights: z.array(flightCheckoutOfferSchema).max(5),
 }).strict().superRefine((response, context) => {
   if (response.handoff.url !== response.checkoutUrl) {
     context.addIssue({
@@ -178,39 +121,6 @@ export const flightCheckoutSearchResponseSchema = z.object({
       message: "Group booking flag does not match passenger scope",
     });
   }
-  if (response.flightDataStatus === "unavailable" && response.flights.length) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["flights"],
-      message: "Unavailable responses cannot contain offers",
-    });
-  }
-  response.flights.forEach((offer, index) => {
-    if (offer.requestedPassengers !== response.passengers) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flights", index, "requestedPassengers"],
-        message: "Offer requested passengers must match response scope",
-      });
-    }
-    if (offer.quotedPassengers !== response.checkoutAdults) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flights", index, "quotedPassengers"],
-        message: "Offer quoted passengers must match checkout scope",
-      });
-    }
-    if (offer.currency !== response.currency) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["flights", index, "currency"],
-        message: "Offer currency must match response currency",
-      });
-    }
-  });
 });
 
-export type FlightSegment = z.infer<typeof flightSegmentSchema>;
-export type FlightResult = z.infer<typeof flightResultSchema>;
-export type FlightCheckoutOffer = z.infer<typeof flightCheckoutOfferSchema>;
-export type FlightCheckoutSearchResponse = z.infer<typeof flightCheckoutSearchResponseSchema>;
+export type FlightHandoffResponse = z.infer<typeof flightHandoffResponseSchema>;

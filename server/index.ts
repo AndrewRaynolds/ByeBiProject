@@ -10,7 +10,6 @@ import {
   aiLimiter,
   apiLimiter,
   commerceLimiter,
-  externalApiLimiter,
   webhookLimiter,
   analyticsLimiter,
   newsletterLimiter,
@@ -18,7 +17,6 @@ import {
 import { storage } from "./storage";
 import { createHttpSecurityMiddleware } from "./httpSecurity";
 import { validateRuntimeEnvironment } from "./runtimeConfig";
-import { logAmadeusRuntimeDiagnostics } from "./services/amadeusConfig";
 import { getTransactionalEmailStatus, startTransactionalEmailWorker } from "./services/transactionalEmail";
 import { getNewsletterDeliveryStatus } from "./services/newsletterEmail";
 import { requestObservability } from "./requestObservability";
@@ -103,8 +101,6 @@ app.use("/api/generate-itinerary", aiLimiter);
 app.use("/api/stripe", commerceLimiter);
 app.use("/api/printful", commerceLimiter);
 app.use("/api/admin/merchandise", commerceLimiter);
-app.use("/api/hotels", externalApiLimiter);
-app.use("/api/flights", externalApiLimiter);
 app.use("/api/analytics", analyticsLimiter);
 app.use("/api/newsletter", newsletterLimiter);
 
@@ -150,7 +146,6 @@ async function initStripe() {
 }
 
 async function startServer() {
-  logAmadeusRuntimeDiagnostics(process.env);
   validateRuntimeEnvironment(process.env);
   await initStripe();
 

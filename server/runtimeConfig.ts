@@ -54,15 +54,6 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     }
   }
 
-  const hasLiveAmadeusPair = Boolean(
-    env.AMADEUS_API_KEY_LIVE?.trim() && env.AMADEUS_API_SECRET_LIVE?.trim(),
-  );
-  const hasLegacyAmadeusPair = Boolean(
-    env.AMADEUS_API_KEY?.trim() && env.AMADEUS_API_SECRET?.trim(),
-  );
-  if (!hasLiveAmadeusPair && !hasLegacyAmadeusPair) {
-    errors.push("AMADEUS_API_KEY_LIVE and AMADEUS_API_SECRET_LIVE are required (legacy AMADEUS_API_KEY and AMADEUS_API_SECRET are also accepted as a pair)");
-  }
 
   if (
     env.STRIPE_SECRET_KEY &&
@@ -165,9 +156,6 @@ export function validateRuntimeEnvironment(env: RuntimeEnvironment): void {
     errors.push("CRITICAL_DATA_PERSISTENCE must be database");
   }
 
-  if (!env.AMADEUS_ENV || !["production", "prod", "live"].includes(env.AMADEUS_ENV.trim().toLowerCase())) {
-    errors.push("AMADEUS_ENV must select the production/live environment");
-  }
 
   if (
     env.APP_BASE_URL &&
