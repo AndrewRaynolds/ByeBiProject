@@ -151,7 +151,7 @@ export const expenseGroups = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     members: json("members").notNull(),
-    totalAmount: integer("total_amount").default(0),
+    totalAmount: integer("total_amount").notNull().default(0),
     currency: text("currency").default("EUR"),
     createdAt: timestamp("created_at").defaultNow(),
   },
@@ -196,6 +196,8 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
   splitBetween: true,
   category: true,
   date: true,
+}).extend({
+  amount: z.number().int().positive(),
 });
 
 // Export types

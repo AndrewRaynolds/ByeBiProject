@@ -956,6 +956,15 @@ export class MemStorage implements IStorage {
     return Array.from(this.expenseItems.values()).filter(expense => expense.groupId === groupId);
   }
 
+  private adjustExpenseGroupTotal(groupId: number, deltaInCents: number): void {
+    const group = this.expenseGroups.get(groupId);
+    if (!group) return;
+    this.expenseGroups.set(groupId, {
+      ...group,
+      totalAmount: Math.max(0, group.totalAmount + deltaInCents),
+    });
+  }
+
   async createExpense(insertExpense: InsertExpense): Promise<Expense> {
     const expense: Expense = { 
       id: this.expenseId++, 
@@ -963,6 +972,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.expenseItems.set(expense.id, expense);
+    this.adjustExpenseGroupTotal(expense.groupId, expense.amount);
     return expense;
   }
 
@@ -975,11 +985,22 @@ export class MemStorage implements IStorage {
       ...updateData,
     };
     this.expenseItems.set(id, updatedExpense);
+
+    if (updatedExpense.groupId === expense.groupId) {
+      this.adjustExpenseGroupTotal(expense.groupId, updatedExpense.amount - expense.amount);
+    } else {
+      this.adjustExpenseGroupTotal(expense.groupId, -expense.amount);
+      this.adjustExpenseGroupTotal(updatedExpense.groupId, updatedExpense.amount);
+    }
     return updatedExpense;
   }
 
   async deleteExpense(id: number): Promise<boolean> {
-    return this.expenseItems.delete(id);
+    const expense = this.expenseItems.get(id);
+    if (!expense) return false;
+    const deleted = this.expenseItems.delete(id);
+    if (deleted) this.adjustExpenseGroupTotal(expense.groupId, -expense.amount);
+    return deleted;
   }
 
   async hasProcessedStripeEvent(eventId: string): Promise<boolean> {
@@ -1524,31 +1545,94 @@ export class DatabaseStorage extends MemStorage {
   }
 
   override async createExpense(insertExpense: InsertExpense): Promise<Expense> {
-    const [expense] = await this.db
-      .insert(expensesTable)
-      .values(insertExpense)
-      .returning();
-    return expense;
+    return this.db.transaction(async (transaction) => {
+      const [expense] = await transaction
+        .insert(expensesTable)
+        .values(insertExpense)
+        .returning();
+      await transaction
+        .update(expenseGroupsTable)
+        .set({
+          totalAmount: sql<number>`coalesce(${expenseGroupsTable.totalAmount}, 0) + ${expense.amount}`,
+        })
+        .where(eq(expenseGroupsTable.id, expense.groupId));
+      return expense;
+    });
   }
 
   override async updateExpense(
     id: number,
     updateData: Partial<InsertExpense>,
   ): Promise<Expense | undefined> {
-    const [expense] = await this.db
-      .update(expensesTable)
-      .set(updateData)
-      .where(eq(expensesTable.id, id))
-      .returning();
-    return expense;
+    return this.db.transaction(async (transaction) => {
+      const [existing] = await transaction
+        .select()
+        .from(expensesTable)
+        .where(eq(expensesTable.id, id))
+        .for("update")
+        .limit(1);
+      if (!existing) return undefined;
+
+      const [expense] = await transaction
+        .update(expensesTable)
+        .set(updateData)
+        .where(eq(expensesTable.id, id))
+        .returning();
+      if (!expense) return undefined;
+
+      if (expense.groupId === existing.groupId) {
+        const delta = expense.amount - existing.amount;
+        if (delta !== 0) {
+          await transaction
+            .update(expenseGroupsTable)
+            .set({
+              totalAmount: sql<number>`greatest(coalesce(${expenseGroupsTable.totalAmount}, 0) + ${delta}, 0)`,
+            })
+            .where(eq(expenseGroupsTable.id, expense.groupId));
+        }
+      } else {
+        await transaction
+          .update(expenseGroupsTable)
+          .set({
+            totalAmount: sql<number>`greatest(coalesce(${expenseGroupsTable.totalAmount}, 0) - ${existing.amount}, 0)`,
+          })
+          .where(eq(expenseGroupsTable.id, existing.groupId));
+        await transaction
+          .update(expenseGroupsTable)
+          .set({
+            totalAmount: sql<number>`coalesce(${expenseGroupsTable.totalAmount}, 0) + ${expense.amount}`,
+          })
+          .where(eq(expenseGroupsTable.id, expense.groupId));
+      }
+
+      return expense;
+    });
   }
 
   override async deleteExpense(id: number): Promise<boolean> {
-    const deleted = await this.db
-      .delete(expensesTable)
-      .where(eq(expensesTable.id, id))
-      .returning({ id: expensesTable.id });
-    return deleted.length > 0;
+    return this.db.transaction(async (transaction) => {
+      const [existing] = await transaction
+        .select()
+        .from(expensesTable)
+        .where(eq(expensesTable.id, id))
+        .for("update")
+        .limit(1);
+      if (!existing) return false;
+
+      const deleted = await transaction
+        .delete(expensesTable)
+        .where(eq(expensesTable.id, id))
+        .returning({ id: expensesTable.id });
+      if (deleted.length === 0) return false;
+
+      await transaction
+        .update(expenseGroupsTable)
+        .set({
+          totalAmount: sql<number>`greatest(coalesce(${expenseGroupsTable.totalAmount}, 0) - ${existing.amount}, 0)`,
+        })
+        .where(eq(expenseGroupsTable.id, existing.groupId));
+      return true;
+    });
   }
 
   override async hasProcessedStripeEvent(eventId: string): Promise<boolean> {

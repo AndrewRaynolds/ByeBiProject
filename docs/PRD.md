@@ -133,7 +133,7 @@ It may provide:
 - the saved trip summary;
 - links back to provider options;
 - sharing through revocable invite links;
-- group coordination and expense tools;
+- group coordination and expense tools with durable, internally consistent monetary totals;
 - an owner-controlled manual organization checklist for flights, hotels, and activities;
 - clear status that distinguishes planning from external booking.
 

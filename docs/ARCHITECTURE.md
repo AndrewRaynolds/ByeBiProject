@@ -152,6 +152,16 @@ Saved Trips are represented by the `trips` table and `shared/schema.ts`.
 
 The current Saved Trip schema uses a `budget` column. At the product boundary this value is per person; future schema evolution should make that semantic explicit without silently changing stored meaning.
 
+## Expense coordination
+
+Splitta expense persistence uses integer minor currency units.
+
+- `expenses.amount` is stored in cents (or the corresponding minor unit).
+- `expense_groups.total_amount` uses the same minor-unit semantics and is server-authoritative.
+- Expense create, update, and delete operations update the group total atomically with the expense mutation.
+- Migration `20260926170000_repair_expense_group_totals.sql` backfills existing totals from persisted expenses and makes `total_amount` non-null.
+- Client surfaces format minor units for display and must not persist euro-denominated floating-point totals.
+
 ## Authentication boundary
 
 Supabase Auth owns sign-up, sign-in, password recovery, browser session refresh, and sign-out.

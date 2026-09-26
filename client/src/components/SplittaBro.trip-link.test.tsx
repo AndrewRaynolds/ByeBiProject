@@ -43,6 +43,31 @@ describe("SplittaBro trip link", () => {
       }));
   });
 
+  it("renders persisted group totals as cents, not euros", async () => {
+    apiRequest.mockReset();
+    apiRequest
+      .mockResolvedValueOnce(new Response(JSON.stringify([{
+        id: 44,
+        tripId: 12,
+        name: "Weekend a Barcellona",
+        members: ["Andrea"],
+        totalAmount: 12345,
+        currency: "EUR",
+      }]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+
+    render(<SplittaBro />);
+
+    expect(await screen.findByText(/123,45/)).toBeInTheDocument();
+    expect(screen.queryByText(/12\.345,00/)).not.toBeInTheDocument();
+  });
+
   it("prefills the existing group flow and associates the new group with the trip", async () => {
     render(<SplittaBro />);
 
