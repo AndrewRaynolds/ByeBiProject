@@ -24,6 +24,18 @@ const budgetPerPerson: Record<string, number> = {
   high: 1_000,
 };
 
+export function resolvePlannedTripBudget(
+  budget: PlannedTripContext["budget"],
+): number | null {
+  if (typeof budget === "number") {
+    return Number.isInteger(budget) && budget >= 1 && budget <= 100_000
+      ? budget
+      : null;
+  }
+  if (typeof budget !== "string") return null;
+  return budgetPerPerson[budget.trim().toLowerCase()] ?? null;
+}
+
 export function buildPlannedTripPayload(context: PlannedTripContext) {
   const destination = context.destination?.trim();
   const departureCity = context.origin?.trim();
@@ -45,6 +57,9 @@ export function buildPlannedTripPayload(context: PlannedTripContext) {
   const experienceType = context.partyType === "bachelorette"
     ? "bachelorette"
     : "bachelor";
+  const resolvedBudget = resolvePlannedTripBudget(context.budget);
+  if (resolvedBudget === null) return null;
+
   const activities = (context.activities ?? [])
     .map((activity) => typeof activity === "string" ? activity : activity.name)
     .filter((activity): activity is string => Boolean(activity?.trim()))
@@ -59,9 +74,7 @@ export function buildPlannedTripPayload(context: PlannedTripContext) {
     departureCity,
     destinations: [destination],
     experienceType,
-    budget: typeof context.budget === "number"
-      ? context.budget
-      : budgetPerPerson[context.budget?.toLowerCase() ?? ""] ?? 600,
+    budget: resolvedBudget,
     activities,
     specialRequests: null,
     includeMerch: false,

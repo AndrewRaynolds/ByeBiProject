@@ -7,6 +7,9 @@ const locales = { it: itTranslations, en: enTranslations, es: esTranslations };
 const requiredKeys = [
   "checkout.title",
   "checkout.subtitle",
+  "checkout.budgetPerPerson",
+  "checkout.preferences",
+  "checkout.notSpecified",
   "checkout.flightOptions",
   "checkout.hotelOptions",
   "checkout.flightProviderNote",

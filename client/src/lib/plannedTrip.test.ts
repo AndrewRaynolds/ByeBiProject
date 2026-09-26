@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPlannedTripPayload, plannedTripMatchesSavedTrip } from "./plannedTrip";
+import { buildPlannedTripPayload, plannedTripMatchesSavedTrip, resolvePlannedTripBudget } from "./plannedTrip";
 
 describe("planned trip persistence", () => {
   beforeEach(() => {
@@ -41,32 +41,49 @@ describe("planned trip persistence", () => {
       startDate: "2027-06-13",
       endDate: "2027-06-10",
       people: 6,
+      budget: 600,
     })).toBeNull();
     expect(buildPlannedTripPayload({
       destination: "Ibiza", origin: "Milano", startDate: "not-a-date",
-      endDate: "also-not-a-date", people: 6,
+      endDate: "also-not-a-date", people: 6, budget: 600,
     })).toBeNull();
   });
 
   it("rejects a past start date for the legacy save payload", () => {
     expect(buildPlannedTripPayload({
       destination: "Ibiza", origin: "Milano", startDate: "2026-01-14",
-      endDate: "2026-01-16", people: 6,
+      endDate: "2026-01-16", people: 6, budget: 600,
     })).toBeNull();
   });
 
   it("accepts today for the legacy save payload", () => {
     expect(buildPlannedTripPayload({
       destination: "Ibiza", origin: "Milano", startDate: "2026-01-15",
-      endDate: "2026-01-16", people: 6,
+      endDate: "2026-01-16", people: 6, budget: 600,
     })).toMatchObject({ startDate: "2026-01-15", endDate: "2026-01-16" });
   });
 
   it("keeps a same-day planner valid for the legacy save payload", () => {
     expect(buildPlannedTripPayload({
       destination: "Ibiza", origin: "Milano", startDate: "2026-01-20",
-      endDate: "2026-01-20", people: 6,
+      endDate: "2026-01-20", people: 6, budget: 600,
     })).toMatchObject({ startDate: "2026-01-20", endDate: "2026-01-20" });
+  });
+
+  it("never invents a missing or unknown budget during explicit save", () => {
+    expect(resolvePlannedTripBudget(undefined)).toBeNull();
+    expect(resolvePlannedTripBudget("unknown")).toBeNull();
+    expect(resolvePlannedTripBudget(0)).toBeNull();
+    expect(resolvePlannedTripBudget(100_001)).toBeNull();
+    expect(resolvePlannedTripBudget("medio")).toBe(600);
+
+    expect(buildPlannedTripPayload({
+      destination: "Ibiza",
+      origin: "Milano",
+      startDate: "2027-06-10",
+      endDate: "2027-06-13",
+      people: 6,
+    })).toBeNull();
   });
 
   it("recognizes only a saved trip with the same dashboard details", () => {
