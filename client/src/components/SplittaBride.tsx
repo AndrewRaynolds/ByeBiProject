@@ -578,13 +578,26 @@ export function SplittaBride() {
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
-                <Button
-                  onClick={() => setSelectedGroup(null)}
-                  className="bg-primary text-primary-foreground hover:bg-primary-hover w-full sm:w-auto"
-                  data-testid="button-back-to-groups"
-                >
-                  ← Torna ai gruppi
-                </Button>
+                <div className="flex w-full flex-col gap-2 sm:w-auto">
+                  <Button
+                    onClick={() => setSelectedGroup(null)}
+                    className="bg-primary text-primary-foreground hover:bg-primary-hover w-full sm:w-auto"
+                    data-testid="button-back-to-groups"
+                  >
+                    {t('splittabro.backToGroups')}
+                  </Button>
+                  {selectedGroup.tripId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate(`/trips/${selectedGroup.tripId}`)}
+                      className="w-full sm:w-auto"
+                      data-testid="button-back-to-trip"
+                    >
+                      {t('splittabro.backToTrip')}
+                    </Button>
+                  )}
+                </div>
                 <div>
                   <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                     {selectedGroup.name}

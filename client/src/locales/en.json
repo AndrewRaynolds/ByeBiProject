@@ -886,6 +886,7 @@
   "splittabro.noGroupsDesc": "Create your first group and start splitting trip expenses.",
   "splittabro.createFirstGroup": "Create first group",
   "splittabro.backToGroups": "← Back to groups",
+  "splittabro.backToTrip": "Back to trip",
   "splittabro.total": "Total",
   "splittabro.addExpense": "Add expense",
   "splittabro.addExpenseTitle": "Add new expense",
