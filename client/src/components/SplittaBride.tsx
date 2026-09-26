@@ -67,7 +67,7 @@ type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
 type CreateExpenseFormValues = z.infer<typeof createExpenseSchema>;
 
 export function SplittaBride() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [groups, setGroups] = useState<ExpenseGroup[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ExpenseGroup | null>(null);
@@ -80,6 +80,12 @@ export function SplittaBride() {
   const linkedGroupId = Number(new URLSearchParams(window.location.search).get('groupId'));
   const linkedTripId = Number(new URLSearchParams(window.location.search).get('tripId'));
   const linkedTripName = new URLSearchParams(window.location.search).get('tripName')?.trim() || '';
+
+  const formatCurrency = (amountInCents: number, currency = 'EUR') =>
+    new Intl.NumberFormat(locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'it-IT', {
+      style: 'currency',
+      currency,
+    }).format(amountInCents / 100);
 
   const groupForm = useForm<CreateGroupFormValues>({
     resolver: zodResolver(createGroupSchema),
@@ -248,10 +254,18 @@ export function SplittaBride() {
           splitEqually: false,
         });
         
-        const groupTotal = [...expenses, newExpense].reduce((sum, exp) => sum + exp.amount, 0) / 100;
+        const groupTotalInCents = [...expenses, newExpense].reduce(
+          (sum, expense) => sum + expense.amount,
+          0,
+        );
         setGroups(prev => prev.map(g => 
-          g.id === selectedGroup.id ? { ...g, totalAmount: groupTotal } : g
+          g.id === selectedGroup.id ? { ...g, totalAmount: groupTotalInCents } : g
         ));
+        setSelectedGroup(current =>
+          current?.id === selectedGroup.id
+            ? { ...current, totalAmount: groupTotalInCents }
+            : current,
+        );
         
         toast({
           title: t('splittabro.toast.expenseAddedTitle'),
@@ -532,7 +546,7 @@ export function SplittaBride() {
                           )}
                         </div>
                         <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 px-3 py-1 rounded-lg border border-pink-500/30">
-                          <p className="text-pink-400 font-bold text-sm">€{(group.totalAmount || 0).toFixed(2)}</p>
+                          <p className="text-pink-400 font-bold text-sm">{formatCurrency(group.totalAmount || 0, group.currency)}</p>
                         </div>
                       </div>
                     </CardHeader>
@@ -577,7 +591,7 @@ export function SplittaBride() {
                   </h2>
                   <div className="flex items-center gap-2 mt-1">
                     <TrendingUp className="w-4 h-4 text-pink-400" />
-                    <p className="text-gray-400">{t('splittabro.total')}: <span className="text-pink-400 font-bold">€{(selectedGroup.totalAmount || 0).toFixed(2)}</span></p>
+                    <p className="text-gray-400">{t('splittabro.total')}: <span className="text-pink-400 font-bold">{formatCurrency(selectedGroup.totalAmount || 0, selectedGroup.currency)}</span></p>
                   </div>
                 </div>
               </div>
