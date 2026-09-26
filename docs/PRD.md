@@ -123,6 +123,7 @@ Planning, reviewing, and comparing travel options do not require a trip to be sa
 - If the user is not authenticated, preserve the valid trip context and route through authentication before saving.
 - Do not create duplicate saved trips for the same user intent when an equivalent saved trip already exists.
 - Authentication protects user-owned resources; it must not be presented as external travel booking.
+- When authentication is required to open a protected internal page, preserve that safe internal destination and return the user there after successful authentication.
 
 ## Trip Hub
 

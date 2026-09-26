@@ -171,6 +171,7 @@ Supabase Auth owns sign-up, sign-in, password recovery, browser session refresh,
 - Protected routes include saved trips, Trip Hub ownership, expenses, and administrative operations.
 - Browsing, Planner drafting, Travel Options, and external handoff do not require Saved Trip persistence.
 - Unauthenticated **Save trip** sends the user to `/auth?next=/checkout`; the valid browser context remains available for the explicit post-auth save.
+- Protected routes preserve their current safe internal path in the `next` query parameter so an expired or missing session returns the user to the originally requested Dashboard, Trip Hub, or Splitta route after authentication. External redirect targets remain rejected by `getSafePostAuthPath`.
 
 ## Integrations
 
