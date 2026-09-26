@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import {
   getAllCityExperiences,
   getItemsByCategory,
+  getSupportedCityKey,
   type ExperienceCategory,
   type CityExperienceItem,
 } from "@/lib/cityExperiences";
@@ -91,7 +92,10 @@ export default function ExperiencesPage() {
   const { brand } = useBrand();
   const isBride = brand === "byebride";
   const cities = useMemo(() => getAllCityExperiences(), []);
-  const [selectedCityKey, setSelectedCityKey] = useState<string>(cities[0]?.cityKey ?? "");
+  const [selectedCityKey, setSelectedCityKey] = useState<string>(() => {
+    const requestedCity = new URLSearchParams(window.location.search).get("city");
+    return getSupportedCityKey(requestedCity) ?? cities[0]?.cityKey ?? "";
+  });
   const [activeCategory, setActiveCategory] = useState<ExperienceCategory>("restaurants");
 
   const selectedCity = cities.find((c) => c.cityKey === selectedCityKey) ?? cities[0];

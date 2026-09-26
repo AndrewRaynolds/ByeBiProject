@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBrand } from "@/contexts/BrandContext";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { getSupportedCityKey } from "@/lib/cityExperiences";
 import {
   adaptDestinationExperienceName,
   getDestinationCountryCode,
@@ -73,6 +74,7 @@ export default function DestinationDetailPage() {
   const localizedDestination = localizeDestination(destination, t);
   const recommendedExperiences = getDestinationExperiences(destination);
   const getYourGuideUrl = getGetYourGuideCityLink(destination.name);
+  const experiencesCityKey = getSupportedCityKey(destination.name);
   const plannerHref = `/?planDestination=${encodeURIComponent(localizedDestination.name)}`;
 
   const handleAffiliateClick = () => {
@@ -183,6 +185,20 @@ export default function DestinationDetailPage() {
                   {t("destinations.planWithAi")}
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
+
+                {experiencesCityKey && (
+                  <Button asChild variant="secondary" className="mt-3 w-full">
+                    <Link
+                      href={`/experiences?city=${experiencesCityKey}`}
+                      data-testid="destination-experiences-link"
+                    >
+                      {t("destinations.exploreExperiences", {
+                        city: localizedDestination.name,
+                      })}
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                )}
 
                 {getYourGuideUrl && (
                   <div className="mt-5 border-t border-border pt-5">

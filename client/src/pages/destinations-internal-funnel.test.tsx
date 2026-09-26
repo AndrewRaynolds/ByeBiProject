@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   trackAffiliateClick: vi.fn(),
   openExternalUrl: vi.fn(),
   destinations: [] as Destination[],
+  destinationId: "1",
 }));
 
 function makeDestination(id: number, name: string, country: string): Destination {
@@ -46,7 +47,7 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("wouter", async (importOriginal) => {
   const actual = await importOriginal<typeof import("wouter")>();
-  return { ...actual, useParams: () => ({ id: "1" }) };
+  return { ...actual, useParams: () => ({ id: mocks.destinationId }) };
 });
 
 vi.mock("@/components/Header", () => ({ default: () => <header /> }));
@@ -74,6 +75,7 @@ describe("destinations internal funnel", () => {
     mocks.trackAffiliateClick.mockClear();
     mocks.openExternalUrl.mockClear();
     mocks.destinations = [...destinationFixtures];
+    mocks.destinationId = "1";
   });
 
   it("routes destination cards internally without affiliate tracking", () => {
@@ -106,6 +108,24 @@ describe("destinations internal funnel", () => {
       monetized: true,
     });
     expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://gyg.me/JvxfvhRT");
+  });
+
+  it("shows an internal Experiences deep link only for supported cities", () => {
+    const { unmount } = renderInItalian(<DestinationDetailPage />);
+
+    expect(screen.getByTestId("destination-experiences-link")).toHaveAttribute(
+      "href",
+      "/experiences?city=rome",
+    );
+    expect(screen.getByTestId("destination-experiences-link")).toHaveTextContent(
+      "Esplora le esperienze a Roma",
+    );
+
+    unmount();
+    mocks.destinationId = "2";
+    renderInItalian(<DestinationDetailPage />);
+
+    expect(screen.queryByTestId("destination-experiences-link")).not.toBeInTheDocument();
   });
 
   it("preserves the existing destination-to-experience matching semantics", () => {

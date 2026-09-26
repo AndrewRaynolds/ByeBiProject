@@ -629,6 +629,10 @@ export function getCityExperiences(destinationCity: string | null | undefined): 
   return CITY_BY_KEY[canonicalKey] ?? null;
 }
 
+export function getSupportedCityKey(destinationCity: string | null | undefined): string | null {
+  return getCityExperiences(destinationCity)?.cityKey ?? null;
+}
+
 export function getAllCityExperiences(): CityExperiences[] {
   return CITY_DATA;
 }

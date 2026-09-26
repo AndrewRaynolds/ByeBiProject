@@ -55,6 +55,7 @@ function selectTab(name: string) {
 describe("experiences hub", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState(null, "", "/experiences");
     mocks.openExternalUrl.mockClear();
     mocks.trackAffiliateClick.mockClear();
     mocks.trackEvent.mockClear();
@@ -80,6 +81,45 @@ describe("experiences hub", () => {
     expect(screen.getByRole("heading", { name: "Bar a Ibiza" })).toBeInTheDocument();
     expect(screen.getByText("Lío Ibiza")).toBeInTheDocument();
     expect(screen.queryByText("Roscioli")).not.toBeInTheDocument();
+  });
+
+  it("preselects a valid city from the query without changing the initial category", () => {
+    window.history.replaceState(null, "", "/experiences?city=ibiza");
+    renderPage();
+
+    expect(screen.getByRole("button", { name: "Ibiza" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("tab", { name: "Ristoranti" })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+    expect(screen.getByText("Sa Capilla")).toBeInTheDocument();
+    expect(mocks.openExternalUrl).not.toHaveBeenCalled();
+    expect(mocks.trackAffiliateClick).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the first city for an invalid query", () => {
+    window.history.replaceState(null, "", "/experiences?city=not-a-city");
+    renderPage();
+
+    expect(screen.getByRole("button", { name: "Roma" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Roscioli")).toBeInTheDocument();
+  });
+
+  it("does not overwrite a manual city change on rerender", () => {
+    window.history.replaceState(null, "", "/experiences?city=rome");
+    const { rerender } = renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ibiza" }));
+    rerender(
+      <LanguageProvider>
+        <BrandProvider>
+          <ExperiencesPage />
+        </BrandProvider>
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Ibiza" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Sa Capilla")).toBeInTheDocument();
   });
 
   it("keeps Maps URLs unchanged and reserves affiliate tracking for GYG items", () => {
