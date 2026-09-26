@@ -146,6 +146,17 @@ The Planner collects intent progressively and ends in a reviewable travel brief.
 
 The AI must not appear to have completed a booking or verified provider availability when it has only updated intent.
 
+## Saved Trip and Trip Hub UI
+
+Saved Trip surfaces summarize durable planning context and coordination state, not provider booking records.
+
+- The Dashboard should route users into the dedicated Trip Hub rather than recreating provider workflows inside each trip card.
+- The Trip Hub may expose a manual organization checklist for flights, hotels, and activities.
+- Checklist state means only that the owner marked an item as handled; it must never be presented as provider-verified booking status.
+- If checklist state is stored only on the current device, say so in the UI.
+- Use **Travel Options / Opzioni di viaggio** for the current partner-handoff surface. Avoid user-facing “checkout” language for travel.
+- Sharing remains read-only and must not expose the owner's private local checklist state.
+
 ## Provider UI
 
 The current Travel Options surface is handoff-only: ByeBi does not display live flight or hotel inventory.
