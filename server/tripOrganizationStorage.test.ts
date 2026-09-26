@@ -35,6 +35,48 @@ describe("MemStorage trip organization status", () => {
     expect(await storage.getTripOrganizationStatusForUser(trip.id, "user-a"))
       .toEqual({ flight: "done", hotel: "pending", activities: "done" });
 
+    const untouchedTrip = await storage.createTrip({
+      userId: "user-a",
+      name: "ByeBro · Ibiza",
+      participants: 8,
+      startDate: "2027-07-01",
+      endDate: "2027-07-04",
+      departureCity: "Rome",
+      destinations: ["Ibiza"],
+      experienceType: "bachelor",
+      budget: 800,
+      activities: ["beach"],
+      specialRequests: null,
+      includeMerch: false,
+    });
+    await storage.createTrip({
+      userId: "user-b",
+      name: "Other user trip",
+      participants: 4,
+      startDate: "2027-08-01",
+      endDate: "2027-08-03",
+      departureCity: "Milan",
+      destinations: ["Prague"],
+      experienceType: "bachelor",
+      budget: 500,
+      activities: ["nightlife"],
+      specialRequests: null,
+      includeMerch: false,
+    });
+
+    expect(await storage.getTripOrganizationOverviewForUser("user-a")).toEqual([
+      {
+        tripId: trip.id,
+        status: { flight: "done", hotel: "pending", activities: "done" },
+        persisted: true,
+      },
+      {
+        tripId: untouchedTrip.id,
+        status: { flight: "pending", hotel: "pending", activities: "pending" },
+        persisted: false,
+      },
+    ]);
+
     expect(await storage.deleteTripForUser(trip.id, "user-a")).toBe(true);
     expect(await storage.getTripOrganizationStatusForUser(trip.id, "user-a")).toBeUndefined();
   });
