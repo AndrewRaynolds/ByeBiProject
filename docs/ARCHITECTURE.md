@@ -145,6 +145,7 @@ Saved Trips are represented by the `trips` table and `shared/schema.ts`.
 - Public sharing exposes a constrained `publicSharedTripSchema` through a revocable token.
 - Manual Trip Hub organization state is stored separately in `trip_organization_statuses`, one row per trip, with `pending | done` values for flight, hotel, and activities.
 - `GET/PUT /api/trips/:tripId/organization-status` require authentication and enforce ownership through the Saved Trip.
+- `GET /api/trips/organization-statuses` returns one owner-scoped batch overview for Dashboard progress, including non-persisted all-`pending` defaults without creating rows.
 - A missing organization-status row is represented as a non-persisted all-`pending` default; the first user change creates the durable row.
 - The retired browser key `byebi:trip-booking-status:v1:<tripId>` is migrated once only when no server status exists, then removed.
 - Public shared-trip responses never include the owner's organization checklist.

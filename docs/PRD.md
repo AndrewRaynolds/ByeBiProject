@@ -137,7 +137,7 @@ It may provide:
 - an owner-controlled manual organization checklist for flights, hotels, and activities;
 - clear status that distinguishes planning from external booking.
 
-The organization checklist is durable coordination state for the authenticated owner. It must not be exposed as provider-verified booking data and is not included in the public shared-trip payload.
+The organization checklist is durable coordination state for the authenticated owner. The Dashboard may summarize its completion progress so organizers can see which Saved Trips still need attention without opening each Trip Hub. Progress remains coordination language, not provider-verified booking data, and is not included in the public shared-trip payload.
 
 The Trip Hub must not infer that a provider option was booked merely because it was selected, opened, or manually marked as handled. Saved Trip data is durable user intent and coordination context, not a booking record.
 

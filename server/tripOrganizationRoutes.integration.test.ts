@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 const storageMocks = vi.hoisted(() => ({
   getTripForUser: vi.fn(),
+  getTripOrganizationOverviewForUser: vi.fn(),
   getTripOrganizationStatusForUser: vi.fn(),
   upsertTripOrganizationStatusForUser: vi.fn(),
 }));
@@ -48,6 +49,47 @@ describe("trip organization status routes", () => {
 
     expect(response.status).toBe(401);
     expect(storageMocks.getTripForUser).not.toHaveBeenCalled();
+  });
+
+  it("returns one owner-scoped batch overview for the dashboard", async () => {
+    storageMocks.getTripOrganizationOverviewForUser.mockResolvedValue([
+      {
+        tripId: 12,
+        status: { flight: "done", hotel: "pending", activities: "done" },
+        persisted: true,
+      },
+      {
+        tripId: 13,
+        status: { flight: "pending", hotel: "pending", activities: "pending" },
+        persisted: false,
+      },
+    ]);
+
+    const response = await fetch(`${baseUrl}/api/trips/organization-statuses`, {
+      headers: { Authorization: "Bearer token-a" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      {
+        tripId: 12,
+        status: { flight: "done", hotel: "pending", activities: "done" },
+        persisted: true,
+      },
+      {
+        tripId: 13,
+        status: { flight: "pending", hotel: "pending", activities: "pending" },
+        persisted: false,
+      },
+    ]);
+    expect(storageMocks.getTripOrganizationOverviewForUser).toHaveBeenCalledWith("user-a");
+  });
+
+  it("requires authentication for the dashboard organization overview", async () => {
+    const response = await fetch(`${baseUrl}/api/trips/organization-statuses`);
+
+    expect(response.status).toBe(401);
+    expect(storageMocks.getTripOrganizationOverviewForUser).not.toHaveBeenCalled();
   });
 
   it("returns a non-persisted pending default for an owned trip without status", async () => {

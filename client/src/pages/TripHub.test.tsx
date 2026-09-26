@@ -6,10 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import TripHub from "./TripHub";
 import { getLegacyTripOrganizationStatusKey } from "@/lib/tripOrganizationMigration";
 
-const { navigate, queryData, apiRequest, setQueryData } = vi.hoisted(() => ({
+const { navigate, queryData, apiRequest, invalidateQueries, setQueryData } = vi.hoisted(() => ({
   navigate: vi.fn(),
   queryData: new Map<string, unknown>(),
   apiRequest: vi.fn(),
+  invalidateQueries: vi.fn(),
   setQueryData: vi.fn(),
 }));
 
@@ -50,7 +51,7 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("@/lib/queryClient", () => ({
   apiRequest,
-  queryClient: { setQueryData },
+  queryClient: { invalidateQueries, setQueryData },
 }));
 
 vi.mock("wouter", () => ({
@@ -118,6 +119,8 @@ describe("TripHub", () => {
       persisted: true,
     });
     apiRequest.mockReset();
+    invalidateQueries.mockReset();
+    invalidateQueries.mockResolvedValue(undefined);
     setQueryData.mockReset();
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -170,6 +173,9 @@ describe("TripHub", () => {
         persisted: true,
       },
     );
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["/api/trips/organization-statuses"],
+    });
   });
 
   it("migrates the retired local checklist once when no server state exists", async () => {

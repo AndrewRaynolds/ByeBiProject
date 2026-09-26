@@ -30,6 +30,7 @@ import {
 import {
   defaultTripOrganizationStatus,
   tripOrganizationStatusSchema,
+  type TripOrganizationOverviewItem,
   type TripOrganizationStatus,
 } from "@shared/tripOrganizationSchemas";
 import {
@@ -95,6 +96,7 @@ export interface IStorage {
   getTrip(id: number): Promise<Trip | undefined>;
   getTripForUser(id: number, userId: string): Promise<Trip | undefined>;
   getTripsByUserId(userId: string): Promise<Trip[]>;
+  getTripOrganizationOverviewForUser(userId: string): Promise<TripOrganizationOverviewItem[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
   createTripIfAbsent(trip: InsertTrip): Promise<{ trip: Trip; created: boolean }>;
   deleteTripForUser(id: number, userId: string): Promise<boolean>;
@@ -716,6 +718,21 @@ export class MemStorage implements IStorage {
     return Array.from(this.trips.values()).filter(trip => trip.userId === userId);
   }
 
+  async getTripOrganizationOverviewForUser(
+    userId: string,
+  ): Promise<TripOrganizationOverviewItem[]> {
+    return Array.from(this.trips.values())
+      .filter((trip) => trip.userId === userId)
+      .map((trip) => {
+        const status = this.tripOrganizationItems.get(trip.id);
+        return {
+          tripId: trip.id,
+          status: status ?? { ...defaultTripOrganizationStatus },
+          persisted: Boolean(status),
+        };
+      });
+  }
+
   async createTrip(insertTrip: InsertTrip): Promise<Trip> {
     const trip: Trip = { 
       id: this.tripId++, 
@@ -1172,6 +1189,47 @@ export class DatabaseStorage extends MemStorage {
       .select()
       .from(tripsTable)
       .where(eq(tripsTable.userId, userId));
+  }
+
+  override async getTripOrganizationOverviewForUser(
+    userId: string,
+  ): Promise<TripOrganizationOverviewItem[]> {
+    const rows = await this.db
+      .select({
+        tripId: tripsTable.id,
+        flightStatus: tripOrganizationStatusesTable.flightStatus,
+        hotelStatus: tripOrganizationStatusesTable.hotelStatus,
+        activitiesStatus: tripOrganizationStatusesTable.activitiesStatus,
+      })
+      .from(tripsTable)
+      .leftJoin(
+        tripOrganizationStatusesTable,
+        eq(tripOrganizationStatusesTable.tripId, tripsTable.id),
+      )
+      .where(eq(tripsTable.userId, userId));
+
+    return rows.map((row) => {
+      if (
+        row.flightStatus === null ||
+        row.hotelStatus === null ||
+        row.activitiesStatus === null
+      ) {
+        return {
+          tripId: row.tripId,
+          status: { ...defaultTripOrganizationStatus },
+          persisted: false,
+        };
+      }
+      return {
+        tripId: row.tripId,
+        status: toTripOrganizationStatus({
+          flightStatus: row.flightStatus,
+          hotelStatus: row.hotelStatus,
+          activitiesStatus: row.activitiesStatus,
+        }),
+        persisted: true,
+      };
+    });
   }
 
   override async createTrip(insertTrip: InsertTrip): Promise<Trip> {

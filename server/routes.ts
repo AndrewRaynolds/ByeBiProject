@@ -677,6 +677,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/trips/organization-statuses", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const ownerId = req.supabaseUser!.id;
+      const overview = await storage.getTripOrganizationOverviewForUser(ownerId);
+      return res.status(200).json(overview);
+    } catch {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/trips/:tripId/organization-status", isAuthenticated, async (req: Request, res: Response) => {
     const tripId = parsePositiveIntegerParam(req.params.tripId);
     if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });

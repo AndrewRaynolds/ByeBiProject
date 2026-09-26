@@ -3,6 +3,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Trip, type MerchandiseOrderItem } from "@shared/schema";
 import type { ProductAnalyticsSummary } from "@shared/analyticsSchemas";
+import {
+  countCompletedTripOrganizationItems,
+  type TripOrganizationOverviewResponse,
+} from "@shared/tripOrganizationSchemas";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -76,6 +80,14 @@ export default function Dashboard() {
   // Fetch user trips
   const { data: trips, isLoading, error } = useQuery<Trip[]>({
     queryKey: [`/api/trips/user/${user?.id}`],
+    enabled: !!user?.id,
+  });
+  const {
+    data: tripOrganizationOverview,
+    isLoading: isLoadingTripOrganization,
+    error: tripOrganizationError,
+  } = useQuery<TripOrganizationOverviewResponse>({
+    queryKey: ["/api/trips/organization-statuses"],
     enabled: !!user?.id,
   });
 
@@ -223,6 +235,12 @@ export default function Dashboard() {
     active: adminOrders.filter((order) => activeStatuses.has(order.fulfillmentStatus)).length,
     completed: adminOrders.filter((order) => completedStatuses.has(order.fulfillmentStatus)).length,
   };
+  const organizationProgressByTripId = new globalThis.Map<number, number>(
+    (tripOrganizationOverview ?? []).map((item) => [
+      item.tripId,
+      countCompletedTripOrganizationItems(item.status),
+    ] as const),
+  );
 
   if (!isAuthenticated) {
     return null; // Will redirect in useEffect
@@ -331,6 +349,19 @@ export default function Dashboard() {
                             <GlassWater className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                             <span><span className="font-semibold">{t('dashboard.activities')}:</span> {(trip.activities ?? []).slice(0, 2).join(", ") || "—"}
                               {(trip.activities ?? []).length > 2 ? ` ${t('dashboard.moreActivities', { count: (trip.activities ?? []).length - 2 })}` : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2 sm:col-span-2">
+                            <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span>
+                              {tripOrganizationError
+                                ? t("dashboard.organizationUnavailable")
+                                : isLoadingTripOrganization
+                                  ? t("dashboard.organizationLoading")
+                                  : t("dashboard.organizationProgress", {
+                                      completed: organizationProgressByTripId.get(trip.id) ?? 0,
+                                      total: 3,
+                                    })}
                             </span>
                           </div>
                         </div>
