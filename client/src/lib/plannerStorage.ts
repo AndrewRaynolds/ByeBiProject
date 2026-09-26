@@ -6,9 +6,9 @@ import {
   type PlannerBrand,
   type PlannerDraft,
 } from "@shared/plannerSchemas";
-import { PROVIDER_SELECTION_STORAGE_KEY } from "@shared/providerSelectionSchemas";
 
 const LEGACY_ITINERARY_KEY = "currentItinerary";
+const RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
 
 export function getPlannerStorageKey(brand: PlannerBrand): string {
   return `${PLANNER_STORAGE_KEY}:${brand}`;
@@ -136,7 +136,7 @@ export function startNewPlannerTrip(storage: Storage, brand: PlannerBrand): Plan
   storage.removeItem(getPlannerStorageKey(brand));
   storage.removeItem(PLANNER_STORAGE_KEY);
   storage.removeItem(LEGACY_ITINERARY_KEY);
-  storage.removeItem(PROVIDER_SELECTION_STORAGE_KEY);
+  storage.removeItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY);
   storage.removeItem("selectedFlight");
   savePlannerDraft(storage, next);
   return next;
@@ -177,6 +177,7 @@ export function persistCheckoutBridge(storage: Storage, planner: PlannerDraft): 
   const bridge = createLegacyCheckoutBridge(planner);
   if (!bridge) return false;
   storage.setItem(LEGACY_ITINERARY_KEY, JSON.stringify(bridge));
+  storage.removeItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY);
   storage.removeItem("selectedFlight");
   return true;
 }

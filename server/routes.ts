@@ -13,15 +13,11 @@ import { fromZodError } from "zod-validation-error";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
 import { iataToCity, resolveIataCode } from "./services/cityMapping";
-import { getSafeAmadeusErrorMetadata } from "./services/amadeusHttp";
-import { searchHotelsForCheckout } from "./services/hotelSearch";
-import { searchFlightsForCheckout } from "./services/flightSearch";
 import { getStoreProducts, getProductDetail, getShippingRates, PrintfulOrderNotCancellableError } from "./services/printful";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { buildPublicBlogPost } from "./blog";
 import { blogSubmissionLimiter } from "./security";
-import { hotelSearchQuerySchema } from "@shared/hotelSchemas";
-import { flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
+import { buildAviasalesUrl, flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
 import { parsePositiveIntegerParam } from "./routeParams";
@@ -1167,62 +1163,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Amadeus Hotels - search endpoint
-  app.get("/api/hotels/search", async (req: Request, res: Response) => {
-    const parsedQuery = hotelSearchQuerySchema.safeParse(req.query);
-
-    if (!parsedQuery.success) {
-      return res.status(400).json({ error: "Invalid hotel search parameters" });
-    }
-
-    const result = await searchHotelsForCheckout(parsedQuery.data, {
-      onProviderError: (error) => {
-        console.error("Amadeus hotel search unavailable", getSafeAmadeusErrorMetadata(error));
-      },
-    });
-
-    return res.json(result);
-  });
-
-  // Flights search endpoint con checkoutUrl reali
-  app.get("/api/flights/search", async (req: Request, res: Response) => {
+  // Backward-compatible flight path: prepares an Aviasales handoff only.
+  // ByeBi does not fetch or claim live flight inventory here.
+  app.get("/api/flights/search", (req: Request, res: Response) => {
     const parsedQuery = flightSearchQuerySchema.safeParse(req.query);
     if (!parsedQuery.success) {
-      return res.status(400).json({ error: "Invalid flight search parameters" });
+      return res.status(400).json({ error: "Invalid flight handoff parameters" });
     }
 
-    const { origin, destination, departDate, returnDate, passengers, currency } = parsedQuery.data;
+    const { origin, destination, departDate, returnDate, passengers } = parsedQuery.data;
     const originIata = resolveIataCode(origin);
-    const destIata = resolveIataCode(destination);
-    if (!originIata || !destIata) {
+    const destinationIata = resolveIataCode(destination);
+    if (!originIata || !destinationIata) {
       return res.status(400).json({ error: "Unsupported origin or destination" });
     }
 
-    const numAdults = getAviasalesAdultCount(passengers);
-    if (!numAdults) {
+    const checkoutAdults = getAviasalesAdultCount(passengers);
+    if (!checkoutAdults) {
       return res.status(400).json({ error: "Invalid passenger count" });
     }
 
-    const result = await searchFlightsForCheckout({
+    const checkoutUrl = buildAviasalesUrl({
       originIata,
-      destinationIata: destIata,
+      destinationIata,
       departDate,
       returnDate,
-      passengers,
-      checkoutAdults: numAdults,
-      currency,
+      adults: checkoutAdults,
       partnerId: process.env.AVIASALES_PARTNER_ID || "byebi",
-    }, {
-      onProviderError: (error) => {
-        console.error("Amadeus flight search unavailable", getSafeAmadeusErrorMetadata(error));
-      },
     });
-
-    if (!result) {
-      return res.status(500).json({ error: "Flight checkout configuration is invalid" });
+    if (!checkoutUrl) {
+      return res.status(500).json({ error: "Flight handoff configuration is invalid" });
     }
 
-    return res.json(result);
+    return res.json({
+      origin: originIata,
+      destination: destinationIata,
+      departDate,
+      ...(returnDate ? { returnDate } : {}),
+      passengers,
+      checkoutAdults,
+      groupBookingRequired: passengers > checkoutAdults,
+      checkoutUrl,
+      handoff: {
+        provider: "aviasales",
+        url: checkoutUrl,
+        exactOffer: false,
+      },
+    });
   });
 
   const httpServer = createServer(app);

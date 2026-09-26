@@ -40,18 +40,6 @@ interface ChatContext {
   origin?: string;
   originCityName?: string;
 
-
-  hotels?: {
-    hotelId: string;
-    name: string;
-    stars?: string;
-    priceTotal: number;
-    currency: string;
-    offerId: string;
-    bookingFlow: "IN_APP" | "REDIRECT";
-    paymentPolicy: string;
-    roomDescription?: string;
-  }[];
 }
 
 export interface ToolCall {
@@ -70,7 +58,7 @@ export function enforceSelectedDestination(
 ): ToolCall {
   if (
     !(context.planner?.destination?.canonical || context.selectedDestination) ||
-    (toolCall.name !== "search_flights" && toolCall.name !== "search_hotels")
+    toolCall.name !== "search_flights"
   ) {
     return toolCall;
   }
@@ -163,32 +151,6 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       }
       return { valid: true };
     }
-    case "search_hotels": {
-      const destination = typeof args.destination === "string" ? args.destination.trim() : "";
-      const checkIn = typeof args.check_in_date === "string" ? args.check_in_date.trim() : "";
-      const checkOut = typeof args.check_out_date === "string" ? args.check_out_date.trim() : "";
-      const guests = Number(args.guests);
-
-      if (!destination) {
-        return {
-          valid: false,
-          message: "Which city should I search hotels in?",
-        };
-      }
-      if (!checkIn || !checkOut || !isValidISODate(checkIn) || !isValidISODate(checkOut)) {
-        return {
-          valid: false,
-          message: "I need your check-in and check-out dates to search hotels. When are you arriving and leaving?",
-        };
-      }
-      if (!Number.isInteger(guests) || guests <= 0) {
-        return {
-          valid: false,
-          message: "How many guests will be staying?",
-        };
-      }
-      return { valid: true };
-    }
     default:
       return { valid: false, message: "Can you clarify what you'd like to do?" };
   }
@@ -277,45 +239,6 @@ export async function executeToolCall(
         groupBookingRequired: groupSize > checkoutAdults,
       };
     }
-
-    case "search_hotels": {
-      const { searchHotels } = await import("./amadeus-hotels");
-      const { cityToIata } = await import("./cityMapping");
-
-      const destCity = typeof args.destination === "string" ? args.destination : "";
-      const destIata = cityToIata(destCity) || destCity.substring(0, 3).toUpperCase();
-      const checkIn = typeof args.check_in_date === "string" ? args.check_in_date : "";
-      const checkOut = typeof args.check_out_date === "string" ? args.check_out_date : "";
-      const guests = typeof args.guests === "number" ? args.guests : 2;
-
-      try {
-        const hotelResults = await searchHotels({
-          cityCode: destIata,
-          checkInDate: checkIn,
-          checkOutDate: checkOut,
-          adults: guests,
-          currency: "EUR",
-        });
-
-        const hotels = (hotelResults || []).slice(0, 5).map((h) => ({
-          hotelId: h.hotelId,
-          name: h.name,
-          stars: h.stars,
-          priceTotal: h.priceTotal,
-          currency: h.currency,
-          offerId: h.offerId,
-          bookingFlow: h.bookingFlow,
-          paymentPolicy: h.paymentPolicy,
-          roomDescription: h.roomDescription,
-        }));
-
-        return { hotels, destination: destIata };
-      } catch (error) {
-        console.error("Hotel search error", getSafeErrorMetadata(error));
-        return { error: "Failed to search hotels. Please try again.", hotels: [] };
-      }
-    }
-
 
     default:
       return { error: `Unknown tool: ${name}` };

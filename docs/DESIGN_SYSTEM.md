@@ -148,18 +148,17 @@ The AI must not appear to have completed a booking or verified provider availabi
 
 ## Provider UI
 
-Provider options are evidence-backed, external choices.
+The current Travel Options surface is handoff-only: ByeBi does not display live flight or hotel inventory.
 
-Each result or handoff should communicate, when available:
+Each current travel handoff should communicate:
 
-- provider name;
-- route, property, activity, or option identity;
-- relevant dates and party size;
-- price and currency with explicit scope;
-- live, unavailable, or incomplete data status;
-- whether the next action opens an external site.
+- the external provider name;
+- the route or destination context being handed off;
+- relevant dates and party size when useful;
+- that prices and availability are confirmed on the external provider;
+- that the next action opens an external site.
 
-Selection styling means “chosen in ByeBi,” not “reserved.” Do not use confirmation language, checkmarks, or success colors in a way that implies an external booking has completed.
+Do not show selectable flight/hotel result cards, internal price labels, or availability badges unless a verified live provider integration exists. If live Provider Results are reintroduced later, selection styling means “chosen in ByeBi,” never “reserved,” and freshness/price scope must be explicit.
 
 ## Loading, error, and empty states
 
@@ -188,10 +187,10 @@ Selection styling means “chosen in ByeBi,” not “reserved.” Do not use co
 Price labels must state what the number represents.
 
 - Planner budget: **per person**.
-- Flight result: provider-reported fare and currency; identify per-person or party scope from the contract before display.
-- Hotel result: provider-reported `priceTotal`, displayed as the total stay for the contract's explicit quoted occupancy. When the quote covers fewer people than the Planner group, state that it is not the full-group total.
-- Merchandise: separate commerce flow; show item, shipping, and total amounts according to Stripe/Printful requirements.
-- Estimates are labeled estimates; live results are labeled with provider context; stale values are not presented as current.
+- Current Travel Options do not display live flight or hotel prices inside ByeBi; users verify current prices on Aviasales and Booking.com.
+- GetYourGuide prices, when visited through the destination handoff, are owned by GetYourGuide and are not represented as ByeBi inventory.
+- Merchandise is a separate commerce flow; show item, shipping, and total amounts according to Stripe/Printful requirements.
+- If a verified live travel provider is integrated in the future, every displayed price must name its provider context and explicit scope, and stale values must not be presented as current.
 
 Never derive an unlabeled group total from `budgetPerPerson`, and never compare differently scoped prices as though they were equivalent.
 

@@ -85,11 +85,11 @@ Current compatibility behavior:
 - A `review-ready` Planner is explicitly converted into `currentItinerary` before navigating to `/checkout`, with a small provenance marker tied to that Planner snapshot.
 - The bridge removes the legacy `selectedFlight` value.
 - Unknown or corrupt versioned Planner values are discarded rather than trusted.
-- Closing the Planner preserves the current brand's draft. The explicit **New trip** action replaces only that brand's draft with a fresh one and clears the transient `currentItinerary`, `byebi:providerSelections:v1`, legacy `selectedFlight`, and in-memory chat/review-edit state. It never deletes Saved Trips.
+- Closing the Planner preserves the current brand's draft. The explicit **New trip** action replaces only that brand's draft with a fresh one and clears the transient `currentItinerary`, retired `byebi:providerSelections:v1` data, legacy `selectedFlight`, and in-memory chat/review-edit state. It never deletes Saved Trips.
 
 The compatibility bridge is transitional. New work should not expand `currentItinerary` into a canonical cross-domain model.
 
-The provider-options page now adapts these inputs into a narrow search context. It uses the valid `review-ready` Planner only when the checkout bridge carries matching Planner provenance. A bridge without matching provenance is treated as a legacy/Saved Trip flow even when its route, dates, and participant count happen to match a stored Planner. Provider Results and Selections are never written back into either input.
+The provider-options page now adapts these inputs into a narrow handoff context. It uses the valid `review-ready` Planner only when the checkout bridge carries matching Planner provenance. A bridge without matching provenance is treated as a legacy/Saved Trip flow even when its route, dates, and participant count happen to match a stored Planner. External handoff state is never written back into either input.
 
 Other current browser keys include `selectedBrand`, `byebi_locale`, per-trip booking-status keys, and a session-scoped analytics identifier. Each has a narrow owner and must not become a substitute for domain contracts.
 
@@ -105,42 +105,34 @@ Other current browser keys include `selectedBrand`, `byebi_locale`, per-trip boo
 
 ## Provider architecture
 
-Provider responsibilities are isolated from UI rendering:
+ByeBi currently uses an external-handoff-only travel model. No live flight or hotel inventory provider is active in the runtime.
 
-- `server/services/amadeus-flights.ts` and `amadeus-hotels.ts` call Amadeus.
-- `server/services/flightSearch.ts` normalizes and deterministically ranks live flight results, while building an Aviasales handoff URL.
-- `server/services/hotelSearch.ts` normalizes and sorts live hotel results.
-- `/api/flights/search` and `/api/hotels/search` validate queries with shared schemas.
-- `client/src/lib/affiliateLinks.ts` and `aviasales.ts` build approved external handoffs.
-- `client/src/lib/getyourguide.ts` resolves curated GetYourGuide city links.
+- `/api/flights/search` is retained as a backward-compatible URL-construction endpoint. It validates trip search inputs, resolves IATA codes, applies Aviasales' 9-adult search cap, and returns a non-exact Aviasales search handoff. It performs no external inventory request.
+- `client/src/lib/affiliateLinks.ts` builds the Booking.com hotel search handoff from destination, dates, and the real group size.
+- `client/src/lib/getyourguide.ts` resolves the approved GetYourGuide destination-level handoff.
+- The active Travel Options UI does not display internal flight or hotel prices, availability, offer cards, or booking confirmations.
+- Aviasales, Booking.com, and GetYourGuide own current price, availability, terms, and booking confirmation on their external sites.
 
-Booking.com and GetYourGuide are currently handoff destinations, not booking APIs. Aviasales receives the non-exact flight search handoff; Amadeus supplies current search data where available.
-
-Amadeus runtime selection is centralized in `server/services/amadeusConfig.ts`. `AMADEUS_ENV` accepts `production`, `prod`, or `live` for the live endpoint and `test`, `sandbox`, `development`, or `dev` for the test endpoint; when omitted, `NODE_ENV=production` selects live and other runtimes select test. Environment-specific credential pairs (`AMADEUS_API_KEY_LIVE` / `AMADEUS_API_SECRET_LIVE` and `AMADEUS_API_KEY_TEST` / `AMADEUS_API_SECRET_TEST`) are preferred. The legacy `AMADEUS_API_KEY` / `AMADEUS_API_SECRET` pair remains a backward-compatible fallback. Startup diagnostics log only the selected environment, credential source, and presence booleans; provider failures log sanitized status/code/title metadata and never credential values.
+The retired Amadeus Self-Service runtime, OAuth/configuration helpers, flight/hotel search adapters, normalized Amadeus result contracts, and internal hotel-booking dead code are not part of the current codebase.
 
 ## Provider Results
 
-Shared response contracts live in `shared/flightSchemas.ts` and `shared/hotelSchemas.ts`.
+There is no active live Provider Results contract for flights or hotels. The Provider Results domain remains a durable architectural boundary so that a future verified provider can be integrated without placing provider data inside the Planner or Saved Trip.
 
-- Flight results include the provider-supplied Amadeus offer identifier, provider, segments, airlines, price/currency, searched-passenger price scope, requested group size, data status, fetch time, and a separate non-exact Aviasales search handoff.
-- Hotel results include the Amadeus hotel/offer identifiers, provider, total-stay price/currency, stay dates, requested group size, and explicit quoted occupancy. Amadeus currently quotes at most two adults per room, so `priceTotal` is not represented as a full-group total.
-- Results are sorted deterministically before presentation.
-- In canonical product flows, provider failures or empty results must surface as empty, error, or explicit `unavailable` states; fabricated provider offers are forbidden.
-- Hotel search returns real provider results, an empty live result, or an unavailable state. The former non-production synthetic hotel inventory fallback is no longer part of the search path.
-- A valid handoff URL may still be provided when live flight data is unavailable; it must not be presented as confirmed availability.
+Any future live provider integration must:
 
-Provider Results remain request-scoped UI/query data and are not saved as Planner or Saved Trip data. Only the small canonical display/handoff subset required for an explicit selection may be persisted; raw provider payloads are not persisted.
+- normalize untrusted provider data at a validated boundary;
+- identify provider and freshness;
+- state price scope and currency precisely;
+- distinguish live, empty, unavailable, and stale states;
+- never fabricate prices, availability, inventory, or booking success;
+- keep raw provider payloads out of Planner and Saved Trip persistence.
 
 ## Selection state
 
-The shared, versioned Selection contract is `shared/providerSelectionSchemas.ts`, currently version 1, and browser persistence uses `byebi:providerSelections:v1`.
+There is no active persisted flight or hotel Selection contract because there are no verified live flight or hotel results to select.
 
-- Flight and hotel choices are explicit, independently optional, and contain only canonical display and handoff metadata.
-- A deterministic provider-search fingerprint covers origin, destination, dates, and participants. Planner-only preference changes do not invalidate flight or hotel selections; material provider-search changes do. A corrupt, unknown-version, or non-matching persisted selection is discarded.
-- After each successful live provider response, a restored selection is reconciled by provider identity. Matching selections are refreshed from the current normalized result and disappeared offers are cleared. Transient unavailable/error states retain persisted choices but do not present their stored prices or handoff actions as current live data.
-- Selection does not modify Planner state, `currentItinerary`, or Saved Trip persistence and does not trigger authentication.
-- The Aviasales handoff remains a search handoff (`exactOffer: false`), even when an Amadeus offer is selected.
-- GetYourGuide remains a real city-level destination handoff. There is no persisted activity selection because no verified item-level inventory contract exists.
+The former browser key `byebi:providerSelections:v1` is retired. Current Travel Options ignores and removes stale values from that key, and **New trip** also clears it. A future provider selection contract must be introduced deliberately and versioned rather than reusing stale Amadeus-era data.
 
 ## Saved Trip persistence
 
@@ -161,14 +153,13 @@ Supabase Auth owns sign-up, sign-in, password recovery, browser session refresh,
 - The browser attaches the current access token to API requests.
 - Server middleware validates tokens and resolves the authenticated user.
 - Protected routes include saved trips, Trip Hub ownership, expenses, and administrative operations.
-- Browsing, Planner drafting, Provider Results, and external handoff do not require Saved Trip persistence.
+- Browsing, Planner drafting, Travel Options, and external handoff do not require Saved Trip persistence.
 - Unauthenticated **Save trip** sends the user to `/auth?next=/checkout`; the valid browser context remains available for the explicit post-auth save.
 
 ## Integrations
 
 - OpenAI — conversational planning tool loop.
-- Amadeus — flight and hotel search.
-- Aviasales, Booking.com, GetYourGuide — approved external travel handoffs.
+- Aviasales, Booking.com, GetYourGuide — approved external travel handoffs. No live flight or hotel inventory provider is currently active.
 - Supabase — authentication and hosted PostgreSQL integration.
 - Stripe and Printful — separate merchandise checkout and fulfillment flow.
 - Resend — transactional and newsletter email.
@@ -229,7 +220,6 @@ Do not treat Replit-local history as canonical, and do not automatically sync, p
 - `/checkout` is named like an internal checkout but functions as a provider-options and external-handoff page.
 - `currentItinerary` remains the compatibility input for `/checkout` while the versioned Planner uses its own key.
 - Saved Trip storage names the per-person value `budget`, so the semantic relies on product and conversion invariants.
-- The unused internal `bookHotel()` service, including legacy non-production mock-booking behavior, remains dead code with no public API route. It is outside the external-handoff flow and should be removed in a separately scoped cleanup.
 - Some older UI surfaces use page-specific styling instead of only shared design primitives.
 
 These are documentation findings, not authorization to refactor or migrate them.

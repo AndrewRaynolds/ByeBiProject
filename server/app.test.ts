@@ -35,16 +35,6 @@ vi.mock('./services/openai', () => ({
   streamOpenAIChatCompletion: vi.fn(),
 }));
 
-// Mock amadeus-hotels service
-vi.mock('./services/amadeus-hotels', () => ({
-  searchHotels: vi.fn().mockResolvedValue([]),
-  bookHotel: vi.fn().mockResolvedValue({ success: true }),
-}));
-
-// Mock Amadeus flights to keep route imports independent from external credentials
-vi.mock('./services/amadeus-flights', () => ({
-  searchFlights: vi.fn().mockResolvedValue([]),
-}));
 
 describe('Express App', () => {
   describe('app creation', () => {

@@ -40,7 +40,7 @@ Do not explore unrelated directories unless the task requires it. Avoid `node_mo
 
 ### Travel
 
-Travel providers include Amadeus, Aviasales, Booking.com, and GetYourGuide. Do not create fake travel results when providers are unavailable.
+Current travel integrations are external handoffs to Aviasales, Booking.com, and GetYourGuide. No live flight or hotel inventory provider is active. Do not create fake travel results, prices, or availability.
 
 ### Saved Trips
 

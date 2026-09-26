@@ -15,39 +15,6 @@ vi.mock('openai', () => {
   };
 });
 
-// Mock amadeus-flights
-vi.mock('./amadeus-flights', () => ({
-  searchFlights: vi.fn().mockResolvedValue([
-    {
-      id: '1',
-      price: 89,
-      currency: 'EUR',
-      outbound: [{
-        departure: { iataCode: 'ROM', at: '2025-06-15T10:00:00' },
-        arrival: { iataCode: 'BCN', at: '2025-06-15T12:30:00' },
-        carrierCode: 'VY',
-        carrierName: 'Vueling',
-        flightNumber: '456',
-        duration: 'PT2H30M'
-      }],
-      inbound: [{
-        departure: { iataCode: 'BCN', at: '2025-06-20T18:00:00' },
-        arrival: { iataCode: 'ROM', at: '2025-06-20T20:30:00' },
-        carrierCode: 'VY',
-        carrierName: 'Vueling',
-        flightNumber: '789',
-        duration: 'PT2H30M'
-      }],
-      airlines: ['Vueling'],
-      totalDuration: 'PT2H30M',
-      stops: 0
-    }
-  ])
-}));
-
-vi.mock('./amadeus-hotels', () => ({
-  searchHotels: vi.fn().mockResolvedValue([]),
-}));
 
 // Mock cityMapping
 vi.mock('./cityMapping', () => ({
@@ -188,46 +155,6 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     expect(flightResult.checkoutReady).toBe(true);
     expect(flightResult.checkoutUrl).toContain('https://www.aviasales.com/search/');
     expect(mockCreate).toHaveBeenCalledTimes(1);
-  });
-
-  it('continues when a tool requires an OpenAI follow-up', async () => {
-    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
-
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      {
-        tool_call: {
-          id: 'call_1',
-          name: 'search_hotels',
-          arguments: JSON.stringify({
-            destination: 'Barcelona',
-            check_in_date: '2027-06-15',
-            check_out_date: '2027-06-20',
-            guests: 2,
-          })
-        }
-      },
-      { finish: 'tool_calls' }
-    ]));
-
-    mockCreate.mockResolvedValueOnce(createMockStream([
-      { content: 'Here are the available hotels.' },
-      { finish: 'stop' }
-    ]));
-
-    const chunks: StreamChunk[] = [];
-    for await (const chunk of streamOpenAIChatCompletionWithTools(
-      'I want to fly from Rome to Barcelona',
-      {},
-      []
-    )) {
-      chunks.push(chunk);
-    }
-
-    expect(mockCreate).toHaveBeenCalledTimes(2);
-
-    const toolCallChunks = chunks.filter(c => c.type === 'tool_call');
-    expect(toolCallChunks).toHaveLength(1);
-    expect((toolCallChunks[0] as any).toolCall.name).toBe('search_hotels');
   });
 
   it('stops loop when no tool calls are returned', async () => {
