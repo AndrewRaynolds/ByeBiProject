@@ -2,6 +2,8 @@
 
 These instructions apply to `supabase/` and take precedence over repository-wide guidance when they are more specific.
 
+- Consult `docs/ARCHITECTURE.md`, the explicit product requirement in `docs/PRD.md`, and relevant ADRs before changing persistence.
+- Avoid adding persistence when the product does not require it.
 - Represent production schema changes only as ordered, versioned migrations in `supabase/migrations/`.
 - Never run `drizzle-kit push` against production or use it as the production deployment path.
 - Prefer additive, predictable, and safely deployable changes.

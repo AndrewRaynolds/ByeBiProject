@@ -5,6 +5,7 @@ These instructions apply to `server/` and take precedence over repository-wide g
 ## API and Security
 
 - Follow the existing Express and TypeScript structure.
+- For server work, consult `docs/ARCHITECTURE.md` for API, provider, authentication, and persistence boundaries; `docs/PRD.md` for product semantics; and the relevant accepted ADRs.
 - Validate untrusted input with Zod at API and external-system boundaries.
 - Enforce authorization, resource ownership, and sensitive business rules server-side.
 - Return sanitized errors. Do not expose stack traces, provider payloads, secrets, or sensitive internal details to clients.
