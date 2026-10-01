@@ -27,6 +27,14 @@ describe("chatStreamRequestSchema", () => {
     expect(chatStreamRequestSchema.safeParse(validRequest).success).toBe(true);
   });
 
+  it.each(["it", "en", "es"])("accepts supported locale %s", (locale) => {
+    expect(chatStreamRequestSchema.safeParse({ ...validRequest, locale }).success).toBe(true);
+  });
+
+  it("rejects an unsupported locale", () => {
+    expect(chatStreamRequestSchema.safeParse({ ...validRequest, locale: "fr" }).success).toBe(false);
+  });
+
   it("accepts the shared planner contract and rejects an unknown planner version", () => {
     const planner = createPlannerDraft({ brand: "byebro", destination: "Ibiza" });
     expect(chatStreamRequestSchema.safeParse({ message: "continua", planner }).success).toBe(true);

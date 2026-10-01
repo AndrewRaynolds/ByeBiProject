@@ -24,6 +24,7 @@ interface ChatMessage {
 }
 
 interface ChatContext {
+  locale?: "it" | "en" | "es";
   planner?: PlannerDraft;
   selectedDestination?: string;
   tripDetails?: {
@@ -330,6 +331,10 @@ function buildContextualPrompt(context: ChatContext): string {
     }
   }
 
+  if (context.locale) {
+    const language = { it: "Italian", en: "English", es: "Spanish" }[context.locale];
+    contextualPrompt += `\n\nRESPONSE LANGUAGE: Always respond in ${language}, the selected interface language. This overrides language detection from user messages or conversation history. Short replies, numbers, destination names and tool results must not change the response language.`;
+  }
 
   return contextualPrompt;
 }
@@ -513,12 +518,18 @@ export function detectUserLanguage(
   userMessage: string,
   conversationHistory: ChatMessage[] = [],
 ): string {
-  const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === "user");
-  const text = `${lastUserMsg?.content || ""} ${userMessage}`.toLowerCase();
   const itPatterns = /\b(ciao|voglio|andare|siamo|partiamo|dal|al|persone|voli|quando|dove|prenota|perfetto|procedi)\b/;
   const esPatterns = /\b(hola|quiero|somos|salimos|del|personas|vuelos|cuando|donde|reservar|perfecto)\b/;
-  if (itPatterns.test(text)) return "it";
-  if (esPatterns.test(text)) return "es";
+  const enPatterns = /\b(hello|want|from|people|flights|where|when|book|please|travel)\b/;
+  // Legacy callers without a locale retain the last recognizable user language.
+  const userTexts = [userMessage, ...[...conversationHistory].reverse()
+    .filter((message) => message.role === "user").map((message) => message.content)];
+  for (const message of userTexts) {
+    const text = message.toLowerCase();
+    if (itPatterns.test(text)) return "it";
+    if (esPatterns.test(text)) return "es";
+    if (enPatterns.test(text)) return "en";
+  }
   return "en";
 }
 
@@ -527,12 +538,16 @@ interface LocalStrings {
   noFlights: (o: string, d: string) => string;
   plannerReady: string;
   missingPlannerField: Record<string, string>;
+  requestIncomplete: string;
+  requestError: string;
 }
 
 const STRINGS: Record<string, LocalStrings> = {
   it: {
     noFlightsError: (o, d) => `Non sono riuscito a preparare il collegamento da ${o} a ${d}. Controlla città e date, poi riprova.`,
     noFlights: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
+    requestIncomplete: "Non sono riuscito a completare la richiesta. Riprova.",
+    requestError: "Si è verificato un problema. Riprova.",
     plannerReady: "Il tuo travel brief è pronto. Controlla i dettagli e modificali se serve.",
     missingPlannerField: {
       origin: "Da quale città partite?",
@@ -547,6 +562,8 @@ const STRINGS: Record<string, LocalStrings> = {
   en: {
     noFlightsError: (o, d) => `I couldn't prepare the connection from ${o} to ${d}. Check the cities and dates, then try again.`,
     noFlights: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
+    requestIncomplete: "I couldn't complete the request. Please try again.",
+    requestError: "There was a problem. Please try again.",
     plannerReady: "Your travel brief is ready. Review the details and edit anything you need.",
     missingPlannerField: {
       origin: "Which city are you departing from?",
@@ -561,6 +578,8 @@ const STRINGS: Record<string, LocalStrings> = {
   es: {
     noFlightsError: (o, d) => `No pude preparar la conexión de ${o} a ${d}. Comprueba las ciudades y las fechas e inténtalo de nuevo.`,
     noFlights: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
+    requestIncomplete: "No pude completar la solicitud. Inténtalo de nuevo.",
+    requestError: "Se ha producido un problema. Inténtalo de nuevo.",
     plannerReady: "Tu resumen de viaje está listo. Revisa los datos y modifica lo que necesites.",
     missingPlannerField: {
       origin: "¿Desde qué ciudad salís?",
@@ -578,8 +597,9 @@ export function getDeterministicPlannerFollowUp(
   planner: PlannerDraft,
   userMessage: string,
   conversationHistory: ChatMessage[] = [],
+  locale?: ChatContext["locale"],
 ): string {
-  const lang = detectUserLanguage(userMessage, conversationHistory);
+  const lang = locale ?? detectUserLanguage(userMessage, conversationHistory);
   const strings = STRINGS[lang] || STRINGS.en;
   const missingFields = getMissingPlannerFields(planner);
   if (missingFields.length === 0 && planner.status === "review-ready") return strings.plannerReady;
@@ -599,7 +619,7 @@ function generateLocalToolResponse(
   userMessage: string,
   conversationHistory: ChatMessage[] = [],
 ): string | null {
-  const lang = detectUserLanguage(userMessage, conversationHistory);
+  const lang = context.locale ?? detectUserLanguage(userMessage, conversationHistory);
   const s = STRINGS[lang] || STRINGS.en;
 
   for (const { name, result, args } of toolResults) {
@@ -607,7 +627,7 @@ function generateLocalToolResponse(
       case "update_planner": {
         const parsed = plannerDraftSchema.safeParse(result.planner);
         if (parsed.success) {
-          return getDeterministicPlannerFollowUp(parsed.data, userMessage, conversationHistory);
+          return getDeterministicPlannerFollowUp(parsed.data, userMessage, conversationHistory, context.locale);
         }
         break;
       }
@@ -832,7 +852,7 @@ export async function* streamOpenAIChatCompletionWithTools(
     if (!completed && !signal?.aborted) {
       yield {
         type: "content",
-        content: "Sorry, I couldn't complete the request. Please try again.",
+        content: STRINGS[context.locale ?? detectUserLanguage(userMessage, conversationHistory)].requestIncomplete,
       };
     }
   } catch (error) {
@@ -840,7 +860,7 @@ export async function* streamOpenAIChatCompletionWithTools(
     console.error("OpenAI streaming error", getSafeErrorMetadata(error));
     yield {
       type: "content",
-      content: "Sorry, there was a problem. Please try again!",
+      content: STRINGS[context.locale ?? detectUserLanguage(userMessage, conversationHistory)].requestError,
     };
   }
 }

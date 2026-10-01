@@ -45,6 +45,7 @@ function renderHeader(locale: Locale = "it", brand: "byebro" | "byebride" = "bye
 describe("Header navigation", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState(null, "", "/destinations");
     authState.user = null;
   });
 

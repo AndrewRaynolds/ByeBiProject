@@ -93,6 +93,38 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     mockCreate.mockReset();
   });
 
+  it.each([
+    ['it', 'Italian', 'Quali sono le date di partenza e ritorno?'],
+    ['en', 'English', 'What are your departure and return dates?'],
+    ['es', 'Spanish', '¿Cuáles son las fechas de salida y regreso?'],
+  ] as const)('keeps selected %s in model instructions and local tool responses', async (locale, language, expected) => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    mockCreate.mockResolvedValueOnce(createMockStream([
+      { tool_call: { id: 'locale_test', name: 'update_planner', arguments: JSON.stringify({
+        origin: 'Rome', destination: 'Barcelona', startDate: null, endDate: null,
+        participants: 6, budgetPerPerson: null, preferenceArchetype: null, interests: null,
+      }) } },
+      { finish: 'tool_calls' },
+    ]));
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools('6', { locale, partyType: 'bachelorette' }, [
+      { role: 'user', content: 'Voglio organizzare un viaggio' },
+    ])) chunks.push(chunk);
+    expect(mockCreate.mock.calls[0][0].messages[0].content).toContain(`Always respond in ${language}`);
+    expect(chunks.filter(chunk => chunk.type === 'content')).toEqual([{ type: 'content', content: expected }]);
+  });
+
+  it.each([
+    ['it', 'Si è verificato un problema. Riprova.'],
+    ['es', 'Se ha producido un problema. Inténtalo de nuevo.'],
+  ] as const)('localizes streaming failures in %s', async (locale, expected) => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    mockCreate.mockRejectedValueOnce(new Error('unavailable'));
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools('6', { locale })) chunks.push(chunk);
+    expect(chunks).toEqual([{ type: 'content', content: expected }]);
+  });
+
   it('streams content without tool calls', async () => {
     // Import fresh after mocks are set
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');

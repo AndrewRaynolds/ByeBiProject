@@ -32,23 +32,23 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
   };
 
   return (
-    <Card className="bg-gradient-to-br from-orange-900/30 to-amber-900/30 backdrop-blur-sm border-2 border-orange-500/50 shadow-xl">
+    <Card className="border-2 border-primary/30 bg-card shadow-soft">
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg flex-shrink-0">
-            <Compass className="w-6 h-6 text-white" />
+          <div className="rounded-xl bg-primary p-3 text-primary-foreground flex-shrink-0">
+            <Compass className="w-6 h-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-white mb-1">
+            <h3 className="text-lg font-bold text-card-foreground mb-1">
               {t('gyg.title', { city: destinationCity || '' })}
             </h3>
-            <p className="text-white/70 text-sm mb-4">
+            <p className="text-muted-foreground text-sm mb-4">
               {t('gyg.subtitle')}
             </p>
-            <AffiliateNotice className="mb-4" showText={placement !== "checkout"} />
+            <AffiliateNotice className="mb-4" variant="light" />
             <Button
               onClick={handleClick}
-              className="h-auto min-h-11 w-full whitespace-normal bg-gradient-to-r from-orange-500 to-amber-600 text-center font-semibold leading-tight text-white hover:from-orange-600 hover:to-amber-700 sm:w-auto"
+              className="h-auto min-h-11 w-full whitespace-normal text-center font-semibold leading-tight sm:w-auto"
               data-testid={`button-gyg-${placement}`}
             >
               <Compass className="w-4 h-4 mr-2" />

@@ -142,6 +142,16 @@ describe("PlannerDialog", () => {
     expect(screen.getByRole("textbox", { name: "Scrivi il tuo messaggio..." })).toBeInTheDocument();
   });
 
+  it.each(["it", "en", "es"])("sends the selected %s locale with a numeric reply", async (locale) => {
+    localStorage.setItem("byebi_locale", locale);
+    vi.mocked(apiRequest).mockResolvedValue({} as Response);
+    vi.mocked(consumeJsonSse).mockResolvedValue();
+    renderPlanner(<PlannerDialog brand="byebride" open onOpenChange={vi.fn()} initialMessage="6" />);
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
+      "POST", "/api/chat/openai-stream", expect.objectContaining({ message: "6", locale }), expect.any(Object),
+    ));
+  });
+
   it("moves from collection to review only after a validated complete tool result", async () => {
     const ready = createPlannerDraft({
       brand: "byebro", origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13",
@@ -157,6 +167,7 @@ describe("PlannerDialog", () => {
 
     await waitFor(() => expect(screen.getByTestId("planner-review")).toBeInTheDocument());
     expect(apiRequest).toHaveBeenCalledWith("POST", "/api/chat/openai-stream", expect.objectContaining({
+      locale: "it",
       planner: expect.objectContaining({ status: "draft", budgetPerPerson: null }),
     }), expect.any(Object));
   });

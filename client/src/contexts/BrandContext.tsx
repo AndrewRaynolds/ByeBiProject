@@ -24,7 +24,9 @@ export function applyBrandTheme(brand: Brand | null) {
 }
 
 export function initializeBrandTheme(): Brand | null {
-  const storedBrand = readStoredBrand();
+  // A fresh visit to the general entry point always starts with ByeBi.
+  // Keep the stored choice for deep links and the current in-memory session.
+  const storedBrand = window.location.pathname === "/" ? null : readStoredBrand();
   applyBrandTheme(storedBrand);
   return storedBrand;
 }

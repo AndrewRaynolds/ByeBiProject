@@ -66,6 +66,22 @@ describe('expense group ownership', () => {
     await expect(storage.isExpenseGroupOwner(group.id, 'user-b')).resolves.toBe(false);
   });
 
+  it('deletes only an owned group and its expenses, preserving other groups', async () => {
+    const storage = new MemStorage();
+    const group = await storage.createExpenseGroup({ name: 'Weekend', members: ['Alice'] }, 'user-a');
+    const other = await storage.createExpenseGroup({ name: 'Other', members: ['Bob'] }, 'user-b');
+    const first = await storage.createExpense({ groupId: group.id, description: 'Dinner', amount: 1000, paidBy: 'Alice', splitBetween: ['Alice'], category: 'food', date: '2027-01-01' });
+    const second = await storage.createExpense({ groupId: other.id, description: 'Lunch', amount: 500, paidBy: 'Bob', splitBetween: ['Bob'], category: 'food', date: '2027-01-01' });
+    expect(await storage.deleteExpenseGroupForUser(group.id, 'user-b')).toBe(false);
+    expect(await storage.getExpense(first.id)).toBeDefined();
+    expect(await storage.deleteExpenseGroupForUser(group.id, 'user-a')).toBe(true);
+    expect(await storage.getExpenseGroup(group.id)).toBeUndefined();
+    expect(await storage.getExpensesByGroupId(group.id)).toEqual([]);
+    expect(await storage.getExpense(second.id)).toBeDefined();
+    expect(await storage.getExpenseGroup(other.id)).toBeDefined();
+    expect(await storage.deleteExpenseGroupForUser(group.id, 'user-a')).toBe(false);
+  });
+
   it('filters owned groups by trip', async () => {
     const storage = new MemStorage();
     const tripOne = await storage.createExpenseGroup(

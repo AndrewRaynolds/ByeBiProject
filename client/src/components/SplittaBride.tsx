@@ -1,3 +1,4 @@
+import { DeleteExpenseGroupButton } from "@/components/DeleteExpenseGroupButton";
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -586,6 +587,15 @@ export function SplittaBride() {
                   >
                     {t('splittabro.backToGroups')}
                   </Button>
+                  <DeleteExpenseGroupButton
+                    group={selectedGroup}
+                    onDeleted={() => {
+                      setGroups((current) => current.filter((group) => group.id !== selectedGroup.id));
+                      setSelectedGroup(null);
+                      setExpenses([]);
+                      setShowCreateExpense(false);
+                    }}
+                  />
                   {selectedGroup.tripId && (
                     <Button
                       type="button"

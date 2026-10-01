@@ -1014,6 +1014,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/expense-groups/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parsePositiveIntegerParam(req.params.id);
+      if (id === null) return res.status(400).json({ message: "Invalid expense group ID" });
+      const deleted = await storage.deleteExpenseGroupForUser(id, req.supabaseUser!.id);
+      if (!deleted) return res.status(404).json({ message: "Expense group not found" });
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting expense group", getSafeErrorMetadata(error));
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // SplittaBro - Expense routes
   app.post("/api/expenses", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1148,6 +1161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         message,
         planner,
+        locale,
         selectedDestination,
         tripDetails,
         conversationHistory,
@@ -1174,6 +1188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const context = {
         planner,
+        locale,
         selectedDestination,
         tripDetails,
         partyType: planner?.partyType ?? partyType ?? 'bachelor',

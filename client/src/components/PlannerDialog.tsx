@@ -23,7 +23,7 @@ type ReviewFieldName = "origin" | "destination" | "startDate" | "endDate" | "par
 type ReviewErrors = Partial<Record<ReviewFieldName, string>>;
 
 export default function PlannerDialog({ brand, open, onOpenChange, initialMessage }: PlannerDialogProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [, setLocation] = useLocation();
   const [planner, setPlanner] = useState<PlannerDraft>(() => loadPlannerDraft(localStorage, brand));
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -75,6 +75,7 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
       const response = await apiRequest("POST", "/api/chat/openai-stream", {
         message,
         planner,
+        locale,
         conversationHistory: messagesRef.current.slice(-12).map((item) => ({ role: item.sender, content: item.content.slice(0, 8_000) })),
       }, { signal: controller.signal, timeoutMs: 30_000 });
       if (requestGenerationRef.current !== requestGeneration) return;
@@ -103,7 +104,7 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
         setIsLoading(false);
       }
     }
-  }, [acceptServerPlanner, isLoading, planner, t]);
+  }, [acceptServerPlanner, isLoading, locale, planner, t]);
 
   useEffect(() => {
     const justOpened = open && !wasOpenRef.current;
@@ -210,8 +211,10 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
           <ReviewField label={t("planner.endDate")} name="endDate" value={planner.endDate ?? ""} editing={isEditing} type="date" min={planner.startDate ?? getLocalDateOnly()} error={reviewErrors.endDate} />
           <ReviewField label={t("planner.participants")} name="participants" value={String(planner.participants ?? "")} editing={isEditing} type="number" max={50} error={reviewErrors.participants} />
           <ReviewField label={t("planner.budgetPerPerson")} name="budgetPerPerson" value={String(planner.budgetPerPerson ?? "")} editing={isEditing} type="number" max={100000} suffix="€" error={reviewErrors.budgetPerPerson} />
+          <p className="col-span-full text-sm text-muted-foreground">{t("planner.budgetHelp")}</p>
           <ReviewField label={t("planner.experienceType")} name="archetype" value={planner.preferences?.archetype ?? ""} editing={isEditing} required={false} />
           <ReviewField label={t("planner.interests")} name="interests" value={planner.preferences?.interests.join(", ") ?? ""} editing={isEditing} required={false} error={reviewErrors.preferences} />
+          <p className="col-span-full text-sm text-muted-foreground">{t("planner.preferencesHelp")}</p>
           {reviewError && <p className="col-span-full text-sm text-destructive" role="alert">{reviewError}</p>}
           <div className="col-span-full flex flex-col gap-2 pt-2 sm:flex-row">{isEditing ? <><Button type="submit" className="min-h-11 flex-1">{t("planner.saveChanges")}</Button><Button type="button" variant="outline" className="min-h-11 flex-1" onClick={cancelReviewEdits}><X className="mr-2 h-4 w-4" aria-hidden="true" />{t("planner.cancelEdit")}</Button></> : <Button type="button" variant="outline" className="min-h-11 flex-1" onClick={() => { setReviewError(null); setReviewErrors({}); setIsEditing(true); }}><Pencil className="mr-2 h-4 w-4" aria-hidden="true" />{t("planner.edit")}</Button>}<Button type="button" className="min-h-11 flex-1" onClick={continueToOptions} disabled={isEditing || planner.status !== "review-ready"}>{t("planner.continueOptions")}</Button></div>
         </form>

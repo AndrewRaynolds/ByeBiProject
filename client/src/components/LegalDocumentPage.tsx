@@ -9,21 +9,12 @@ type Section = { title: string; paragraphs: string[] };
 type DocumentContent = { title: string; updated: string; intro: string; sections: Section[] };
 
 const sellerIdentity = (locale: Locale): string => {
-  if (!isSellerConfigComplete) {
-    return locale === "it"
-      ? "I dati identificativi del venditore saranno pubblicati prima dell'attivazione delle vendite reali."
-      : locale === "es"
-        ? "Los datos identificativos del vendedor se publicarán antes de activar las ventas reales."
-        : "The seller's identifying details will be published before live sales are enabled.";
-  }
-
-  return [
-    sellerConfig.legalName,
-    sellerConfig.legalAddress,
-    sellerConfig.country,
-    sellerConfig.vatId ? `VAT/Tax ID: ${sellerConfig.vatId}` : "",
-    sellerConfig.contactEmail,
-  ].filter(Boolean).join(" — ");
+  if (sellerConfig.contactEmail) return sellerConfig.contactEmail;
+  return locale === "it"
+    ? "Il contatto email ByeBi sarà pubblicato prima dell'attivazione delle vendite reali."
+    : locale === "es"
+      ? "El contacto de correo de ByeBi se publicará antes de activar las ventas reales."
+      : "The ByeBi contact email will be published before live sales are enabled.";
 };
 
 export const legalDocumentContent: Record<Locale, Record<LegalDocument, DocumentContent>> = {
