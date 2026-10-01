@@ -30,7 +30,7 @@ Brand variants may change accents, imagery, icons, examples, copy, and tone. The
 
 ## Core journey
 
-1. The user chooses ByeBro or ByeBride.
+1. A fresh visit to `/` shows the neutral ByeBi brand choice, even when a previous brand is stored. The user chooses ByeBro or ByeBride; deep links retain the stored brand and selecting a brand does not clear Planner drafts.
 2. The user discovers destinations or experiences, or starts with the AI Planner.
 3. The Planner collects and validates the trip intent.
 4. The product presents a reviewable travel brief before provider handoff.
@@ -139,6 +139,8 @@ It may provide:
 - clear status that distinguishes planning from external booking.
 
 The organization checklist is durable coordination state for the authenticated owner. The Dashboard may summarize its completion progress so organizers can see which Saved Trips still need attention without opening each Trip Hub. Progress remains coordination language, not provider-verified booking data, and is not included in the public shared-trip payload.
+
+Expense-group owners can explicitly delete a group after confirmation. Deletion removes its expenses but preserves the linked Saved Trip.
 
 The Trip Hub must not infer that a provider option was booked merely because it was selected, opened, or manually marked as handled. Saved Trip data is durable user intent and coordination context, not a booking record.
 

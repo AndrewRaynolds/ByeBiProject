@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 describe("Footer", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState(null, "", "/destinations");
     localStorage.setItem("selectedBrand", "byebride");
     localStorage.setItem("byebi_locale", "it");
   });

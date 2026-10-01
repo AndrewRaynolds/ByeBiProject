@@ -64,6 +64,16 @@ describe('detectUserLanguage', () => {
   });
 });
 
+describe('language continuity for legacy clients', () => {
+  it.each(['6', '700', 'ok'])('keeps Italian after an ambiguous reply %s', (message) => {
+    expect(detectUserLanguage(message, [
+      { role: 'user', content: 'Voglio organizzare il viaggio' },
+      { role: 'assistant', content: 'How many people?' },
+      { role: 'user', content: '6' },
+    ])).toBe('it');
+  });
+});
+
 describe('deterministic planner follow-up', () => {
   it.each([
     ['Voglio organizzare il viaggio', 'Quali sono le date di partenza e ritorno?'],
@@ -76,6 +86,15 @@ describe('deterministic planner follow-up', () => {
     });
     expect(getDeterministicPlannerFollowUp(planner, message)).toBe(expected);
     expect(planner.status).toBe('draft');
+  });
+
+  it.each([
+    ['it', 'Quali sono le date di partenza e ritorno?'],
+    ['en', 'What are your departure and return dates?'],
+    ['es', '¿Cuáles son las fechas de salida y regreso?'],
+  ] as const)('uses selected %s even when the reply and history have another language', (locale, expected) => {
+    const planner = createPlannerDraft({ brand: 'byebride', origin: 'Rome', destination: 'Ibiza', participants: 6 });
+    expect(getDeterministicPlannerFollowUp(planner, '6', [{ role: 'user', content: 'Voglio andare a Ibiza' }], locale)).toBe(expected);
   });
 
   it('asks for budget before preferences when both remain missing', () => {

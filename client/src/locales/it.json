@@ -1,4 +1,13 @@
 {
+  "planner.budgetHelp": "Indica quanto ogni persona può spendere per l’intero viaggio. È un obiettivo di pianificazione, non un prezzo confermato dai partner.",
+  "planner.preferencesHelp": "Indica lo stile del viaggio e le attività preferite, ad esempio relax, vita notturna o cibo. Queste preferenze orientano il Planner.",
+  "splittabro.deleteGroup": "Elimina gruppo",
+  "splittabro.deleteGroupTitle": "Eliminare il gruppo?",
+  "splittabro.deleteGroupDescription": "Il gruppo {{name}} e tutte le sue spese saranno eliminati definitivamente. Il viaggio salvato rimane disponibile.",
+  "splittabro.deleteGroupConfirm": "Elimina definitivamente",
+  "splittabro.deleteGroupCancel": "Annulla",
+  "splittabro.deleteGroupError": "Non è stato possibile eliminare il gruppo. Riprova.",
+  "splittabro.deleteGroupSuccess": "Gruppo eliminato",
   "common.loading": "Caricamento...",
   "common.retry": "Riprova",
   "common.error": "Errore",

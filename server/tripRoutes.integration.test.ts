@@ -2,15 +2,16 @@ import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createTripIfAbsent, deleteTripForUser, getTripForUser, getUser } = vi.hoisted(() => ({
+const { createTripIfAbsent, deleteTripForUser, deleteExpenseGroupForUser, getTripForUser, getUser } = vi.hoisted(() => ({
   createTripIfAbsent: vi.fn(),
   deleteTripForUser: vi.fn(),
+  deleteExpenseGroupForUser: vi.fn(),
   getTripForUser: vi.fn(),
   getUser: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
-  storage: { createTripIfAbsent, deleteTripForUser, getTripForUser },
+  storage: { createTripIfAbsent, deleteTripForUser, deleteExpenseGroupForUser, getTripForUser },
 }));
 
 vi.mock("./supabase", () => ({
@@ -38,6 +39,7 @@ describe("owner-scoped /api/trips/:tripId routes", () => {
   beforeEach(() => {
     createTripIfAbsent.mockReset();
     deleteTripForUser.mockReset();
+    deleteExpenseGroupForUser.mockReset();
     getTripForUser.mockReset();
     getUser.mockReset();
     getUser.mockImplementation(async (token: string) => ({
@@ -50,6 +52,25 @@ describe("owner-scoped /api/trips/:tripId routes", () => {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => error ? reject(error) : resolve());
     });
+  });
+
+  it('requires authentication before deleting an expense group', async () => {
+    const response = await fetch(`${baseUrl}/api/expense-groups/44`, { method: 'DELETE' });
+    expect(response.status).toBe(401);
+    expect(deleteExpenseGroupForUser).not.toHaveBeenCalled();
+  });
+
+  it.each(['bad', '0', '-1', '1.5'])('rejects invalid expense group ID %s', async (id) => {
+    const response = await fetch(`${baseUrl}/api/expense-groups/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer token-a' } });
+    expect(response.status).toBe(400);
+    expect(deleteExpenseGroupForUser).not.toHaveBeenCalled();
+  });
+
+  it.each([[true, 204], [false, 404]] as const)('scopes group deletion to the authenticated owner (deleted=%s)', async (deleted, status) => {
+    deleteExpenseGroupForUser.mockResolvedValueOnce(deleted);
+    const response = await fetch(`${baseUrl}/api/expense-groups/44`, { method: 'DELETE', headers: { Authorization: 'Bearer token-a' } });
+    expect(response.status).toBe(status);
+    expect(deleteExpenseGroupForUser).toHaveBeenCalledWith(44, 'user-a');
   });
 
   it("requires authentication before creating a saved trip", async () => {

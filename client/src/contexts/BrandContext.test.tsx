@@ -8,6 +8,7 @@ import { BrandProvider, initializeBrandTheme, useBrand } from "./BrandContext";
 describe("BrandProvider", () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState(null, "", "/checkout");
     delete document.documentElement.dataset.brand;
   });
 

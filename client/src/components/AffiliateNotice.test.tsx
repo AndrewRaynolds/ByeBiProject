@@ -15,10 +15,9 @@ vi.mock("@/contexts/LanguageContext", () => ({
 }));
 
 describe("AffiliateNotice", () => {
-  it("can keep the affiliate badge without the checkout disclosure sentence", () => {
-    render(<AffiliateNotice showText={false} />);
-
-    expect(screen.getByText("Affiliato")).toBeInTheDocument();
-    expect(screen.queryByText(/Potremmo ricevere una commissione/)).not.toBeInTheDocument();
+  it("keeps the disclosure without an affiliate badge", () => {
+    render(<AffiliateNotice variant="light" />);
+    expect(screen.queryByText("Affiliato")).not.toBeInTheDocument();
+    expect(screen.getByText(/Potremmo ricevere una commissione/)).toBeInTheDocument();
   });
 });

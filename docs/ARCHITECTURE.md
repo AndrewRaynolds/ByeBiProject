@@ -32,7 +32,7 @@ The client must not own server authorization or secret-bearing provider logic. T
 
 ## Current routes relevant to planning
 
-- `/` — branded homepage and Planner entry.
+- `/` — neutral ByeBi brand choice on a fresh entry, then the selected branded homepage and Planner entry for the current session. Deep links retain the stored brand.
 - `/destinations`, `/destinations/:id`, `/experiences` — discovery.
 - `/checkout` — current travel provider-option and external-handoff surface.
 - `/itinerary` and `/itinerary/:id` — compatibility redirects to `/checkout`.
@@ -93,6 +93,8 @@ The provider-options page now adapts these inputs into a narrow handoff context.
 
 Other current browser keys include `selectedBrand`, `byebi_locale`, the retired per-trip booking-status key used only for one-time migration, and a session-scoped analytics identifier. Each has a narrow owner and must not become a substitute for domain contracts.
 
+Expense groups can be deleted through authenticated `DELETE /api/expense-groups/:id`. Storage scopes deletion to the owner; the existing expense foreign key cascades without a new migration. Linked Saved Trips remain intact.
+
 ## OpenAI boundary
 
 `/api/chat/openai-stream` accepts a request validated by `shared/chatSchemas.ts` and streams server-sent events. `server/services/openai.ts` provides the tool loop.
@@ -101,6 +103,7 @@ Other current browser keys include `selectedBrand`, `byebi_locale`, the retired 
 - Planner updates are parsed by shared Zod schemas before becoming application state.
 - Tool execution is bounded and provider/service errors are sanitized.
 - Chat text and raw model output are not canonical state.
+- The optional validated request `locale` (`it`, `en`, `es`) controls model instructions and local follow-ups/errors. Legacy clients without it fall back to user-message language detection.
 - Provider credentials and OpenAI credentials remain server-side.
 
 ## Provider architecture

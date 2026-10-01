@@ -29,6 +29,7 @@ vi.mock('@/contexts/LanguageContext', () => ({
 describe('App brand loading', () => {
   beforeEach(() => {
     localStorage.clear();
+    window.history.replaceState(null, "", "/");
     delete document.documentElement.dataset.brand;
     document.head.innerHTML = '<meta name="description" content="">';
   });
@@ -50,7 +51,8 @@ describe('App brand loading', () => {
     });
   });
 
-  it('loads the saved brand without showing the selection screen', async () => {
+  it('loads the saved brand for a direct checkout link', async () => {
+    window.history.replaceState(null, "", "/checkout");
     localStorage.setItem('selectedBrand', 'byebride');
     render(<App />);
 
@@ -58,6 +60,17 @@ describe('App brand loading', () => {
     expect(screen.queryByTestId('brand-selection')).not.toBeInTheDocument();
     await waitFor(() => expect(document.documentElement.dataset.brand).toBe('byebride'));
     await waitFor(() => expect(document.title).toBe('meta.titleBride'));
+  });
+
+  it.each(['byebro', 'byebride'])('shows ByeBi on a fresh root visit with stored %s', async (brand) => {
+    localStorage.setItem('selectedBrand', brand);
+    localStorage.setItem('byebi:plannerDraft:v1:' + brand, 'preserved draft');
+    render(<App />);
+    expect(screen.getByTestId('brand-selection')).toBeInTheDocument();
+    expect(screen.queryByTestId('branded-app')).not.toBeInTheDocument();
+    expect(document.documentElement.dataset.brand).toBeUndefined();
+    expect(localStorage.getItem('byebi:plannerDraft:v1:' + brand)).toBe('preserved draft');
+    await waitFor(() => expect(document.title).toBe('meta.titleBase'));
   });
 
   it('persists a new selection and loads the application', async () => {

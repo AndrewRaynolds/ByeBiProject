@@ -4,6 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SplittaBro } from "./SplittaBro";
+import { SplittaBride } from "./SplittaBride";
 
 const { apiRequest, navigate, toast } = vi.hoisted(() => ({
   apiRequest: vi.fn(),
@@ -11,7 +12,7 @@ const { apiRequest, navigate, toast } = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-vi.mock("@/lib/queryClient", () => ({ apiRequest }));
+vi.mock("@/lib/queryClient", () => ({ apiRequest, queryClient: { invalidateQueries: vi.fn() } }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 vi.mock("wouter", () => ({ useLocation: () => [window.location.pathname, navigate] }));
 vi.mock("@/contexts/LanguageContext", () => ({
@@ -43,6 +44,40 @@ describe("SplittaBro trip link", () => {
         status: 201,
         headers: { "Content-Type": "application/json" },
       }));
+  });
+
+  it.each([SplittaBro, SplittaBride])('requires confirmation and removes the selected group after success', async (Component) => {
+    apiRequest.mockReset();
+    apiRequest.mockImplementation(async (method: string, url: string) => {
+      if (method === 'DELETE') return new Response(null, { status: 204 });
+      return new Response(JSON.stringify(url === '/api/expense-groups' ? [{
+        id: 44, tripId: 12, name: 'Weekend', members: ['Andrea'], totalAmount: 0, currency: 'EUR',
+      }] : []), { status: 200 });
+    });
+    render(<Component />);
+    fireEvent.click(await screen.findByTestId('button-delete-group'));
+    expect(apiRequest).not.toHaveBeenCalledWith('DELETE', expect.any(String));
+    fireEvent.click(screen.getByRole('button', { name: 'splittabro.deleteGroupCancel' }));
+    expect(screen.getByTestId('button-delete-group')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('button-delete-group'));
+    fireEvent.click(screen.getByRole('button', { name: 'splittabro.deleteGroupConfirm' }));
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith('DELETE', '/api/expense-groups/44'));
+    await waitFor(() => expect(screen.queryByTestId('button-delete-group')).not.toBeInTheDocument());
+  });
+
+  it('retains the group and reports a deletion failure', async () => {
+    apiRequest.mockReset();
+    apiRequest.mockImplementation(async (method: string, url: string) => {
+      if (method === 'DELETE') throw new Error('unavailable');
+      return new Response(JSON.stringify(url === '/api/expense-groups' ? [{
+        id: 44, tripId: 12, name: 'Weekend', members: ['Andrea'], totalAmount: 0, currency: 'EUR',
+      }] : []), { status: 200 });
+    });
+    render(<SplittaBro />);
+    fireEvent.click(await screen.findByTestId('button-delete-group'));
+    fireEvent.click(screen.getByRole('button', { name: 'splittabro.deleteGroupConfirm' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('splittabro.deleteGroupError');
+    expect(screen.getByTestId('button-delete-group')).toBeInTheDocument();
   });
 
   it("renders persisted group totals as cents, not euros", async () => {

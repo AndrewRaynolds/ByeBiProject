@@ -135,6 +135,7 @@ export interface IStorage {
   getAllExpenseGroups(ownerId: string): Promise<ExpenseGroup[]>;
   createExpenseGroup(group: InsertExpenseGroup, ownerId: string): Promise<ExpenseGroup>;
   isExpenseGroupOwner(groupId: number, ownerId: string): Promise<boolean>;
+  deleteExpenseGroupForUser(groupId: number, ownerId: string): Promise<boolean>;
   
   // Expense operations (SplittaBro feature)
   getExpense(id: number): Promise<Expense | undefined>;
@@ -943,6 +944,14 @@ export class MemStorage implements IStorage {
     return group;
   }
 
+  async deleteExpenseGroupForUser(groupId: number, ownerId: string): Promise<boolean> {
+    if (!(await this.isExpenseGroupOwner(groupId, ownerId))) return false;
+    for (const [id, expense] of this.expenseItems) {
+      if (expense.groupId === groupId) this.expenseItems.delete(id);
+    }
+    return this.expenseGroups.delete(groupId);
+  }
+
   async isExpenseGroupOwner(groupId: number, ownerId: string): Promise<boolean> {
     return this.expenseGroups.get(groupId)?.ownerId === ownerId;
   }
@@ -1509,6 +1518,14 @@ export class DatabaseStorage extends MemStorage {
       })
       .returning();
     return group;
+  }
+
+  override async deleteExpenseGroupForUser(groupId: number, ownerId: string): Promise<boolean> {
+    // The existing expenses FK cascades; ownership is enforced in the DELETE itself.
+    const deleted = await this.db.delete(expenseGroupsTable)
+      .where(and(eq(expenseGroupsTable.id, groupId), eq(expenseGroupsTable.ownerId, ownerId)))
+      .returning({ id: expenseGroupsTable.id });
+    return deleted.length > 0;
   }
 
   override async isExpenseGroupOwner(

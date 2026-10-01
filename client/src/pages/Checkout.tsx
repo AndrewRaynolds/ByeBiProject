@@ -263,7 +263,7 @@ export default function Checkout() {
             {flightHandoffState === "ready" && flightHandoffUrl && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">{t("checkout.aviasalesHandoffNote")}</p>
-                {aviasalesIsMonetized && <AffiliateNotice showText={false} />}
+                {aviasalesIsMonetized && <AffiliateNotice variant="light" />}
                 <Button asChild variant="external" className="h-auto min-h-11 w-full whitespace-normal">
                   <a
                     href={flightHandoffUrl}
@@ -297,7 +297,7 @@ export default function Checkout() {
             >
               {t("checkout.searchHotelsBooking")}<ExternalLink />
             </Button>
-            {hasBookingAffiliateId() && <AffiliateNotice showText={false} />}
+            {hasBookingAffiliateId() && <AffiliateNotice variant="light" />}
           </CardContent>
         </Card>
 

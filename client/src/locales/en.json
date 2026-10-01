@@ -1,4 +1,13 @@
 {
+  "planner.budgetHelp": "Enter what each person can spend on the entire trip. This is a planning target, not a price confirmed by partners.",
+  "planner.preferencesHelp": "Describe the trip style and preferred activities, such as relaxation, nightlife or food. These preferences guide the Planner.",
+  "splittabro.deleteGroup": "Delete group",
+  "splittabro.deleteGroupTitle": "Delete this group?",
+  "splittabro.deleteGroupDescription": "The group {{name}} and all its expenses will be permanently deleted. Your saved trip will remain available.",
+  "splittabro.deleteGroupConfirm": "Delete permanently",
+  "splittabro.deleteGroupCancel": "Cancel",
+  "splittabro.deleteGroupError": "The group could not be deleted. Please try again.",
+  "splittabro.deleteGroupSuccess": "Group deleted",
   "common.loading": "Loading...",
   "common.retry": "Try again",
   "common.error": "Error",
