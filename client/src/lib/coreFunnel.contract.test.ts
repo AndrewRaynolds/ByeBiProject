@@ -12,8 +12,8 @@ import { isAllowedExternalUrl } from "./externalNavigation";
 const baseArguments = {
   origin: "Roma",
   destination: "Barcellona",
-  departure_date: "2026-10-10",
-  return_date: "2026-10-13",
+  departure_date: "2099-10-10",
+  return_date: "2099-10-13",
 };
 
 describe("core travel funnel contract", () => {
@@ -54,8 +54,8 @@ describe("core travel funnel contract", () => {
       expect(trip).toMatchObject({
         origin: "Roma",
         destination: "Barcellona",
-        startDate: "2026-10-10",
-        endDate: "2026-10-13",
+        startDate: "2099-10-10",
+        endDate: "2099-10-13",
         people,
         aviasalesCheckoutUrl,
       });
@@ -84,7 +84,7 @@ describe("core travel funnel contract", () => {
 
   it.each([
     [{ ...baseArguments, origin: "", passengers: 4 }, "https://www.aviasales.com/search/ROM1010BCN13104?marker=685469"],
-    [{ ...baseArguments, return_date: "2026-10-09", passengers: 4 }, "https://www.aviasales.com/search/ROM1010BCN13104?marker=685469"],
+    [{ ...baseArguments, return_date: "2099-10-09", passengers: 4 }, "https://www.aviasales.com/search/ROM1010BCN13104?marker=685469"],
     [{ ...baseArguments, passengers: 51 }, "https://www.aviasales.com/search/ROM1010BCN13109?marker=685469"],
     [{ ...baseArguments, passengers: 4 }, "https://example.com/search/ROM1010BCN13104?marker=685469"],
   ])("rejects unsafe or inconsistent chat-to-checkout data", (args, checkoutUrl) => {
