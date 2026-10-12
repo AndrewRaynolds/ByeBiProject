@@ -75,8 +75,8 @@ describe("planner storage", () => {
 
   it("migrates only trustworthy legacy values without inventing budget or preferences", () => {
     const migrated = migrateLegacyItinerary({
-      origin: "Roma", destination: "Ibiza", startDate: "2026-10-10",
-      endDate: "2026-10-13", people: 6,
+      origin: "Roma", destination: "Ibiza", startDate: "2099-10-10",
+      endDate: "2099-10-13", people: 6,
     }, "byebro");
     expect(migrated).toMatchObject({
       origin: { canonical: "Rome" }, destination: { canonical: "Ibiza" },
