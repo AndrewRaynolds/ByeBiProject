@@ -114,6 +114,48 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     expect(chunks.filter(chunk => chunk.type === 'content')).toEqual([{ type: 'content', content: expected }]);
   });
 
+  it('applies interface locale changes immediately within the same planner chat', async () => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const history: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      { role: 'user', content: 'Voglio organizzare un viaggio' },
+      { role: 'assistant', content: 'Da quale città partite?' },
+    ];
+    const cases = [
+      ['it', 'Italian', 'Quali sono le date di partenza e ritorno?'],
+      ['en', 'English', 'What are your departure and return dates?'],
+      ['es', 'Spanish', '¿Cuáles son las fechas de salida y regreso?'],
+    ] as const;
+
+    for (const [locale, language, expected] of cases) {
+      mockCreate.mockResolvedValueOnce(createMockStream([
+        { tool_call: { id: `locale_switch_${locale}`, name: 'update_planner', arguments: JSON.stringify({
+          origin: 'Rome', destination: 'Barcelona', startDate: null, endDate: null,
+          participants: 6, budgetPerPerson: null, preferenceArchetype: null, interests: null,
+        }) } },
+        { finish: 'tool_calls' },
+      ]));
+
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamOpenAIChatCompletionWithTools(
+        '6',
+        { locale, partyType: 'bachelorette' },
+        history,
+      )) chunks.push(chunk);
+
+      const systemPrompt = mockCreate.mock.calls.at(-1)?.[0]?.messages?.[0]?.content;
+      expect(systemPrompt).toContain(`Always respond in ${language}, the selected interface language`);
+      expect(systemPrompt).not.toContain('ALWAYS respond in the language the user writes in');
+      expect(chunks.filter(chunk => chunk.type === 'content')).toEqual([
+        { type: 'content', content: expected },
+      ]);
+
+      history.push(
+        { role: 'user', content: '6' },
+        { role: 'assistant', content: expected },
+      );
+    }
+  });
+
   it.each([
     ['it', 'Si è verificato un problema. Riprova.'],
     ['es', 'Se ha producido un problema. Inténtalo de nuevo.'],
