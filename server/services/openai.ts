@@ -293,11 +293,11 @@ TOOLS:
 - update_planner: validates and persists only the planner brief. It never calls a travel provider.`;
 })();
 
-const BYEBRO_SYSTEM_PROMPT = `You are the ByeBro planner for bachelor party travel briefs. ALWAYS respond in the language the user writes in.
+const BYEBRO_SYSTEM_PROMPT = `You are the ByeBro planner for bachelor party travel briefs.
 
 ${SHARED_SYSTEM_PROMPT}`;
 
-const BYEBRIDE_SYSTEM_PROMPT = `You are the ByeBride planner for bachelorette party travel briefs. ALWAYS respond in the language the user writes in.
+const BYEBRIDE_SYSTEM_PROMPT = `You are the ByeBride planner for bachelorette party travel briefs.
 
 ${SHARED_SYSTEM_PROMPT}`;
 
@@ -333,7 +333,9 @@ function buildContextualPrompt(context: ChatContext): string {
 
   if (context.locale) {
     const language = { it: "Italian", en: "English", es: "Spanish" }[context.locale];
-    contextualPrompt += `\n\nRESPONSE LANGUAGE: Always respond in ${language}, the selected interface language. This overrides language detection from user messages or conversation history. Short replies, numbers, destination names and tool results must not change the response language.`;
+    contextualPrompt += `\n\nRESPONSE LANGUAGE: Always respond in ${language}, the selected interface language. This is the single authoritative language rule and overrides user-message language and all conversation history, including earlier assistant replies. A locale change applies immediately to the next response. Short replies, numbers, destination names and tool results must not change the response language.`;
+  } else {
+    contextualPrompt += "\n\nRESPONSE LANGUAGE: Respond in the language of the user's latest unambiguous message. For short or ambiguous replies, preserve the last recognizable user language.";
   }
 
   return contextualPrompt;
