@@ -80,7 +80,7 @@ describe("planner storage", () => {
     }, "byebro");
     expect(migrated).toMatchObject({
       origin: { canonical: "Rome" }, destination: { canonical: "Ibiza" },
-      participants: 6, budgetPerPerson: null, preferences: null, status: "draft",
+      participants: 6, budgetPerPerson: null, preferences: null, status: "review-ready",
     });
   });
 
@@ -120,4 +120,13 @@ describe("planner storage", () => {
       destination: "Ibiza", people: 5, partyType: "bachelorette",
     }, "byebro")?.partyType).toBe("bachelor");
   });
+});
+
+it.each(["byebro", "byebride"] as const)("resumes an old %s draft blocked only by optional data", (brand) => {
+  localStorage.clear();
+  const ready = createPlannerDraft({ brand, origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", participants: 4 });
+  localStorage.setItem(getPlannerStorageKey(brand), JSON.stringify({ ...ready, status: "draft" }));
+  const resumed = loadPlannerDraft(localStorage, brand);
+  expect(resumed).toMatchObject({ status: "review-ready", budgetPerPerson: null, preferences: null });
+  expect(createLegacyCheckoutBridge(resumed)).toMatchObject({ budget: null, activities: [], people: 4 });
 });

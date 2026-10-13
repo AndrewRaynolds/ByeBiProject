@@ -61,8 +61,8 @@ export function loadProviderSearchContext(storage: Storage): {
           return { searchContext: fromTripContext(legacyTripContext), legacyTripContext };
         }
         const preferences = [
-          ...(planner.preferences!.archetype ? [planner.preferences!.archetype] : []),
-          ...planner.preferences!.interests,
+          ...(planner.preferences?.archetype ? [planner.preferences.archetype] : []),
+          ...(planner.preferences?.interests ?? []),
         ];
         const searchInput = {
           origin: planner.origin!.canonical,

@@ -131,6 +131,14 @@ describe("owner-scoped /api/trips/:tripId routes", () => {
     );
   });
 
+  it("accepts explicit save with no budget or preferences", async () => {
+    const payload = { name: "QA", participants: 4, startDate: "2099-10-10", endDate: "2099-10-13", departureCity: "Rome", destinations: ["Ibiza"], experienceType: "bachelorette", budget: null, activities: [] };
+    createTripIfAbsent.mockResolvedValueOnce({ created: true, trip: { ...payload, id: 99 } });
+    const response = await fetch(`${baseUrl}/api/trips`, { method: "POST", headers: { Authorization: "Bearer token-a", "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    expect(response.status).toBe(201);
+    expect(createTripIfAbsent).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-a", budget: null, activities: [] }));
+  });
+
   it("returns the existing trip instead of creating a duplicate", async () => {
     const payload = {
       name: "ByeBro · Barcelona",

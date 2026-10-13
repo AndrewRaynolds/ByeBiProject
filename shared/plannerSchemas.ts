@@ -68,7 +68,7 @@ export const plannerDraftSchema = z.object({
 }).strict().superRefine((planner, context) => {
   const complete = Boolean(
     planner.origin && planner.destination && planner.startDate && planner.endDate &&
-    planner.participants && planner.budgetPerPerson && planner.preferences,
+    planner.participants,
   );
   if (planner.partyType !== partyTypeForPlannerBrand(planner.brand)) {
     context.addIssue({
@@ -129,7 +129,6 @@ export type PlannerBrand = z.infer<typeof plannerBrandSchema>;
 
 export const PLANNER_REQUIRED_FIELDS = [
   "origin", "destination", "startDate", "endDate", "participants",
-  "budgetPerPerson", "preferences",
 ] as const;
 
 export function normalizePlannerCity(value: string): string | null {
@@ -168,8 +167,7 @@ export function createPlannerDraft(input: {
   const interests = input.interests?.map((value) => value.trim()).filter(Boolean) ?? [];
   const archetype = input.preferenceArchetype?.trim() ?? "";
   const complete = Boolean(
-    origin && destination && startDate && endDate && input.participants &&
-    input.budgetPerPerson && (archetype || interests.length),
+    origin && destination && startDate && endDate && input.participants,
   );
 
   return plannerDraftSchema.parse({

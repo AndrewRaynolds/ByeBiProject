@@ -11,7 +11,7 @@ export type PlannedTripContext = {
   endDate?: string;
   people?: number;
   partyType?: string;
-  budget?: string | number;
+  budget?: string | number | null;
   activities?: PlannedActivity[];
 };
 
@@ -58,7 +58,7 @@ export function buildPlannedTripPayload(context: PlannedTripContext) {
     ? "bachelorette"
     : "bachelor";
   const resolvedBudget = resolvePlannedTripBudget(context.budget);
-  if (resolvedBudget === null) return null;
+  if (context.budget != null && resolvedBudget === null) return null;
 
   const activities = (context.activities ?? [])
     .map((activity) => typeof activity === "string" ? activity : activity.name)

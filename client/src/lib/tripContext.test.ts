@@ -25,6 +25,10 @@ describe("TripContext", () => {
     });
   });
 
+  it("reopens saved trips with no optional budget or preferences", () => {
+    expect(createSavedTripContext({ departureCity: "Rome", destinations: ["Ibiza"], startDate: "2099-10-10", endDate: "2099-10-13", participants: 4, experienceType: "bachelor", budget: null, activities: [] })).toMatchObject({ origin: "Rome", destination: "Ibiza", people: 4, budget: null, activities: [] });
+  });
+
   it("supports the legacy originCity field", () => {
     const { origin, ...legacyContext } = validContext;
     expect(

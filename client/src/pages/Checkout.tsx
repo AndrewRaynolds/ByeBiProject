@@ -198,7 +198,7 @@ export default function Checkout() {
   const formattedDates = `${dateFormatter.format(new Date(`${searchContext.startDate}T00:00:00Z`))} – ${dateFormatter.format(new Date(`${searchContext.endDate}T00:00:00Z`))}`;
   const aviasalesIsMonetized = isMonetizedAviasalesUrl(flightHandoffUrl);
   const plannedTripPayload = buildPlannedTripPayload(tripContext);
-  const formattedBudget = plannedTripPayload
+  const formattedBudget = plannedTripPayload?.budget != null
     ? new Intl.NumberFormat(locale, {
         style: "currency",
         currency: "EUR",

@@ -43,6 +43,13 @@ describe("provider search context", () => {
     expect(loaded?.legacyTripContext.destination).toBe("Barcelona");
   });
 
+  it.each(["byebro", "byebride"] as const)("keeps %s partner parameters without optional notes", (brand) => {
+    const planner = createPlannerDraft({ brand, origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", participants: 4 });
+    localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(planner));
+    expect(persistCheckoutBridge(localStorage, planner)).toBe(true);
+    expect(loadProviderSearchContext(localStorage)?.searchContext).toMatchObject({ source: "planner", origin: "Rome", destination: "Ibiza", participants: 4, preferences: [] });
+  });
+
   it("falls back to a valid saved-trip/legacy context", () => {
     expect(loadProviderSearchContext(localStorage)?.searchContext).toMatchObject({
       source: "legacy",

@@ -62,9 +62,9 @@ Required planning concepts are:
 - destination;
 - start and end dates;
 - participant count;
-- budget per person;
-- at least one explicit preference, such as an archetype or interests;
 - brand and its canonical party type.
+
+Budget and group preferences are optional notes. The Planner does not ask for them or block review, partner handoffs or explicit save when they are absent. They do not select activities or filter external partner searches. Unknown budget remains null; preferences remain absent rather than invented.
 
 `budgetPerPerson` is always the budget for one participant. It must never be silently interpreted as the total group budget. See [ADR-0002](adr/0002-budget-per-person.md).
 

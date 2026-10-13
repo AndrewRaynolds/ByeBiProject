@@ -67,8 +67,8 @@ The current implementation:
 - models origin and destination as canonical locations with optional display labels;
 - stores ISO date-only start and end values;
 - validates 1–50 participants;
-- stores integer `budgetPerPerson` values from 1 to 100,000;
-- requires an archetype or interests;
+- optionally stores integer `budgetPerPerson` values from 1 to 100,000;
+- optionally stores an archetype or interests;
 - distinguishes `draft` from `review-ready`;
 - rejects brand/party-type mismatches and invalid date order.
 
@@ -77,6 +77,8 @@ The version is an implementation fact, not a permanent architectural decision. B
 ## Planner persistence and compatibility
 
 The versioned Planner draft is stored locally by `client/src/lib/plannerStorage.ts`. `byebi:plannerDraft:v1` remains the active/backward-compatible value used by the checkout bridge, while brand-isolated resumable drafts use `byebi:plannerDraft:v1:byebro` and `byebi:plannerDraft:v1:byebride`.
+
+The v1 field shape is preserved. Resumable drafts with valid essential route/date/participant details are promoted to review-ready even if budget or preferences remain null. Existing supplied values remain unchanged. Required details still validate normally. Saved-trip budget is nullable via migration `20261013090000_make_trip_budget_optional.sql`, which must deploy before application code; no values are fabricated. Older application versions require a reload to use the relaxed readiness rule.
 
 Current compatibility behavior:
 

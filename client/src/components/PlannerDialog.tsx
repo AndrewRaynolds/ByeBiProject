@@ -136,7 +136,8 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
     const startDate = String(data.get("startDate") ?? "");
     const endDate = String(data.get("endDate") ?? "");
     const participants = Number(data.get("participants"));
-    const budgetPerPerson = Number(data.get("budgetPerPerson"));
+    const budgetValue = String(data.get("budgetPerPerson") ?? "").trim();
+    const budgetPerPerson = budgetValue ? Number(budgetValue) : null;
     const preferenceArchetype = String(data.get("archetype") ?? "").trim();
     const interests = String(data.get("interests") ?? "").split(",").map((value) => value.trim()).filter(Boolean);
     const errors: ReviewErrors = {};
@@ -145,8 +146,7 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
     if (!startDate || startDate < getLocalDateOnly()) errors.startDate = t("planner.errorStartDate");
     if (!endDate || (startDate && endDate < startDate)) errors.endDate = t("planner.errorEndDate");
     if (!Number.isInteger(participants) || participants < 1 || participants > 50) errors.participants = t("planner.errorParticipants");
-    if (!Number.isInteger(budgetPerPerson) || budgetPerPerson < 1 || budgetPerPerson > 100_000) errors.budgetPerPerson = t("planner.errorBudget");
-    if (!preferenceArchetype && interests.length === 0) errors.preferences = t("planner.errorPreferences");
+    if (budgetPerPerson !== null && (!Number.isInteger(budgetPerPerson) || budgetPerPerson < 1 || budgetPerPerson > 100_000)) errors.budgetPerPerson = t("planner.errorBudget");
     if (Object.keys(errors).length > 0) {
       setReviewErrors(errors);
       setReviewError(t("planner.reviewValidationError"));
@@ -210,7 +210,7 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
           <ReviewField label={t("planner.startDate")} name="startDate" value={planner.startDate ?? ""} editing={isEditing} type="date" min={getLocalDateOnly()} error={reviewErrors.startDate} />
           <ReviewField label={t("planner.endDate")} name="endDate" value={planner.endDate ?? ""} editing={isEditing} type="date" min={planner.startDate ?? getLocalDateOnly()} error={reviewErrors.endDate} />
           <ReviewField label={t("planner.participants")} name="participants" value={String(planner.participants ?? "")} editing={isEditing} type="number" max={50} error={reviewErrors.participants} />
-          <ReviewField label={t("planner.budgetPerPerson")} name="budgetPerPerson" value={String(planner.budgetPerPerson ?? "")} editing={isEditing} type="number" max={100000} suffix="€" error={reviewErrors.budgetPerPerson} />
+          <ReviewField label={t("planner.budgetPerPerson")} name="budgetPerPerson" value={String(planner.budgetPerPerson ?? "")} editing={isEditing} required={false} type="number" max={100000} suffix="€" error={reviewErrors.budgetPerPerson} />
           <p className="col-span-full text-sm text-muted-foreground">{t("planner.budgetHelp")}</p>
           <ReviewField label={t("planner.experienceType")} name="archetype" value={planner.preferences?.archetype ?? ""} editing={isEditing} required={false} />
           <ReviewField label={t("planner.interests")} name="interests" value={planner.preferences?.interests.join(", ") ?? ""} editing={isEditing} required={false} error={reviewErrors.preferences} />
@@ -232,5 +232,5 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
 
 function ReviewField({ label, name, value, editing, type = "text", suffix, required = true, min, max, error }: { label: string; name: string; value: string; editing: boolean; type?: string; suffix?: string; required?: boolean; min?: string | number; max?: string | number; error?: string }) {
   const errorId = `${name}-error`;
-  return <label className="block min-w-0 text-sm font-medium"><span className="mb-1 block">{label}</span>{editing ? <><Input name={name} type={type} defaultValue={value} min={min ?? (type === "number" ? 1 : undefined)} max={max} required={required} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} />{error && <span id={errorId} className="mt-1 block text-xs text-destructive">{error}</span>}</> : <span className="block min-h-11 break-words rounded-md border bg-muted/30 px-3 py-2 text-base font-normal">{value}{suffix ? ` ${suffix}` : ""}</span>}</label>;
+  return <label className="block min-w-0 text-sm font-medium"><span className="mb-1 block">{label}</span>{editing ? <><Input name={name} type={type} defaultValue={value} min={min ?? (type === "number" ? 1 : undefined)} max={max} required={required} aria-invalid={Boolean(error)} aria-describedby={error ? errorId : undefined} />{error && <span id={errorId} className="mt-1 block text-xs text-destructive">{error}</span>}</> : <span className="block min-h-11 break-words rounded-md border bg-muted/30 px-3 py-2 text-base font-normal">{value || "—"}{value && suffix ? ` ${suffix}` : ""}</span>}</label>;
 }

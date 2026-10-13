@@ -82,7 +82,7 @@ export function arePlannedTripsEquivalent(
     normalizeTripIdentity(existing.departureCity) ===
       normalizeTripIdentity(candidate.departureCity) &&
     existing.experienceType === candidate.experienceType &&
-    existing.budget === candidate.budget &&
+    existing.budget === (candidate.budget ?? null) &&
     normalizeTripIdentity(existing.destinations?.[0]) ===
       normalizeTripIdentity(candidate.destinations?.[0])
   );
@@ -745,7 +745,7 @@ export class MemStorage implements IStorage {
       departureCity: insertTrip.departureCity,
       destinations: insertTrip.destinations ?? null,
       experienceType: insertTrip.experienceType,
-      budget: insertTrip.budget,
+      budget: insertTrip.budget ?? null,
       activities: insertTrip.activities ?? null,
       specialRequests: insertTrip.specialRequests ?? null,
       includeMerch: insertTrip.includeMerch ?? false,
