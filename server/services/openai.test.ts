@@ -97,20 +97,20 @@ describe('deterministic planner follow-up', () => {
     expect(getDeterministicPlannerFollowUp(planner, '6', [{ role: 'user', content: 'Voglio andare a Ibiza' }], locale)).toBe(expected);
   });
 
-  it('asks for budget before preferences when both remain missing', () => {
+  it('announces review without requesting optional budget or preferences', () => {
     const planner = createPlannerDraft({
       brand: 'byebro', origin: 'Rome', destination: 'Ibiza', startDate: '2099-10-10',
       endDate: '2099-10-13', participants: 6,
     });
-    expect(getDeterministicPlannerFollowUp(planner, 'Siamo pronti')).toBe('Qual è il budget per persona?');
+    expect(getDeterministicPlannerFollowUp(planner, 'Siamo pronti')).toMatch(/travel brief è pronto/i);
   });
 
-  it('asks for preferences when they are the last missing detail', () => {
+  it('announces review without requesting optional preferences', () => {
     const planner = createPlannerDraft({
       brand: 'byebride', origin: 'Rome', destination: 'Ibiza', startDate: '2099-10-10',
       endDate: '2099-10-13', participants: 6, budgetPerPerson: 700,
     });
-    expect(getDeterministicPlannerFollowUp(planner, 'Quiero seguir')).toBe('¿Qué tipo de experiencia o actividades prefiere el grupo?');
+    expect(getDeterministicPlannerFollowUp(planner, 'Quiero seguir')).toMatch(/resumen de viaje está listo/i);
   });
 
   it('announces review only for a complete validated planner', () => {
@@ -159,7 +159,7 @@ describe('executeToolCall', () => {
         participants: null, budgetPerPerson: null, preferenceArchetype: null, interests: null,
       }, { partyType: 'bachelorette', planner: createPlannerDraft({ brand: 'byebride' }) });
       expect(result).toMatchObject({ planner: { status: 'draft', budgetPerPerson: null, preferences: null } });
-      expect(result.missingFields).toEqual(expect.arrayContaining(['origin', 'budgetPerPerson', 'preferences']));
+      expect(result.missingFields).toEqual(['origin', 'startDate', 'endDate', 'participants']);
     });
 
     it('keeps the planner brand authoritative over a mismatched legacy context value', async () => {

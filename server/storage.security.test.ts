@@ -130,6 +130,16 @@ describe('expense group ownership', () => {
     await expect(storage.getTripsByUserId('user-a')).resolves.toHaveLength(1);
   });
 
+  it('deduplicates saved trips whose optional budget is omitted or null', async () => {
+    const storage = new MemStorage();
+    const core = { userId: 'user-a', name: 'QA', participants: 4, startDate: '2099-10-10', endDate: '2099-10-13', departureCity: 'Rome', destinations: ['Ibiza'], experienceType: 'bachelor' };
+    const first = await storage.createTripIfAbsent(core);
+    const second = await storage.createTripIfAbsent({ ...core, budget: null });
+    expect(first.trip.budget).toBeNull();
+    expect(second.created).toBe(false);
+    expect(second.trip.id).toBe(first.trip.id);
+  });
+
   it('does not merge plans whose saved details differ', async () => {
     const storage = new MemStorage();
     const basePlan = {

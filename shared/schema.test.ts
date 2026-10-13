@@ -63,10 +63,10 @@ describe('insertTripSchema', () => {
       expect(result.success).toBe(false);
     });
 
-    it('rejects trip without budget', () => {
-      const invalidTrip = { ...validTrip, budget: undefined };
-      const result = insertTripSchema.safeParse(invalidTrip);
-      expect(result.success).toBe(false);
+    it('accepts trip without budget', () => {
+      const validOptionalTrip = { ...validTrip, budget: undefined };
+      const result = insertTripSchema.safeParse(validOptionalTrip);
+      expect(result.success).toBe(true);
     });
 
     it('rejects trip with invalid budget type', () => {
@@ -209,4 +209,10 @@ describe('insertExpenseSchema', () => {
       expect(result.success).toBe(false);
     });
   });
+});
+
+it("allows a null budget but rejects an invalid supplied budget", () => {
+  const core = { userId: "test-user", name: "QA", participants: 4, startDate: "2099-10-10", endDate: "2099-10-13", departureCity: "Rome", destinations: ["Ibiza"], experienceType: "bachelor" };
+  expect(insertTripSchema.safeParse({ ...core, budget: null }).success).toBe(true);
+  expect(insertTripSchema.safeParse({ ...core, budget: 0 }).success).toBe(false);
 });

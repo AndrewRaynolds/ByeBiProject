@@ -34,7 +34,7 @@ const storedTripContextSchema = z
     budget: z.union([
       z.string().trim().min(1).max(30),
       z.number().int().positive(),
-    ]).optional(),
+    ]).nullable().optional(),
     activities: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
     startDate: dateOnlySchema,
     endDate: dateOnlySchema,
@@ -95,7 +95,7 @@ export interface TripContext {
   flightLabel: string;
   originCity?: string;
   partyType?: "bachelor" | "bachelorette";
-  budget?: string | number;
+  budget?: string | number | null;
   activities?: string[];
 }
 

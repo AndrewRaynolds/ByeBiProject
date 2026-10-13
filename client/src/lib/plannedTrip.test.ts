@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPlannedTripPayload, plannedTripMatchesSavedTrip, resolvePlannedTripBudget } from "./plannedTrip";
+import { buildPlannedTripPayload, plannedTripMatchesSavedTrip, resolvePlannedTripBudget, savePlannedTrip } from "./plannedTrip";
+
+vi.mock("./queryClient", () => ({ apiRequest: vi.fn() }));
 
 describe("planned trip persistence", () => {
   beforeEach(() => {
@@ -83,7 +85,7 @@ describe("planned trip persistence", () => {
       startDate: "2027-06-10",
       endDate: "2027-06-13",
       people: 6,
-    })).toBeNull();
+    })).toMatchObject({ budget: null, activities: [] });
   });
 
   it("recognizes only a saved trip with the same dashboard details", () => {
@@ -135,4 +137,13 @@ describe("planned trip persistence", () => {
     expect(buildPlannedTripPayload(context)).toMatchObject({ budget: 475, activities: ["Kart"] });
     expect(plannedTripMatchesSavedTrip(context, savedTrip)).toBe(true);
   });
+});
+
+it("explicitly saves a complete trip with no invented budget or preferences", async () => {
+  const { apiRequest } = await import("./queryClient");
+  vi.mocked(apiRequest).mockResolvedValueOnce({ status: 201 } as Response);
+  const context = { origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", people: 4, budget: null };
+  await expect(savePlannedTrip(context)).resolves.toEqual({ created: true });
+  expect(apiRequest).toHaveBeenCalledWith("POST", "/api/trips", expect.objectContaining({ budget: null, activities: [] }));
+  expect(plannedTripMatchesSavedTrip(context, { participants: 4, startDate: context.startDate, endDate: context.endDate, departureCity: "Rome", destinations: ["Ibiza"], experienceType: "bachelor", budget: null })).toBe(true);
 });

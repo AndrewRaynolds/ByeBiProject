@@ -44,7 +44,7 @@ describe("planner contract", () => {
     expect(planner.status).toBe("draft");
     expect(planner.budgetPerPerson).toBeNull();
     expect(planner.preferences).toBeNull();
-    expect(getMissingPlannerFields(planner)).toContain("budgetPerPerson");
+    expect(getMissingPlannerFields(planner)).toEqual(["origin", "startDate", "endDate", "participants"]);
   });
 
   it("accepts an explicit experience archetype without inventing interests", () => {
@@ -89,4 +89,11 @@ describe("planner contract", () => {
     expect(normalizePlannerCity("  praga ")).toBe("Prague");
     expect(normalizePlannerCity("new   york")).toBe("New York");
   });
+});
+
+it.each(["byebro", "byebride"] as const)("allows %s review with only essential fields", (brand) => {
+  const planner = createPlannerDraft({ brand, origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", participants: 4 });
+  expect(planner).toMatchObject({ status: "review-ready", budgetPerPerson: null, preferences: null });
+  expect(getMissingPlannerFields(planner)).toEqual([]);
+  expect(() => createPlannerDraft({ brand, origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", participants: 4, budgetPerPerson: 0 })).toThrow();
 });

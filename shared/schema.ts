@@ -16,7 +16,7 @@ export const trips = pgTable(
     departureCity: text("departure_city").notNull(),
     destinations: text("destinations").array(),
     experienceType: text("experience_type").notNull(),
-    budget: integer("budget").notNull(),
+    budget: integer("budget"),
     activities: text("activities").array(),
     specialRequests: text("special_requests"),
     includeMerch: boolean("include_merch").default(false),
@@ -38,7 +38,7 @@ export const insertTripSchema = createInsertSchema(trips).pick({
   activities: true,
   specialRequests: true,
   includeMerch: true,
-});
+}).extend({ budget: z.number().int().min(1).max(100_000).nullable().optional() });
 
 export const tripOrganizationStatuses = pgTable(
   "trip_organization_statuses",

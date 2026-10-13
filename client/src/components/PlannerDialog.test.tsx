@@ -122,14 +122,13 @@ describe("PlannerDialog", () => {
     expect(JSON.parse(localStorage.getItem("currentItinerary")!)).toMatchObject({ budget: 700, activities: ["nightlife", "music", "food"] });
   });
 
-  it("keeps an invalid review editable and exposes a localized accessible error", () => {
+  it("keeps an invalid essential field editable and exposes a localized accessible error", () => {
     storeReady();
     renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Modifica dettagli" }));
-    fireEvent.change(screen.getByLabelText("Tipo di esperienza"), { target: { value: "" } });
-    fireEvent.change(screen.getByLabelText("Preferenze del gruppo"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Città di partenza"), { target: { value: " " } });
     fireEvent.click(screen.getByRole("button", { name: "Salva modifiche" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/campi essenziali/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/partenza/i);
     expect(screen.getByLabelText("Tipo di esperienza")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continua alle opzioni di viaggio" })).toBeDisabled();
   });
@@ -274,3 +273,18 @@ function deferred() {
   const promise = new Promise<void>((done) => { resolve = done; });
   return { promise, resolve };
 }
+
+it.each(["byebro", "byebride"] as const)("continues %s to options after clearing optional notes", (brand) => {
+  localStorage.clear();
+  localStorage.setItem("byebi_locale", "it");
+  storeReady(brand);
+  renderPlanner(<PlannerDialog brand={brand} open onOpenChange={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Modifica dettagli" }));
+  fireEvent.change(screen.getByLabelText("Budget per persona"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Tipo di esperienza"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Preferenze del gruppo"), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Salva modifiche" }));
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Continua alle opzioni di viaggio" }));
+  expect(JSON.parse(localStorage.getItem("currentItinerary")!)).toMatchObject({ budget: null, activities: [], people: 6 });
+});

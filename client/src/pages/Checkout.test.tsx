@@ -143,6 +143,16 @@ describe("travel handoffs", () => {
     expect(apiRequest.mock.calls.some((call) => String(call[1]).startsWith("/api/hotels/search"))).toBe(false);
   });
 
+  it("shows unknown optional notes without zero prices or blocking partner handoffs", async () => {
+    const raw = JSON.parse(localStorage.getItem("currentItinerary")!);
+    localStorage.setItem("currentItinerary", JSON.stringify({ ...raw, budget: null, activities: [] }));
+    buildPlannedTripPayload.mockReturnValue({ budget: null });
+    render(<Checkout />);
+    expect(await screen.findByRole("link", { name: "Confronta su Aviasales" })).toBeInTheDocument();
+    expect(screen.getByTestId("travel-brief-budget")).toHaveTextContent("Non specificato");
+    expect(screen.getByTestId("travel-brief-preferences")).toHaveTextContent("Non specificato");
+  });
+
   it("preserves the real group size while explaining the Aviasales cap", async () => {
     render(<Checkout />);
     expect(await screen.findByTestId("flight-large-group-note")).toHaveTextContent("12 persone");

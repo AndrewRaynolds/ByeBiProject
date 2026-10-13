@@ -280,7 +280,8 @@ const SHARED_SYSTEM_PROMPT = (() => {
 DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
 RULES:
-- Collect exactly: departure city, destination, start date, end date, participants, budget per person, and group preferences/experience archetype.
+- Required details: departure city, destination, start date, end date, and participants.
+- Budget per person and group preferences/experience archetype are optional. Preserve them if volunteered, but never ask for them or delay the travel brief because they are unknown. They are optional notes, not filters applied to external partner searches.
 - NEVER assume departure city, budget, or preferences. Budget always means EUR PER PERSON, never the group total.
 - NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
 - Call update_planner whenever the user supplies or changes planner details, merging the CURRENT PLANNER and the new message. Use null for values that remain unknown.

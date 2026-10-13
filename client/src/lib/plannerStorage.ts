@@ -73,14 +73,25 @@ function legacyItineraryMatchesBrand(raw: unknown, brand: PlannerBrand): boolean
   return true;
 }
 
+function parseResumablePlanner(raw: unknown) {
+  if (raw && typeof raw === "object") {
+    const value = raw as Partial<PlannerDraft>;
+    if (value.status === "draft" && value.origin && value.destination &&
+        value.startDate && value.endDate && value.participants) {
+      return plannerDraftSchema.safeParse({ ...value, status: "review-ready" });
+    }
+  }
+  return plannerDraftSchema.safeParse(raw);
+}
+
 export function loadPlannerDraft(storage: Storage, brand: PlannerBrand): PlannerDraft {
   const brandStorageKey = getPlannerStorageKey(brand);
   const stored = storage.getItem(brandStorageKey);
   if (stored) {
     try {
-      const parsed = plannerDraftSchema.safeParse(JSON.parse(stored));
+      const parsed = parseResumablePlanner(JSON.parse(stored));
       if (parsed.success && parsed.data.brand === brand) {
-        storage.setItem(PLANNER_STORAGE_KEY, stored);
+        savePlannerDraft(storage, parsed.data);
         return parsed.data;
       }
     } catch {
@@ -94,7 +105,7 @@ export function loadPlannerDraft(storage: Storage, brand: PlannerBrand): Planner
   const originalStored = storage.getItem(PLANNER_STORAGE_KEY);
   if (originalStored) {
     try {
-      const parsed = plannerDraftSchema.safeParse(JSON.parse(originalStored));
+      const parsed = parseResumablePlanner(JSON.parse(originalStored));
       if (parsed.success && parsed.data.brand === brand) {
         savePlannerDraft(storage, parsed.data);
         return parsed.data;
@@ -144,12 +155,11 @@ export function startNewPlannerTrip(storage: Storage, brand: PlannerBrand): Plan
 
 export function createLegacyCheckoutBridge(planner: PlannerDraft): Record<string, unknown> | null {
   if (planner.status !== "review-ready" || !planner.origin || !planner.destination ||
-      !planner.startDate || !planner.endDate || !planner.participants ||
-      !planner.budgetPerPerson || !planner.preferences) return null;
+      !planner.startDate || !planner.endDate || !planner.participants) return null;
 
   const activities = [
-    ...(planner.preferences.archetype ? [planner.preferences.archetype] : []),
-    ...planner.preferences.interests,
+    ...(planner.preferences?.archetype ? [planner.preferences.archetype] : []),
+    ...(planner.preferences?.interests ?? []),
   ].filter((value, index, values) => values.indexOf(value) === index);
 
   return {
