@@ -11,6 +11,7 @@ import {
 } from "@shared/tripOrganizationSchemas";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import TripOptions from "@/components/TripOptions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -318,6 +319,8 @@ export default function TripHub() {
           })}
           </div>
         </section>
+
+        <TripOptions tripId={tripId} />
 
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <Card className="shadow-sm">
