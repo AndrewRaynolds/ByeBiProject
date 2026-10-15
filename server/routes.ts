@@ -9,6 +9,9 @@ import {
   insertExpenseSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import { rateLimit } from "express-rate-limit";
+import { tripOptionInputSchema, tripOptionPatchSchema, tripOptionPreviewRequestSchema } from "@shared/tripOptionSchemas";
+import { previewTripLink } from "./services/tripLinkPreview";
 import { fromZodError } from "zod-validation-error";
 import { supabase } from "./supabase";
 import { registerZapierRoutes } from "./zapier-integration";
@@ -728,6 +731,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch {
       return res.status(500).json({ message: "Server error" });
     }
+  });
+
+  // Organizer-curated external links: never confirmed reservations or provider inventory.
+  const previewLimiter = rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false });
+  app.post("/api/trips/:tripId/options/preview", isAuthenticated, previewLimiter, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    const input = tripOptionPreviewRequestSchema.safeParse(req.body);
+    if (!input.success) return res.status(400).json({ message: "Invalid link" });
+    try {
+      if (!(await storage.getTripForUser(tripId, req.supabaseUser!.id))) return res.status(404).json({ message: "Trip not found" });
+      return res.status(200).json(await previewTripLink(input.data.url));
+    } catch {
+      return res.status(503).json({ message: "Preview temporarily unavailable" });
+    }
+  });
+
+  app.get("/api/trips/:tripId/options", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    try {
+      const options = await storage.listTripOptionsForUser(tripId, req.supabaseUser!.id);
+      if (!options) return res.status(404).json({ message: "Trip not found" });
+      return res.status(200).json(options);
+    } catch { return res.status(500).json({ message: "Server error" }); }
+  });
+
+  app.post("/api/trips/:tripId/options", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    const input = tripOptionInputSchema.safeParse(req.body);
+    if (!input.success) return res.status(400).json({ message: "Invalid option" });
+    try {
+      const option = await storage.addTripOptionForUser(tripId, req.supabaseUser!.id, input.data);
+      if (!option) return res.status(404).json({ message: "Trip not found" });
+      return res.status(201).json(option);
+    } catch { return res.status(500).json({ message: "Server error" }); }
+  });
+
+  app.patch("/api/trips/:tripId/options/:optionId", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    const optionId = parsePositiveIntegerParam(req.params.optionId);
+    if (tripId === null || optionId === null) return res.status(400).json({ message: "Invalid ID" });
+    const patch = tripOptionPatchSchema.safeParse(req.body);
+    if (!patch.success) return res.status(400).json({ message: "Invalid option" });
+    try {
+      const option = await storage.updateTripOptionForUser(tripId, optionId, req.supabaseUser!.id, patch.data);
+      if (!option) return res.status(404).json({ message: "Option not found" });
+      return res.status(200).json(option);
+    } catch { return res.status(500).json({ message: "Server error" }); }
+  });
+
+  app.delete("/api/trips/:tripId/options/:optionId", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    const optionId = parsePositiveIntegerParam(req.params.optionId);
+    if (tripId === null || optionId === null) return res.status(400).json({ message: "Invalid ID" });
+    try {
+      const deleted = await storage.removeTripOptionForUser(tripId, optionId, req.supabaseUser!.id);
+      return deleted ? res.status(204).end() : res.status(404).json({ message: "Option not found" });
+    } catch { return res.status(500).json({ message: "Server error" }); }
   });
 
   app.get("/api/trips/:tripId/invite", isAuthenticated, async (req: Request, res: Response) => {
