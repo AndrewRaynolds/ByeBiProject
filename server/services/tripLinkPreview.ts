@@ -89,10 +89,11 @@ export function parseTripLinkHtml(html: string, inputUrl: string): TripOptionPre
 
 async function requestPage(url: URL): Promise<{ body?: string; redirect?: string }> {
   const records = await dns.lookup(url.hostname, { all: true, verbatim: true });
-  if (!records.length || records.some((record) => !isPublicPreviewIpv4(record.address))) {
+  const ipv4 = records.filter((record) => record.family === 4);
+  if (!ipv4.length || ipv4.some((record) => !isPublicPreviewIpv4(record.address))) {
     throw new Error("Blocked DNS destination");
   }
-  const address = records.find((record) => record.family === 4)!.address;
+  const address = ipv4[0].address;
   return new Promise((resolve, reject) => {
     const transport = url.protocol === "https:" ? https : http;
     const request = transport.request(url, {

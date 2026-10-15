@@ -104,6 +104,12 @@ If live Provider Results are reintroduced later:
 - selection must not imply an external booking;
 - stale or invalidated selections must never be presented as current.
 
+## Candidate links saved for consideration
+
+Organizers may explicitly attach external flight, accommodation and activity URLs from any public website to an existing Saved Trip. A best-effort server-side preview can suggest title, source, description and an image based on publicly available HTML metadata. Failed or incomplete previews must still allow manual entry, editing and removal. A Saved Trip can hold multiple candidates of each category.
+
+These curated candidate links are not Provider Results or verified selections. They never represent live availability, booking or payment. Optional user-entered price notes are historical observations and must not be presented as refreshed provider prices. Saving a link never saves a Planner draft, changes a booking checklist status, or books travel. Only the authenticated Saved Trip owner can manage candidate links; partner handoffs and affiliate tracking remain unchanged. This extension must remain separate from the beta-critical core journey.
+
 ## External travel booking boundary
 
 Travel booking and payment happen on the external provider's site. ByeBi does not confirm travel reservations or charge for travel.
