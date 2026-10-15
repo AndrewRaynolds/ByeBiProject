@@ -1002,5 +1002,8 @@
   "tripOptions.observedPrice": "Precio indicativo",
   "tripOptions.considering": "En evaluación · Sin reservar",
   "tripOptions.open": "Abrir sitio original",
-  "tripOptions.confirmDelete": "¿Eliminar esta opción?"
+  "tripOptions.confirmDelete": "¿Eliminar esta opción?",
+  "tripOptions.illustrativeImage": "Imagen ilustrativa",
+  "tripOptions.imageUrl": "URL de imagen (opcional)",
+  "tripOptions.imageHelp": "Usa la foto del enlace o añade una URL pública. Sin foto, mostramos una portada ilustrativa."
 }

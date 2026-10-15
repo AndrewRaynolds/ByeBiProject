@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ExternalLink, Link2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Compass, ExternalLink, Hotel, Link2, Pencil, Plane, Plus, Trash2 } from "lucide-react";
 import type { TripCandidateOption } from "@shared/schema";
 import {
   tripOptionInputSchema,
@@ -36,6 +36,36 @@ function fromOption(option: TripCandidateOption): Draft {
     description: option.description ?? "", imageUrl: option.imageUrl ?? "",
     priceNote: option.priceNote ?? "", notes: option.notes ?? "",
   };
+}
+
+const categoryCovers = {
+  flight: "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=900&h=500&q=85",
+  hotel: "https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=900&h=500&q=85",
+  activities: "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=900&h=500&q=85",
+};
+const categoryIcons = { flight: Plane, hotel: Hotel, activities: Compass };
+
+function OptionCover({ category, imageUrl }: { category: Draft["category"]; imageUrl?: string | null }) {
+  const { t } = useTranslation();
+  const [failedUrls, setFailedUrls] = useState<string[]>([]);
+  const Icon = categoryIcons[category] ?? Compass;
+  const suppliedImage = imageUrl && !failedUrls.includes(imageUrl) ? imageUrl : null;
+  const cover = suppliedImage || categoryCovers[category];
+  const showImage = cover && !failedUrls.includes(cover);
+  return (
+    <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-primary/20 via-muted to-primary/5">
+      {showImage ? (
+        <img src={cover} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
+          onError={() => setFailedUrls((previous) => [...previous, cover])}
+          className="h-full w-full object-cover" />
+      ) : <Icon aria-hidden="true" className="absolute right-8 top-8 h-24 w-24 -rotate-12 text-primary/20" strokeWidth={1} />}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+      <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-soft">
+        <Icon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />{t(`tripOptions.${category}`)}
+      </span>
+      {!suppliedImage && showImage && <span className="absolute bottom-3 right-4 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">{t("tripOptions.illustrativeImage")}</span>}
+    </div>
+  );
 }
 
 export default function TripOptions({ tripId }: { tripId: number }) {
@@ -115,7 +145,7 @@ export default function TripOptions({ tripId }: { tripId: number }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="trip-options-heading" className="text-2xl font-bold">{t("tripOptions.title")}</h2>
-          <p className="mt-1 text-sm text-gray-600">{t("tripOptions.intro")}</p>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{t("tripOptions.intro")}</p>
         </div>
         {!formOpen && (
           <Button type="button" onClick={() => { setDraft(emptyDraft); setEditingId(null); setFormOpen(true); }}>
@@ -156,8 +186,15 @@ export default function TripOptions({ tripId }: { tripId: number }) {
                 </div>
                 {previewError && <p role="status" className="text-sm text-amber-800">{previewError}</p>}
               </div>
-              {draft.imageUrl && (
-                <img src={draft.imageUrl} alt="" className="max-h-40 w-full rounded-md border object-contain" referrerPolicy="no-referrer" />
+              <div>
+                <label htmlFor="trip-option-image" className="block text-sm font-medium">{t("tripOptions.imageUrl")}</label>
+                <input id="trip-option-image" aria-describedby="trip-option-image-help" type="url" maxLength={2048} value={draft.imageUrl} placeholder="https://..."
+                  onChange={(e) => update({ imageUrl: e.target.value })}
+                  className="mt-1 w-full rounded-md border px-3 py-2 text-base" />
+                <p id="trip-option-image-help" className="mt-1 text-xs text-muted-foreground">{t("tripOptions.imageHelp")}</p>
+              </div>
+              {draft.imageUrl && tripOptionUrlSchema.safeParse(draft.imageUrl).success && (
+                <div className="overflow-hidden rounded-lg"><OptionCover category={draft.category} imageUrl={draft.imageUrl} /></div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium">{t("tripOptions.optionTitle")}
@@ -196,31 +233,40 @@ export default function TripOptions({ tripId }: { tripId: number }) {
       {isLoading && <p role="status" className="text-sm text-gray-600">{t("tripOptions.loading")}</p>}
       {!isLoading && !error && !options?.length && <p className="text-sm text-gray-600">{t("tripOptions.empty")}</p>}
       {!!options?.length && (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid items-stretch gap-6 md:grid-cols-2">
           {options.map((option) => (
-            <Card key={option.id} className="overflow-hidden">
-              {option.imageUrl && <img src={option.imageUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-36 w-full object-cover" />}
-              <CardContent className="space-y-2 pt-5">
-                <p className="text-xs font-semibold uppercase text-gray-500">{t(`tripOptions.${option.category}`)} · {option.source}</p>
-                <h3 className="break-words font-bold">{option.title}</h3>
-                {option.description && <p className="text-sm text-gray-600">{option.description}</p>}
-                {option.priceNote && <p className="text-sm">{t("tripOptions.observedPrice")}: {option.priceNote}</p>}
-                {option.notes && <p className="text-sm">{option.notes}</p>}
-                <p className="text-xs font-medium text-gray-600">{t("tripOptions.considering")}</p>
-                <div className="flex flex-wrap gap-2">
-                  <a href={option.url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex min-h-10 items-center rounded-md border px-3 py-2 text-sm font-semibold hover:bg-gray-50">
-                    <ExternalLink className="mr-2 h-4 w-4" />{t("tripOptions.open")}
-                  </a>
-                  <Button type="button" variant="outline" onClick={() => {
-                    setEditingId(option.id); setDraft(fromOption(option)); setPreviewError(""); setSaveError(""); setFormOpen(true);
-                  }}>
-                    <Pencil className="mr-2 h-4 w-4" />{t("tripOptions.edit")}
-                  </Button>
-                  <Button type="button" variant="outline" disabled={remove.isPending}
-                    onClick={() => { if (window.confirm(t("tripOptions.confirmDelete"))) remove.mutate(option.id); }}>
-                    <Trash2 className="mr-2 h-4 w-4" />{t("tripOptions.delete")}
-                  </Button>
+            <Card key={option.id} className="flex min-w-0 flex-col overflow-hidden rounded-xl border-border/70">
+              <OptionCover category={option.category as Draft["category"]} imageUrl={option.imageUrl} />
+              <CardContent className="flex flex-1 flex-col p-5 sm:p-6">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{option.source}</span>
+                </p>
+                <h3 className="break-words font-display text-xl font-semibold leading-snug">{option.title}</h3>
+                {option.description && <p className="mt-2 line-clamp-3 break-words text-sm leading-relaxed text-muted-foreground">{option.description}</p>}
+                {option.priceNote && <p className="mt-4 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium">{t("tripOptions.observedPrice")}: {option.priceNote}</p>}
+                {option.notes && <p className="mt-3 whitespace-pre-line break-words border-l-2 border-primary/25 pl-3 text-sm leading-relaxed text-muted-foreground">{option.notes}</p>}
+                <div className="mt-auto pt-5">
+                  <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary" />{t("tripOptions.considering")}
+                  </p>
+                  <div className="flex items-center gap-2 border-t border-border/70 pt-4">
+                    <Button asChild variant="external" className="min-h-11 flex-1 whitespace-normal">
+                      <a href={option.url} target="_blank" rel="noopener noreferrer">
+                        {t("tripOptions.open")}<ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      </a>
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0"
+                      aria-label={t("tripOptions.edit")} title={t("tripOptions.edit")} onClick={() => {
+                        setEditingId(option.id); setDraft(fromOption(option)); setPreviewError(""); setSaveError(""); setFormOpen(true);
+                      }}>
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label={t("tripOptions.delete")} title={t("tripOptions.delete")} disabled={remove.isPending}
+                      onClick={() => { if (window.confirm(t("tripOptions.confirmDelete"))) remove.mutate(option.id); }}>
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

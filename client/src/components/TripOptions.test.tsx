@@ -61,12 +61,14 @@ describe("TripOptions", () => {
     expect(apiRequest).toHaveBeenCalledWith("POST", "/api/trips/12/options/preview", { url: "https://example.com/hotel" });
     expect(apiRequest).toHaveBeenCalledTimes(1);
     fireEvent.change(screen.getByLabelText("tripOptions.priceNote"), { target: { value: "€85 observed" } });
+    fireEvent.change(screen.getByLabelText("tripOptions.imageUrl"), { target: { value: "https://example.com/custom-photo.jpg" } });
     fireEvent.click(screen.getByRole("button", { name: "tripOptions.save" }));
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
       "POST", "/api/trips/12/options",
       expect.objectContaining({
         category: "flight", url: "https://example.com/hotel",
         title: "Example Hotel", source: "example.com", priceNote: "€85 observed",
+        imageUrl: "https://example.com/custom-photo.jpg",
       }),
     ));
   });
@@ -89,4 +91,23 @@ describe("TripOptions", () => {
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("DELETE", "/api/trips/12/options/9"));
     confirm.mockRestore();
   });
+  it("uses a labeled illustrative cover when the source image fails, then handles a failed cover", () => {
+    data.options = [{
+      id: 10, category: "hotel", url: "https://example.com/hotel",
+      title: "Saved hotel", source: "example.com", description: null,
+      imageUrl: "https://example.com/photo.jpg", priceNote: null, notes: null,
+      tripId: 12, createdAt: new Date(),
+    }];
+    const { container } = render(<TripOptions tripId={12} />);
+    const sourceImage = container.querySelector("img")!;
+    expect(sourceImage).toHaveAttribute("src", "https://example.com/photo.jpg");
+    expect(screen.queryByText("tripOptions.illustrativeImage")).not.toBeInTheDocument();
+    fireEvent.error(sourceImage);
+    expect(screen.getByText("tripOptions.illustrativeImage")).toBeInTheDocument();
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("Saved hotel")).toBeVisible();
+    expect(screen.getByRole("link", { name: "tripOptions.open" })).toBeVisible();
+  });
+
 });

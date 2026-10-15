@@ -99,6 +99,7 @@ async function requestPage(url: URL): Promise<{ body?: string; redirect?: string
     const transport = url.protocol === "https:" ? https : http;
     const request = transport.request(url, {
       method: "GET",
+      family: 4,
       lookup: (_hostname, _options, callback) => callback(null, address, 4),
       headers: { Accept: "text/html,application/xhtml+xml", "Accept-Encoding": "identity", "User-Agent": "ByeBiLinkPreview/1.0" },
     }, (response) => {

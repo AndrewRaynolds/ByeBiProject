@@ -1002,5 +1002,8 @@
   "tripOptions.observedPrice": "Indicative price",
   "tripOptions.considering": "Under consideration · Not booked",
   "tripOptions.open": "Open source site",
-  "tripOptions.confirmDelete": "Delete this option?"
+  "tripOptions.confirmDelete": "Delete this option?",
+  "tripOptions.illustrativeImage": "Illustrative image",
+  "tripOptions.imageUrl": "Image URL (optional)",
+  "tripOptions.imageHelp": "Use the link’s photo or add a public URL. Without a photo, we show an illustrative cover."
 }
