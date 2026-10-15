@@ -55,7 +55,7 @@ describe("TripOptions", () => {
     render(<TripOptions tripId={12} />);
     fireEvent.click(screen.getByRole("button", { name: "tripOptions.add" }));
     fireEvent.change(screen.getByLabelText("tripOptions.url"), { target: { value: "https://example.com/hotel" } });
-    fireEvent.click(screen.getByRole("button", { name: "tripOptions.getPreview" }));
+    fireEvent.paste(screen.getByLabelText("tripOptions.url"), { clipboardData: { getData: () => "https://example.com/hotel" } });
 
     await waitFor(() => expect(screen.getByLabelText("tripOptions.optionTitle")).toHaveValue("Example Hotel"));
     expect(apiRequest).toHaveBeenCalledWith("POST", "/api/trips/12/options/preview", { url: "https://example.com/hotel" });
