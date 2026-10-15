@@ -115,12 +115,17 @@ async function requestPage(url: URL): Promise<{ body?: string; redirect?: string
       let size = 0;
       const chunks: Buffer[] = [];
       response.on("data", (chunk: Buffer) => {
-        size += chunk.length;
-        if (size > 262144) {
-          request.destroy(new Error("Preview too large"));
-          return;
+        const remaining = 262144 - size;
+        if (remaining <= 0) return;
+        const portion = chunk.subarray(0, remaining);
+        chunks.push(portion);
+        size += portion.length;
+        if (chunk.length > remaining || size === 262144) {
+          // Metadata normally lives in <head>; larger commercial pages are common.
+          // Keep the bounded prefix rather than discarding a valid partial preview.
+          resolve({ body: Buffer.concat(chunks).toString("utf8") });
+          response.destroy();
         }
-        chunks.push(chunk);
       });
       response.on("end", () => resolve({ body: Buffer.concat(chunks).toString("utf8") }));
       response.on("error", reject);
