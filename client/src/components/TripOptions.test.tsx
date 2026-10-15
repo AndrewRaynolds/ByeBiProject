@@ -13,13 +13,13 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: data.options, error: null, isLoading: false }),
   useMutation: (options: {
     mutationFn: (value: unknown) => Promise<unknown>;
-    onSuccess?: (value: unknown) => void;
-    onError?: (value: unknown) => void;
+    onSuccess?: (value: unknown, variables: unknown) => void;
+    onError?: (error: unknown, variables: unknown) => void;
   }) => ({
     mutate: (value: unknown) => {
       void options.mutationFn(value)
-        .then((result) => options.onSuccess?.(result))
-        .catch((error) => options.onError?.(error));
+        .then((result) => options.onSuccess?.(result, value))
+        .catch((error) => options.onError?.(error, value));
     },
     isPending: false,
   }),
@@ -91,7 +91,7 @@ describe("TripOptions", () => {
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("DELETE", "/api/trips/12/options/9"));
     confirm.mockRestore();
   });
-  it("uses a labeled illustrative cover when the source image fails, then handles a failed cover", () => {
+  it("uses the actual image when available and falls back to a labeled contextual cover", () => {
     data.options = [{
       id: 10, category: "hotel", url: "https://example.com/hotel",
       title: "Saved hotel", source: "example.com", description: null,
@@ -103,11 +103,66 @@ describe("TripOptions", () => {
     expect(sourceImage).toHaveAttribute("src", "https://example.com/photo.jpg");
     expect(screen.queryByText("tripOptions.illustrativeImage")).not.toBeInTheDocument();
     fireEvent.error(sourceImage);
-    expect(screen.getByText("tripOptions.illustrativeImage")).toBeInTheDocument();
-    fireEvent.error(container.querySelector("img")!);
     expect(container.querySelector("img")).toBeNull();
-    expect(screen.getByText("Saved hotel")).toBeVisible();
+    expect(screen.getByText("tripOptions.illustrativeImage")).toBeVisible();
+    // The fallback explains this specific saved candidate without pretending to be a photo of it.
+    expect(screen.getAllByText("Saved hotel")).toHaveLength(2);
     expect(screen.getByRole("link", { name: "tripOptions.open" })).toBeVisible();
+  });
+
+  it("uses an illustrative category/title cover instead of an unrelated stock photograph", () => {
+    data.options = [{
+      id: 11, category: "activities", url: "https://example.com/tour",
+      title: "Kayak tour", source: "example.com", description: null,
+      imageUrl: null, priceNote: null, notes: null, tripId: 12, createdAt: new Date(),
+    }];
+    const { container } = render(<TripOptions tripId={12} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getAllByText("Kayak tour")).toHaveLength(2);
+    expect(screen.getByText("tripOptions.illustrativeImage")).toBeVisible();
+    expect(screen.getByText("tripOptions.activities")).toBeVisible();
+  });
+
+  it("preserves manually edited fields while an automatic link preview is loading", async () => {
+    let resolvePreview!: (response: { json: () => Promise<unknown> }) => void;
+    apiRequest.mockImplementation(async (_method: string, url: string) => {
+      if (url.endsWith("/preview")) {
+        return await new Promise<{ json: () => Promise<unknown> }>((resolve) => {
+          resolvePreview = resolve;
+        });
+      }
+      return { json: async () => ({ id: 1 }) };
+    });
+    render(<TripOptions tripId={12} />);
+    fireEvent.click(screen.getByRole("button", { name: "tripOptions.add" }));
+    fireEvent.change(screen.getByLabelText("tripOptions.url"), { target: { value: "https://example.com/hotel" } });
+    fireEvent.paste(screen.getByLabelText("tripOptions.url"), {
+      clipboardData: { getData: () => "https://example.com/hotel" },
+    });
+    fireEvent.change(screen.getByLabelText("tripOptions.optionTitle"), { target: { value: "My chosen hotel" } });
+    fireEvent.change(screen.getByLabelText("tripOptions.imageUrl"), { target: { value: "https://example.com/custom.jpg" } });
+    resolvePreview({
+      json: async () => ({
+        url: "https://example.com/hotel", title: "Remote title",
+        source: "example.com", description: "Suggested", imageUrl: "https://example.com/source.jpg", available: true,
+      }),
+    });
+    await waitFor(() => expect(screen.getByLabelText("tripOptions.source")).toHaveValue("example.com"));
+    expect(screen.getByLabelText("tripOptions.optionTitle")).toHaveValue("My chosen hotel");
+    expect(screen.getByLabelText("tripOptions.imageUrl")).toHaveValue("https://example.com/custom.jpg");
+    expect(screen.getByLabelText("tripOptions.description")).toHaveValue("Suggested");
+  });
+
+  it("shows readable input text and visible focus treatment in the add-link form", () => {
+    render(<TripOptions tripId={12} />);
+    fireEvent.click(screen.getByRole("button", { name: "tripOptions.add" }));
+    for (const key of ["url", "optionTitle", "source", "description", "priceNote", "notes", "imageUrl"]) {
+      const field = screen.getByLabelText(`tripOptions.${key}`);
+      expect(field).toHaveClass("text-foreground");
+      expect(field).toHaveClass("bg-background");
+      expect(field).toHaveClass("focus-visible:ring-2");
+      expect(field).toHaveClass("text-base");
+    }
   });
 
 });
