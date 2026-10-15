@@ -74,7 +74,8 @@ export function parseTripLinkHtml(html: string, inputUrl: string): TripOptionPre
   if (image) {
     try {
       const value = new URL(decodeEntities(image), url);
-      if (tripOptionUrlSchema.safeParse(value.toString()).success) imageUrl = value.toString();
+      validTarget(value.toString()); // Exclude local/IP-literal metadata image targets as well.
+      imageUrl = value.toString();
     } catch { /* No usable preview image */ }
   }
   return {
