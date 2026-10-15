@@ -18,6 +18,8 @@ import {
   productEvents,
   tripOrganizationStatuses as tripOrganizationStatusesTable,
   tripInvites as tripInvitesTable,
+  tripCandidateOptions as tripCandidateOptionsTable,
+  type TripCandidateOption,
   type TripInvite,
   type PublicSharedTrip,
   type MerchandiseOrder,
@@ -39,6 +41,7 @@ import {
   type AffiliateClickSummary,
   type ProductAnalyticsSummary,
 } from "@shared/analyticsSchemas";
+import type { TripOptionInput, TripOptionPatch } from "@shared/tripOptionSchemas";
 import { and, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { createDatabase, type DatabaseConnection } from "./db";
 
@@ -113,6 +116,11 @@ export interface IStorage {
   rotateTripInviteForUser(tripId: number, ownerId: string, tokenHash: string): Promise<TripInvite | undefined>;
   revokeTripInviteForUser(tripId: number, ownerId: string): Promise<boolean>;
   getSharedTripByTokenHash(tokenHash: string): Promise<PublicSharedTrip | undefined>;
+
+  listTripOptionsForUser(tripId: number, ownerId: string): Promise<TripCandidateOption[] | undefined>;
+  addTripOptionForUser(tripId: number, ownerId: string, input: TripOptionInput): Promise<TripCandidateOption | undefined>;
+  updateTripOptionForUser(tripId: number, optionId: number, ownerId: string, patch: TripOptionPatch): Promise<TripCandidateOption | undefined>;
+  removeTripOptionForUser(tripId: number, optionId: number, ownerId: string): Promise<boolean>;
 
   // Blog post operations
   getBlogPost(id: number): Promise<BlogPost | undefined>;
@@ -248,6 +256,8 @@ export class MemStorage implements IStorage {
   private newsletterSubscriberItems: Map<string, NewsletterSubscriber>;
   private tripInviteItems: Map<string, TripInvite>;
   private tripOrganizationItems: Map<number, TripOrganizationStatus>;
+  private tripOptionItems: Map<number, TripCandidateOption>;
+  private tripOptionId = 1;
 
   private tripId: number;
   private blogPostId: number;
@@ -271,6 +281,7 @@ export class MemStorage implements IStorage {
     this.newsletterSubscriberItems = new Map();
     this.tripInviteItems = new Map();
     this.tripOrganizationItems = new Map();
+    this.tripOptionItems = new Map();
 
     this.tripId = 1;
     this.blogPostId = 1;
@@ -772,7 +783,49 @@ export class MemStorage implements IStorage {
       if (invite.tripId === id) this.tripInviteItems.delete(inviteId);
     }
     this.tripOrganizationItems.delete(id);
+    for (const [optionId, option] of this.tripOptionItems) {
+      if (option.tripId === id) this.tripOptionItems.delete(optionId);
+    }
     return this.trips.delete(id);
+  }
+
+  async listTripOptionsForUser(tripId: number, ownerId: string): Promise<TripCandidateOption[] | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    return Array.from(this.tripOptionItems.values()).filter((item) => item.tripId === tripId);
+  }
+
+  async addTripOptionForUser(tripId: number, ownerId: string, input: TripOptionInput): Promise<TripCandidateOption | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    const option: TripCandidateOption = {
+      id: this.tripOptionId++,
+      tripId,
+      category: input.category,
+      url: input.url,
+      title: input.title,
+      source: input.source,
+      description: input.description ?? null,
+      imageUrl: input.imageUrl ?? null,
+      priceNote: input.priceNote ?? null,
+      notes: input.notes ?? null,
+      createdAt: new Date(),
+    };
+    this.tripOptionItems.set(option.id, option);
+    return option;
+  }
+
+  async updateTripOptionForUser(tripId: number, optionId: number, ownerId: string, patch: TripOptionPatch): Promise<TripCandidateOption | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    const existing = this.tripOptionItems.get(optionId);
+    if (!existing || existing.tripId !== tripId) return undefined;
+    const updated = { ...existing, ...patch };
+    this.tripOptionItems.set(optionId, updated);
+    return updated;
+  }
+
+  async removeTripOptionForUser(tripId: number, optionId: number, ownerId: string): Promise<boolean> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return false;
+    if (this.tripOptionItems.get(optionId)?.tripId !== tripId) return false;
+    return this.tripOptionItems.delete(optionId);
   }
 
   async getTripOrganizationStatusForUser(
@@ -1299,6 +1352,37 @@ export class DatabaseStorage extends MemStorage {
       .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, userId)))
       .returning({ id: tripsTable.id });
     return deleted.length > 0;
+  }
+
+  override async listTripOptionsForUser(tripId: number, ownerId: string): Promise<TripCandidateOption[] | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    return this.db.select().from(tripCandidateOptionsTable)
+      .where(eq(tripCandidateOptionsTable.tripId, tripId))
+      .orderBy(desc(tripCandidateOptionsTable.createdAt), desc(tripCandidateOptionsTable.id));
+  }
+
+  override async addTripOptionForUser(tripId: number, ownerId: string, input: TripOptionInput): Promise<TripCandidateOption | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    const [item] = await this.db.insert(tripCandidateOptionsTable)
+      .values({ ...input, tripId })
+      .returning();
+    return item;
+  }
+
+  override async updateTripOptionForUser(tripId: number, optionId: number, ownerId: string, patch: TripOptionPatch): Promise<TripCandidateOption | undefined> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return undefined;
+    const [item] = await this.db.update(tripCandidateOptionsTable).set(patch)
+      .where(and(eq(tripCandidateOptionsTable.id, optionId), eq(tripCandidateOptionsTable.tripId, tripId)))
+      .returning();
+    return item;
+  }
+
+  override async removeTripOptionForUser(tripId: number, optionId: number, ownerId: string): Promise<boolean> {
+    if (!(await this.getTripForUser(tripId, ownerId))) return false;
+    const rows = await this.db.delete(tripCandidateOptionsTable)
+      .where(and(eq(tripCandidateOptionsTable.id, optionId), eq(tripCandidateOptionsTable.tripId, tripId)))
+      .returning({ id: tripCandidateOptionsTable.id });
+    return rows.length > 0;
   }
 
   override async getTripOrganizationStatusForUser(
