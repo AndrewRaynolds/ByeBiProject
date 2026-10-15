@@ -34,6 +34,14 @@ describe("trip link previews", () => {
     expect(result).not.toHaveProperty("price");
   });
 
+  it("ignores preview images pointing at local network hosts", () => {
+    const result = parseTripLinkHtml(
+      '<meta property="og:title" content="Public hotel"><meta property="og:image" content="http://127.0.0.1/internal">',
+      "https://example.com/hotel",
+    );
+    expect(result.imageUrl).toBeNull();
+  });
+
   it("falls back to source hostname without inventing an offer", () => {
     const result = parseTripLinkHtml("<html><body>Offer without metadata</body></html>", "https://example.com/offer");
     expect(result).toMatchObject({
