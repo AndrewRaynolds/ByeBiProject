@@ -1,7 +1,12 @@
 /** @vitest-environment jsdom */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render as baseRender, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TripOptions from "./TripOptions";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+function render(ui: React.ReactElement) {
+  return baseRender(<QueryClientProvider client={new QueryClient({defaultOptions: {mutations: {retry: false}}})}>{ui}</QueryClientProvider>);
+}
 
 const { apiRequest, invalidateQueries, data } = vi.hoisted(() => ({
   apiRequest: vi.fn(),
@@ -9,20 +14,9 @@ const { apiRequest, invalidateQueries, data } = vi.hoisted(() => ({
   data: { options: [] as unknown[] },
 }));
 
-vi.mock("@tanstack/react-query", () => ({
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@tanstack/react-query")>(),
   useQuery: () => ({ data: data.options, error: null, isLoading: false }),
-  useMutation: (options: {
-    mutationFn: (value: unknown) => Promise<unknown>;
-    onSuccess?: (value: unknown, variables: unknown) => void;
-    onError?: (error: unknown, variables: unknown) => void;
-  }) => ({
-    mutate: (value: unknown) => {
-      void options.mutationFn(value)
-        .then((result) => options.onSuccess?.(result, value))
-        .catch((error) => options.onError?.(error, value));
-    },
-    isPending: false,
-  }),
 }));
 
 vi.mock("@/lib/queryClient", () => ({
@@ -31,7 +25,7 @@ vi.mock("@/lib/queryClient", () => ({
 }));
 
 vi.mock("@/contexts/LanguageContext", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string, params?: Record<string, string>) => params ? `${key}: ${params.destination}` : key === "destinations.city.barcelona.name" ? "Barcellona" : key }),
 }));
 
 describe("TripOptions", () => {
@@ -141,6 +135,7 @@ describe("TripOptions", () => {
     });
     fireEvent.change(screen.getByLabelText("tripOptions.optionTitle"), { target: { value: "My chosen hotel" } });
     fireEvent.change(screen.getByLabelText("tripOptions.imageUrl"), { target: { value: "https://example.com/custom.jpg" } });
+    await waitFor(() => expect(resolvePreview).toBeTypeOf("function"));
     resolvePreview({
       json: async () => ({
         url: "https://example.com/hotel", title: "Remote title",
@@ -163,6 +158,81 @@ describe("TripOptions", () => {
       expect(field).toHaveClass("focus-visible:ring-2");
       expect(field).toHaveClass("text-base");
     }
+  });
+
+  it.each(["before", "before-cleared", "during", "cleared"])("protects manual title %s the request using real mutation state", async (when) => {
+    let resolve!: (value: unknown) => void;
+    apiRequest.mockReturnValue(new Promise((r) => { resolve = r; }));
+    render(<TripOptions tripId={12} />);
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.add"}));
+    const title = screen.getByLabelText("tripOptions.optionTitle");
+    fireEvent.change(screen.getByLabelText("tripOptions.url"), {target: {value: "https://byebi.it/"}});
+    if (when.startsWith("before")) fireEvent.change(title, {target: {value: "Manual"}});
+    if (when === "before-cleared") fireEvent.change(title, {target: {value: ""}});
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.getPreview"}));
+    await waitFor(() => expect(screen.getByRole("button", {name: "tripOptions.loading"})).toBeDisabled());
+    if (!when.startsWith("before")) fireEvent.change(title, {target: {value: "Manual"}});
+    if (when === "cleared") fireEvent.change(title, {target: {value: ""}});
+    await act(async () => resolve({json: async () => ({url: "https://byebi.it/", title: "Remote", source: "byebi.it", description: null, imageUrl: null, available: true})}));
+    expect(title).toHaveValue(when.includes("cleared") ? "" : "Manual");
+    expect(screen.getByLabelText("tripOptions.source")).toHaveValue("byebi.it");
+  });
+
+  it.each(["success", "error"])("ignores stale %s after URL A → B → A", async (outcome) => {
+    let resolve!: (value: unknown) => void;
+    let reject!: (error: Error) => void;
+    apiRequest.mockReturnValue(new Promise((yes, no) => { resolve = yes; reject = no; }));
+    render(<TripOptions tripId={12} />);
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.add"}));
+    const url = screen.getByLabelText("tripOptions.url");
+    fireEvent.change(url, {target: {value: "https://byebi.it/"}});
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.getPreview"}));
+    fireEvent.change(url, {target: {value: "https://example.com/"}});
+    fireEvent.change(url, {target: {value: "https://byebi.it/"}});
+    await act(async () => {
+      if (outcome === "error") reject(new Error("Unavailable"));
+      else resolve({json: async () => ({url: "https://byebi.it/", title: "Stale", source: "byebi.it", description: null, imageUrl: null, available: false})});
+    });
+    expect(screen.getByLabelText("tripOptions.optionTitle")).toHaveValue("");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("uses the latest replacement paste and ignores older responses and cancelled drafts", async () => {
+    const pending: ((value: unknown) => void)[] = [];
+    apiRequest.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
+    render(<TripOptions tripId={12} />);
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.add"}));
+    const url = screen.getByLabelText("tripOptions.url");
+    for (const link of ["https://example.com/a", "https://example.com/b"]) {
+      fireEvent.paste(url, {clipboardData: {getData: () => link}});
+    }
+    expect(url).toHaveValue("https://example.com/b");
+    const response = (suffix: string) => ({json: async () => ({url: `https://example.com/${suffix}`, title: suffix, source: "example.com", description: null, imageUrl: null, available: true})});
+    await waitFor(() => expect(pending).toHaveLength(2));
+    await act(async () => pending[1](response("b")));
+    await act(async () => pending[0](response("a")));
+    expect(screen.getByLabelText("tripOptions.optionTitle")).toHaveValue("b");
+    fireEvent.paste(url, {clipboardData: {getData: () => "https://example.com/c"}});
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.cancel"}));
+    fireEvent.click(screen.getByRole("button", {name: "tripOptions.add"}));
+    await waitFor(() => expect(pending).toHaveLength(3));
+    await act(async () => pending[2](response("c")));
+    expect(screen.getByLabelText("tripOptions.optionTitle")).toHaveValue("");
+  });
+
+  it.each([
+    ["https://www.booking.com/searchresults.html?ss=Barcelona", "www.booking.com", ["Barcelona"], true],
+    ["https://www.booking.com/searchresults.it.html?ss=Barcelona", "booking.com", ["Barcelona"], true],
+    ["https://www.booking.com/hotel/es/example.html?ss=Barcelona", "www.booking.com", ["Barcelona"], false],
+    ["https://www.booking.com/searchresults.html?ss=Madrid", "www.booking.com", ["Barcelona"], false],
+    ["https://booking.com.evil.test/searchresults.html?ss=Barcelona", "www.booking.com", ["Barcelona"], false],
+    ["https://www.booking.com/searchresults.html?ss=Barcelona", "Named property", ["Barcelona"], false],
+    ["https://www.booking.com/searchresults.html?ss=Barcelona", "www.booking.com", [], false],
+    ["https://www.booking.com/searchresults.html?ss=Barcelona&ss=Madrid", "www.booking.com", ["Barcelona"], false],
+  ])("only contextualizes a verified Booking search %s (%s)", (url, title, destinations, contextual) => {
+    data.options = [{id: 1, category: "hotel", url, title, source: "booking.com"}];
+    render(<TripOptions tripId={12} destinations={destinations} />);
+    expect(screen.getByRole("heading", {level: 3})).toHaveTextContent(contextual ? "tripOptions.accommodationIn: Barcellona" : title);
   });
 
 });

@@ -320,7 +320,7 @@ export default function TripHub() {
           </div>
         </section>
 
-        <TripOptions tripId={tripId} />
+        <TripOptions key={tripId} tripId={tripId} destinations={trip.destinations ?? []} />
 
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <Card className="shadow-sm">

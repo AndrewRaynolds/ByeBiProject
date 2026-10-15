@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Compass, ExternalLink, Hotel, Link2, Pencil, Plane, Plus, Trash2 } from "lucide-react";
+import { getCityDefinition } from "@shared/cityMapping";
 import type { TripCandidateOption } from "@shared/schema";
 import {
   tripOptionInputSchema,
@@ -98,7 +99,21 @@ function OptionCover({
   );
 }
 
-export default function TripOptions({ tripId }: { tripId: number }) {
+// A search page is not a property. Only use the saved destination when the URL agrees.
+function bookingSearchDestination(url: string, title: string, destinations: string[]) {
+  if (!/^(www\.)?booking\.com$/i.test(title.trim())) return null;
+  try {
+    const parsed = new URL(url);
+    if (!/^(www\.)?booking\.com$/i.test(parsed.hostname) ||
+        !/^\/searchresults(?:\.[a-z]{2}(?:-[a-z]{2})?)?\.html$/i.test(parsed.pathname)) return null;
+    const searches = parsed.searchParams.getAll("ss");
+    if (searches.length !== 1) return null;
+    return destinations.find((destination) => destination.trim() &&
+      destination.trim().toLocaleLowerCase() === searches[0].trim().toLocaleLowerCase())?.trim() ?? null;
+  } catch { return null; }
+}
+
+export default function TripOptions({ tripId, destinations = [] }: { tripId: number; destinations?: string[] }) {
   const { t } = useTranslation();
   const apiUrl = `/api/trips/${tripId}/options`;
   const { data: options, isLoading, error } = useQuery<TripCandidateOption[]>({
@@ -112,16 +127,37 @@ export default function TripOptions({ tripId }: { tripId: number }) {
   const [saveError, setSaveError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const previewGeneration = useRef(0);
+  const editedFields = useRef(new Set<keyof Draft>());
+  useEffect(() => () => { previewGeneration.current += 1; }, []);
+  const contextualTitle = (url: string, title: string) => {
+    const destination = bookingSearchDestination(url, title, destinations);
+    if (!destination) return title;
+    const city = getCityDefinition(destination);
+    return t("tripOptions.accommodationIn", {
+      destination: city ? t(`destinations.city.${city.translationKey}.name`) : destination,
+    });
+  };
 
   const reset = () => {
     previewGeneration.current += 1;
+    editedFields.current.clear();
     setFormOpen(false);
     setEditingId(null);
     setDraft(emptyDraft);
     setPreviewError("");
     setSaveError("");
   };
-  const update = (part: Partial<Draft>) => setDraft((previous) => ({ ...previous, ...part }));
+  const update = (part: Partial<Draft>) => {
+    for (const field of Object.keys(part) as (keyof Draft)[]) {
+      editedFields.current.add(field);
+    }
+    // Invalidate even A → B → A: equality at response time alone is insufficient.
+    if (part.url !== undefined) {
+      previewGeneration.current += 1;
+      setPreviewError("");
+    }
+    setDraft((previous) => ({ ...previous, ...part }));
+  };
   const preview = useMutation({
     mutationFn: async (request: PreviewRequest) => {
       const response = await apiRequest("POST", `${apiUrl}/preview`, { url: request.url });
@@ -131,14 +167,15 @@ export default function TripOptions({ tripId }: { tripId: number }) {
       if (request.generation !== previewGeneration.current) return;
       setDraft((current) => {
         // Ignore previews for an earlier link, and never replace fields the user filled in.
-        if (current.url.trim() !== request.url) return current;
+        if (request.generation !== previewGeneration.current || current.url.trim() !== request.url) return current;
         const suggested = (field: keyof PreviewRequest["before"], value: string) =>
-          current[field] === request.before[field] && !request.before[field].trim()
+          current[field] === request.before[field] && !request.before[field].trim() &&
+          !editedFields.current.has(field)
             ? value : current[field];
         return {
           ...current,
           url: result.url,
-          title: suggested("title", result.title),
+          title: suggested("title", contextualTitle(result.url, result.title)),
           source: suggested("source", result.source),
           description: suggested("description", result.description ?? ""),
           imageUrl: suggested("imageUrl", result.imageUrl ?? ""),
@@ -211,7 +248,7 @@ export default function TripOptions({ tripId }: { tripId: number }) {
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{t("tripOptions.intro")}</p>
         </div>
         {!formOpen && (
-          <Button type="button" onClick={() => { previewGeneration.current += 1; setDraft(emptyDraft); setEditingId(null); setFormOpen(true); }}>
+          <Button type="button" onClick={() => { previewGeneration.current += 1; editedFields.current.clear(); setDraft(emptyDraft); setEditingId(null); setFormOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />{t("tripOptions.add")}
           </Button>
         )}
@@ -220,7 +257,7 @@ export default function TripOptions({ tripId }: { tripId: number }) {
         <Card>
           <CardHeader><CardTitle>{editingId === null ? t("tripOptions.add") : t("tripOptions.edit")}</CardTitle></CardHeader>
           <CardContent>
-            <form onSubmit={submit} className="space-y-4">
+            <form onSubmit={submit} className="space-y-4 [color-scheme:light]">
               <label className={labelStyles}>{t("tripOptions.category")}
                 <select className={fieldStyles} value={draft.category}
                   onChange={(e) => update({ category: e.target.value as Draft["category"] })}>
@@ -236,7 +273,9 @@ export default function TripOptions({ tripId }: { tripId: number }) {
                     onPaste={(e) => {
                       const pasted = e.clipboardData.getData("text").trim();
                       if (tripOptionUrlSchema.safeParse(pasted).success) {
-                        setPreviewError("");
+                        // Apply exactly the URL being previewed, including replacement pastes.
+                        e.preventDefault();
+                        update({ url: pasted });
                         startPreview(pasted);
                       }
                     }}
@@ -299,12 +338,12 @@ export default function TripOptions({ tripId }: { tripId: number }) {
         <div className="grid items-stretch gap-6 md:grid-cols-2">
           {options.map((option) => (
             <Card key={option.id} className="flex min-w-0 flex-col overflow-hidden rounded-xl border-border/70">
-              <OptionCover category={option.category as Draft["category"]} imageUrl={option.imageUrl} title={option.title} source={option.source} />
+              <OptionCover category={option.category as Draft["category"]} imageUrl={option.imageUrl} title={contextualTitle(option.url, option.title)} source={option.source} />
               <CardContent className="flex flex-1 flex-col p-5 sm:p-6">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{option.source}</span>
                 </p>
-                <h3 className="break-words font-display text-xl font-semibold leading-snug">{option.title}</h3>
+                <h3 className="break-words font-display text-xl font-semibold leading-snug">{contextualTitle(option.url, option.title)}</h3>
                 {option.description && <p className="mt-2 line-clamp-3 break-words text-sm leading-relaxed text-muted-foreground">{option.description}</p>}
                 {option.priceNote && <p className="mt-4 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium">{t("tripOptions.observedPrice")}: {option.priceNote}</p>}
                 {option.notes && <p className="mt-3 whitespace-pre-line break-words border-l-2 border-primary/25 pl-3 text-sm leading-relaxed text-muted-foreground">{option.notes}</p>}
@@ -320,7 +359,7 @@ export default function TripOptions({ tripId }: { tripId: number }) {
                     </Button>
                     <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0"
                       aria-label={t("tripOptions.edit")} title={t("tripOptions.edit")} onClick={() => {
-                        previewGeneration.current += 1; setEditingId(option.id); setDraft(fromOption(option)); setPreviewError(""); setSaveError(""); setFormOpen(true);
+                        previewGeneration.current += 1; editedFields.current.clear(); setEditingId(option.id); setDraft(fromOption(option)); setPreviewError(""); setSaveError(""); setFormOpen(true);
                       }}>
                       <Pencil className="h-4 w-4" aria-hidden="true" />
                     </Button>
