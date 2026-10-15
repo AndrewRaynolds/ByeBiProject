@@ -5,6 +5,7 @@ import type { TripCandidateOption } from "@shared/schema";
 import {
   tripOptionInputSchema,
   tripOptionPreviewSchema,
+  tripOptionUrlSchema,
   type TripOptionInput,
   type TripOptionPreview,
 } from "@shared/tripOptionSchemas";
@@ -139,6 +140,13 @@ export default function TripOptions({ tripId }: { tripId: number }) {
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input id="trip-option-url" type="url" required maxLength={2048} value={draft.url}
                     placeholder="https://..." onChange={(e) => update({ url: e.target.value })}
+                    onPaste={(e) => {
+                      const pasted = e.clipboardData.getData("text").trim();
+                      if (tripOptionUrlSchema.safeParse(pasted).success) {
+                        setPreviewError("");
+                        preview.mutate(pasted);
+                      }
+                    }}
                     className="min-w-0 flex-1 rounded-md border px-3 py-2 text-base" />
                   <Button type="button" variant="outline" disabled={preview.isPending || !draft.url.trim()}
                     onClick={() => { setPreviewError(""); preview.mutate(draft.url.trim()); }}>
