@@ -25,6 +25,26 @@ export const trips = pgTable(
   (table) => [index("trips_user_id_idx").on(table.userId)],
 );
 
+// External links an organizer explicitly saves for consideration. Not provider inventory or bookings.
+export const tripCandidateOptions = pgTable(
+  "trip_candidate_options",
+  {
+    id: serial("id").primaryKey(),
+    tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    source: text("source").notNull(),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    priceNote: text("price_note"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("trip_candidate_options_trip_id_idx").on(table.tripId)],
+);
+export type TripCandidateOption = typeof tripCandidateOptions.$inferSelect;
+
 export const insertTripSchema = createInsertSchema(trips).pick({
   userId: true,
   name: true,

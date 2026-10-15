@@ -56,6 +56,14 @@ Keep four concepts separate:
 
 No generic `itinerary` object is canonical across these domains. Conversions between domains must be explicit and validated. See [ADR-0006](adr/0006-domain-state-separation.md).
 
+## Organizer-curated candidate links
+
+`trip_candidate_options` is a child table of `trips` with cascade deletion. Each entry has a category, source URL, title, source label and optional descriptive fields/indicative price note. It belongs to the authenticated owner of the Saved Trip, enforced by Express routes and owner-scoped storage methods. PostgreSQL RLS is enabled and direct `anon`/`authenticated` table grants are revoked.
+
+The `/api/trips/:tripId/options` family manages explicitly saved links. `POST /api/trips/:tripId/options/preview` attempts a metadata-only HTML preview of a user-provided public URL. It is authenticated, owner-checked and rate limited. The fetcher permits standard HTTP(S) ports, pins a validated public IPv4 DNS destination for each request, revalidates redirects, and enforces request timeout and response size limits. It never fetches stored preview image URLs, user credentials or provider private APIs. Metadata may be unavailable, in which case the editor falls back to manual fields.
+
+Candidate links are **neither Provider Results nor persisted verified Selections**, and must not mutate the Planner, Legacy `currentItinerary`, affiliate integrations or the separate manual booking checklist. Apply the versioned migration before the code is published.
+
 ## Planner contract
 
 The canonical Planner contract is `shared/plannerSchemas.ts`.
