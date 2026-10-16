@@ -39,7 +39,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
             className="group w-full cursor-pointer overflow-hidden rounded-lg border-2 border-red-500/20 bg-gradient-to-br from-black to-red-950 text-left text-card-foreground shadow-sm transition-all duration-300 hover:scale-105 hover:border-red-500 hover:shadow-2xl hover:shadow-red-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
             onClick={() => onSelectBrand('byebro')}
             data-testid="button-select-byebro"
-            aria-label="Scegli ByeBro per organizzare un addio al celibato"
+            aria-label={t("brand.bro.accessibleLabel")}
           >
             <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -68,7 +68,7 @@ export default function BrandSelection({ onSelectBrand }: BrandSelectionProps) {
             className="group w-full cursor-pointer overflow-hidden rounded-lg border-2 border-pink-500/20 bg-gradient-to-br from-black to-pink-950 text-left text-card-foreground shadow-sm transition-all duration-300 hover:scale-105 hover:border-pink-500 hover:shadow-2xl hover:shadow-pink-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
             onClick={() => onSelectBrand('byebride')}
             data-testid="button-select-byebride"
-            aria-label="Scegli ByeBride per organizzare un addio al nubilato"
+            aria-label={t("brand.bride.accessibleLabel")}
           >
             <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">

@@ -1,11 +1,14 @@
 /** @vitest-environment jsdom */
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PlannerDialog from "./PlannerDialog";
 import ChatDialogCompact from "./ChatDialogCompact";
 import ChatDialogCompactBride from "./ChatDialogCompactBride";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { createPlannerDraft, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
+import { createProgramDraft } from "@shared/programTransitions";
+import { budgetAllocationStorageKey } from "@/lib/planningDraftKeys";
+import { programStorageKey } from "@/lib/programStorage";
 const RETIRED_PROVIDER_SELECTION_STORAGE_KEY = "byebi:providerSelections:v1";
 import { apiRequest } from "@/lib/queryClient";
 import { consumeJsonSse } from "@/lib/sse";
@@ -55,14 +58,14 @@ describe("PlannerDialog", () => {
     renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
     expect(screen.getByText(/travel brief modificabile/i)).toBeInTheDocument();
     expect(screen.queryByText(/prezzo del volo|hotel disponibile/i)).not.toBeInTheDocument();
-    expect(screen.getByText("700 €")).toBeInTheDocument();
+    expect(within(screen.getByTestId("planner-review")).getByText("700 €")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Modifica dettagli" }));
     fireEvent.change(screen.getByLabelText("Budget per persona"), { target: { value: "850" } });
     fireEvent.change(screen.getByLabelText("Preferenze del gruppo"), { target: { value: "music, spa" } });
     fireEvent.click(screen.getByRole("button", { name: "Salva modifiche" }));
 
-    expect(screen.getByText("850 €")).toBeInTheDocument();
+    expect(within(screen.getByTestId("planner-review")).getByText("850 €")).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!).budgetPerPerson).toBe(850);
   });
 
@@ -73,22 +76,30 @@ describe("PlannerDialog", () => {
     fireEvent.change(screen.getByLabelText("Budget per persona"), { target: { value: "999" } });
     fireEvent.click(screen.getByRole("button", { name: "Annulla modifiche" }));
 
-    expect(screen.getByText("700 €")).toBeInTheDocument();
+    expect(within(screen.getByTestId("planner-review")).getByText("700 €")).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!).budgetPerPerson).toBe(700);
   });
 
-  it("starts a visibly fresh trip and clears chat, bridge, and provider selections", () => {
+  it("starts a visibly fresh trip and clears chat, bridge, and provider selections", async () => {
     storeReady();
+    localStorage.setItem(programStorageKey("byebro"), JSON.stringify(createProgramDraft(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!))));
+    localStorage.setItem(programStorageKey("byebride"), "untouched other brand");
+    localStorage.setItem(budgetAllocationStorageKey("byebro"), "current budget");
+    localStorage.setItem(budgetAllocationStorageKey("byebride"), "other budget");
     localStorage.setItem("currentItinerary", JSON.stringify({ destination: "Ibiza" }));
     localStorage.setItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY, "old selections");
     renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Nuovo viaggio" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Nuovo viaggio" })));
 
     expect(screen.queryByTestId("planner-review")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Scrivi il tuo messaggio..." })).toHaveValue("");
     expect(localStorage.getItem("currentItinerary")).toBeNull();
     expect(localStorage.getItem(RETIRED_PROVIDER_SELECTION_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(programStorageKey("byebro"))).toBeNull();
+    expect(localStorage.getItem(programStorageKey("byebride"))).toBe("untouched other brand");
+    expect(localStorage.getItem(budgetAllocationStorageKey("byebro"))).toBeNull();
+    expect(localStorage.getItem(budgetAllocationStorageKey("byebride"))).toBe("other budget");
     expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!)).toMatchObject({ status: "draft", destination: null });
   });
 
@@ -255,7 +266,7 @@ describe("PlannerDialog", () => {
     window.history.replaceState(null, "", "/");
     window.dispatchEvent(new PopStateEvent("popstate"));
     renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} />);
-    expect(screen.getByText("875 €")).toBeInTheDocument();
+    expect(within(screen.getByTestId("planner-review")).getByText("875 €")).toBeInTheDocument();
   });
 
   it("keeps every new planner label aligned in Italian, English and Spanish", () => {

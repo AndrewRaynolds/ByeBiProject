@@ -37,6 +37,8 @@ The selected brand is applied through `html[data-brand]` and persisted as `selec
 - Imagery, icons, examples, copy, and tone may vary when they preserve the same task and information hierarchy.
 - A brand change must not produce a different capability or hidden workflow.
 
+Brand voice: ByeBro is direct, playful and collaborative; ByeBride is attentive, warm and imaginative. Do not associate either voice with presumed interests or group composition. In the preference editor, expose every editorial outline to both variants, with no preselection. Preview, explicit field replacement and final review save are distinct actions. State that applying replaces both preference fields, that notes remain editable, and that outlines are neither bookable packages nor partner filters. Keep controls at least 44 px high, labels visible, copy wrapping and keyboard focus on the first editable preference field after application.
+
 Prefer token overrides and data-driven content. Do not fork a shared feature component solely to change color or copy.
 
 ## Layout
@@ -111,6 +113,7 @@ Button labels begin with a clear verb. Disabled controls still explain unmet pre
 On discovery and entry surfaces:
 
 - Primary: AI Planner.
+- The homepage action uses a clear planning verb and remains usable with an empty optional message. Explain that users can type an idea or open guided inspiration. Preserve visible labels and wrapping helper text on mobile.
 - Secondary: explore or compare.
 
 On provider-option surfaces:
@@ -119,6 +122,8 @@ On provider-option surfaces:
 - That action may be an external partner handoff.
 
 External actions must name the provider, show an external-link cue when useful, and never imply internal ByeBi booking. A page may have several provider actions, but the current decision should remain visually dominant.
+
+On Travel Options, repeat the route/destination, dates and real group size near the relevant flight/hotel action. Keep provider-specific limitations adjacent and distinguish the group size from a capped external search. Place any affiliate disclosure before the action. Destination-level activity handoffs must not imply that trip dates or interests have filtered live results.
 
 ## Cards
 
@@ -130,11 +135,16 @@ Use the shared Card primitive and its variants:
 
 Clickable cards need keyboard-equivalent interaction. Keep the click target unambiguous; avoid nesting conflicting controls. Use consistent order for title, descriptive metadata, price/status, and action.
 
+## Optional editorial program editor
+
+The review summary exposes a collapsible optional editor. Distinguish ideas from explicitly scheduled items, show that feasibility is unverified and avoid implying inventory or booking. Require a day and named calendar slot for addition; keep optional duration editable rather than inventing it. An occupied slot must prompt another choice or explicit removal, never silent replacement. Context changes require review and visible corrections before applying the new context; preserve unrelated item details. Program revision conflicts require reloading/review instead of replaying an action automatically. The optional editor must not block the existing brief, search or save journey. Keep the local-only scope and unverified feasibility visible, with no claim of Trip Hub synchronization. New program controls use at least 44 px height. A successful activity write returns focus to the program heading. Validation failures keep the form editable; storage/conflict failures require explicit reload rather than replaying a write.
+
 ## Planner UI
 
 The Planner collects intent progressively and ends in a reviewable travel brief.
 
 - Show which fields are known, missing, or invalid.
+- Destination inspiration uses at most two stacked, keyboard-operable buttons with a destination label and a short editorial reason. State that these are ideas, not live offers, and that choosing updates the draft without booking. Inspire me and More ideas never select automatically. Keep free-text input available for other destinations. After an explicit choice, return focus to the message field or the review heading when the brief is complete.
 - Let the user edit structured values without restarting the conversation.
 - Present budget explicitly as **per person** near both input and review value.
 - Keep brand and party type aligned without asking users to resolve internal mappings.
@@ -143,6 +153,8 @@ The Planner collects intent progressively and ends in a reviewable travel brief.
 - Preserve a valid draft across refresh using the versioned Planner storage contract.
 - Closing and reopening resumes the current brand's draft. Keep an obvious **New trip** action available in both collection and review states; it starts fresh only after that explicit action and must not delete Saved Trips.
 - Review mode exposes clear **Edit**, **Save changes**, and **Cancel editing** actions. Cancel restores the last validated values, continuation stays disabled while editing or invalid, and field-specific validation remains adjacent to the affected control.
+
+Saved preference updates show the saved and draft versions side by side on wider screens and stacked on mobile. Use visible Update saved preferences or Remove saved preferences labels, with explicit replacement/removal and shared-link impact copy before the action. Loading, failure, conflict and successful alignment must have readable status text. On conflict, reload the current saved version for comparison and require another click; never overwrite automatically. Controls wrap at narrow widths and keep a minimum height of 44 px. No autosave or booking implication.
 
 The AI must not appear to have completed a booking or verified provider availability when it has only updated intent.
 
@@ -234,3 +246,15 @@ All product copy uses translation keys from `client/src/locales/it.json`, `en.js
 - New reusable components require accessible states and representative tests.
 
 Existing bespoke surfaces are implementation evidence, not permission to copy legacy patterns into new work.
+
+### Optional budget editor in Planner review
+
+Keep allocation controls in a collapsible section outside the brief form. Label all six inputs in EUR per person for the whole trip; preserve blank versus zero and validate whole non-negative euros up to 100,000. Distinguish unsaved preview from confirmed local save; focus the summary after success. Use text for incomplete state, unknown cap and excess, never color alone. Show old and current context when review is required and preserve values until explicit confirmation. A storage conflict preserves unsaved fields and offers explicit reload. Save/replacement, clear-fields and reload controls wrap at mobile widths and have at least 44px touch targets. Explain device-only persistence in IT/EN/ES, including at the Saved Trip boundary.
+
+### Candidate image covers
+
+Use the supplied image URL when valid, with a readable overlay identifying its URL host. This names the image host, not its author or licensing status. Keep the image decorative when the card title already identifies the candidate. On missing/failed images use the existing category illustration and explicit illustrative label; do not substitute unrelated hotel or activity photos. Keep the image host contained on narrow screens with truncation and full host available as its title. The editor explains metadata, manual replacement and fallback in all three languages.
+
+### Google sign-in entry and callback
+
+Use one localized Continue with Google control above the login/register tabs, at least 48px high, with the unmodified official Google G asset on white. The asset is embedded locally, not requested from Google before click. Preserve standard Google colors rather than recoloring by ByeBro/ByeBride. Keep a visible focus ring, wrapping text and an accessible pending label. Temporarily disable password/register submission during OAuth start and suppress repeated clicks. On failure show a short localized message and retain email/password access. Explain that returning after authentication does not save a trip. Callback progress and errors use status/alert roles and offer a clear retry link. Final branding/typography and real-provider UX must be validated before enabling the feature externally.

@@ -28,11 +28,9 @@ export default function HeroSection() {
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (chatInput.trim()) {
-      setInitialChatMessage(chatInput.trim());
-      setChatInput('');
-      setChatDialogOpen(true);
-    }
+    setInitialChatMessage(chatInput.trim() || undefined);
+    setChatInput('');
+    setChatDialogOpen(true);
   };
 
   return (

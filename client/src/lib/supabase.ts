@@ -12,4 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // 3. Creiamo la connessione ufficiale e la esportiamo ("export")
 // così potrai usarla in qualsiasi altro file del tuo frontend
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  // The dedicated PKCE callback exchanges its own code; password/recovery keep their existing flow.
+  auth: { detectSessionInUrl: typeof window === "undefined" || window.location.pathname !== "/auth/callback" },
+});

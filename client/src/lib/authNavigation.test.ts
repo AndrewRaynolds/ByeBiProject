@@ -32,3 +32,12 @@ describe("post-auth navigation", () => {
     );
   });
 });
+
+describe("OAuth-safe internal return paths", () => {
+  it.each(["/foo/..//evil.example", "/\\evil.example", "/\nevil", "/auth", "/auth/callback?code=bad", "/foo/../auth/reset-password", "//evil.example", "https://evil.example", "javascript:alert(1)"])("rejects external, ambiguous or authentication-loop target %s", next => {
+    expect(getSafePostAuthPath(`?next=${encodeURIComponent(next)}`)).toBe("/");
+  });
+  it("normalizes an internal path while preserving its own query and fragment", () => {
+    expect(getSafePostAuthPath("?next="+encodeURIComponent("/trips/42?tab=expenses#notes"))).toBe("/trips/42?tab=expenses#notes");
+  });
+});

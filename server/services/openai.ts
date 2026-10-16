@@ -3,6 +3,7 @@ import { buildAviasalesUrl, getAviasalesAdultCount } from "@shared/flightSchemas
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { resolveIataCode } from "./cityMapping";
 import { getSafeErrorMetadata } from "../safeError";
+import { buildPlannerFollowUp } from "./plannerConversation";
 import {
   applyPlannerUpdate,
   createPlannerDraft,
@@ -265,8 +266,9 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           budgetPerPerson: { type: ["integer", "null"], description: "Budget in EUR per person, never total group budget, or null" },
           preferenceArchetype: { type: ["string", "null"], description: "Group experience archetype, or null" },
           interests: { type: ["array", "null"], items: { type: "string" }, description: "Explicit group interests, or null" },
+          clearFields: { type: ["array", "null"], items: { type: "string", enum: ["budgetPerPerson", "preferences"] }, maxItems: 2, description: "Only fields the user explicitly asks to remove. Use null for their corresponding update values. Empty array when nothing is being removed." },
         },
-        required: ["origin", "destination", "startDate", "endDate", "participants", "budgetPerPerson", "preferenceArchetype", "interests"],
+        required: ["origin", "destination", "startDate", "endDate", "participants", "budgetPerPerson", "preferenceArchetype", "interests", "clearFields"],
         additionalProperties: false,
       },
     },
@@ -283,9 +285,12 @@ RULES:
 - Required details: departure city, destination, start date, end date, and participants.
 - Budget per person and group preferences/experience archetype are optional. Preserve them if volunteered, but never ask for them or delay the travel brief because they are unknown. They are optional notes, not filters applied to external partner searches.
 - NEVER assume departure city, budget, or preferences. Budget always means EUR PER PERSON, never the group total.
+- A volunteered amount with unclear scope needs one clarification before applying it. For a group total, propose the per-person calculation and await explicit confirmation before updating budgetPerPerson. Qualitative words such as cheap/medium/high are not numeric budgets; never convert them into amounts. Never silently round or convert a currency.
+- If the user explicitly removes budget or preferences, call update_planner with clearFields naming only those fields and null for their corresponding update values. Otherwise clearFields is empty; ordinary null values preserve existing details.
 - NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
 - Call update_planner whenever the user supplies or changes planner details, merging the CURRENT PLANNER and the new message. Use null for values that remain unknown.
-- After the tool result, ask only for the next missing detail. When no fields are missing, briefly say the travel brief is ready for review.
+- Recognize what the user has shared and help them move forward, instead of listing fields to fill in. Ask at most one useful question per turn and never re-ask a known detail. When no essential fields are missing, say the brief is ready for review without asking more questions.
+- If the user is undecided, offer up to two destination ideas from the supported destinations with an editorial reason, then one useful question. Explain they are inspiration to verify, not offers. Never write a suggestion into the Planner unless the user chooses it. Do not infer interests from the party type or brand. All editorial styles are available to both brands. Use explicitly confirmed preferences as optional intent notes; never claim they filter partner searches or represent scheduled or bookable activities.
 - NEVER output text alongside a tool call. When calling a tool, output ONLY the tool call with zero accompanying text.
 - Concise: 2-3 sentences max. Friendly startup tone. No jargon.
 - Do not search providers, invent prices, flights, hotels, activities, availability, or offers.
@@ -295,10 +300,12 @@ TOOLS:
 })();
 
 const BYEBRO_SYSTEM_PROMPT = `You are the ByeBro planner for bachelor party travel briefs.
+Voice: friendly, direct and playfully collaborative. Help the group build shared complicity; invite rather than pressure.
 
 ${SHARED_SYSTEM_PROMPT}`;
 
 const BYEBRIDE_SYSTEM_PROMPT = `You are the ByeBride planner for bachelorette party travel briefs.
+Voice: warm, attentive and imaginative. Help the group express what matters to the person being celebrated; invite rather than pressure.
 
 ${SHARED_SYSTEM_PROMPT}`;
 
@@ -539,8 +546,6 @@ export function detectUserLanguage(
 interface LocalStrings {
   noFlightsError: (o: string, d: string) => string;
   noFlights: (o: string, d: string) => string;
-  plannerReady: string;
-  missingPlannerField: Record<string, string>;
   requestIncomplete: string;
   requestError: string;
 }
@@ -551,48 +556,18 @@ const STRINGS: Record<string, LocalStrings> = {
     noFlights: (o, d) => `Ho preparato il viaggio da ${o} a ${d}. Ti porto al checkout: sceglierai il volo direttamente su Aviasales.`,
     requestIncomplete: "Non sono riuscito a completare la richiesta. Riprova.",
     requestError: "Si è verificato un problema. Riprova.",
-    plannerReady: "Il tuo travel brief è pronto. Controlla i dettagli e modificali se serve.",
-    missingPlannerField: {
-      origin: "Da quale città partite?",
-      destination: "Qual è la destinazione?",
-      dates: "Quali sono le date di partenza e ritorno?",
-      endDate: "Qual è la data di ritorno?",
-      participants: "Quante persone partecipano?",
-      budgetPerPerson: "Qual è il budget per persona?",
-      preferences: "Che tipo di esperienza o attività preferisce il gruppo?",
-    },
   },
   en: {
     noFlightsError: (o, d) => `I couldn't prepare the connection from ${o} to ${d}. Check the cities and dates, then try again.`,
     noFlights: (o, d) => `I've prepared your trip from ${o} to ${d}. Taking you to checkout so you can choose the flight directly on Aviasales.`,
     requestIncomplete: "I couldn't complete the request. Please try again.",
     requestError: "There was a problem. Please try again.",
-    plannerReady: "Your travel brief is ready. Review the details and edit anything you need.",
-    missingPlannerField: {
-      origin: "Which city are you departing from?",
-      destination: "Where would you like to go?",
-      dates: "What are your departure and return dates?",
-      endDate: "What is your return date?",
-      participants: "How many people are traveling?",
-      budgetPerPerson: "What is the budget per person?",
-      preferences: "What kind of experience or activities does the group prefer?",
-    },
   },
   es: {
     noFlightsError: (o, d) => `No pude preparar la conexión de ${o} a ${d}. Comprueba las ciudades y las fechas e inténtalo de nuevo.`,
     noFlights: (o, d) => `He preparado tu viaje de ${o} a ${d}. Te llevo al checkout para elegir el vuelo directamente en Aviasales.`,
     requestIncomplete: "No pude completar la solicitud. Inténtalo de nuevo.",
     requestError: "Se ha producido un problema. Inténtalo de nuevo.",
-    plannerReady: "Tu resumen de viaje está listo. Revisa los datos y modifica lo que necesites.",
-    missingPlannerField: {
-      origin: "¿Desde qué ciudad salís?",
-      destination: "¿Cuál es el destino?",
-      dates: "¿Cuáles son las fechas de salida y regreso?",
-      endDate: "¿Cuál es la fecha de regreso?",
-      participants: "¿Cuántas personas viajan?",
-      budgetPerPerson: "¿Cuál es el presupuesto por persona?",
-      preferences: "¿Qué tipo de experiencia o actividades prefiere el grupo?",
-    },
   },
 };
 
@@ -601,19 +576,10 @@ export function getDeterministicPlannerFollowUp(
   userMessage: string,
   conversationHistory: ChatMessage[] = [],
   locale?: ChatContext["locale"],
+  previousPlanner?: PlannerDraft,
 ): string {
   const lang = locale ?? detectUserLanguage(userMessage, conversationHistory);
-  const strings = STRINGS[lang] || STRINGS.en;
-  const missingFields = getMissingPlannerFields(planner);
-  if (missingFields.length === 0 && planner.status === "review-ready") return strings.plannerReady;
-
-  const nextField = missingFields[0];
-  const questionKey = nextField === "startDate"
-    ? "dates"
-    : nextField === "endDate"
-      ? "endDate"
-      : nextField;
-  return strings.missingPlannerField[questionKey] ?? strings.missingPlannerField.preferences;
+  return buildPlannerFollowUp(planner, lang === "it" || lang === "es" ? lang : "en", previousPlanner);
 }
 
 function generateLocalToolResponse(
@@ -621,16 +587,17 @@ function generateLocalToolResponse(
   context: ChatContext,
   userMessage: string,
   conversationHistory: ChatMessage[] = [],
+  previousPlanner?: PlannerDraft,
 ): string | null {
   const lang = context.locale ?? detectUserLanguage(userMessage, conversationHistory);
   const s = STRINGS[lang] || STRINGS.en;
 
-  for (const { name, result, args } of toolResults) {
+  for (const { name, result, args } of [...toolResults].reverse()) {
     switch (name) {
       case "update_planner": {
         const parsed = plannerDraftSchema.safeParse(result.planner);
         if (parsed.success) {
-          return getDeterministicPlannerFollowUp(parsed.data, userMessage, conversationHistory, context.locale);
+          return getDeterministicPlannerFollowUp(parsed.data, userMessage, conversationHistory, context.locale, previousPlanner);
         }
         break;
       }
@@ -778,6 +745,8 @@ export async function* streamOpenAIChatCompletionWithTools(
         }))
       });
 
+      // Keep the validated pre-update snapshot for truthful acknowledgements.
+      const previousPlanner = context.planner;
       // Execute each tool and collect results
       let canShortCircuit = true;
       const toolResults: Array<{ name: string; result: Record<string, unknown>; args: Record<string, unknown> }> = [];
@@ -840,6 +809,7 @@ export async function* streamOpenAIChatCompletionWithTools(
           context,
           userMessage,
           conversationHistory,
+          previousPlanner,
         );
         if (localResponse) {
           debugLog(`⏱️ [STREAM] Short-circuiting with local response (saved ~5-8s). Total: ${Date.now() - totalStart}ms`);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   createPlannerDraft,
+  getPlannerPreferenceNotes,
   PLANNER_STORAGE_KEY,
   plannerDraftSchema,
   type PlannerBrand,
@@ -157,10 +158,8 @@ export function createLegacyCheckoutBridge(planner: PlannerDraft): Record<string
   if (planner.status !== "review-ready" || !planner.origin || !planner.destination ||
       !planner.startDate || !planner.endDate || !planner.participants) return null;
 
-  const activities = [
-    ...(planner.preferences?.archetype ? [planner.preferences.archetype] : []),
-    ...(planner.preferences?.interests ?? []),
-  ].filter((value, index, values) => values.indexOf(value) === index);
+  // The persisted legacy field contains preference notes, not selected activities.
+  const activities = getPlannerPreferenceNotes(planner);
 
   return {
     origin: planner.origin.canonical,

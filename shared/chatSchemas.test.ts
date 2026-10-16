@@ -23,6 +23,15 @@ const validRequest = {
 };
 
 describe("chatStreamRequestSchema", () => {
+  it("requires an eligible draft for an explicit destination action", () => {
+    const planner = createPlannerDraft({ brand: "byebro", origin: "Roma" });
+    const action = { type: "choose_destination", destinationId: "barcelona" };
+    expect(chatStreamRequestSchema.safeParse({ message: "Scegli Barcellona", planner, plannerAction: action }).success).toBe(true);
+    expect(chatStreamRequestSchema.safeParse({ message: "Scegli", plannerAction: action }).success).toBe(false);
+    expect(chatStreamRequestSchema.safeParse({ message: "Scegli", planner, plannerAction: { ...action, destinationId: "rome" } }).success).toBe(false);
+    expect(chatStreamRequestSchema.safeParse({ message: "Scegli", planner: createPlannerDraft({ brand: "byebro", destination: "Ibiza" }), plannerAction: action }).success).toBe(false);
+    expect(chatStreamRequestSchema.safeParse({ message: "Altre idee", planner, plannerAction: { type: "suggest_destinations", seenIds: Array(7).fill("rome") } }).success).toBe(false);
+  });
   it("accepts the current streaming payload", () => {
     expect(chatStreamRequestSchema.safeParse(validRequest).success).toBe(true);
   });

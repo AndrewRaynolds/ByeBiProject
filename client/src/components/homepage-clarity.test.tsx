@@ -59,31 +59,31 @@ describe("homepage clarity", () => {
     const translations = [
       {
         values: itTranslations,
-        cta: "Inizia con l'AI",
+        cta: "Organizza il viaggio",
         prefill: "Organizza un viaggio a {{destination}}",
         steps: [
           "Raccontaci il viaggio",
-          "Confronta voli, hotel e attività",
+          "Cerca voli, hotel e attività",
           "Salva e organizza il gruppo",
         ],
       },
       {
         values: en,
-        cta: "Start with AI",
+        cta: "Plan the trip",
         prefill: "Plan a trip to {{destination}}",
         steps: [
           "Tell us about the trip",
-          "Compare flights, hotels and activities",
+          "Search flights, hotels and activities",
           "Save and organize the group",
         ],
       },
       {
         values: es,
-        cta: "Empieza con IA",
+        cta: "Organiza el viaje",
         prefill: "Organiza un viaje a {{destination}}",
         steps: [
           "Cuéntanos el viaje",
-          "Compara vuelos, hoteles y actividades",
+          "Busca vuelos, hoteles y actividades",
           "Guarda y organiza el grupo",
         ],
       },
@@ -119,11 +119,11 @@ describe("homepage clarity", () => {
     fireEvent.change(screen.getByTestId("input-hero-chat"), {
       target: { value: "Roma a ottobre" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Inizia con l'AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Organizza il viaggio" }));
 
     expect(screen.getByTestId("chat-dialog-message")).toHaveTextContent("Roma a ottobre");
     expect(screen.queryByText("Raccontaci il viaggio")).not.toBeInTheDocument();
-    expect(screen.queryByText("Confronta voli, hotel e attività")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cerca voli, hotel e attività")).not.toBeInTheDocument();
     expect(screen.queryByText("Salva e organizza il gruppo")).not.toBeInTheDocument();
   });
 
@@ -138,7 +138,7 @@ describe("homepage clarity", () => {
     fireEvent.change(screen.getByTestId("input-hero-chat-bride"), {
       target: { value: "Lisbona a maggio" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Inizia con l'AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Organizza il viaggio" }));
 
     expect(screen.getByTestId("chat-dialog-message-bride")).toHaveTextContent("Lisbona a maggio");
   });
@@ -183,7 +183,7 @@ describe("homepage clarity", () => {
 
     expect(document.getElementById("how-it-works")).toBeInTheDocument();
     expect(screen.getByText("Raccontaci il viaggio")).toBeInTheDocument();
-    expect(screen.getByText("Confronta voli, hotel e attività")).toBeInTheDocument();
+    expect(screen.getByText("Cerca voli, hotel e attività")).toBeInTheDocument();
     expect(screen.getByText("Salva e organizza il gruppo")).toBeInTheDocument();
     expect(screen.getByText(/senza registrarti/i)).toBeInTheDocument();
     expect(screen.getByText(/Trip Hub.*partner/i)).toBeInTheDocument();

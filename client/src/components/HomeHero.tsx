@@ -119,20 +119,24 @@ export default function HomeHero({
             </div>
 
             <form onSubmit={onChatSubmit} className="space-y-3">
-              <label htmlFor={inputTestId} className="sr-only">
-                {t(`${translationRoot}.placeholder`)}
+              <label htmlFor={inputTestId} className="block text-sm font-medium text-foreground">
+                {t("hero.inputLabel")}
               </label>
               <Input
                 id={inputTestId}
                 type="text"
                 autoComplete="off"
+                aria-describedby={`${inputTestId}-hint`}
                 placeholder={t(`${translationRoot}.placeholder`)}
                 value={chatInput}
                 onChange={(event) => onChatInputChange(event.target.value)}
                 className="h-12 border-border-strong bg-background px-4 shadow-none"
                 data-testid={inputTestId}
               />
-              <Button type="submit" size="lg" className="h-12 w-full" data-testid={buttonTestId}>
+              <p id={`${inputTestId}-hint`} className="text-sm leading-6 text-muted-foreground">
+                {t("hero.inputHint")}
+              </p>
+              <Button type="submit" size="lg" className="h-auto min-h-12 w-full whitespace-normal" data-testid={buttonTestId}>
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
                 {t(`${translationRoot}.startChat`)}
                 <Send className="h-4 w-4" aria-hidden="true" />

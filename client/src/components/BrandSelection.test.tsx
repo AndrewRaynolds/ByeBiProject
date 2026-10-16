@@ -7,7 +7,7 @@ import BrandSelection from "./BrandSelection";
 
 vi.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => ({ "brand.bro.accessibleLabel": "Scegli ByeBro per organizzare un addio al celibato", "brand.bride.accessibleLabel": "Scegli ByeBride per organizzare un addio al nubilato" }[key] ?? key),
   }),
 }));
 

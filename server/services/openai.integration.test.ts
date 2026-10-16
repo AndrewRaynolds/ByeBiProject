@@ -93,10 +93,69 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
     mockCreate.mockReset();
   });
 
+  it('clears optional notes through a single validated tool response without a second model call', async () => {
+    const { createPlannerDraft } = await import('@shared/plannerSchemas');
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const planner = createPlannerDraft({ brand: 'byebride', origin: 'Rome', destination: 'Ibiza', budgetPerPerson: 700, interests: ['food'] });
+    mockCreate.mockResolvedValueOnce(createMockStream([
+      { content: 'Ignored unvalidated filler' },
+      { tool_call: { id: 'remove_notes', name: 'update_planner', arguments: JSON.stringify({
+        origin: null, destination: null, startDate: null, endDate: null, participants: null,
+        budgetPerPerson: null, preferenceArchetype: null, interests: null,
+        clearFields: ['budgetPerPerson', 'preferences'],
+      }) } },
+      { finish: 'tool_calls' },
+    ]));
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools('Togli budget e preferenze', { planner, locale: 'it' })) chunks.push(chunk);
+    const result = chunks.find(chunk => chunk.type === 'tool_result');
+    expect(result).toMatchObject({ result: { planner: { budgetPerPerson: null, preferences: null, destination: { canonical: 'Ibiza' } } } });
+    const content = chunks.filter(chunk => chunk.type === 'content').map(chunk => chunk.content).join('');
+    expect(content).toContain('Ho aggiornato');
+    expect(content).not.toContain('Ignored');
+    expect(content.match(/\?/g)).toHaveLength(1);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate.mock.calls[0][0].tools[0].function.parameters.required).toContain('clearFields');
+  });
+
+  it('acknowledges a validated unchanged planner without claiming a change', async () => {
+    const { createPlannerDraft } = await import('@shared/plannerSchemas');
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const planner = createPlannerDraft({ brand: 'byebro', origin: 'Rome', destination: 'Ibiza', participants: 6 });
+    mockCreate.mockResolvedValueOnce(createMockStream([
+      { tool_call: { id: 'no_change', name: 'update_planner', arguments: JSON.stringify({
+        origin: null, destination: null, startDate: null, endDate: null, participants: null,
+        budgetPerPerson: null, preferenceArchetype: null, interests: null,
+      }) } }, { finish: 'tool_calls' },
+    ]));
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools('Non so', { planner, locale: 'it' })) chunks.push(chunk);
+    expect(chunks.filter(chunk => chunk.type === 'content')).toEqual([{ type: 'content', content: 'Per dare forma al viaggio, quali sono le date di partenza e ritorno?' }]);
+  });
+
+  it('uses the final validated planner when one response contains several updates', async () => {
+    const { streamOpenAIChatCompletionWithTools } = await import('./openai');
+    const empty = { origin: null, destination: null, startDate: null, endDate: null, participants: null, budgetPerPerson: null, preferenceArchetype: null, interests: null };
+    mockCreate.mockResolvedValueOnce({
+      async *[Symbol.asyncIterator]() {
+        yield { choices: [{ delta: { tool_calls: [
+          { index: 0, id: 'first', function: { name: 'update_planner', arguments: JSON.stringify({ ...empty, origin: 'Rome' }) } },
+          { index: 1, id: 'second', function: { name: 'update_planner', arguments: JSON.stringify({ ...empty, destination: 'Ibiza', participants: 6 }) } },
+        ] }, finish_reason: 'tool_calls' }] };
+      },
+    });
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of streamOpenAIChatCompletionWithTools('Da Roma a Ibiza, siamo 6', { locale: 'it' })) chunks.push(chunk);
+    const content = chunks.filter(chunk => chunk.type === 'content').map(chunk => chunk.content).join('');
+    expect(content).toContain('date di partenza e ritorno');
+    expect(content).not.toContain('Barcellona');
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
-    ['it', 'Italian', 'Quali sono le date di partenza e ritorno?'],
-    ['en', 'English', 'What are your departure and return dates?'],
-    ['es', 'Spanish', '¿Cuáles son las fechas de salida y regreso?'],
+    ['it', 'Italian', 'Ho aggiornato il riepilogo con i dettagli che hai indicato. Per dare forma al viaggio, quali sono le date di partenza e ritorno?'],
+    ['en', 'English', 'I\'ve updated the brief with the details you shared. To shape the trip, what are your departure and return dates?'],
+    ['es', 'Spanish', 'He actualizado el resumen con los datos que has compartido. Para dar forma al viaje, ¿cuáles son las fechas de salida y regreso?'],
   ] as const)('keeps selected %s in model instructions and local tool responses', async (locale, language, expected) => {
     const { streamOpenAIChatCompletionWithTools } = await import('./openai');
     mockCreate.mockResolvedValueOnce(createMockStream([
@@ -121,9 +180,9 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
       { role: 'assistant', content: 'Da quale città partite?' },
     ];
     const cases = [
-      ['it', 'Italian', 'Quali sono le date di partenza e ritorno?'],
-      ['en', 'English', 'What are your departure and return dates?'],
-      ['es', 'Spanish', '¿Cuáles son las fechas de salida y regreso?'],
+      ['it', 'Italian', 'Ho aggiornato il riepilogo con i dettagli che hai indicato. Per dare forma al viaggio, quali sono le date di partenza e ritorno?'],
+      ['en', 'English', 'I\'ve updated the brief with the details you shared. To shape the trip, what are your departure and return dates?'],
+      ['es', 'Spanish', 'He actualizado el resumen con los datos que has compartido. Para dar forma al viaje, ¿cuáles son las fechas de salida y regreso?'],
     ] as const;
 
     for (const [locale, language, expected] of cases) {

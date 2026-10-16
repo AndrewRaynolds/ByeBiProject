@@ -48,6 +48,7 @@ export function GetYourGuideCta({ destinationCity, placement, tripId }: GetYourG
             <AffiliateNotice className="mb-4" variant="light" />
             <Button
               onClick={handleClick}
+              variant="external"
               className="h-auto min-h-11 w-full whitespace-normal text-center font-semibold leading-tight sm:w-auto"
               data-testid={`button-gyg-${placement}`}
             >

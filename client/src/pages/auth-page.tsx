@@ -1,3 +1,4 @@
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -53,6 +54,7 @@ type RegisterFormValues = {
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [location, navigate] = useLocation();
+  const [googlePending, setGooglePending] = useState(false);
   const [activeTab, setActiveTab] = useState<"login" | "register">(() =>
     new URLSearchParams(window.location.search).get("tab") === "register"
       ? "register"
@@ -106,10 +108,12 @@ export default function AuthPage() {
   });
 
   const onLoginSubmit = (data: LoginFormValues) => {
+    if (googlePending) return;
     loginMutation.mutate({ email: data.email, password: data.password });
   };
 
   const onRegisterSubmit = (data: RegisterFormValues) => {
+    if (googlePending) return;
     registerMutation.mutate({
       email: data.email,
       password: data.password,
@@ -136,6 +140,8 @@ export default function AuthPage() {
               {t(isBride ? 'hero.bride.title' : 'hero.bro.title')}
             </p>
           </div>
+
+          <GoogleSignInButton disabled={loginMutation.isPending || registerMutation.isPending} onPendingChange={setGooglePending} />
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="mt-8">
             <TabsList className="grid w-full grid-cols-2 bg-gray-900">
@@ -196,7 +202,7 @@ export default function AuthPage() {
                   <Button
                     type="submit"
                     className={`w-full text-white ${isBride ? "bg-pink-600 hover:bg-pink-700" : "bg-red-600 hover:bg-red-700"}`}
-                    disabled={loginMutation.isPending}
+                    disabled={googlePending || loginMutation.isPending}
                   >
                     {loginMutation.isPending ? (
                       <>
@@ -291,7 +297,7 @@ export default function AuthPage() {
                   <Button
                     type="submit"
                     className={`w-full text-white ${isBride ? "bg-pink-600 hover:bg-pink-700" : "bg-red-600 hover:bg-red-700"}`}
-                    disabled={registerMutation.isPending}
+                    disabled={googlePending || registerMutation.isPending}
                   >
                     {registerMutation.isPending ? (
                       <>

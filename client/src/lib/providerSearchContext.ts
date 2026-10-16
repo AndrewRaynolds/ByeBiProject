@@ -1,4 +1,4 @@
-import { plannerReviewSchema, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
+import { getPlannerPreferenceNotes, plannerReviewSchema, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
 import { getPlannerStorageKey, plannerCheckoutBridgeProvenanceSchema } from "./plannerStorage";
 import { parseStoredTripContext, type TripContext } from "./tripContext";
 
@@ -60,10 +60,7 @@ export function loadProviderSearchContext(storage: Storage): {
         if (!plannerMatchesCheckout) {
           return { searchContext: fromTripContext(legacyTripContext), legacyTripContext };
         }
-        const preferences = [
-          ...(planner.preferences?.archetype ? [planner.preferences.archetype] : []),
-          ...(planner.preferences?.interests ?? []),
-        ];
+        const preferences = getPlannerPreferenceNotes(planner);
         const searchInput = {
           origin: planner.origin!.canonical,
           destination: planner.destination!.canonical,

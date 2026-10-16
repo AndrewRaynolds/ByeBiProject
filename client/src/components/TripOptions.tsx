@@ -64,7 +64,9 @@ function OptionCover({
   const { t } = useTranslation();
   const [failedUrls, setFailedUrls] = useState<string[]>([]);
   const Icon = categoryIcons[category] ?? Compass;
-  const suppliedImage = imageUrl && !failedUrls.includes(imageUrl) ? imageUrl : null;
+  const parsedImage = tripOptionUrlSchema.safeParse(imageUrl);
+  const suppliedImage = parsedImage.success && !failedUrls.includes(parsedImage.data) ? parsedImage.data : null;
+  const imageHost = suppliedImage ? new URL(suppliedImage).hostname : null;
   return (
     <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-primary/15 via-background to-muted text-foreground">
       {suppliedImage ? (
@@ -90,7 +92,11 @@ function OptionCover({
       <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-soft">
         <Icon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />{t(`tripOptions.${category}`)}
       </span>
-      {!suppliedImage && (
+      {suppliedImage ? (
+        <span className="absolute bottom-3 left-4 right-4 truncate rounded-md bg-background/95 px-2.5 py-1 text-xs font-semibold text-foreground" title={imageHost!}>
+          {t("tripOptions.imageOrigin")}: {imageHost}
+        </span>
+      ) : (
         <span className="absolute bottom-3 right-4 rounded-full border border-border bg-background/95 px-2.5 py-1 text-xs font-semibold text-foreground">
           {t("tripOptions.illustrativeImage")}
         </span>

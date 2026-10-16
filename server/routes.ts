@@ -1,3 +1,5 @@
+import { tripPreferencesPatchSchema } from "@shared/tripPreferencesSchemas";
+import { tripPreferencesSnapshot } from "./tripPreferences";
 import "./types";
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
@@ -23,6 +25,8 @@ import { blogSubmissionLimiter } from "./security";
 import { buildAviasalesUrl, flightSearchQuerySchema, getAviasalesAdultCount } from "@shared/flightSchemas";
 import { getSafeErrorMetadata } from "./safeError";
 import { chatStreamRequestSchema } from "@shared/chatSchemas";
+import { plannerDraftSchema } from "@shared/plannerSchemas";
+import { buildDestinationSuggestions, handlePlannerAction } from "./services/plannerSuggestions";
 import { parsePositiveIntegerParam } from "./routeParams";
 import { affiliateClickEventSchema, productEventSchema } from "@shared/analyticsSchemas";
 import {
@@ -660,6 +664,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/trips/:tripId/preferences", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    try {
+      const trip = await storage.getTripForUser(tripId, req.supabaseUser!.id);
+      if (!trip) return res.status(404).json({ message: "Trip not found" });
+      res.setHeader("Cache-Control", "no-store");
+      return res.json(tripPreferencesSnapshot(trip));
+    } catch {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.patch("/api/trips/:tripId/preferences", isAuthenticated, async (req: Request, res: Response) => {
+    const tripId = parsePositiveIntegerParam(req.params.tripId);
+    if (tripId === null) return res.status(400).json({ message: "Invalid trip ID" });
+    const patch = tripPreferencesPatchSchema.safeParse(req.body);
+    if (!patch.success) return res.status(400).json({ message: "Invalid preferences" });
+    try {
+      const result = await storage.updateTripPreferencesForUser(tripId, req.supabaseUser!.id, patch.data);
+      if (result.status === "not_found") return res.status(404).json({ message: "Trip not found" });
+      res.setHeader("Cache-Control", "no-store");
+      if (result.status === "conflict") return res.status(409).json({ message: "Preferences changed; reload before confirming" });
+      return res.json(result.preferences);
+    } catch {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/trips/user/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const supabaseUser = req.supabaseUser;
@@ -1230,9 +1263,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conversationHistory,
         partyType,
         originCity,
+        plannerAction,
       } = parsedRequest.data;
 
-      if (!process.env.OPENAI_API_KEY) {
+      if (!plannerAction && !process.env.OPENAI_API_KEY) {
         return res.status(503).json({
           success: false, 
           error: "Assistant temporarily unavailable",
@@ -1242,6 +1276,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
+
+      if (plannerAction) {
+        const result = handlePlannerAction(planner, plannerAction, locale ?? "it");
+        if (result.planner) res.write(`data: ${JSON.stringify({ tool_result: { name: "update_planner", result: { planner: result.planner, missingFields: result.missingFields } } })}\n\n`);
+        res.write(`data: ${JSON.stringify({ content: result.content })}\n\n`);
+        res.write(`data: ${JSON.stringify({ suggestions: result.suggestions })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+        return;
+      }
 
       const originIata = resolveIataCode(originCity) || "";
       const originCityName = originIata ? iataToCity(originIata) : "";
@@ -1259,6 +1303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         originCityName,
       };
 
+      let responsePlanner = planner;
       // Use the new tool-loop streaming function that properly executes tools
       // and feeds results back to OpenAI for natural conversation continuation
       for await (const chunk of streamOpenAIChatCompletionWithTools(
@@ -1274,6 +1319,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (chunk.type === "tool_call") {
           res.write(`data: ${JSON.stringify({ tool_call: chunk.toolCall })}\n\n`);
         } else if (chunk.type === "tool_result") {
+          if (chunk.name === "update_planner") {
+            const updated = plannerDraftSchema.safeParse(chunk.result.planner);
+            if (updated.success) responsePlanner = updated.data;
+          }
           // Send tool results to frontend for state updates (e.g., showing flight cards)
           res.write(`data: ${JSON.stringify({ tool_result: { name: chunk.name, result: chunk.result } })}\n\n`);
         }
@@ -1283,6 +1332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (timedOut) {
         res.write(`data: ${JSON.stringify({ error: "Assistant request timed out" })}\n\n`);
       } else {
+        if (responsePlanner) res.write(`data: ${JSON.stringify({ suggestions: buildDestinationSuggestions(responsePlanner) })}\n\n`);
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       }
       res.end();

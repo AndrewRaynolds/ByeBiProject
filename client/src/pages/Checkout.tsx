@@ -1,3 +1,4 @@
+import SavedTripPreferences from "@/components/SavedTripPreferences";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { AlertCircle, Calendar, CheckCircle2, ExternalLink, Hotel, Loader2, MapPin, Plane, RefreshCw, Save, Users } from "lucide-react";
@@ -38,6 +39,13 @@ export default function Checkout() {
   const [savingTrip, setSavingTrip] = useState(false);
   const [tripSaveStatus, setTripSaveStatus] = useState<"idle" | "saved" | "existing">("idle");
   const [checkingSavedTrip, setCheckingSavedTrip] = useState(false);
+  const [existingTrip, setExistingTrip] = useState<{ id: number; ownerId: string } | null>(null);
+  const saveAbort = useRef<AbortController | null>(null);
+  const saveBusy = useRef(false);
+  const saveScope = JSON.stringify([user?.id, isAuthenticated, tripContext]);
+  const saveScopeRef = useRef(saveScope);
+  saveScopeRef.current = saveScope;
+
 
   const fetchFlightHandoff = useCallback(async (context: ProviderSearchContext, fallbackUrl = "") => {
     flightRequest.current?.abort();
@@ -104,8 +112,10 @@ export default function Checkout() {
   }, [fetchFlightHandoff, setLocation]);
 
   useEffect(() => {
+    saveAbort.current?.abort(); saveBusy.current = false;
+    setSavingTrip(false); setExistingTrip(null); setTripSaveStatus("idle");
     if (!tripContext || !isAuthenticated || !user?.id) {
-      setTripSaveStatus("idle");
+      setCheckingSavedTrip(false);
       return;
     }
 
@@ -114,8 +124,10 @@ export default function Checkout() {
     apiRequest("GET", `/api/trips/user/${user.id}`)
       .then((response) => response.json() as Promise<Trip[]>)
       .then((trips) => {
-        if (!cancelled && trips.some((trip) => plannedTripMatchesSavedTrip(tripContext, trip))) {
+        const match = trips.find((trip) => plannedTripMatchesSavedTrip(tripContext, trip));
+        if (!cancelled && match) {
           setTripSaveStatus("existing");
+          if (Number.isSafeInteger(match.id) && match.id > 0) setExistingTrip({ id: match.id, ownerId: user.id });
         }
       })
       .catch(() => undefined)
@@ -125,6 +137,7 @@ export default function Checkout() {
 
     return () => {
       cancelled = true;
+      saveAbort.current?.abort();
     };
   }, [isAuthenticated, tripContext, user?.id]);
 
@@ -145,6 +158,19 @@ export default function Checkout() {
     openExternalUrl(url);
   };
 
+  const discardLegacyBudget = () => {
+    if (!tripContext || typeof tripContext.budget !== "string") return;
+    // Keep the rest of the validated bridge context intact across authentication.
+    try {
+      const stored = JSON.parse(localStorage.getItem("currentItinerary") || "null");
+      localStorage.setItem("currentItinerary", JSON.stringify({ ...stored, budget: null }));
+    } catch {
+      // Leave the current context intact if the browser cannot persist the change.
+      return;
+    }
+    setTripContext({ ...tripContext, budget: null });
+  };
+
   const handleSaveTrip = async () => {
     if (!tripContext) return;
     if (!isAuthenticated || !user?.id) {
@@ -152,24 +178,31 @@ export default function Checkout() {
       return;
     }
 
+    if (saveBusy.current) return;
+    saveBusy.current = true;
+    const controller = new AbortController(); saveAbort.current = controller;
+    const currentScope = saveScope;
     setSavingTrip(true);
     try {
-      const { created } = await savePlannedTrip(tripContext);
+      const { created, tripId } = await savePlannedTrip(tripContext, { signal: controller.signal });
+      if (controller.signal.aborted || saveScopeRef.current !== currentScope) return;
+      if (!created && tripId) setExistingTrip({ id: tripId, ownerId: user.id });
       if (created) trackProductEvent("trip_saved");
-      await queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] });
+      void queryClient.invalidateQueries({ queryKey: [`/api/trips/user/${user.id}`] }).catch(() => {});
       setTripSaveStatus(created ? "saved" : "existing");
       toast({
         title: t(created ? "chat.tripSaved" : "chat.tripAlreadySaved"),
         description: t(created ? "chat.tripSavedDesc" : "chat.tripAlreadySavedDesc"),
       });
     } catch {
+      if (controller.signal.aborted || saveScopeRef.current !== currentScope) return;
       toast({
         title: t("chat.tripSaveError"),
         description: t("chat.tripSaveErrorDesc"),
         variant: "destructive",
       });
     } finally {
-      setSavingTrip(false);
+      if (saveScopeRef.current === currentScope) { saveBusy.current = false; setSavingTrip(false); }
     }
   };
 
@@ -204,7 +237,8 @@ export default function Checkout() {
         currency: "EUR",
         maximumFractionDigits: 0,
       }).format(plannedTripPayload.budget)
-    : t("checkout.notSpecified");
+    : typeof tripContext.budget === "string" ? tripContext.budget : t("checkout.notSpecified");
+  const needsBudgetReview = typeof tripContext.budget === "string";
   const preferencesText = searchContext.preferences.length > 0
     ? searchContext.preferences.join(", ")
     : t("checkout.notSpecified");
@@ -227,6 +261,10 @@ export default function Checkout() {
               <div>
                 <p className="text-xs text-muted-foreground">{t("checkout.budgetPerPerson")}</p>
                 <p className="mt-1 font-medium" data-testid="travel-brief-budget">{formattedBudget}</p>
+                {needsBudgetReview && <div className="mt-2 space-y-2" role="status">
+                  <p className="text-sm text-muted-foreground">{t("checkout.legacyBudgetNeedsReview")}</p>
+                  <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal" onClick={discardLegacyBudget}>{t("checkout.discardLegacyBudget")}</Button>
+                </div>}
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t("checkout.preferences")}</p>
@@ -239,6 +277,7 @@ export default function Checkout() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-3 text-xl"><Plane aria-hidden="true" />{t("checkout.flightOptions")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <p id="flight-search-context" className="break-words font-medium" data-testid="flight-search-context">{t("checkout.flightSearchContext", { origin: searchContext.origin, destination: searchContext.destination, dates: formattedDates, count: searchContext.participants })}</p>
             <p className="text-sm text-muted-foreground">{t("checkout.flightProviderNote")}</p>
             {searchContext.participants > 9 && (
               <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm" data-testid="flight-large-group-note">
@@ -262,13 +301,14 @@ export default function Checkout() {
             )}
             {flightHandoffState === "ready" && flightHandoffUrl && (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">{t("checkout.aviasalesHandoffNote")}</p>
+                <p id="flight-handoff-note" className="text-sm text-muted-foreground">{t("checkout.aviasalesHandoffNote")}</p>
                 {aviasalesIsMonetized && <AffiliateNotice variant="light" />}
                 <Button asChild variant="external" className="h-auto min-h-11 w-full whitespace-normal">
                   <a
                     href={flightHandoffUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-describedby="flight-search-context flight-handoff-note"
                     onClick={() => trackAffiliateClick({
                       provider: "aviasales",
                       placement: "checkout_flight",
@@ -287,17 +327,19 @@ export default function Checkout() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-3 text-xl"><Hotel aria-hidden="true" />{t("checkout.hotelOptions")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <p id="hotel-search-context" className="break-words font-medium" data-testid="hotel-search-context">{t("checkout.hotelSearchContext", { destination: searchContext.destination, dates: formattedDates, count: searchContext.participants })}</p>
             <p className="text-sm text-muted-foreground">{t("checkout.hotelProviderNote")}</p>
-            <p className="text-sm text-muted-foreground">{t("checkout.bookingHandoffNote")}</p>
+            <p id="hotel-handoff-note" className="text-sm text-muted-foreground">{t("checkout.bookingHandoffNote")}</p>
+            {hasBookingAffiliateId() && <AffiliateNotice variant="light" />}
             <Button
               className="h-auto min-h-11 w-full whitespace-normal"
               variant="external"
               onClick={openBookingSearch}
               data-testid="button-search-hotels-booking"
+              aria-describedby="hotel-search-context hotel-handoff-note"
             >
               {t("checkout.searchHotelsBooking")}<ExternalLink />
             </Button>
-            {hasBookingAffiliateId() && <AffiliateNotice variant="light" />}
           </CardContent>
         </Card>
 
@@ -316,6 +358,7 @@ export default function Checkout() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {t(plannedTripPayload ? "checkout.saveTripDesc" : "checkout.saveTripIncomplete")}
               </p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("program.saveBoundary")}</p>
             </div>
             <Button
               onClick={handleSaveTrip}
@@ -336,6 +379,10 @@ export default function Checkout() {
             </Button>
           </CardContent>
         </Card>
+
+        {isAuthenticated && existingTrip && existingTrip.ownerId === user?.id && plannedTripPayload && <SavedTripPreferences
+          key={`${existingTrip.ownerId}:${existingTrip.id}:${JSON.stringify(plannedTripPayload.activities)}`}
+          tripId={existingTrip.id} ownerId={existingTrip.ownerId} notes={plannedTripPayload.activities} />}
 
         <Button size="lg" variant="outline" className="w-full" onClick={() => setLocation("/")} data-testid="button-back-home">
           {t("checkout.backToHome")}

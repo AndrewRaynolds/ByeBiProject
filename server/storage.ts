@@ -1,3 +1,5 @@
+import { tripPreferencesSnapshot, tripPreferencesConflict } from "./tripPreferences";
+import { tripPreferencesPatchSchema, type TripPreferencesPatch, type TripPreferencesUpdateResult } from "@shared/tripPreferencesSchemas";
 // Updated storage with only the 10 specified destinations
 import { randomUUID } from "node:crypto";
 import {
@@ -102,6 +104,7 @@ export interface IStorage {
   getTripOrganizationOverviewForUser(userId: string): Promise<TripOrganizationOverviewItem[]>;
   createTrip(trip: InsertTrip): Promise<Trip>;
   createTripIfAbsent(trip: InsertTrip): Promise<{ trip: Trip; created: boolean }>;
+  updateTripPreferencesForUser(id: number, ownerId: string, patch: TripPreferencesPatch): Promise<TripPreferencesUpdateResult>;
   deleteTripForUser(id: number, userId: string): Promise<boolean>;
   getTripOrganizationStatusForUser(
     tripId: number,
@@ -776,6 +779,16 @@ export class MemStorage implements IStorage {
     return { trip: await this.createTrip(insertTrip), created: true };
   }
 
+  async updateTripPreferencesForUser(id: number, ownerId: string, rawPatch: TripPreferencesPatch): Promise<TripPreferencesUpdateResult> {
+    const patch = tripPreferencesPatchSchema.parse(rawPatch);
+    const trip = this.trips.get(id);
+    if (!trip || trip.userId !== ownerId) return { status: "not_found" };
+    if (tripPreferencesConflict(trip, patch)) return { status: "conflict", preferences: tripPreferencesSnapshot(trip) };
+    const updated = { ...trip, activities: patch.notes };
+    this.trips.set(id, updated);
+    return { status: "updated", preferences: tripPreferencesSnapshot(updated) };
+  }
+
   async deleteTripForUser(id: number, userId: string): Promise<boolean> {
     const trip = this.trips.get(id);
     if (!trip || trip.userId !== userId) return false;
@@ -1343,6 +1356,20 @@ export class DatabaseStorage extends MemStorage {
         .values(insertTrip)
         .returning();
       return { trip, created: true };
+    });
+  }
+
+  override async updateTripPreferencesForUser(id: number, ownerId: string, rawPatch: TripPreferencesPatch): Promise<TripPreferencesUpdateResult> {
+    const patch = tripPreferencesPatchSchema.parse(rawPatch);
+    return this.db.transaction(async (transaction) => {
+      const [trip] = await transaction.select().from(tripsTable)
+        .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, ownerId)))
+        .limit(1).for("update");
+      if (!trip) return { status: "not_found" };
+      if (tripPreferencesConflict(trip, patch)) return { status: "conflict", preferences: tripPreferencesSnapshot(trip) };
+      const [updated] = await transaction.update(tripsTable).set({ activities: patch.notes })
+        .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, ownerId))).returning();
+      return { status: "updated", preferences: tripPreferencesSnapshot(updated) };
     });
   }
 
