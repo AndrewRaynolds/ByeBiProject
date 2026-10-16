@@ -59,6 +59,7 @@ vi.mock("wouter", () => ({
   useLocation: () => ["/trips/12", navigate],
 }));
 
+vi.mock("@/components/TripPlanning", () => ({ default: () => <div>Budget e programma</div> }));
 vi.mock("@/components/Header", () => ({ default: () => <div>Header</div> }));
 vi.mock("@/components/Footer", () => ({ default: () => <div>Footer</div> }));
 vi.mock("@/contexts/LanguageContext", () => ({

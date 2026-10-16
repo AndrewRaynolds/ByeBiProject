@@ -1,3 +1,4 @@
+import TripPlanning from "@/components/TripPlanning";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
@@ -319,6 +320,8 @@ export default function TripHub() {
           })}
           </div>
         </section>
+
+        <TripPlanning key={`planning:${tripId}`} trip={trip} />
 
         <TripOptions key={tripId} tripId={tripId} destinations={trip.destinations ?? []} />
 

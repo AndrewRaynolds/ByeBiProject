@@ -1,3 +1,6 @@
+import { tripPlanning as tripPlanningTable } from "@shared/schema";
+import { tripPlanningUpdateSchema, planningFitsTrip, type TripPlanningSnapshot, type TripPlanningUpdate, type TripPlanningResult } from "@shared/tripPlanningSchemas";
+import { tripPlanningSnapshot } from "./tripPlanning";
 import { tripPreferencesSnapshot, tripPreferencesConflict } from "./tripPreferences";
 import { tripPreferencesPatchSchema, type TripPreferencesPatch, type TripPreferencesUpdateResult } from "@shared/tripPreferencesSchemas";
 // Updated storage with only the 10 specified destinations
@@ -97,6 +100,8 @@ export interface IStorage {
   healthCheck(): Promise<void>;
   close(): Promise<void>;
 
+  getTripPlanningForUser(id: number, ownerId: string): Promise<TripPlanningSnapshot | undefined>;
+  updateTripPlanningForUser(id: number, ownerId: string, patch: TripPlanningUpdate): Promise<TripPlanningResult>;
   // Trip operations
   getTrip(id: number): Promise<Trip | undefined>;
   getTripForUser(id: number, userId: string): Promise<Trip | undefined>;
@@ -258,6 +263,7 @@ export class MemStorage implements IStorage {
   private merchandiseNotificationItems: Map<string, MerchandiseNotification>;
   private newsletterSubscriberItems: Map<string, NewsletterSubscriber>;
   private tripInviteItems: Map<string, TripInvite>;
+  private tripPlans = new Map<number, { revision: number; plan: TripPlanningUpdate["plan"] }>();
   private tripOrganizationItems: Map<number, TripOrganizationStatus>;
   private tripOptionItems: Map<number, TripCandidateOption>;
   private tripOptionId = 1;
@@ -796,6 +802,7 @@ export class MemStorage implements IStorage {
       if (invite.tripId === id) this.tripInviteItems.delete(inviteId);
     }
     this.tripOrganizationItems.delete(id);
+    this.tripPlans.delete(id);
     for (const [optionId, option] of this.tripOptionItems) {
       if (option.tripId === id) this.tripOptionItems.delete(optionId);
     }
@@ -839,6 +846,26 @@ export class MemStorage implements IStorage {
     if (!(await this.getTripForUser(tripId, ownerId))) return false;
     if (this.tripOptionItems.get(optionId)?.tripId !== tripId) return false;
     return this.tripOptionItems.delete(optionId);
+  }
+
+  async getTripPlanningForUser(id: number, ownerId: string) {
+    const trip = this.trips.get(id);
+    return trip?.userId === ownerId ? tripPlanningSnapshot(trip, this.tripPlans.get(id)) : undefined;
+  }
+
+  async updateTripPlanningForUser(id: number, ownerId: string, raw: TripPlanningUpdate): Promise<TripPlanningResult> {
+    const patch = tripPlanningUpdateSchema.parse(raw);
+    // No await between ownership check, compare and write: atomic in the memory implementation.
+    const trip = this.trips.get(id);
+    if (!trip || trip.userId !== ownerId) return { status: "not_found" };
+    const current = tripPlanningSnapshot(trip, this.tripPlans.get(id));
+    if (current.revision !== patch.expectedRevision || current.contextRevision !== patch.expectedContextRevision) return { status: "conflict" };
+    if (!planningFitsTrip(patch.plan, trip)) return { status: "invalid" };
+    const row = { revision: current.revision + 1, plan: structuredClone(patch.plan) };
+    this.tripPlans.set(id, row);
+    const updated = { ...trip, budget: patch.plan.budgetPerPerson };
+    this.trips.set(id, updated);
+    return { status: "updated", snapshot: tripPlanningSnapshot(updated, row) };
   }
 
   async getTripOrganizationStatusForUser(
@@ -1410,6 +1437,33 @@ export class DatabaseStorage extends MemStorage {
       .where(and(eq(tripCandidateOptionsTable.id, optionId), eq(tripCandidateOptionsTable.tripId, tripId)))
       .returning({ id: tripCandidateOptionsTable.id });
     return rows.length > 0;
+  }
+
+  override async getTripPlanningForUser(id: number, ownerId: string) {
+    const [row] = await this.db.select({ trip: tripsTable, planning: tripPlanningTable })
+      .from(tripsTable).leftJoin(tripPlanningTable, eq(tripPlanningTable.tripId, tripsTable.id))
+      .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, ownerId))).limit(1);
+    return row ? tripPlanningSnapshot(row.trip, row.planning ?? undefined) : undefined;
+  }
+
+  override async updateTripPlanningForUser(id: number, ownerId: string, raw: TripPlanningUpdate): Promise<TripPlanningResult> {
+    const patch = tripPlanningUpdateSchema.parse(raw);
+    return this.db.transaction(async (tx) => {
+      // Lock the parent even before the first planning row exists. Serializes first
+      // creation, subsequent edits, preference writes and trip deletion.
+      const [trip] = await tx.select().from(tripsTable)
+        .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, ownerId))).limit(1).for("update");
+      if (!trip) return { status: "not_found" };
+      const [old] = await tx.select().from(tripPlanningTable).where(eq(tripPlanningTable.tripId, id));
+      const current = tripPlanningSnapshot(trip, old);
+      if (current.revision !== patch.expectedRevision || current.contextRevision !== patch.expectedContextRevision) return { status: "conflict" };
+      if (!planningFitsTrip(patch.plan, trip)) return { status: "invalid" };
+      const row = { tripId: id, revision: current.revision + 1, plan: patch.plan, updatedAt: new Date() };
+      await tx.insert(tripPlanningTable).values(row).onConflictDoUpdate({ target: tripPlanningTable.tripId, set: row });
+      const [updated] = await tx.update(tripsTable).set({ budget: patch.plan.budgetPerPerson })
+        .where(and(eq(tripsTable.id, id), eq(tripsTable.userId, ownerId))).returning();
+      return { status: "updated", snapshot: tripPlanningSnapshot(updated, row) };
+    });
   }
 
   override async getTripOrganizationStatusForUser(
