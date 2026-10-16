@@ -26,12 +26,22 @@ vi.mock('@/contexts/LanguageContext', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+vi.mock("@/pages/auth-callback-page",()=>({default:()=> <div>Google callback</div>}));
+
 describe('App brand loading', () => {
   beforeEach(() => {
     localStorage.clear();
     window.history.replaceState(null, "", "/");
     delete document.documentElement.dataset.brand;
     document.head.innerHTML = '<meta name="description" content="">';
+  });
+
+  it('resolves the OAuth callback before brand selection even without a stored brand', async () => {
+    window.history.replaceState({}, "", "/auth/callback?code=fake");
+    render(<App />);
+    expect(await screen.findByText("Google callback")).toBeInTheDocument();
+    expect(screen.queryByTestId("brand-selection")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("branded-app")).not.toBeInTheDocument();
   });
 
   it('defers the full application until a brand is selected', () => {

@@ -76,9 +76,9 @@ describe('language continuity for legacy clients', () => {
 
 describe('deterministic planner follow-up', () => {
   it.each([
-    ['Voglio organizzare il viaggio', 'Quali sono le date di partenza e ritorno?'],
-    ['I want to organize the trip', 'What are your departure and return dates?'],
-    ['Quiero organizar el viaje', '¿Cuáles son las fechas de salida y regreso?'],
+    ['Voglio organizzare il viaggio', 'Ho aggiornato il riepilogo con i dettagli che hai indicato. Per dare forma al viaggio, quali sono le date di partenza e ritorno?'],
+    ['I want to organize the trip', 'I\'ve updated the brief with the details you shared. To shape the trip, what are your departure and return dates?'],
+    ['Quiero organizar el viaje', 'He actualizado el resumen con los datos que has compartido. Para dar forma al viaje, ¿cuáles son las fechas de salida y regreso?'],
   ])('asks for missing dates in the user language', (message, expected) => {
     const planner = createPlannerDraft({
       brand: 'byebro', origin: 'Rome', destination: 'Ibiza', participants: 6,
@@ -89,9 +89,9 @@ describe('deterministic planner follow-up', () => {
   });
 
   it.each([
-    ['it', 'Quali sono le date di partenza e ritorno?'],
-    ['en', 'What are your departure and return dates?'],
-    ['es', '¿Cuáles son las fechas de salida y regreso?'],
+    ['it', 'Ho aggiornato il riepilogo con i dettagli che hai indicato. Per dare forma al viaggio, quali sono le date di partenza e ritorno?'],
+    ['en', 'I\'ve updated the brief with the details you shared. To shape the trip, what are your departure and return dates?'],
+    ['es', 'He actualizado el resumen con los datos que has compartido. Para dar forma al viaje, ¿cuáles son las fechas de salida y regreso?'],
   ] as const)('uses selected %s even when the reply and history have another language', (locale, expected) => {
     const planner = createPlannerDraft({ brand: 'byebride', origin: 'Rome', destination: 'Ibiza', participants: 6 });
     expect(getDeterministicPlannerFollowUp(planner, '6', [{ role: 'user', content: 'Voglio andare a Ibiza' }], locale)).toBe(expected);

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { plannerDraftSchema } from "./plannerSchemas";
+import { plannerActionSchema } from "./plannerSuggestions";
+import { getCityDefinition } from "./cityMapping";
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const chatHistoryMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -25,7 +27,17 @@ export const chatStreamRequestSchema = z.object({
   conversationHistory: z.array(chatHistoryMessageSchema).max(20).optional().default([]),
   partyType: z.enum(["bachelor", "bachelorette"]).optional(),
   originCity: optionalText(100),
+  plannerAction: plannerActionSchema.optional(),
 }).strict().superRefine((request, context) => {
+  if (request.plannerAction) {
+    if (!request.planner || request.planner.status !== "draft" || request.planner.destination !== null) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["plannerAction"], message: "Destination actions require a draft with no destination" });
+    }
+    if (request.plannerAction.type === "choose_destination" &&
+        getCityDefinition(request.planner?.origin?.canonical)?.key === request.plannerAction.destinationId) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["plannerAction"], message: "Destination must differ from origin" });
+    }
+  }
   if (request.planner && request.partyType && request.partyType !== request.planner.partyType) {
     context.addIssue({
       code: z.ZodIssueCode.custom,

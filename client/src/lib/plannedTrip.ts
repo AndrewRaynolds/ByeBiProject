@@ -15,15 +15,6 @@ export type PlannedTripContext = {
   activities?: PlannedActivity[];
 };
 
-const budgetPerPerson: Record<string, number> = {
-  economico: 300,
-  low: 300,
-  medio: 600,
-  medium: 600,
-  alto: 1_000,
-  high: 1_000,
-};
-
 export function resolvePlannedTripBudget(
   budget: PlannedTripContext["budget"],
 ): number | null {
@@ -33,7 +24,8 @@ export function resolvePlannedTripBudget(
       : null;
   }
   if (typeof budget !== "string") return null;
-  return budgetPerPerson[budget.trim().toLowerCase()] ?? null;
+  // A qualitative legacy band is not a confirmed per-person amount.
+  return null;
 }
 
 export function buildPlannedTripPayload(context: PlannedTripContext) {
@@ -81,13 +73,20 @@ export function buildPlannedTripPayload(context: PlannedTripContext) {
   };
 }
 
-export async function savePlannedTrip(context: PlannedTripContext): Promise<{
+export async function savePlannedTrip(context: PlannedTripContext, options?: { signal?: AbortSignal }): Promise<{
   created: boolean;
+  tripId?: number;
 }> {
   const payload = buildPlannedTripPayload(context);
   if (!payload) throw new Error("Trip planning data is incomplete");
-  const response = await apiRequest("POST", "/api/trips", payload);
-  return { created: response.status === 201 };
+  const response = options
+    ? await apiRequest("POST", "/api/trips", payload, options)
+    : await apiRequest("POST", "/api/trips", payload);
+  if (response.status === 201) return { created: true };
+  if (response.status !== 200) throw new Error("Invalid save response");
+  const value = await response.json();
+  if (!Number.isSafeInteger(value?.id) || value.id <= 0) throw new Error("Missing saved trip identity");
+  return { created: false, tripId: value.id };
 }
 
 const normalizeIdentity = (value: string | null | undefined) =>

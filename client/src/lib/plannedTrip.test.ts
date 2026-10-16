@@ -4,6 +4,10 @@ import { buildPlannedTripPayload, plannedTripMatchesSavedTrip, resolvePlannedTri
 vi.mock("./queryClient", () => ({ apiRequest: vi.fn() }));
 
 describe("planned trip persistence", () => {
+  it.each(["economico", "low", "medio", "medium", "alto", "high"])("requires review of the qualitative legacy budget %s without inventing an amount", (budget) => {
+    expect(resolvePlannedTripBudget(budget)).toBeNull();
+    expect(buildPlannedTripPayload({ destination: "Ibiza", origin: "Rome", startDate: "2099-10-10", endDate: "2099-10-13", people: 6, budget })).toBeNull();
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 0, 15, 12));
@@ -18,7 +22,7 @@ describe("planned trip persistence", () => {
       endDate: "2027-06-13",
       people: 8,
       partyType: "bachelor",
-      budget: "medio",
+      budget: 600,
       activities: [{ name: "Boat party" }, "Pub crawl"],
     })).toEqual({
       name: "ByeBro · Barcellona",
@@ -77,7 +81,7 @@ describe("planned trip persistence", () => {
     expect(resolvePlannedTripBudget("unknown")).toBeNull();
     expect(resolvePlannedTripBudget(0)).toBeNull();
     expect(resolvePlannedTripBudget(100_001)).toBeNull();
-    expect(resolvePlannedTripBudget("medio")).toBe(600);
+    expect(resolvePlannedTripBudget("medio")).toBeNull();
 
     expect(buildPlannedTripPayload({
       destination: "Ibiza",
@@ -96,7 +100,7 @@ describe("planned trip persistence", () => {
       endDate: "2026-11-23",
       people: 12,
       partyType: "bachelor",
-      budget: "medio",
+      budget: 600,
     };
     const savedTrip = {
       participants: 12,
@@ -146,4 +150,17 @@ it("explicitly saves a complete trip with no invented budget or preferences", as
   await expect(savePlannedTrip(context)).resolves.toEqual({ created: true });
   expect(apiRequest).toHaveBeenCalledWith("POST", "/api/trips", expect.objectContaining({ budget: null, activities: [] }));
   expect(plannedTripMatchesSavedTrip(context, { participants: 4, startDate: context.startDate, endDate: context.endDate, departureCity: "Rome", destinations: ["Ibiza"], experienceType: "bachelor", budget: null })).toBe(true);
+});
+
+it("returns an existing trip identity for explicit preference comparison after a concurrent save", async () => {
+  const { apiRequest } = await import("./queryClient");
+  vi.mocked(apiRequest).mockResolvedValueOnce({ status: 200, json: async () => ({ id: 77 }) } as Response);
+  const context = { origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", people: 4, budget: null };
+  await expect(savePlannedTrip(context)).resolves.toEqual({ created: false, tripId: 77 });
+});
+
+it.each([{}, { id: -1 }, { id: "77" }])("rejects an existing-save response without a valid identity %#", async (value) => {
+  const { apiRequest } = await import("./queryClient");
+  vi.mocked(apiRequest).mockResolvedValueOnce({ status: 200, json: async () => value } as Response);
+  await expect(savePlannedTrip({ origin: "Rome", destination: "Ibiza", startDate: "2099-10-10", endDate: "2099-10-13", people: 4 })).rejects.toThrow("Missing saved trip identity");
 });

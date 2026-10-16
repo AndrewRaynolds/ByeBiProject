@@ -121,7 +121,15 @@ export const plannerUpdateArgumentsSchema = z.object({
   budgetPerPerson: z.number().int().min(1).max(100_000).nullable(),
   preferenceArchetype: z.string().trim().min(1).max(100).nullable(),
   interests: z.array(z.string().trim().min(1).max(100)).max(20).nullable(),
-}).strict();
+  clearFields: z.array(z.enum(["budgetPerPerson", "preferences"])).max(2).nullable().optional(),
+}).strict().superRefine((update, context) => {
+  if (update.clearFields?.includes("budgetPerPerson") && update.budgetPerPerson !== null) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["budgetPerPerson"], message: "Cannot set and clear budget together" });
+  }
+  if (update.clearFields?.includes("preferences") && (update.preferenceArchetype !== null || update.interests !== null)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["clearFields"], message: "Cannot set and clear preferences together" });
+  }
+});
 
 export type PlannerDraft = z.infer<typeof plannerDraftSchema>;
 export type PlannerUpdateArguments = z.infer<typeof plannerUpdateArgumentsSchema>;
@@ -207,9 +215,17 @@ export function applyPlannerUpdate(
     startDate: update.startDate ?? current.startDate,
     endDate: update.endDate ?? current.endDate,
     participants: update.participants ?? current.participants,
-    budgetPerPerson: update.budgetPerPerson ?? current.budgetPerPerson,
-    preferenceArchetype: update.preferenceArchetype ?? current.preferences?.archetype,
-    interests: update.interests ?? current.preferences?.interests,
+    budgetPerPerson: update.clearFields?.includes("budgetPerPerson") ? null : update.budgetPerPerson ?? current.budgetPerPerson,
+    preferenceArchetype: update.clearFields?.includes("preferences") ? null : update.preferenceArchetype ?? current.preferences?.archetype,
+    interests: update.clearFields?.includes("preferences") ? [] : update.interests ?? current.preferences?.interests,
     createdAt: current.createdAt,
   });
+}
+
+/** Compatibility notes, never selected/scheduled activities or provider results. */
+export function getPlannerPreferenceNotes(planner: PlannerDraft): string[] {
+  return [...new Set([
+    ...(planner.preferences?.archetype ? [planner.preferences.archetype] : []),
+    ...(planner.preferences?.interests ?? []),
+  ])];
 }

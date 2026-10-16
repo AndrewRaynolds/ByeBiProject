@@ -8,6 +8,7 @@ import {
 } from "@/contexts/LanguageContext";
 import { BrandProvider, useBrand } from "@/contexts/BrandContext";
 
+const AuthCallbackPage = lazy(() => import("@/pages/auth-callback-page"));
 const BrandedApp = lazy(() => import("@/BrandedApp"));
 
 function DocumentMetadata({
@@ -41,7 +42,9 @@ function AppContent() {
   return (
     <AppErrorBoundary>
       <DocumentMetadata selectedBrand={brand} />
-      {!brand ? (
+      {window.location.pathname === "/auth/callback" ? (
+        <Suspense fallback={<RouteLoadingFallback />}><AuthCallbackPage /></Suspense>
+      ) : !brand ? (
         <BrandSelection onSelectBrand={selectBrand} />
       ) : (
         <Suspense fallback={<RouteLoadingFallback />}>

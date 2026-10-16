@@ -28,6 +28,10 @@ ByeBro and ByeBride are brand variants of one product and one behavioral engine.
 
 Brand variants may change accents, imagery, icons, examples, copy, and tone. They must not create separate feature engines, state models, provider logic, or product capabilities solely for branding. See [ADR-0001](adr/0001-single-bro-bride-engine.md).
 
+The editorial positioning differs without restricting user choice: ByeBro uses a direct, playful voice centered on group camaraderie; ByeBride uses an attentive, imaginative voice centered on the person being celebrated and shared memories. Neither positioning implies interests, gender composition, budget or preferred activities.
+
+In review edit mode, both brands offer the same optional editorial preference outlines: group camaraderie, a moment for the guest of honor, and exploration/local culture or food. Presentation order and introduction may differ by brand; no outline is selected automatically. Previewing changes nothing. Explicitly using an outline replaces only the two editable preference fields, with a visible warning; users may customize, combine or clear the notes. Only Save changes validates and updates the draft. These are intent notes, not packages, selected activities, schedules or provider filters. Cancel preserves the prior draft.
+
 ## Core journey
 
 1. A fresh visit to `/` shows the neutral ByeBi brand choice, even when a previous brand is stored. The user chooses ByeBro or ByeBride; deep links retain the stored brand and selecting a brand does not clear Planner drafts.
@@ -50,6 +54,7 @@ Discovery helps users explore destinations and experiences before or during plan
 - Discovery can hand selected context into the Planner.
 - Discovery content must distinguish inspiration from live provider inventory.
 - The primary action on entry and discovery surfaces is the AI Planner; exploration and comparison are secondary actions.
+- The homepage Planner action accepts an optional initial message. Empty or whitespace-only input opens guided planning without sending a message or resetting an existing draft; typed input retains the explicit chat-start behavior. Opening alone does not save a trip, require authentication or count as a chat message.
 - Discovery must preserve the selected brand and current locale.
 
 ## Planner
@@ -66,9 +71,25 @@ Required planning concepts are:
 
 Budget and group preferences are optional notes. The Planner does not ask for them or block review, partner handoffs or explicit save when they are absent. They do not select activities or filter external partner searches. Unknown budget remains null; preferences remain absent rather than invented.
 
+Conversational planning acknowledges validated changes and asks at most one useful question per controlled follow-up. Destination inspiration is editorial, does not claim current prices or availability, and never updates intent until the user chooses a destination. Both brands use the same policy and offer the same options without inferring interests from gender.
+
+While the destination is unknown, the Planner offers Inspire me and up to two editorial destination choices with short reasons. More ideas rotates through a bounded catalog, excluding the known origin; it never changes the draft. Choosing a destination is an explicit, validated action that updates only that field and may make the brief ready for review. These actions do not require a model call, authentication or Saved Trip persistence. Suggestions are transient, tied to the current draft and request, and discarded on close, New trip or brand change. The initial catalog is generic inspiration, not a claim of personalization by budget, interests, price or availability.
+
+Volunteered budgets refer to one person for the whole trip. Ambiguous scope requires clarification; a group-total conversion is proposed for confirmation rather than silently applied. Qualitative legacy bands such as low/medium/high are not numeric amounts: partner searches remain usable, but explicit save requires reviewing that legacy budget, entering a confirmed amount in the Planner or explicitly discarding the band with Continue without a budget. Existing Saved Trip numeric budgets retain their meaning. Users may explicitly remove optional budget or preference notes during chat or clear them in review.
+
 `budgetPerPerson` is always the budget for one participant. It must never be silently interpreted as the total group budget. See [ADR-0002](adr/0002-budget-per-person.md).
 
 The Planner may use conversational AI to collect or clarify intent. AI output is a proposal until validated by the application contract. Missing, invalid, contradictory, or unsupported values require correction or clarification.
+
+## Explicit updates to saved preferences
+
+Changing a Planner draft does not overwrite an existing Saved Trip. Checkout compares saved and draft preference notes for an equivalent owned trip, including when a concurrent explicit save returns an existing trip. Only the separate Update saved preferences action replaces the notes; an empty draft uses an explicit Remove saved preferences action. Show both versions and explain that preferences on an existing shared link also change. Neither action creates a duplicate trip, changes budget, checklist, candidate links or expenses, nor emits a new-trip save event. A concurrent conflicting edit reloads the current version and requires another explicit confirmation. Historical notes remain readable without truncation; new writes follow bounded validated notes. The legacy activities column remains preference notes, not scheduled activities.
+
+## Optional local editorial program
+
+The review summary exposes an optional collapsible program editor backed by the separate version-1 editorial program contract and pure transitions. Ideas do not become scheduled activities until an explicit add action supplies a day and morning/afternoon/evening slot. Custom items, edits and removal are explicit. Both brands use the same operations; preferences are never reclassified as activities. The contract admits no price, availability, booking or verified-feasibility fields. A duration is optional and unverified; a calendar slot does not establish practical feasibility.
+
+Opening the editor reads without writing. Creating/replacing a draft, adding, editing, removing and refreshing editorial ideas require explicit actions. Five generic ideas and all controls are available in IT/EN/ES for both brands. The program is a device-local draft, not part of Save trip, Trip Hub or a shared link; this boundary is stated in the editor and on Checkout. Closing/reopening and refresh resume it; New trip clears only that brand’s program draft. There is no program API or server synchronization, and partner handoffs do not consume it. An occupied slot requires a different choice or separate explicit removal; it is never silently replaced. Changed route/dates/group require explicit context review, with corrections for out-of-range items and without automatic rescheduling or deletion.
 
 ## Travel brief
 
@@ -106,7 +127,7 @@ If live Provider Results are reintroduced later:
 
 ## Candidate links saved for consideration
 
-Organizers may explicitly attach external flight, accommodation and activity URLs from any public website to an existing Saved Trip. A best-effort server-side preview can suggest title, source, description and an image based on publicly available HTML metadata. Failed or incomplete previews must still allow manual entry, editing and removal. A Saved Trip can hold multiple candidates of each category.
+Organizers may explicitly attach external flight, accommodation and activity URLs from any public website to an existing Saved Trip. A best-effort server-side preview can suggest title, source, description and an image based on publicly available HTML metadata. Failed or incomplete previews must still allow manual entry, editing and removal. Image metadata alternatives are considered only when they are explicitly present in the page. Cards display the linked image host, not a claim of authorship, licensing or verified property identity. Missing or failed images use a labeled illustrative category cover; a user-supplied or explicitly cleared image is never overwritten by a late preview. A Saved Trip can hold multiple candidates of each category.
 
 These curated candidate links are not Provider Results or verified selections. They never represent live availability, booking or payment. Optional user-entered price notes are historical observations and must not be presented as refreshed provider prices. Saving a link never saves a Planner draft, changes a booking checklist status, or books travel. Only the authenticated Saved Trip owner can manage candidate links; partner handoffs and affiliate tracking remain unchanged. This extension must remain separate from the beta-critical core journey.
 
@@ -204,3 +225,15 @@ Current development focus: **Phase 6 — Beta Readiness**.
 Beta Readiness focuses on production truthfulness and tester confidence: release checks must match the current product model, documentation must not describe retired integrations as active, production smoke tests must verify only behavior ByeBi actually owns, critical tester journeys such as authentication must expose localized, actionable errors rather than raw provider messages, and testers must have a lightweight way to send contextual feedback without exposing private route tokens or account data.
 
 GitHub is the operational source for current tasks and pull-request status. Volatile delivery status does not belong in this document.
+
+### Optional local budget allocation
+
+Planner review offers a separate optional allocation editor, shared by ByeBro and ByeBride. Users enter whole EUR amounts per person for the whole trip in six categories: main transport, accommodation, local transport, food, activities and buffer. Each amount is 0–100,000 or undecided (null); zero does not assert a free service. No amounts or percentages are suggested automatically. The summary displays assigned amounts, incomplete categories, unassigned cap and any excess. An unknown cap stays unknown; a group cap is derived only as the per-person cap multiplied by participants. Exceeding the cap warns but does not block explicit saving or change the Planner cap.
+
+Allocations are device-local drafts, separate from actual expenses, planned activities, Saved Trips and partner handoffs. Saving a trip saves its brief, not these allocations. Changed cap, group, route or dates requires explicit review with previous/current context; amounts are preserved without redistribution. New trip clears the current brand's local program and allocations.
+
+### Optional Google sign-in
+
+When explicitly enabled by configuration, both brands offer Continue with Google on the authentication page, independently of the login/register tab. Supabase owns Google authentication and account identity. The app asks only for basic identity scopes, does not manually merge accounts or derive privileges from Google profile metadata, and never requests mailbox, Drive or offline Google access.
+
+The callback restores the validated internal return destination without changing the trip draft or saving it. The user must still explicitly Save trip. Missing, expired, denied or invalid callbacks show localized recovery, not an existing-session success. A failed Google attempt leaves email/password available. The feature is hidden by default until the external provider setup and real staging sign-in have been verified.

@@ -236,3 +236,36 @@ describe("TripOptions", () => {
   });
 
 });
+
+describe("candidate image origin and recovery", () => {
+  beforeEach(() => { data.options=[];apiRequest.mockReset();invalidateQueries.mockReset(); });
+  it("shows the actual image host, hides it on failure, and tries a changed URL", () => {
+    data.options=[{id:10,category:"hotel",url:"https://example.com/hotel",title:"Saved hotel",source:"User source",imageUrl:"https://cdn.example.org/photo.jpg"}];
+    const view=render(<TripOptions tripId={12}/>);
+    expect(screen.getByText("tripOptions.imageOrigin: cdn.example.org")).toBeVisible();
+    const image=view.container.querySelector("img")!;
+    expect(image).toHaveAttribute("referrerpolicy","no-referrer");
+    fireEvent.error(image);
+    expect(screen.queryByText("tripOptions.imageOrigin: cdn.example.org")).not.toBeInTheDocument();
+    expect(screen.getByText("tripOptions.illustrativeImage")).toBeVisible();
+    data.options=[{...data.options[0] as object,imageUrl:"https://new.example.org/changed.jpg"}];
+    view.rerender(<QueryClientProvider client={new QueryClient()}><TripOptions tripId={12}/></QueryClientProvider>);
+    expect(view.container.querySelector("img")).toHaveAttribute("src","https://new.example.org/changed.jpg");
+    expect(screen.getByText("tripOptions.imageOrigin: new.example.org")).toBeVisible();
+  });
+  it.each(["javascript:alert(1)","data:image/png;base64,x","https://user:secret@example.com/photo.jpg"])("uses the illustrative cover for an invalid stored image %s", imageUrl=>{
+    data.options=[{id:10,category:"activities",url:"https://example.com/activity",title:"Saved activity",source:"Example",imageUrl}];
+    const view=render(<TripOptions tripId={12}/>);expect(view.container.querySelector("img")).toBeNull();expect(screen.getByText("tripOptions.illustrativeImage")).toBeVisible();
+  });
+  it.each(["before","during"])("preserves an explicitly cleared image %s preview",async when=>{
+    let resolve!:(value:unknown)=>void;apiRequest.mockReturnValue(new Promise(r=>resolve=r));
+    render(<TripOptions tripId={12}/>);fireEvent.click(screen.getByRole("button",{name:"tripOptions.add"}));
+    const field=screen.getByLabelText("tripOptions.imageUrl");
+    const edit=()=>{fireEvent.change(field,{target:{value:"https://example.com/custom.jpg"}});fireEvent.change(field,{target:{value:""}});};
+    if(when==="before")edit();
+    fireEvent.change(screen.getByLabelText("tripOptions.url"),{target:{value:"https://example.com/hotel"}});fireEvent.click(screen.getByRole("button",{name:"tripOptions.getPreview"}));
+    if(when==="during")edit();
+    await act(async()=>resolve({json:async()=>({url:"https://example.com/hotel",title:"Hotel",source:"example.com",description:null,imageUrl:"https://cdn.example.com/automatic.jpg",available:true})}));
+    expect(field).toHaveValue("");expect(apiRequest).toHaveBeenCalledTimes(1);
+  });
+});

@@ -5,9 +5,28 @@ import {
   getMissingPlannerFields,
   normalizePlannerCity,
   plannerDraftSchema,
+  plannerUpdateArgumentsSchema,
+  getPlannerPreferenceNotes,
 } from "./plannerSchemas";
 
 describe("planner contract", () => {
+  const emptyUpdate = { origin: null, destination: null, startDate: null, endDate: null, participants: null, budgetPerPerson: null, preferenceArchetype: null, interests: null };
+
+  it("preserves optional notes for legacy null updates and clears only explicitly requested fields", () => {
+    const planner = createPlannerDraft({ brand: "byebro", destination: "Ibiza", budgetPerPerson: 650, preferenceArchetype: "food", interests: ["food", "walks"] });
+    expect(applyPlannerUpdate(planner, emptyUpdate)).toMatchObject({ budgetPerPerson: 650, preferences: planner.preferences });
+    const cleared = applyPlannerUpdate(planner, plannerUpdateArgumentsSchema.parse({ ...emptyUpdate, clearFields: ["budgetPerPerson", "preferences"] }));
+    expect(cleared).toMatchObject({ budgetPerPerson: null, preferences: null, destination: planner.destination, status: "draft" });
+    expect(getPlannerPreferenceNotes(planner)).toEqual(["food", "walks"]);
+    expect(getPlannerPreferenceNotes(cleared)).toEqual([]);
+  });
+
+  it("rejects clearing required details and contradictory set/clear operations", () => {
+    expect(plannerUpdateArgumentsSchema.safeParse({ ...emptyUpdate, clearFields: ["destination"] }).success).toBe(false);
+    expect(plannerUpdateArgumentsSchema.safeParse({ ...emptyUpdate, clearFields: ["budgetPerPerson"], budgetPerPerson: 600 }).success).toBe(false);
+    expect(plannerUpdateArgumentsSchema.safeParse({ ...emptyUpdate, clearFields: ["preferences"], interests: ["food"] }).success).toBe(false);
+    expect(plannerUpdateArgumentsSchema.safeParse(emptyUpdate).success).toBe(true);
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 0, 15, 12));

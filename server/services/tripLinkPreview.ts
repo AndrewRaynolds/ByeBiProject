@@ -50,32 +50,40 @@ function clean(input: string, maxLength: number): string {
     .replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
-function extractTags(html: string): Record<string, string> {
-  const properties: Record<string, string> = {};
+function extractTags(html: string): Record<string, string[]> {
+  const properties: Record<string, string[]> = Object.create(null);
   for (const match of html.matchAll(/<meta\s+[^>]*>/gi)) {
-    const attributes: Record<string, string> = {};
+    const attributes: Record<string, string> = Object.create(null);
     for (const attribute of match[0].matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
       attributes[attribute[1].toLowerCase()] = attribute[2] ?? attribute[3] ?? attribute[4] ?? "";
     }
     const key = (attributes.property ?? attributes.name ?? "").toLowerCase();
-    if (key && attributes.content && !properties[key]) properties[key] = attributes.content;
+    // Bound repeated values; a broken first image must not hide usable metadata.
+    if (key && attributes.content) {
+      const values = properties[key] ??= [];
+      if (values.length < 8) values.push(attributes.content);
+    }
   }
   return properties;
 }
 
 export function parseTripLinkHtml(html: string, inputUrl: string): TripOptionPreview {
   const url = new URL(inputUrl);
-  const tags = extractTags(html.slice(0, 262144));
-  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title\s*>/i);
-  const title = clean(tags["og:title"] || tags["twitter:title"] || titleMatch?.[1] || "", 160);
-  const description = clean(tags["og:description"] || tags.description || tags["twitter:description"] || "", 500);
+  const prefix = html.slice(0, 262144);
+  const tags = extractTags(prefix);
+  const first = (key: string) => tags[key]?.[0];
+  const titleMatch = prefix.match(/<title[^>]*>([\s\S]*?)<\/title\s*>/i);
+  const title = clean(first("og:title") || first("twitter:title") || titleMatch?.[1] || "", 160);
+  const description = clean(first("og:description") || first("description") || first("twitter:description") || "", 500);
   let imageUrl: string | null = null;
-  const image = tags["og:image:secure_url"] || tags["og:image"] || tags["twitter:image"];
-  if (image) {
+  const candidates = ["og:image:secure_url", "og:image", "og:image:url", "twitter:image", "twitter:image:src"]
+    .flatMap((key) => tags[key] ?? []);
+  for (const image of candidates) {
     try {
-      const value = new URL(decodeEntities(image), url);
+      const value = new URL(decodeEntities(image).trim(), url);
       validTarget(value.toString()); // Exclude local/IP-literal metadata image targets as well.
       imageUrl = value.toString();
+      break;
     } catch { /* No usable preview image */ }
   }
   return {

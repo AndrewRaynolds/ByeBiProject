@@ -1,16 +1,18 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { GetYourGuideCta } from "./GetYourGuideCta";
+import { trackAffiliateClick } from "@/lib/track";
+import { openExternalUrl } from "@/lib/externalNavigation";
 
 vi.mock("@/contexts/LanguageContext", () => ({
   useTranslation: () => ({
     t: (key: string) => ({
       "gyg.title": "Cose da fare a Barcellona",
-      "gyg.subtitle": "Scopri tour e attività",
-      "gyg.cta": "Vedi esperienze su GetYourGuide",
+      "gyg.subtitle": "Apri la pagina della destinazione su GetYourGuide.",
+      "gyg.cta": "Esplora attività su GetYourGuide",
     }[key] ?? key),
   }),
 }));
@@ -21,6 +23,13 @@ vi.mock("@/components/AffiliateNotice", () => ({
 }));
 
 describe("GetYourGuide mobile CTA", () => {
+  it("keeps the destination handoff and referral event explicit without treating the click as a booking", () => {
+    render(<GetYourGuideCta destinationCity="Barcellona" placement="checkout" />);
+    fireEvent.click(screen.getByRole("button", { name: "Esplora attività su GetYourGuide" }));
+    expect(trackAffiliateClick).toHaveBeenCalledWith({ provider: "getyourguide", placement: "checkout_experiences", destination: "Barcellona", monetized: true });
+    expect(openExternalUrl).toHaveBeenCalledWith("https://gyg.me/dL0Pwlqx");
+    expect(screen.queryByText(/prenotazione confermata/i)).not.toBeInTheDocument();
+  });
   it("can wrap inside a narrow checkout card without forcing horizontal overflow", () => {
     render(<GetYourGuideCta destinationCity="Barcellona" placement="checkout" />);
 
