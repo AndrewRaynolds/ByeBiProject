@@ -971,6 +971,7 @@
   "errorBoundary.details": "Detalles técnicos",
   "errorBoundary.retry": "Intentar de nuevo",
   "errorBoundary.backHome": "Volver al inicio",
+  "tripOptions.accommodationIn": "Alojamientos en {{destination}}",
   "tripOptions.title": "Opciones para valorar",
   "tripOptions.intro": "Guarda enlaces de vuelos, alojamientos y actividades de cualquier sitio. Guardar no reserva nada.",
   "tripOptions.add": "Añadir opción",

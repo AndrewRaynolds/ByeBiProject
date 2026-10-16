@@ -971,6 +971,7 @@
   "errorBoundary.details": "Technical details",
   "errorBoundary.retry": "Try again",
   "errorBoundary.backHome": "Back to home",
+  "tripOptions.accommodationIn": "Accommodation in {{destination}}",
   "tripOptions.title": "Options to consider",
   "tripOptions.intro": "Save flight, accommodation and activity links from any website. Saving does not make a booking.",
   "tripOptions.add": "Add option",
