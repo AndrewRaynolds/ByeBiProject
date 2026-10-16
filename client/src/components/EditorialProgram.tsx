@@ -104,14 +104,14 @@ export default function EditorialProgram({ planner, onReloadPlanner }: { planner
   </details>;
 }
 
-function Position({ item, planner }: { item?: Item; planner: PlannerDraft }) {
+function Position({ item, planner }: { item?: Item; planner: Pick<PlannerDraft, "startDate" | "endDate"> }) {
   const { t } = useTranslation(); const prefix = item ? `${item.id}-` : "";
   return <div className="grid min-w-0 gap-3 sm:grid-cols-2"><label className="block min-w-0 text-sm">{t("program.date")}<Input className="min-h-11" name={`${prefix}date`} type="date" required min={planner.startDate!} max={planner.endDate!} defaultValue={item?.date ?? ""} /></label>
     <label className="block min-w-0 text-sm">{t("program.slot")}<select name={`${prefix}slot`} required defaultValue={item?.slot ?? ""} className="min-h-11 w-full rounded-md border bg-background px-2"><option value="">{t("program.choose")}</option>{["morning", "afternoon", "evening"].map((slot) => <option key={slot} value={slot}>{t(`program.slot.${slot}`)}</option>)}</select></label></div>;
 }
 
-function ProgramItemForm({ planner, program, item, disabled, onSave, onCancel }: {
-  planner: PlannerDraft; program: ProgramDraft; item: Item | null; disabled: boolean;
+export function ProgramItemForm({ planner, program, item, disabled, onSave, onCancel }: {
+  planner: Pick<PlannerDraft, "startDate" | "endDate">; program: Pick<ProgramDraft, "ideas">; item: Item | null; disabled: boolean;
   onSave: (data: { title: string; date: string; slot: string; durationMinutes: number | null }, ideaId: string) => void; onCancel: () => void;
 }) {
   const { t } = useTranslation(); const [ideaId, setIdeaId] = useState("");

@@ -1,3 +1,4 @@
+import { tripPlanningUpdateSchema } from "@shared/tripPlanningSchemas";
 import { tripPreferencesPatchSchema } from "@shared/tripPreferencesSchemas";
 import { tripPreferencesSnapshot } from "./tripPreferences";
 import "./types";
@@ -662,6 +663,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       return res.status(500).json({ message: "Server error" });
     }
+  });
+
+  app.get("/api/trips/:tripId/planning", isAuthenticated, async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+    const id = parsePositiveIntegerParam(req.params.tripId);
+    if (id === null) return res.status(400).json({ message: "Invalid trip ID" });
+    try {
+      const snapshot = await storage.getTripPlanningForUser(id, req.supabaseUser!.id);
+      if (!snapshot) return res.status(404).json({ message: "Trip not found" });
+      return res.json(snapshot);
+    } catch { return res.status(500).json({ message: "Planning unavailable" }); }
+  });
+  app.put("/api/trips/:tripId/planning", isAuthenticated, async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+    const id = parsePositiveIntegerParam(req.params.tripId);
+    const patch = tripPlanningUpdateSchema.safeParse(req.body);
+    if (id === null || !patch.success) return res.status(400).json({ message: "Invalid planning data" });
+    try {
+      const result = await storage.updateTripPlanningForUser(id, req.supabaseUser!.id, patch.data);
+      if (result.status === "not_found") return res.status(404).json({ message: "Trip not found" });
+      if (result.status === "conflict") return res.status(409).json({ message: "Planning changed; reload and review" });
+      if (result.status === "invalid") return res.status(400).json({ message: "Activity outside trip dates" });
+      return res.json(result.snapshot);
+    } catch { return res.status(500).json({ message: "Planning unavailable" }); }
   });
 
   app.get("/api/trips/:tripId/preferences", isAuthenticated, async (req: Request, res: Response) => {

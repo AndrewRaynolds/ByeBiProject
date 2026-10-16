@@ -1,3 +1,4 @@
+import type { TripPlanning } from "./tripPlanningSchemas";
 import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, index, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
@@ -59,6 +60,13 @@ export const insertTripSchema = createInsertSchema(trips).pick({
   specialRequests: true,
   includeMerch: true,
 }).extend({ budget: z.number().int().min(1).max(100_000).nullable().optional() });
+
+export const tripPlanning = pgTable("trip_planning", {
+  tripId: integer("trip_id").primaryKey().references(() => trips.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  plan: jsonb("plan").$type<TripPlanning>().notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 export const tripOrganizationStatuses = pgTable(
   "trip_organization_statuses",
