@@ -20,6 +20,15 @@ describe("legal travel-provider disclosure", () => {
   );
 });
 
+describe("AI proposal data-use notice", () => {
+  it.each(["it", "en", "es"] as const)("explains request-only OpenAI processing in %s", locale => {
+    const notice = legalDocumentContent[locale].privacy.sections
+      .find(section => /proposte AI|AI program proposals|propuestas de programa/i.test(section.title));
+    expect(notice).toBeDefined();
+    expect(notice?.paragraphs.join(" ")).toMatch(/OpenAI/);
+  });
+});
+
 const localeState = vi.hoisted(() => ({ locale: "it" }));
 vi.mock("@/contexts/LanguageContext", () => ({ useTranslation: () => localeState }));
 vi.mock("./Header", () => ({ default: () => null }));

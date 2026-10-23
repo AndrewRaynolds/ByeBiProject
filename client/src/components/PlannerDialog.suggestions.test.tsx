@@ -129,4 +129,15 @@ describe("explicit planner destination choices", () => {
     expect(await screen.findByRole("button", { name: new RegExp(copy["destinations.city.barcelona.name"]) })).toBeInTheDocument();
     for (const id of ["barcelona", "budapest", "lisbon", "prague", "rome", "amsterdam"] as const) expect(copy[`planner.ideaReason.${id}`]).toBeTruthy();
   });
+  it.each(["it", "en", "es"] as const)("explains a confirmed interest in %s without choosing a destination", async locale => {
+    localStorage.setItem("byebi_locale", locale);
+    const copy = { it: itCopy, en: enCopy, es: esCopy }[locale];
+    savePlannerDraft(localStorage, createPlannerDraft({ brand: "byebride", origin: "Rome", interests: ["relax"] }));
+    const before = localStorage.getItem(PLANNER_STORAGE_KEY);
+    renderDialog("byebride");
+    fireEvent.click(await screen.findByRole("button", { name: copy["planner.inspireMe"] }));
+    expect(await screen.findByText(copy["planner.interestReason.relax"])).toBeInTheDocument();
+    expect(localStorage.getItem(PLANNER_STORAGE_KEY)).toBe(before);
+  });
+
 });

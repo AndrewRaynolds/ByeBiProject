@@ -28,3 +28,25 @@ export function suggestionsMatchPlanner(suggestions: PlannerSuggestions, planner
     suggestions.plannerUpdatedAt === planner.updatedAt &&
     !suggestions.destinationIds.some((id) => id === getCityDefinition(planner.origin?.canonical)?.key);
 }
+
+// Exact, explicit multilingual interest labels only. Unknown/negated prose stays neutral.
+const interestLabels = {
+  culture: ["culture", "cultura", "arte", "art", "history", "storia", "historia", "museums", "musei", "museos"],
+  food: ["food", "cibo", "cucina", "gastronomia", "gastronomía", "comida", "cuisine"],
+  relax: ["relax", "relaxation", "spa", "terme", "termas", "benessere", "wellness"],
+  sea: ["sea", "mare", "mar", "beach", "spiaggia", "playa"],
+  nightlife: ["nightlife", "vita notturna", "vida nocturna", "party", "festa", "fiesta"],
+} as const;
+export type DestinationInterest = keyof typeof interestLabels;
+const destinationInterests: Record<DestinationIdeaId, readonly DestinationInterest[]> = {
+  barcelona: ["sea", "nightlife", "culture"], budapest: ["relax", "nightlife"],
+  lisbon: ["food", "nightlife"], prague: ["culture", "nightlife"],
+  rome: ["culture", "food"], amsterdam: ["culture"],
+};
+export function matchingDestinationInterests(id: DestinationIdeaId, planner: PlannerDraft): DestinationInterest[] {
+  const explicit = (planner.preferences?.interests ?? []).map(value => value.toLocaleLowerCase().trim());
+  return destinationInterests[id].filter(topic => interestLabels[topic].some(label => explicit.includes(label)));
+}
+export function rankDestinationIdeas(planner: PlannerDraft): DestinationIdeaId[] {
+  return [...destinationIdeaIds].sort((a, b) => matchingDestinationInterests(b, planner).length - matchingDestinationInterests(a, planner).length);
+}

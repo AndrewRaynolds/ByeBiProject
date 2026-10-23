@@ -65,6 +65,14 @@ export function buildPlannerFollowUp(planner: PlannerDraft, locale: Locale, prev
   const question = next === "startDate" && !planner.endDate ? strings.dates
     : next ? strings[next as "origin" | "destination" | "startDate" | "endDate" | "participants"]
       : strings.ready;
+  // Name only values actually changed in the validated brief. No model-generated claims.
+  if (changed.length === 1 && changed[0] === "origin" && planner.origin) {
+    acknowledgement = { it: `Ho aggiornato la partenza: ${planner.origin.canonical}.`, en: `We'll set off from ${planner.origin.canonical}.`, es: `Saldremos desde ${planner.origin.canonical}.` }[locale];
+  } else if (changed.length === 1 && changed[0] === "destination" && planner.destination) {
+    acknowledgement = { it: `${planner.destination.canonical}, prendiamo questa come meta da esplorare insieme.`, en: `${planner.destination.canonical}, let's explore that idea together.`, es: `${planner.destination.canonical}, exploremos esa idea juntos.` }[locale];
+  } else if (changed.length === 1 && changed[0] === "participants" && planner.participants) {
+    acknowledgement = { it: `Sarete in ${planner.participants}: il gruppo prende forma.`, en: `${planner.participants} of you: the group is taking shape.`, es: `Seréis ${planner.participants}: el grupo va tomando forma.` }[locale];
+  }
   // A ready brief needs no extra acknowledgement or additional question.
   return next ? [acknowledgement, question].filter(Boolean).join(" ") : strings.ready;
 }

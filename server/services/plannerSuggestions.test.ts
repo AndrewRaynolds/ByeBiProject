@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createPlannerDraft } from "@shared/plannerSchemas";
-import { destinationIdeaIds, plannerSuggestionsSchema, suggestionsMatchPlanner } from "@shared/plannerSuggestions";
+import { matchingDestinationInterests, destinationIdeaIds, plannerSuggestionsSchema, suggestionsMatchPlanner } from "@shared/plannerSuggestions";
 import { buildDestinationSuggestions, handlePlannerAction } from "./plannerSuggestions";
 
 describe("editorial destination actions", () => {
@@ -8,7 +8,7 @@ describe("editorial destination actions", () => {
     const planner = createPlannerDraft({ brand, origin: "Rome", budgetPerPerson: 600, interests: ["food"] });
     const before = JSON.stringify(planner);
     const result = handlePlannerAction(planner, { type: "suggest_destinations", seenIds: [] }, "it");
-    expect(result.suggestions.destinationIds).toEqual(["barcelona", "budapest"]);
+    expect(result.suggestions.destinationIds).toEqual(["lisbon", "barcelona"]);
     expect(result).not.toHaveProperty("planner");
     expect(JSON.stringify(planner)).toBe(before);
     expect(result.content).toContain("spunti editoriali");
@@ -60,4 +60,17 @@ describe("editorial destination actions", () => {
     expect(plannerSuggestionsSchema.safeParse({ ...packet, destinationIds: ["barcelona", "rome", "prague"] }).success).toBe(false);
     expect(plannerSuggestionsSchema.safeParse({ ...packet, imageUrl: "https://example.com/fake" }).success).toBe(false);
   });
+});
+
+it.each(["byebro", "byebride"] as const)("ranks explicit multilingual interests equally for %s without assumptions from budget or brand", brand => {
+  for (const interest of ["relax", "termas", "wellness"]) {
+    const planner = createPlannerDraft({ brand, interests: [interest], budgetPerPerson: 100 });
+    expect(buildDestinationSuggestions(planner).destinationIds[0]).toBe("budapest");
+    expect(matchingDestinationInterests("budapest", planner)).toEqual(["relax"]);
+  }
+  for (const interest of ["non voglio relax", "no spa", "unknown"]) {
+    const planner = createPlannerDraft({ brand, interests: [interest] });
+    expect(buildDestinationSuggestions(planner).destinationIds).toEqual(["barcelona", "budapest"]);
+    expect(matchingDestinationInterests("budapest", planner)).toEqual([]);
+  }
 });

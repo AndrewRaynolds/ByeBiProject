@@ -48,3 +48,11 @@ describe("controlled planner conversation", () => {
     expect(text).not.toMatch(/budget|presupuesto|preferenc/i);
   });
 });
+
+it.each(["it", "en", "es"] as const)("acknowledges a validated group size naturally in %s, asking only for the next unknown field", locale => {
+  const before = createPlannerDraft({ brand: "byebro", origin: "Rome", destination: "Lisbon" });
+  const after = applyPlannerUpdate(before, { ...emptyUpdate, participants: 8 });
+  const result = buildPlannerFollowUp(after, locale, before);
+  expect(result).toContain("8"); expect(result.match(/\?/g)).toHaveLength(1);
+  expect(result).not.toMatch(/budget|presupuesto|Aviasales|€|booking/);
+});

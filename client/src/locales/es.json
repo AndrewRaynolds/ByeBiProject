@@ -1166,5 +1166,21 @@
   "hubPlanning.previewImport": "Ver borrador local",
   "hubPlanning.importUnavailable": "No hay borrador compatible o el contexto es ambiguo. Nada ha cambiado.",
   "hubPlanning.importPreview": "Borrador local: {{count}} actividades. Revisa importes y actividades antes de usarlo.",
-  "hubPlanning.useImport": "Usar este borrador y guardar explícitamente"
+  "hubPlanning.useImport": "Usar este borrador y guardar explícitamente",
+  "planner.interestReason.culture": "Por vuestro interés por la cultura: ideas para explorar, con visitas por verificar.",
+  "planner.interestReason.food": "Por vuestro interés por la cocina: un destino para descubrir en la mesa.",
+  "planner.interestReason.relax": "Por vuestro interés por el relax: ideas de bienestar por verificar.",
+  "planner.interestReason.sea": "Por vuestro interés por el mar: ideas costeras que valorar según la temporada.",
+  "planner.interestReason.nightlife": "Por vuestro interés por la vida nocturna: barrios y noches para explorar, sin disponibilidad verificada.",
+  "aiProgram.help": "Pide a la IA un borrador editorial para los huecos libres. Viabilidad, horarios, precios y disponibilidad sin verificar. Las actividades existentes se mantienen intactas.",
+  "aiProgram.dataUse": "Si solicitas una propuesta, enviaremos a OpenAI el destino, las fechas, el número de participantes, las preferencias y notas del viaje, y las franjas ya ocupadas. Las notas libres pueden contener datos personales: revísalas antes de continuar. No incluimos campos de cuenta ni de presupuesto, pero sí transmitimos el contenido de las notas.",
+  "aiProgram.generate": "Proponer un borrador con IA",
+  "aiProgram.generating": "Preparando un borrador para revisar…",
+  "aiProgram.error": "No hay un borrador válido disponible. Tus actividades siguen intactas; reintenta o añádelas manualmente.",
+  "aiProgram.noSlots": "No quedan franjas libres en el programa. Modifica o elimina manualmente una actividad antes de solicitar otro borrador; no hemos cambiado nada.",
+  "aiProgram.rateLimit": "Has pedido demasiadas propuestas en poco tiempo. Vuelve a intentarlo más tarde; tus actividades y cambios sin guardar siguen intactos.",
+  "aiProgram.review": "Revisa el borrador de IA",
+  "aiProgram.reviewHelp": "Comprueba cada idea. Al confirmar se añade a los cambios sin guardar; después puedes editarla o quitarla. Para conservarla usa Guardar presupuesto y programa.",
+  "aiProgram.accept": "Confirmar y añadir a los cambios",
+  "aiProgram.discard": "Descartar borrador"
 }
