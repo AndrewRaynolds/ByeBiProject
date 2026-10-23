@@ -108,6 +108,9 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
     setMessages((current) => [...current, { id: crypto.randomUUID(), content: message, sender: "user" }]);
     setIsLoading(true);
     const controller = new AbortController();
+    let timedOut = false;
+    // Cover the response body as well as the initial HTTP headers.
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 30_000);
     const requestGeneration = ++requestGenerationRef.current;
     abortRef.current = controller;
     const assistantId = crypto.randomUUID();
@@ -123,7 +126,7 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
       }, { signal: controller.signal, timeoutMs: 30_000 });
       if (requestGenerationRef.current !== requestGeneration || activeBrandRef.current !== brand) return;
       setMessages((current) => [...current, { id: assistantId, content: "", sender: "assistant" }]);
-      await consumeJsonSse(response, { onEvent: (event: any) => {
+      await consumeJsonSse(response, { signal: controller.signal, onEvent: (event: any) => {
         if (requestGenerationRef.current !== requestGeneration || activeBrandRef.current !== brand) return;
         if (event.tool_result?.name === "update_planner") {
           const parsed = plannerDraftSchema.safeParse(event.tool_result.result?.planner);
@@ -149,9 +152,10 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
     } catch {
       if (requestGenerationRef.current === requestGeneration && activeBrandRef.current === brand) {
         setMessages((current) => current.filter((item) => item.id !== assistantId));
-        if (!controller.signal.aborted) setMessages((current) => [...current, { id: crypto.randomUUID(), content: t("chat.genericError"), sender: "assistant" }]);
+        if (timedOut || !controller.signal.aborted) setMessages((current) => [...current, { id: crypto.randomUUID(), content: t("chat.genericError"), sender: "assistant" }]);
       }
     } finally {
+      window.clearTimeout(timeout);
       if (requestGenerationRef.current === requestGeneration && activeBrandRef.current === brand) {
         if (abortRef.current === controller) abortRef.current = null;
         setIsLoading(false);

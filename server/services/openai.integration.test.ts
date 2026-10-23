@@ -349,7 +349,7 @@ describe('streamOpenAIChatCompletionWithTools integration', () => {
 
     expect(mockCreate).toHaveBeenCalledWith(
       expect.any(Object),
-      { signal: controller.signal },
+      { signal: controller.signal, maxRetries: 0 },
     );
   });
 
