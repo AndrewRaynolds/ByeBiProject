@@ -1,3 +1,4 @@
+import AiProgramProposal from "./AiProgramProposal";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Trip } from "@shared/schema";
@@ -27,7 +28,7 @@ export default function TripPlanning({ trip }: { trip: Trip }) {
     <p role={query.error ? "alert" : "status"}>{t(query.error ? "hubPlanning.error" : "hubPlanning.loading")}</p>
     {query.error && <Button className="h-auto min-h-11 whitespace-normal" onClick={() => void query.refetch()}>{t("hubPlanning.retry")}</Button>}
   </CardContent></Card>;
-  return <PlanningEditor trip={trip} latest={query.data} reload={async () => {
+  return <PlanningEditor key={`${trip.id}:${trip.userId}`} trip={trip} latest={query.data} reload={async () => {
     const response = await query.refetch();
     if (response.error || !response.data) throw new Error("Reload failed");
     return response.data;
@@ -102,6 +103,9 @@ function PlanningEditor({ trip, latest, reload }: { trip: Trip; latest: TripPlan
     <section aria-labelledby="hub-program" className="space-y-3">
       <h3 id="hub-program" className="text-xl font-bold">{t("hubPlanning.program")}</h3>
       <p className="text-sm">{t("hubPlanning.programHelp")}</p>
+      {candidate.success && <AiProgramProposal key={JSON.stringify([trip, base.revision, base.contextRevision, candidate.data, locale])}
+        trip={trip} snapshot={{ ...base, plan: candidate.data }} disabled={blocked || Boolean(editing)}
+        onConflict={() => setFailure("conflict")} onAccept={(next) => { setPlan(next); markDirty(); heading.current?.focus(); }} />}
       {!items.length && <p>{t("program.noItems")}</p>}
       {[...new Set(items.map((item) => item.date))].map((day) => <section key={day} aria-label={day} className="space-y-3">
         <h4 className="font-semibold">{new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`))}</h4>

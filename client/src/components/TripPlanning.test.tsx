@@ -112,4 +112,73 @@ describe("Trip Hub budget/program", () => {
     await screen.findByText(translations["hubPlanning.importUnavailable"]);
     expect(localStorage.getItem("byebi:programDraft:v1:byebro")).toBe("broken"); expect(saveButton()).toBeDisabled();
   });
+  const aiProposal = { version: 1, items: [{ catalogId: "free_time", date: trip.endDate, slot: "evening" }] };
+  const mockProposal = () => request.mockImplementation(async (method: string, _url: string, body?: any) => {
+    if (method === "POST") return { json: async () => aiProposal };
+    if (method === "PUT") persisted = { ...persisted, revision: persisted.revision + 1, plan: body.plan };
+    return { json: async () => structuredClone(persisted) };
+  });
+  it("reviews AI ideas, confirms into unsaved changes and only persists on explicit save", async () => {
+    persisted.plan.plannedItems = [{ id: "kept", ideaId: null, title: "Existing activity", date: trip.startDate, slot: "morning", durationMinutes: 30, provenance: { kind: "user" }, feasibility: "not_checked", userEdited: true }];
+    mockProposal(); mount(); await ready();
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    await screen.findByRole("heading", { name: translations["aiProgram.review"] });
+    expect(request.mock.calls.filter(([method]) => method === "PUT")).toHaveLength(0);
+    expect(saveButton()).toBeDisabled(); expect(persisted.plan.plannedItems).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.accept"] }));
+    expect(screen.getByText(/Existing activity/)).toBeInTheDocument();
+    expect(request.mock.calls.filter(([method]) => method === "PUT")).toHaveLength(0);
+    expect(saveButton()).toBeEnabled();
+    fireEvent.click(saveButton()); await screen.findByText(translations["hubPlanning.saved"]);
+    expect(persisted.plan.plannedItems).toHaveLength(2); expect(persisted.plan.plannedItems[0]).toMatchObject({ id: "kept", durationMinutes: 30, userEdited: true });
+    expect(persisted.plan.plannedItems[1]).toMatchObject({ feasibility: "not_checked", durationMinutes: null });
+  });
+  it("discards a proposal and invalidates it after local changes without saving", async () => {
+    mockProposal(); mount(); await ready();
+    const generate = () => fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    generate(); await screen.findByRole("heading", { name: translations["aiProgram.review"] });
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.discard"] })); expect(saveButton()).toBeDisabled();
+    generate(); await screen.findByRole("heading", { name: translations["aiProgram.review"] });
+    fireEvent.change(capInput(), { target: { value: "850" } });
+    expect(screen.queryByRole("button", { name: translations["aiProgram.accept"] })).not.toBeInTheDocument();
+    expect(request.mock.calls.filter(([method]) => method === "PUT")).toHaveLength(0);
+  });
+  it("shows the AI data disclosure and distinct no-slot/rate-limit errors without losing edits", async () => {
+    mount(); await ready();
+    expect(screen.getByText(translations["aiProgram.dataUse"])).toBeInTheDocument();
+    fireEvent.change(capInput(), { target: { value: "850" } });
+    request.mockRejectedValueOnce(new ApiError(422, "NO_FREE_SLOTS"));
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    await screen.findByText(translations["aiProgram.noSlots"]);
+    expect(capInput()).toHaveValue(850);
+    expect(request.mock.calls.filter(([method]) => method === "PUT")).toHaveLength(0);
+    request.mockRejectedValueOnce(new ApiError(429, "Too many requests"));
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    await screen.findByText(translations["aiProgram.rateLimit"]);
+    expect(capInput()).toHaveValue(850);
+    expect(saveButton()).toBeEnabled();
+  });
+  it("preserves unsaved edits on AI failure and requires reload after a conflict", async () => {
+    mount(); await ready(); fireEvent.change(capInput(), { target: { value: "850" } });
+    request.mockRejectedValueOnce(new Error("provider offline"));
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    await screen.findByText(translations["aiProgram.error"]); expect(capInput()).toHaveValue(850);
+    expect(saveButton()).toBeEnabled();
+    request.mockRejectedValueOnce(new ApiError(409, "conflict"));
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    await screen.findByText(translations["hubPlanning.conflict"]); expect(capInput()).toHaveValue(850); expect(saveButton()).toBeDisabled();
+  });
+  it("rejects invalid/overlapping AI proposals before offering confirmation", async () => {
+    mount(); await ready();
+    request.mockResolvedValueOnce({ json: async () => ({ ...aiProposal, items: [{ ...aiProposal.items[0], date: "2099-01-01" }] }) });
+    fireEvent.click(screen.getByRole("button", { name: translations["aiProgram.generate"] }));
+    await screen.findByText(translations["aiProgram.error"]);
+    expect(screen.queryByRole("button", { name: translations["aiProgram.accept"] })).not.toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+  });
+  it.each([en, es])("localizes AI review and every destination interest reason", copy => {
+    const keys = Object.keys(translations).filter(key => key.startsWith("aiProgram.") || key.startsWith("planner.interestReason."));
+    for (const key of keys) expect((copy as Record<string, string>)[key]).toBeTruthy();
+  });
+
 });

@@ -1,3 +1,7 @@
+import { aiProgramRequestSchema, appendAiProgramProposal, hasFreeAiProgramSlot } from "@shared/aiProgramSchemas";
+import { planningFitsTrip } from "@shared/tripPlanningSchemas";
+import { tripPlanningSnapshot } from "./tripPlanning";
+import { proposeAiProgram } from "./services/aiProgram";
 import { tripPlanningUpdateSchema } from "@shared/tripPlanningSchemas";
 import { tripPreferencesPatchSchema } from "@shared/tripPreferencesSchemas";
 import { tripPreferencesSnapshot } from "./tripPreferences";
@@ -674,6 +678,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!snapshot) return res.status(404).json({ message: "Trip not found" });
       return res.json(snapshot);
     } catch { return res.status(500).json({ message: "Planning unavailable" }); }
+  });
+  const aiProgramLimiter = rateLimit({ windowMs: 60_000, limit: 5, standardHeaders: "draft-7", legacyHeaders: false });
+  app.post("/api/trips/:tripId/planning/proposal", isAuthenticated, aiProgramLimiter, async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+    const id = parsePositiveIntegerParam(req.params.tripId);
+    const request = aiProgramRequestSchema.safeParse(req.body);
+    if (id === null || !request.success) return res.status(400).json({ message: "Invalid proposal request" });
+    const controller = new AbortController();
+    const cancel = () => { if (!res.writableEnded) controller.abort(); };
+    res.on("close", cancel);
+    try {
+      const owner = req.supabaseUser!.id;
+      const trip = await storage.getTripForUser(id, owner);
+      const snapshot = await storage.getTripPlanningForUser(id, owner);
+      if (!trip || !snapshot) return res.status(404).json({ message: "Trip not found" });
+      if (tripPlanningSnapshot(trip).contextRevision !== snapshot.contextRevision || snapshot.revision !== request.data.expectedRevision || snapshot.contextRevision !== request.data.expectedContextRevision) return res.status(409).json({ message: "Planning changed; reload and review" });
+      if (!planningFitsTrip(request.data.plan, trip)) return res.status(400).json({ message: "Activity outside trip dates" });
+      if (!hasFreeAiProgramSlot(request.data.plan, trip)) return res.status(422).json({ error: "NO_FREE_SLOTS" });
+      const proposal = await proposeAiProgram(trip, request.data.plan, controller.signal);
+      appendAiProgramProposal(request.data.plan, proposal, trip, id => id, randomUUID);
+      // Generation may outlast an edit on another device; recheck ownership and context.
+      const current = await storage.getTripPlanningForUser(id, owner);
+      if (!current) return res.status(404).json({ message: "Trip not found" });
+      const currentTrip = await storage.getTripForUser(id, owner);
+      if (!currentTrip) return res.status(404).json({ message: "Trip not found" });
+      if (JSON.stringify([currentTrip.activities, currentTrip.specialRequests]) !== JSON.stringify([trip.activities, trip.specialRequests])) return res.status(409).json({ message: "Preferences changed; reload and review" });
+      if (tripPlanningSnapshot(currentTrip).contextRevision !== snapshot.contextRevision || current.revision !== snapshot.revision || current.contextRevision !== snapshot.contextRevision) return res.status(409).json({ message: "Planning changed; reload and review" });
+      return res.json(proposal);
+    } catch { if (!controller.signal.aborted) return res.status(503).json({ message: "Program proposal unavailable" }); }
+    finally { res.off("close", cancel); }
   });
   app.put("/api/trips/:tripId/planning", isAuthenticated, async (req: Request, res: Response) => {
     res.setHeader("Cache-Control", "no-store");

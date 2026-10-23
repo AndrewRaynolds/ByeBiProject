@@ -1166,5 +1166,21 @@
   "hubPlanning.previewImport": "Preview local draft",
   "hubPlanning.importUnavailable": "No compatible local draft, or ambiguous context. Nothing changed.",
   "hubPlanning.importPreview": "Local draft: {{count}} activities. Check amounts and activities before using it.",
-  "hubPlanning.useImport": "Use this draft, then save explicitly"
+  "hubPlanning.useImport": "Use this draft, then save explicitly",
+  "planner.interestReason.culture": "For your interest in culture: ideas to explore, with visits to verify.",
+  "planner.interestReason.food": "For your interest in food: a destination to explore around the table.",
+  "planner.interestReason.relax": "For your interest in relaxation: wellness ideas to verify.",
+  "planner.interestReason.sea": "For your interest in the sea: coastal ideas to consider depending on the season.",
+  "planner.interestReason.nightlife": "For your interest in nightlife: neighborhoods and evenings to explore, with no availability verified.",
+  "aiProgram.help": "Ask AI for an editorial draft for free slots. Feasibility, times, prices and availability are unverified. Existing activities stay intact.",
+  "aiProgram.dataUse": "If you request a proposal, we will send OpenAI the destination, dates, group size, trip preferences and notes, and occupied time slots. Free-text notes may contain personal data: review them before continuing. We do not include account or budget fields, but information entered in the notes will be sent.",
+  "aiProgram.generate": "Propose a draft with AI",
+  "aiProgram.generating": "Preparing a draft to review…",
+  "aiProgram.error": "No valid draft is available. Your activities are intact; try again or add them manually.",
+  "aiProgram.noSlots": "There are no free slots in this program. Edit or remove an activity manually before asking for another draft; nothing has changed.",
+  "aiProgram.rateLimit": "You have requested too many drafts in a short time. Try again shortly; your activities and unsaved changes are intact.",
+  "aiProgram.review": "Review the AI draft",
+  "aiProgram.reviewHelp": "Check every idea. Confirmation adds it to unsaved changes; you can then edit or remove it. To keep it, use Save budget and program.",
+  "aiProgram.accept": "Confirm and add to changes",
+  "aiProgram.discard": "Discard draft"
 }

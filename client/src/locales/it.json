@@ -1166,5 +1166,21 @@
   "hubPlanning.previewImport": "Visualizza bozza locale",
   "hubPlanning.importUnavailable": "Nessuna bozza compatibile disponibile, oppure contesto ambiguo. Non è stato modificato nulla.",
   "hubPlanning.importPreview": "Bozza locale: {{count}} attività. Verifica importi e attività prima di usarla.",
-  "hubPlanning.useImport": "Usa questa bozza, poi salva esplicitamente"
+  "hubPlanning.useImport": "Usa questa bozza, poi salva esplicitamente",
+  "planner.interestReason.culture": "Per il vostro interesse per la cultura: spunti da esplorare, con visite da verificare.",
+  "planner.interestReason.food": "Per il vostro interesse per la cucina: una meta da esplorare a tavola.",
+  "planner.interestReason.relax": "Per il vostro interesse per il relax: spunti benessere da verificare.",
+  "planner.interestReason.sea": "Per il vostro interesse per il mare: spunti sulla costa da valutare secondo la stagione.",
+  "planner.interestReason.nightlife": "Per il vostro interesse per la vita notturna: quartieri e serate da esplorare, senza disponibilità verificata.",
+  "aiProgram.help": "Chiedi all’AI una bozza editoriale per gli spazi liberi. Fattibilità, orari, prezzi e disponibilità non sono verificati. Le attività esistenti restano intatte.",
+  "aiProgram.dataUse": "Se chiedi una proposta, invieremo a OpenAI destinazione, date, numero di partecipanti, preferenze e note del viaggio, insieme alle fasce già occupate. Le note libere potrebbero contenere dati personali: controllale prima di procedere. Non includiamo i campi dell’account o del budget, ma eventuali dati inseriti nelle note saranno trasmessi.",
+  "aiProgram.generate": "Proponi una bozza con AI",
+  "aiProgram.generating": "Preparo una bozza da rivedere…",
+  "aiProgram.error": "Non è disponibile una bozza valida. Le tue attività sono intatte; puoi riprovare o aggiungerle a mano.",
+  "aiProgram.noSlots": "Il programma non ha fasce libere. Modifica o rimuovi manualmente un’attività prima di richiedere una nuova bozza; non abbiamo cambiato nulla.",
+  "aiProgram.rateLimit": "Hai richiesto troppe proposte in breve tempo. Riprova tra poco: le attività e le modifiche non salvate sono intatte.",
+  "aiProgram.review": "Rivedi la bozza AI",
+  "aiProgram.reviewHelp": "Controlla ogni idea. La conferma la aggiunge alle modifiche non salvate; poi puoi modificarla o rimuoverla. Per conservarla usa Salva budget e programma.",
+  "aiProgram.accept": "Conferma e aggiungi alle modifiche",
+  "aiProgram.discard": "Scarta la bozza"
 }

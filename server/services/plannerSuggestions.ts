@@ -1,11 +1,11 @@
 import { getCityDefinition, getCityDefinitionByKey } from "@shared/cityMapping";
 import { applyPlannerUpdate, getMissingPlannerFields, plannerDraftSchema, type PlannerDraft } from "@shared/plannerSchemas";
-import { destinationIdeaIds, plannerActionSchema, plannerSuggestionsSchema, type DestinationIdeaId } from "@shared/plannerSuggestions";
+import { rankDestinationIdeas, plannerActionSchema, plannerSuggestionsSchema, type DestinationIdeaId } from "@shared/plannerSuggestions";
 import { buildPlannerFollowUp } from "./plannerConversation";
 
 export function buildDestinationSuggestions(planner: PlannerDraft, seenIds: DestinationIdeaId[] = []) {
   const originKey = getCityDefinition(planner.origin?.canonical)?.key;
-  const eligible = destinationIdeaIds.filter((id) => id !== originKey);
+  const eligible = rankDestinationIdeas(planner).filter((id) => id !== originKey);
   const unseen = eligible.filter((id) => !seenIds.includes(id));
   const ids = planner.destination || planner.status !== "draft" ? [] : (unseen.length ? unseen : eligible).slice(0, 2);
   return plannerSuggestionsSchema.parse({ version: 1, brand: planner.brand,

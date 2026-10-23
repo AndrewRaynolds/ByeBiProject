@@ -33,12 +33,13 @@ export const legalDocumentContent: Record<Locale, Record<LegalDocument, Document
     },
     privacy: {
       title: "Informativa sulla privacy",
-      updated: "Versione 4 agosto 2026",
+      updated: "Versione 23 ottobre 2026",
       intro: "Questa informativa descrive in modo trasparente i principali trattamenti del sito. Prima del lancio sarà completata con basi giuridiche, tempi di conservazione e dati del titolare verificati.",
       sections: [
         { title: "Titolare e contatti", paragraphs: ["{{seller}}"] },
         { title: "Dati e finalità", paragraphs: ["Possiamo trattare dati di account e accesso, richieste di viaggio, ordini, indirizzi di consegna, comunicazioni di assistenza e dati tecnici necessari a sicurezza e funzionamento. Li usiamo per fornire il servizio richiesto, gestire account e ordini, prevenire abusi e adempiere agli obblighi di legge."] },
         { title: "Fornitori coinvolti", paragraphs: ["Supabase supporta autenticazione e database; Stripe elabora i pagamenti; Printful produce e spedisce il merchandise; Resend invia le comunicazioni transazionali sugli ordini; OpenAI può elaborare le richieste rivolte all'assistente di viaggio; Aviasales, Booking.com e GetYourGuide gestiscono i collegamenti esterni per voli, hotel e attività. Ogni fornitore tratta i dati secondo il proprio ruolo e le proprie condizioni."] },
+        { title: "Proposte AI del programma", paragraphs: ["Quando il proprietario di un viaggio salvato richiede una bozza di programma, inviamo a OpenAI destinazione, date, numero di partecipanti, preferenze e note del viaggio, insieme alle fasce occupate. Le note sono testo libero e potrebbero contenere dati personali: è opportuno verificarle prima di richiedere la proposta. Non includiamo direttamente i campi dell’account, gli identificativi dell’utente o gli importi del budget; eventuali dati inseriti nelle note libere possono però essere trasmessi. La proposta non viene salvata automaticamente: l'utente deve prima confermarla e poi salvare il programma."] },
         { title: "Conservazione e sicurezza", paragraphs: ["I dati sono conservati per il tempo necessario alle finalità indicate e agli obblighi legali. Prima del lancio commerciale saranno definiti periodi specifici e procedure di cancellazione, accesso e gestione degli incidenti."] },
         { title: "Diritti", paragraphs: ["Nei casi previsti è possibile chiedere accesso, rettifica, cancellazione, limitazione, portabilità o opposizione e presentare reclamo all'autorità competente. Le richieste vanno inviate al contatto del titolare."] },
       ],
@@ -70,12 +71,13 @@ export const legalDocumentContent: Record<Locale, Record<LegalDocument, Document
     },
     privacy: {
       title: "Privacy notice",
-      updated: "Version dated 4 August 2026",
+      updated: "Version dated 23 October 2026",
       intro: "This notice transparently describes the site's main processing activities. Before launch it will be completed with verified legal bases, retention periods and controller details.",
       sections: [
         { title: "Controller and contact details", paragraphs: ["{{seller}}"] },
         { title: "Data and purposes", paragraphs: ["We may process account and login data, travel requests, orders, delivery addresses, support communications and technical data needed for security and operation. We use it to provide requested services, manage accounts and orders, prevent abuse and meet legal obligations."] },
         { title: "Service providers", paragraphs: ["Supabase supports authentication and the database; Stripe processes payments; Printful produces and ships merchandise; Resend sends transactional order communications; OpenAI may process requests sent to the travel assistant; Aviasales, Booking.com and GetYourGuide handle the external handoffs for flights, hotels and activities. Each provider processes data according to its role and terms."] },
+        { title: "AI program proposals", paragraphs: ["When the owner of a saved trip requests a program draft, we send OpenAI the destination, dates, participant count, trip preferences and notes, and occupied time slots. Notes are free text and may contain personal data: review them before requesting a proposal. We do not directly include account fields, user identifiers or budget amounts; however, information entered into free-text notes may still be transmitted. The proposal is not saved automatically: the user must first confirm it and separately save the program."] },
         { title: "Retention and security", paragraphs: ["Data is kept for as long as necessary for the stated purposes and legal obligations. Specific periods and procedures for deletion, access and incident handling will be defined before commercial launch."] },
         { title: "Your rights", paragraphs: ["Where applicable, you may request access, correction, deletion, restriction, portability or objection and complain to the competent authority. Send requests to the controller contact."] },
       ],
@@ -107,12 +109,13 @@ export const legalDocumentContent: Record<Locale, Record<LegalDocument, Document
     },
     privacy: {
       title: "Política de privacidad",
-      updated: "Versión de 4 de agosto de 2026",
+      updated: "Versión de 23 de octubre de 2026",
       intro: "Este aviso describe de forma transparente los principales tratamientos del sitio. Antes del lanzamiento se completará con bases jurídicas, plazos de conservación y datos verificados del responsable.",
       sections: [
         { title: "Responsable y contacto", paragraphs: ["{{seller}}"] },
         { title: "Datos y finalidades", paragraphs: ["Podemos tratar datos de cuenta y acceso, solicitudes de viaje, pedidos, direcciones de entrega, comunicaciones de soporte y datos técnicos necesarios para seguridad y funcionamiento. Se usan para prestar servicios, gestionar cuentas y pedidos, prevenir abusos y cumplir obligaciones legales."] },
         { title: "Proveedores", paragraphs: ["Supabase presta autenticación y base de datos; Stripe procesa pagos; Printful produce y envía productos; Resend envía comunicaciones transaccionales de los pedidos; OpenAI puede procesar solicitudes al asistente de viajes; Aviasales, Booking.com y GetYourGuide gestionan los enlaces externos para vuelos, hoteles y actividades. Cada proveedor trata los datos según su función y condiciones."] },
+        { title: "Propuestas de programa con IA", paragraphs: ["Cuando el propietario de un viaje guardado solicita un borrador de programa, enviamos a OpenAI el destino, las fechas, el número de participantes, las preferencias y notas del viaje y las franjas ocupadas. Las notas son texto libre y pueden contener datos personales: revísalas antes de solicitar una propuesta. No incluimos directamente campos de cuenta, identificadores de usuario ni importes del presupuesto; sin embargo, los datos introducidos en las notas libres también pueden transmitirse. La propuesta no se guarda automáticamente: primero hay que confirmarla y después guardar el programa."] },
         { title: "Conservación y seguridad", paragraphs: ["Los datos se conservan durante el tiempo necesario para las finalidades indicadas y las obligaciones legales. Antes del lanzamiento comercial se definirán plazos y procedimientos específicos de eliminación, acceso e incidentes."] },
         { title: "Derechos", paragraphs: ["Cuando corresponda, puedes solicitar acceso, rectificación, supresión, limitación, portabilidad u oposición y reclamar ante la autoridad competente. Envía las solicitudes al contacto del responsable."] },
       ],

@@ -18,7 +18,7 @@ import { consumeJsonSse } from "@/lib/sse";
 import { trackProductEvent } from "@/lib/track";
 import { loadPlannerDraft, persistCheckoutBridge, savePlannerDraft } from "@/lib/plannerStorage";
 import { createPlannerDraft, getLocalDateOnly, plannerDraftSchema, type PlannerBrand, type PlannerDraft } from "@shared/plannerSchemas";
-import { plannerSuggestionsSchema, suggestionsMatchPlanner, type DestinationIdeaId, type PlannerAction, type PlannerSuggestions } from "@shared/plannerSuggestions";
+import { matchingDestinationInterests, plannerSuggestionsSchema, suggestionsMatchPlanner, type DestinationIdeaId, type PlannerAction, type PlannerSuggestions } from "@shared/plannerSuggestions";
 
 const messageSchema = z.object({ message: z.string().trim().min(1).max(2_000) });
 type MessageForm = z.infer<typeof messageSchema>;
@@ -316,7 +316,7 @@ export default function PlannerDialog({ brand, open, onOpenChange, initialMessag
             <p className="text-sm text-muted-foreground">{t("planner.ideasDisclaimer")}</p>
             {visibleIdeas.map((id) => <Button key={id} type="button" variant="outline" className="h-auto min-h-11 w-full min-w-0 flex-col items-start whitespace-normal p-3 text-left" onClick={() => chooseIdea(id)}>
               <span className="font-semibold">{t("planner.chooseDestination", { destination: t(`destinations.city.${id}.name`) })}</span>
-              <span className="text-sm font-normal leading-6 text-muted-foreground">{t(`planner.ideaReason.${id}`)}</span>
+              <span className="text-sm font-normal leading-6 text-muted-foreground">{t(`planner.ideaReason.${id}`)}{matchingDestinationInterests(id, planner).map(topic => <span className="block" key={topic}>{t(`planner.interestReason.${topic}`)}</span>)}</span>
             </Button>)}
             <Button type="button" variant="outline" className="min-h-11 whitespace-normal" onClick={requestIdeas}>{t(visibleIdeas.length ? "planner.moreIdeas" : "planner.inspireMe")}</Button>
           </section>}

@@ -87,7 +87,24 @@ At least one tester in each cohort should use keyboard-only navigation. Cover cu
 - [ ] Return from Splitta to the same Trip Hub.
 - [ ] If testing sharing, use the generated link in a private/incognito window and confirm it exposes only the intended public trip view.
 
-### 6. Feedback and safety
+### 6. AI program proposal — owner-only saved Trip Hub
+
+Use synthetic trip notes and a test account. Do not enter personal information in free-text fields.
+
+- [ ] In each brand (ByeBro and ByeBride) and language (IT/EN/ES), open an owned Saved Trip and check the data-use disclosure before requesting an AI proposal.
+- [ ] With an unsaved changed budget or activity, request a proposal; confirm that no PUT/save occurs during generation or preview and that current edits remain intact.
+- [ ] Review every suggested date, time slot and editorial title. Check that prices, real availability, opening hours, verified feasibility and booking status are never claimed.
+- [ ] Discard the preview and confirm existing activities and unsaved edits are unchanged.
+- [ ] Generate again and explicitly confirm; check that new activities appear only as unsaved changes and can be edited or removed before Save budget and program.
+- [ ] Save explicitly, reload and verify persistence of the correct items while pre-existing activities remain unchanged.
+- [ ] Fill all available slots with synthetic activities and verify a distinct no-free-slots message, no OpenAI call and no mutation.
+- [ ] Simulate a provider failure/timeout and the 5-per-minute rate limit; verify localized, recoverable errors and preserved unsaved changes.
+- [ ] Simulate a concurrent save or changed trip context during generation; verify the preview is rejected and an explicit reload/review is required.
+- [ ] In an unauthenticated session or another account, confirm the proposal API does not expose private trip data and does not invoke the AI provider.
+- [ ] Confirm public shared-trip links do not show private budget, program or AI drafts.
+- [ ] Before beta launch, verify the additive PR #58 trip-planning migration is present on staging with an owner-only authenticated read/write smoke test.
+
+### 7. Feedback and safety
 
 - [ ] Open **Send feedback** from both desktop and mobile navigation.
 - [ ] Confirm the draft includes only brand, locale and pathname context.
