@@ -299,3 +299,27 @@ it.each(["byebro", "byebride"] as const)("continues %s to options after clearing
   fireEvent.click(screen.getByRole("button", { name: "Continua alle opzioni di viaggio" }));
   expect(JSON.parse(localStorage.getItem("currentItinerary")!)).toMatchObject({ budget: null, activities: [], people: 6 });
 });
+
+
+describe("Planner streaming deadline", () => {
+  it("aborts a stalled response body at 30 seconds, shows an error and preserves the hydrated draft", async () => {
+    localStorage.clear(); localStorage.setItem("byebi_locale", "it");
+    const planner = createPlannerDraft({ brand: "byebro", destination: "Palma di Maiorca", startDate: "2099-02-24", endDate: "2099-02-27", participants: 5 });
+    localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(planner));
+    vi.mocked(apiRequest).mockResolvedValue({} as Response);
+    vi.mocked(consumeJsonSse).mockImplementation((_response, { signal }) => new Promise((_resolve, reject) => {
+      signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+    }));
+    vi.useFakeTimers();
+    try {
+      renderPlanner(<PlannerDialog brand="byebro" open onOpenChange={vi.fn()} initialMessage="milano" />);
+      await act(async () => { await Promise.resolve(); });
+      expect(consumeJsonSse).toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      expect(screen.getByText(localeIt["chat.genericError"])).toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem(PLANNER_STORAGE_KEY)!)).toEqual(planner);
+      expect(screen.getByRole("button", { name: "Invia messaggio" })).not.toBeDisabled();
+      expect(apiRequest).toHaveBeenLastCalledWith("POST", "/api/chat/openai-stream", expect.objectContaining({ planner }), expect.any(Object));
+    } finally { vi.useRealTimers(); }
+  });
+});

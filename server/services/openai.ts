@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { ZodError } from "zod";
 import { buildAviasalesUrl, getAviasalesAdultCount } from "@shared/flightSchemas";
 import { calculateTripDays, isValidDateRange, normalizeTripDate } from "@shared/dateUtils";
 import { resolveIataCode } from "./cityMapping";
@@ -8,6 +9,7 @@ import {
   applyPlannerUpdate,
   createPlannerDraft,
   getMissingPlannerFields,
+  getLocalDateOnly,
   plannerDraftSchema,
   plannerUpdateArgumentsSchema,
   type PlannerDraft,
@@ -84,7 +86,13 @@ function isValidISODate(value: string): boolean {
   return normalizeTripDate(value) === value;
 }
 
-function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: string } {
+// Return field identifiers only: Zod messages/inputs can contain private user data.
+function plannerErrorFields(error: ZodError): string[] {
+  const allowed = new Set(["origin", "destination", "startDate", "endDate", "participants", "budgetPerPerson", "preferenceArchetype", "interests", "preferences", "clearFields"]);
+  return [...new Set(error.issues.map(issue => String(issue.path[0])).filter(field => allowed.has(field)))];
+}
+
+function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: string; fields?: string[] } {
   const args = toolCall.arguments || {};
 
   switch (toolCall.name) {
@@ -92,7 +100,7 @@ function validateToolCall(toolCall: ToolCall): { valid: boolean; message?: strin
       const parsed = plannerUpdateArgumentsSchema.safeParse(args);
       return parsed.success
         ? { valid: true }
-        : { valid: false, message: "Please provide only the planner details the user explicitly shared." };
+        : { valid: false, message: "Correct only the invalid fields using explicit user details; preserve all other values.", fields: plannerErrorFields(parsed.error) };
     }
     case "search_flights": {
       const origin = typeof args.origin === "string" ? args.origin.trim() : "";
@@ -191,7 +199,11 @@ export async function executeToolCall(
   switch (name) {
     case "update_planner": {
       const update = plannerUpdateArgumentsSchema.safeParse(args);
-      if (!update.success) return { error: "Invalid planner update" };
+      if (!update.success) return { error: "Invalid planner update", fields: plannerErrorFields(update.error) };
+      const invalidDates = (["startDate", "endDate"] as const).filter(field =>
+        update.data[field] !== null && !normalizeTripDate(update.data[field]!),
+      );
+      if (invalidDates.length) return { error: "Invalid planner details", fields: invalidDates };
       try {
         const current = context.planner ?? createPlannerDraft({
           brand: context.partyType === "bachelorette" ? "byebride" : "byebro",
@@ -199,8 +211,8 @@ export async function executeToolCall(
         });
         const planner = applyPlannerUpdate(current, update.data);
         return { planner, missingFields: getMissingPlannerFields(planner) };
-      } catch {
-        return { error: "Invalid planner details" };
+      } catch (error) {
+        return { error: "Invalid planner details", fields: error instanceof ZodError ? plannerErrorFields(error) : [] };
       }
     }
     case "search_flights": {
@@ -275,11 +287,7 @@ const TRIP_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   },
 ];
 
-const SHARED_SYSTEM_PROMPT = (() => {
-  const today = new Date().toISOString().slice(0, 10);
-  return `Today is ${today}.
-
-DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
+const SHARED_SYSTEM_PROMPT = `DESTINATIONS: Rome, Ibiza, Barcelona, Prague, Budapest, Krakow, Amsterdam, Berlin, Lisbon, Palma de Mallorca
 
 RULES:
 - Required details: departure city, destination, start date, end date, and participants.
@@ -288,7 +296,7 @@ RULES:
 - A volunteered amount with unclear scope needs one clarification before applying it. For a group total, propose the per-person calculation and await explicit confirmation before updating budgetPerPerson. Qualitative words such as cheap/medium/high are not numeric budgets; never convert them into amounts. Never silently round or convert a currency.
 - If the user explicitly removes budget or preferences, call update_planner with clearFields naming only those fields and null for their corresponding update values. Otherwise clearFields is empty; ordinary null values preserve existing details.
 - NEVER mention date formats. Accept natural language dates ("June 10-14", "next weekend", "primo weekend di luglio") and convert to YYYY-MM-DD internally. When user says a month without a year, use the NEXT occurrence of that month (never a past date).
-- Call update_planner whenever the user supplies or changes planner details, merging the CURRENT PLANNER and the new message. Use null for values that remain unknown.
+- Call update_planner once when the user supplies or changes planner details. Send only changed values; null preserves known values. After a tool error, correct only the reported fields if the user's message/history supports the correction; otherwise ask one targeted question. Never repeat a failed call unchanged. For a retry request, recover explicitly supplied details from recent user messages that are still missing in CURRENT PLANNER and call update_planner once if there are any. A retry request does not authorize changing destination or other known details.
 - Recognize what the user has shared and help them move forward, instead of listing fields to fill in. Ask at most one useful question per turn and never re-ask a known detail. When no essential fields are missing, say the brief is ready for review without asking more questions.
 - If the user is undecided, offer up to two destination ideas from the supported destinations with an editorial reason, then one useful question. Explain they are inspiration to verify, not offers. Never write a suggestion into the Planner unless the user chooses it. Do not infer interests from the party type or brand. All editorial styles are available to both brands. Use explicitly confirmed preferences as optional intent notes; never claim they filter partner searches or represent scheduled or bookable activities.
 - NEVER output text alongside a tool call. When calling a tool, output ONLY the tool call with zero accompanying text.
@@ -297,7 +305,6 @@ RULES:
 
 TOOLS:
 - update_planner: validates and persists only the planner brief. It never calls a travel provider.`;
-})();
 
 const BYEBRO_SYSTEM_PROMPT = `You are the ByeBro planner for bachelor party travel briefs.
 Voice: friendly, direct and playfully collaborative. Help the group build shared complicity; invite rather than pressure.
@@ -314,7 +321,7 @@ function buildContextualPrompt(context: ChatContext): string {
     context.partyType === "bachelorette"
       ? BYEBRIDE_SYSTEM_PROMPT
       : BYEBRO_SYSTEM_PROMPT;
-  let contextualPrompt = basePrompt;
+  let contextualPrompt = `Today is ${getLocalDateOnly()}.\n\n${basePrompt}`;
 
   if (context.planner) {
     contextualPrompt += `\n\nCURRENT PLANNER (validated JSON; preserve known values unless the user changes them):\n${JSON.stringify(context.planner)}`;
@@ -379,6 +386,7 @@ export async function createOpenAIChatCompletion(
 
     if (message?.tool_calls) {
       for (const tc of message.tool_calls) {
+        if (tc.type !== "function") continue;
         try {
           toolCalls.push({
             name: tc.function.name,
@@ -612,6 +620,21 @@ function generateLocalToolResponse(
   return null;
 }
 
+function plannerCorrectionMessage(context: ChatContext, userMessage: string, history: ChatMessage[], fields: string[]): string {
+  const lang = context.locale ?? detectUserLanguage(userMessage, history);
+  const locale = lang === "it" || lang === "es" ? lang : "en";
+  const field = fields[0];
+  const key = field === "startDate" || field === "endDate" ? "dates"
+    : field === "origin" || field === "destination" || field === "participants" ? field
+    : field === "budgetPerPerson" ? "budget" : field ? "preferences" : "retry";
+  const copy = {
+    it: { dates: "Le date proposte non sono valide. Quali sono le date di partenza e ritorno, con l’anno?", origin: "Non ho potuto aggiornare la partenza. Da quale città partite?", destination: "Non ho potuto aggiornare la meta. Qual è la destinazione?", participants: "Quante persone partecipano, da 1 a 50?", budget: "Qual è il budget in euro per persona per l’intero viaggio?", preferences: "Quali preferenze vuoi modificare o rimuovere?", retry: "Non ho potuto interpretare l’aggiornamento. Puoi riscrivere il dettaglio che vuoi aggiungere o correggere?" },
+    en: { dates: "The proposed dates are invalid. What are your departure and return dates, including the year?", origin: "I couldn't update the departure city. Which city are you departing from?", destination: "I couldn't update the destination. Where would you like to go?", participants: "How many people are traveling, from 1 to 50?", budget: "What is the budget in euros per person for the whole trip?", preferences: "Which preferences would you like to change or remove?", retry: "I couldn't interpret the update. Could you rephrase the detail you want to add or correct?" },
+    es: { dates: "Las fechas propuestas no son válidas. ¿Cuáles son las fechas de salida y regreso, incluido el año?", origin: "No pude actualizar la salida. ¿Desde qué ciudad salís?", destination: "No pude actualizar el destino. ¿Adónde queréis ir?", participants: "¿Cuántas personas viajan, de 1 a 50?", budget: "¿Cuál es el presupuesto en euros por persona para todo el viaje?", preferences: "¿Qué preferencias quieres modificar o eliminar?", retry: "No pude interpretar la actualización. ¿Puedes reformular el dato que quieres añadir o corregir?" },
+  };
+  return copy[locale][key];
+}
+
 /**
  * New streaming function that implements the proper OpenAI function calling loop.
  * Instead of hard-coding follow-up messages, this function:
@@ -648,7 +671,10 @@ export async function* streamOpenAIChatCompletionWithTools(
     debugLog(`⏱️ [STREAM] Start | system_prompt=${systemPromptLength} chars | history=${historyLength} msgs | total_chars=${totalChars}`);
 
     // Tool loop: keep calling OpenAI until we get a response without tool calls
-    const maxToolIterations = 4;
+    const maxToolIterations = 2;
+    let lastInvalidFields: string[] = [];
+    const attemptedTools = new Set<string>();
+    const successfulTools = new Map<string, Record<string, unknown>>();
     let completed = false;
     for (let iteration = 1; iteration <= maxToolIterations; iteration++) {
       if (signal?.aborted) return;
@@ -663,8 +689,9 @@ export async function* streamOpenAIChatCompletionWithTools(
           stream: true,
           tools: TRIP_TOOLS,
           tool_choice: "auto",
+          parallel_tool_calls: false,
         },
-        { signal },
+        { signal, maxRetries: 0 },
       );
 
       const firstChunkStart = Date.now();
@@ -706,12 +733,12 @@ export async function* streamOpenAIChatCompletionWithTools(
         }
       }
 
-      if (!hasToolCalls && contentBuffer.length > 0) {
+      if (!hasToolCalls && contentBuffer.length > 0 && attemptedTools.size === 0) {
         for (const chunk of contentBuffer) {
           yield { type: "content", content: chunk };
         }
       } else if (hasToolCalls && assistantContent) {
-        debugLog(`⏱️ [STREAM] Discarded filler text before tool call: "${assistantContent.slice(0, 80)}..."`);
+        debugLog("[STREAM] Discarded text accompanying tool calls");
       }
 
       const streamDone = Date.now();
@@ -725,12 +752,14 @@ export async function* streamOpenAIChatCompletionWithTools(
         }
       }
 
-      debugLog(`⏱️ [STREAM] Tool calls: [${toolCalls.map(tc => tc.name).join(", ")}] | content=${assistantContent.length} chars`);
+      debugLog(`[STREAM] tool_count=${toolCalls.length} content_chars=${assistantContent.length}`);
 
       // If no tool calls, we're done - exit the loop
       if (toolCalls.length === 0) {
         debugLog(`⏱️ [STREAM] No tool calls, done. Total: ${Date.now() - totalStart}ms`);
-        completed = true;
+        if (!hasToolCalls && assistantContent.trim() && attemptedTools.size === 0) {
+          completed = true;
+        }
         break;
       }
 
@@ -767,12 +796,22 @@ export async function* streamOpenAIChatCompletionWithTools(
         );
         args = constrainedToolCall.arguments;
 
+        const fingerprint = JSON.stringify([toolCall.name, args]);
+        if (attemptedTools.has(fingerprint)) {
+          const cachedResult = successfulTools.get(fingerprint);
+          messages.push({ role: "tool", tool_call_id: toolCall.id, content: JSON.stringify(cachedResult ?? { error: "Repeated tool call rejected", fields: lastInvalidFields }) });
+          if (!cachedResult) canShortCircuit = false;
+          continue;
+        }
+        attemptedTools.add(fingerprint);
         const validation = validateToolCall(constrainedToolCall);
         if (!validation.valid) {
+          lastInvalidFields = validation.fields ?? [];
+          debugLog(`[STREAM] invalid_tool fields=${lastInvalidFields.join(",")}`);
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
-            content: JSON.stringify({ error: validation.message })
+            content: JSON.stringify({ error: validation.message, fields: lastInvalidFields })
           });
           canShortCircuit = false;
           continue;
@@ -787,7 +826,13 @@ export async function* streamOpenAIChatCompletionWithTools(
           const updatedPlanner = plannerDraftSchema.safeParse(result.planner);
           if (updatedPlanner.success) context.planner = updatedPlanner.data;
         }
-        debugLog(`⏱️ [STREAM] Tool "${toolCall.name}" executed in ${Date.now() - toolStart}ms`);
+        if (!result.error) successfulTools.set(fingerprint, result);
+        if (result.error) {
+          canShortCircuit = false;
+          lastInvalidFields = Array.isArray(result.fields) ? result.fields.filter((field): field is string => typeof field === "string") : [];
+          debugLog(`[STREAM] tool_rejected fields=${lastInvalidFields.join(",")}`);
+        }
+        debugLog(`[STREAM] Tool executed in ${Date.now() - toolStart}ms`);
 
         yield { type: "tool_result", name: toolCall.name, result };
         toolResults.push({ name: toolCall.name, result, args });
@@ -801,10 +846,13 @@ export async function* streamOpenAIChatCompletionWithTools(
 
       // Short-circuit: generate local response for search tools to avoid a second OpenAI call (~3-8s saved)
       const searchToolNames = new Set(["search_flights", "update_planner"]);
-      const allToolsAreSimple = canShortCircuit && toolResults.every(t => searchToolNames.has(t.name));
+      const hasValidatedPlanner = toolResults.some(t => t.name === "update_planner" && plannerDraftSchema.safeParse(t.result.planner).success);
+      const allToolsAreSimple = hasValidatedPlanner || (canShortCircuit && toolResults.every(t => searchToolNames.has(t.name)));
 
       if (allToolsAreSimple && toolResults.length > 0) {
-        const localResponse = generateLocalToolResponse(
+        const localResponse = hasValidatedPlanner && !canShortCircuit
+          ? plannerCorrectionMessage(context, userMessage, conversationHistory, lastInvalidFields)
+          : generateLocalToolResponse(
           toolResults,
           context,
           userMessage,
@@ -825,7 +873,7 @@ export async function* streamOpenAIChatCompletionWithTools(
     if (!completed && !signal?.aborted) {
       yield {
         type: "content",
-        content: STRINGS[context.locale ?? detectUserLanguage(userMessage, conversationHistory)].requestIncomplete,
+        content: plannerCorrectionMessage(context, userMessage, conversationHistory, lastInvalidFields),
       };
     }
   } catch (error) {

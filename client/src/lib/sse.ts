@@ -16,21 +16,28 @@ export class SseStreamError extends Error {
 
 interface ConsumeJsonSseOptions {
   onEvent: (event: JsonSseEvent) => void | Promise<void>;
+  signal?: AbortSignal;
 }
 
 export async function consumeJsonSse(
   response: Response,
-  { onEvent }: ConsumeJsonSseOptions,
+  { onEvent, signal }: ConsumeJsonSseOptions,
 ): Promise<void> {
   if (!response.body) {
     throw new SseStreamError("La risposta streaming non contiene dati");
   }
 
   const reader = response.body.getReader();
+  const throwIfAborted = () => {
+    if (signal?.aborted) throw new DOMException("Stream aborted", "AbortError");
+  };
+  const abortRead = () => { void reader.cancel().catch(() => {}); };
+  signal?.addEventListener("abort", abortRead, { once: true });
   const decoder = new TextDecoder();
   let buffer = "";
 
   const processLine = async (rawLine: string): Promise<boolean> => {
+    throwIfAborted();
     const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
     if (!line.startsWith("data:")) return false;
 
@@ -54,8 +61,10 @@ export async function consumeJsonSse(
   };
 
   try {
+    throwIfAborted();
     while (true) {
       const { done, value } = await reader.read();
+      throwIfAborted();
       buffer += decoder.decode(value, { stream: !done });
 
       let newlineIndex = buffer.indexOf("\n");
@@ -75,6 +84,8 @@ export async function consumeJsonSse(
       }
     }
   } finally {
+    signal?.removeEventListener("abort", abortRead);
+    if (signal?.aborted) await reader.cancel().catch(() => {});
     reader.releaseLock();
   }
 }

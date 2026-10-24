@@ -70,3 +70,25 @@ describe("consumeJsonSse", () => {
     );
   });
 });
+
+
+describe("SSE cancellation after response headers", () => {
+  it("cancels a stalled body and releases the reader when the caller aborts", async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn();
+    const body = new ReadableStream({ cancel });
+    const onEvent = vi.fn();
+    const pending = consumeJsonSse(new Response(body), { onEvent, signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(body.locked).toBe(false);
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+  it("rejects a pre-aborted body without delivering buffered events", async () => {
+    const controller = new AbortController(); controller.abort();
+    const onEvent = vi.fn();
+    await expect(consumeJsonSse(streamingResponse(['data: {"content":"stale"}\n']), { onEvent, signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+});
