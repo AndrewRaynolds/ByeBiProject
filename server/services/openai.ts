@@ -386,6 +386,7 @@ export async function createOpenAIChatCompletion(
 
     if (message?.tool_calls) {
       for (const tc of message.tool_calls) {
+        if (tc.type !== "function") continue;
         try {
           toolCalls.push({
             name: tc.function.name,
