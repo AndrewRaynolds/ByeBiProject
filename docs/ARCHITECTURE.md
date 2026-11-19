@@ -271,7 +271,14 @@ CI runs `npm run verify` on pull requests and pushes to `main` with Node.js 20.
 
 ## Deployment
 
-GitHub `main` is canonical. Replit is the deployment runtime.
+GitHub `main` is canonical. Replit remains the deployed runtime until migration QA and cutover.
+
+The prepared Vercel target serves the Vite frontend as static Build Output API v3
+assets and proxies `/api` to a separate persistent Node/Express origin. The API keeps
+SSE, raw Stripe webhooks, database connections, startup sync and the periodic email
+worker. No Express serverless compatibility is assumed. See
+[VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for configuration, environment ownership,
+API-host activation, QA gates and rollback. This preparation does not move production.
 
 ```text
 feature branch -> pull request -> CI/review -> main -> Replit sync -> manual republish

@@ -90,6 +90,12 @@ npm run dev
 
 The application starts through the Express server, which also serves the frontend during development. Features connected to external providers require their respective credentials.
 
+## Deployment
+
+[Vercel migration runbook](docs/VERCEL_DEPLOYMENT.md): static frontend on Vercel,
+with a separate persistent Node API. Replit stays active until the new URL and
+independent API pass QA; GitHub main remains canonical.
+
 ## Quality checks
 
 ```bash

@@ -7,7 +7,7 @@ Use this checklist for the first 20–30 invited testers. The goal is to validat
 - [ ] Confirm the candidate commit is the current GitHub `main`.
 - [ ] Confirm CI is green for that exact commit.
 - [ ] Run `npm run verify` with the CI Supabase placeholders.
-- [ ] Sync Replit from GitHub `main` and republish manually.
+- [ ] Release through the selected hosting workflow. While Replit is active, sync GitHub `main` and republish manually. For Vercel, complete [the migration gates](VERCEL_DEPLOYMENT.md) on the candidate URL before domain cutover; retain Replit until QA passes.
 - [ ] Run `npm run smoke:production -- https://byebi.it`.
 - [ ] Run `npm run smoke:travel:production -- https://byebi.it`.
 - [ ] Confirm the header contains **Invia feedback / Send feedback / Enviar feedback**.
