@@ -26,7 +26,8 @@ this migration. The selected target is **Vercel frontend + persistent Node API o
 Replit**. Replit can temporarily be that API origin, but that stage is not a completed
 Replit exit. Password reset and confirmation resend now return to the current frontend origin
 instead of hard-coded byebi.it, allowing isolated preview QA. No product features,
-commerce switches or dependencies are changed.
+commerce switches are changed. The CI audit required two scoped transitive security
+patches: `qs` 6.16.1 and `follow-redirects` 1.16.3; no framework upgrade was made.
 
 ## Build and routing
 
