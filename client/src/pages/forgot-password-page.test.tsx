@@ -33,14 +33,14 @@ describe("ForgotPasswordPage", () => {
     localStorage.setItem("selectedBrand", "byebro");
   });
 
-  it("requests a password reset using the production callback", async () => {
+  it("requests a password reset using the current frontend origin", async () => {
     render(<ForgotPasswordPage />);
     fireEvent.change(screen.getByLabelText("auth.email"), { target: { value: "person@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "auth.sendReset" }));
 
     await waitFor(() => expect(resetPasswordForEmail).toHaveBeenCalledWith(
       "person@example.com",
-      { redirectTo: "https://byebi.it/auth/reset-password" },
+      { redirectTo: `${window.location.origin}/auth/reset-password` },
     ));
     expect(screen.getByRole("status")).toHaveTextContent("auth.resetRequestSuccess");
   });
@@ -53,7 +53,7 @@ describe("ForgotPasswordPage", () => {
     await waitFor(() => expect(resend).toHaveBeenCalledWith({
       type: "signup",
       email: "person@example.com",
-      options: { emailRedirectTo: "https://byebi.it/auth" },
+      options: { emailRedirectTo: `${window.location.origin}/auth` },
     }));
     expect(screen.getByRole("status")).toHaveTextContent("auth.confirmationResendSuccess");
   });
