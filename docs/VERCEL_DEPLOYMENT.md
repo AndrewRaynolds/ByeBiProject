@@ -32,6 +32,13 @@ patches: `qs` 6.16.1 and `follow-redirects` 1.16.3; no framework upgrade was mad
 ## Build and routing
 
 `vercel.json` selects Other (`framework: null`), `npm ci` and `npm run build:vercel`.
+Vercel builds use Node.js 24 because Node.js 20 is no longer accepted there.
+The package explicitly allows 20.x or 24.x; existing Replit runtime and `.nvmrc`
+remain on 20, and CI validates the existing app on 20 plus the Vercel build on 24.
+This does not upgrade the running Replit API. Three pre-existing frontend test
+files now fix only their Date clock before their November 2026 trip fixtures;
+otherwise those tests fail as soon as their fixture travel dates pass.
+
 Leave Output Directory unset: the build emits `.vercel/output/config.json` and
 `.vercel/output/static` using the Build Output API. Do not set output to `dist/public`,
 which would omit the generated proxy routing. There are no Vercel API functions.
