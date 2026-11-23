@@ -44,3 +44,15 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-public-anon-placeholder
+
+      - name: Use Node.js 24 for Vercel frontend build
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Build Vercel static deployment and API routing
+        run: npm run build:vercel
+        env:
+          API_BACKEND_ORIGIN: https://ci-api.example.com
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-public-anon-placeholder

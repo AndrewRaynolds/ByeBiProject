@@ -98,7 +98,11 @@ function handoffResponse() {
 
 describe("travel handoffs", () => {
   afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
+    // Keep fixed future-trip fixtures independent of the machine clock.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
     localStorage.clear();
     localStorage.setItem("currentItinerary", JSON.stringify({
       origin: "Roma",

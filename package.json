@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": "20.x"
+    "node": "20.x || 24.x"
   },
   "scripts": {
     "dev": "tsx server/index.ts",
@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "verify": "npm run check && npm test && npm run build",
     "smoke:production": "node scripts/smoke-production.mjs",
-    "smoke:travel:production": "node scripts/smoke-travel-production.mjs"
+    "smoke:travel:production": "node scripts/smoke-travel-production.mjs",
+    "build:vercel": "vite build && node --import tsx scripts/build-vercel.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",
@@ -107,7 +108,8 @@
   },
   "overrides": {
     "nanoid": "3.3.18",
-    "qs": "6.16.0",
+    "follow-redirects": "1.16.3",
+    "qs": "6.16.1",
     "postcss-selector-parser": "7.1.6"
   },
   "optionalDependencies": {

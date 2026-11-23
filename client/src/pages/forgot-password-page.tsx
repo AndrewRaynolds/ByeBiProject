@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { supabase } from "@/lib/supabase";
 
-const RESET_REDIRECT_URL = "https://byebi.it/auth/reset-password";
-const CONFIRM_REDIRECT_URL = "https://byebi.it/auth";
+const RESET_REDIRECT_URL = new URL("/auth/reset-password", window.location.origin).href;
+const CONFIRM_REDIRECT_URL = new URL("/auth", window.location.origin).href;
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();

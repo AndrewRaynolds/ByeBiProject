@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TripHub from "./TripHub";
 import { getLegacyTripOrganizationStatusKey } from "@/lib/tripOrganizationMigration";
 
@@ -107,7 +107,11 @@ vi.mock("@/contexts/LanguageContext", () => ({
 }));
 
 describe("TripHub", () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
+    // Keep fixed future-trip fixtures independent of the machine clock.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
     localStorage.clear();
     localStorage.setItem("selectedBrand", "byebro");
     navigate.mockReset();

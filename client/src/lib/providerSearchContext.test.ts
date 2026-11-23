@@ -1,11 +1,15 @@
 /** @vitest-environment jsdom */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPlannerDraft, PLANNER_STORAGE_KEY } from "@shared/plannerSchemas";
 import { persistCheckoutBridge } from "./plannerStorage";
 import { loadProviderSearchContext } from "./providerSearchContext";
 
 describe("provider search context", () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
+    // Keep fixed future-trip fixtures independent of the machine clock.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
     localStorage.clear();
     localStorage.setItem("currentItinerary", JSON.stringify({
       origin: "Milano",
